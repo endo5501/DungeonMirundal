@@ -12,14 +12,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 実行コマンド
 - アプリケーション実行: `python main.py`
 - 仮想環境での実行: `uv run python main.py`
+- Panda3D依存関係追加: `uv add panda3d`
+- テスト実行: `uv run pytest`
 
 ## プロジェクト構成
 
 ### アーキテクチャ概要
 - Python製のクラシックなダンジョン探索RPG
+- **Panda3D**を使用した3Dダンジョン探索
+- Wizardry風の3D簡易ビューによる視覚表現
 - 外部ファイル（JSON/YAML）による設定管理でハードコーディングを回避
 - 地上パートとダンジョン探索パートの二つの主要セクション
-- 将来的にPyGameを使用したGUIベースのゲームを想定
+- WASD + コントローラー対応
 
 ### 設計思想
 - **外部ファイル管理**: テキスト、キャラクター、アイテム、モンスター等はすべて外部ファイルで管理
@@ -39,3 +43,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - テストファースト、実装は後
 - テストが通過してからコミット
 - 修正完了後はまとめてコミット（コミットメッセージは英語）
+
+## 開発計画
+- **総開発期間**: 14週間（5フェーズ）
+- **Phase 1**: 基盤構築（Panda3D環境）
+- **Phase 2**: コア機能（キャラクター・UI）
+- **Phase 3**: 地上部（施設システム）
+- **Phase 4**: ダンジョン（3D探索・戦闘）
+- **Phase 5**: 統合・最適化
+
+各フェーズの詳細TODO: `docs/phase*_todos.md`
