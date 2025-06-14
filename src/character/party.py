@@ -303,3 +303,9 @@ class Party:
             gold=data.get('gold', 0)
         )
         return party
+    
+    def show_inventory_ui(self):
+        """パーティインベントリUIを表示"""
+        from src.ui.inventory_ui import inventory_ui
+        inventory_ui.show_party_inventory_menu(self)
+        logger.info(f"パーティ {self.name} のインベントリUIを表示")
