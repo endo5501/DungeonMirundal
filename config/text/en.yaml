@@ -1,0 +1,70 @@
+# English Text
+
+# Menu & UI
+menu:
+  main_menu: "Main Menu"
+  new_game: "New Game"
+  load_game: "Load Game"
+  save_game: "Save Game"
+  settings: "Settings"
+  exit: "Exit"
+  back: "Back"
+  
+# Common
+common:
+  yes: "Yes"
+  no: "No"
+  ok: "OK"
+  cancel: "Cancel"
+  confirm: "Confirm"
+  error: "Error"
+  warning: "Warning"
+  info: "Info"
+  
+# Character
+character:
+  name: "Name"
+  level: "Level"
+  hp: "HP"
+  mp: "MP"
+  strength: "Strength"
+  agility: "Agility"
+  intelligence: "Intelligence"
+  faith: "Faith"
+  luck: "Luck"
+  
+# Race
+race:
+  human: "Human"
+  elf: "Elf"
+  dwarf: "Dwarf"
+  hobbit: "Hobbit"
+  
+# Class
+class:
+  fighter: "Fighter"
+  mage: "Mage"
+  priest: "Priest"
+  thief: "Thief"
+  bishop: "Bishop"
+  samurai: "Samurai"
+  lord: "Lord"
+  ninja: "Ninja"
+  
+# Facilities
+facility:
+  guild: "Adventurers Guild"
+  inn: "Inn"
+  shop: "Shop"
+  temple: "Temple"
+  magic_guild: "Magic Guild"
+  dungeon_entrance: "Dungeon Entrance"
+  
+# System Messages
+system:
+  loading: "Loading..."
+  saving: "Saving..."
+  game_saved: "Game Saved"
+  game_loaded: "Game Loaded"
+  startup: "Starting Game"
+  shutdown: "Shutting Down"

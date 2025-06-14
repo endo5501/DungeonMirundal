@@ -4,4 +4,8 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "panda3d>=1.10.15",
+    "pytest>=8.4.0",
+    "pyyaml>=6.0.2",
+]

@@ -1,0 +1,45 @@
+# ゲーム基本設定
+game:
+  title: "Dungeon RPG"
+  version: "0.1.0"
+  
+# ウィンドウ設定
+window:
+  width: 1024
+  height: 768
+  fullscreen: false
+  title: "Dungeon RPG"
+  
+# グラフィック設定
+graphics:
+  fps: 60
+  vsync: true
+  anti_aliasing: true
+  texture_quality: "high"
+  
+# オーディオ設定
+audio:
+  master_volume: 0.8
+  music_volume: 0.7
+  sfx_volume: 0.8
+  mute: false
+  
+# ゲームプレイ設定
+gameplay:
+  language: "ja"
+  auto_save_interval: 300  # 秒
+  battle_animation_speed: 1.0
+  text_speed: 1.0
+  
+# 入力設定
+input:
+  keyboard_enabled: true
+  controller_enabled: true
+  mouse_enabled: true
+  
+# デバッグ設定
+debug:
+  enabled: false
+  show_fps: false
+  show_collision: false
+  log_level: "INFO"
