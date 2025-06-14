@@ -1,0 +1,226 @@
+# アイテム定義ファイル
+
+# 武器
+weapons:
+  dagger:
+    name_key: "item.dagger"
+    description_key: "item.dagger_desc"
+    type: "weapon"
+    weapon_type: "dagger"
+    attack_power: 3
+    attribute: "physical"
+    range: "melee"
+    price: 50
+    weight: 1
+    usable_classes: ["fighter", "thief", "mage", "ninja"]
+    
+  short_sword:
+    name_key: "item.short_sword"
+    description_key: "item.short_sword_desc"
+    type: "weapon"
+    weapon_type: "sword"
+    attack_power: 5
+    attribute: "physical"
+    range: "melee"
+    price: 100
+    weight: 2
+    usable_classes: ["fighter", "thief", "samurai", "lord"]
+    
+  long_sword:
+    name_key: "item.long_sword"
+    description_key: "item.long_sword_desc"
+    type: "weapon"
+    weapon_type: "sword"
+    attack_power: 8
+    attribute: "physical"
+    range: "melee"
+    price: 300
+    weight: 3
+    usable_classes: ["fighter", "samurai", "lord"]
+    
+  mace:
+    name_key: "item.mace"
+    description_key: "item.mace_desc"
+    type: "weapon"
+    weapon_type: "mace"
+    attack_power: 6
+    attribute: "physical"
+    range: "melee"
+    price: 150
+    weight: 3
+    usable_classes: ["fighter", "priest", "bishop", "lord"]
+    
+  staff:
+    name_key: "item.staff"
+    description_key: "item.staff_desc"
+    type: "weapon"
+    weapon_type: "staff"
+    attack_power: 2
+    attribute: "physical"
+    range: "melee"
+    price: 80
+    weight: 2
+    usable_classes: ["mage", "priest", "bishop"]
+    magic_bonus: 2
+    
+  bow:
+    name_key: "item.bow"
+    description_key: "item.bow_desc"
+    type: "weapon"
+    weapon_type: "bow"
+    attack_power: 4
+    attribute: "physical"
+    range: "ranged"
+    price: 120
+    weight: 2
+    usable_classes: ["fighter", "thief", "samurai"]
+
+# 防具
+armor:
+  cloth_robe:
+    name_key: "item.cloth_robe"
+    description_key: "item.cloth_robe_desc"
+    type: "armor"
+    armor_type: "light"
+    defense: 1
+    price: 30
+    weight: 1
+    usable_classes: ["mage", "priest", "thief", "bishop"]
+    
+  leather_armor:
+    name_key: "item.leather_armor"
+    description_key: "item.leather_armor_desc"
+    type: "armor"
+    armor_type: "light"
+    defense: 3
+    price: 80
+    weight: 2
+    usable_classes: ["fighter", "thief", "priest", "ninja"]
+    
+  chain_mail:
+    name_key: "item.chain_mail"
+    description_key: "item.chain_mail_desc"
+    type: "armor"
+    armor_type: "medium"
+    defense: 5
+    price: 200
+    weight: 4
+    usable_classes: ["fighter", "priest", "samurai", "lord"]
+    
+  plate_armor:
+    name_key: "item.plate_armor"
+    description_key: "item.plate_armor_desc"
+    type: "armor"
+    armor_type: "heavy"
+    defense: 8
+    price: 500
+    weight: 6
+    usable_classes: ["fighter", "samurai", "lord"]
+
+# 消費アイテム
+consumables:
+  healing_potion:
+    name_key: "item.healing_potion"
+    description_key: "item.healing_potion_desc"
+    type: "consumable"
+    effect_type: "heal_hp"
+    effect_value: 20
+    price: 50
+    weight: 1
+    usable_in_combat: true
+    
+  mana_potion:
+    name_key: "item.mana_potion"
+    description_key: "item.mana_potion_desc"
+    type: "consumable"
+    effect_type: "restore_mp"
+    effect_value: 10
+    price: 80
+    weight: 1
+    usable_in_combat: false
+    
+  antidote:
+    name_key: "item.antidote"
+    description_key: "item.antidote_desc"
+    type: "consumable"
+    effect_type: "cure_poison"
+    price: 30
+    weight: 1
+    usable_in_combat: true
+    
+  return_scroll:
+    name_key: "item.return_scroll"
+    description_key: "item.return_scroll_desc"
+    type: "consumable"
+    effect_type: "return_to_town"
+    price: 200
+    weight: 1
+    usable_in_combat: false
+    
+  resurrection_powder:
+    name_key: "item.resurrection_powder"
+    description_key: "item.resurrection_powder_desc"
+    type: "consumable"
+    effect_type: "resurrect"
+    price: 1000
+    weight: 1
+    usable_in_combat: false
+
+# 魔法書・祈祷書
+spellbooks:
+  fire_spell_book:
+    name_key: "item.fire_spell_book"
+    description_key: "item.fire_spell_book_desc"
+    type: "spellbook"
+    spell_type: "magic"
+    spell_id: "fireball"
+    price: 300
+    weight: 1
+    required_class: ["mage", "bishop"]
+    
+  heal_prayer_book:
+    name_key: "item.heal_prayer_book"
+    description_key: "item.heal_prayer_book_desc"
+    type: "spellbook"
+    spell_type: "prayer"
+    spell_id: "heal"
+    price: 250
+    weight: 1
+    required_class: ["priest", "bishop", "lord"]
+
+# 特殊アイテム
+special:
+  lockpick:
+    name_key: "item.lockpick"
+    description_key: "item.lockpick_desc"
+    type: "tool"
+    tool_type: "lockpick"
+    price: 20
+    weight: 1
+    required_class: ["thief", "ninja"]
+    
+  torch:
+    name_key: "item.torch"
+    description_key: "item.torch_desc"
+    type: "tool"
+    tool_type: "light"
+    duration: 100  # ターン数
+    price: 10
+    weight: 1
+
+# アイテム分類設定
+item_categories:
+  weapon_types: ["dagger", "sword", "mace", "staff", "bow", "axe", "throwing"]
+  armor_types: ["light", "medium", "heavy"]
+  attributes: ["physical", "fire", "ice", "lightning"]
+  
+# 価格設定
+pricing:
+  base_sell_ratio: 0.5  # 売却時の基本価格比率
+  identification_cost: 100  # 鑑定費用
+  repair_cost_ratio: 0.3  # 修理費用比率
+  
+# 重量制限
+weight_limits:
+  max_individual_weight: 10  # 個別アイテムの最大重量
+  strength_weight_bonus: 2   # 筋力1につき追加できる重量
