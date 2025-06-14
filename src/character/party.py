@@ -133,6 +133,9 @@ class Party:
     formation: PartyFormation = field(default_factory=PartyFormation)
     gold: int = 0
     
+    # 新しいインベントリシステム
+    _party_inventory_initialized: bool = field(default=False, init=False)
+    
     def add_character(self, character: Character, position: Optional[PartyPosition] = None) -> bool:
         """キャラクターをパーティに追加"""
         if len(self.characters) >= MAX_PARTY_SIZE:
@@ -172,6 +175,20 @@ class Party:
         
         logger.info(f"キャラクター {character.name} をパーティから削除しました")
         return True
+    
+    def initialize_party_inventory(self):
+        """パーティインベントリを初期化（遅延初期化）"""
+        if not self._party_inventory_initialized:
+            from src.inventory.inventory import inventory_manager
+            inventory_manager.create_party_inventory(self.party_id)
+            self._party_inventory_initialized = True
+            logger.debug(f"パーティインベントリを初期化: {self.party_id}")
+    
+    def get_party_inventory(self):
+        """パーティインベントリを取得"""
+        self.initialize_party_inventory()
+        from src.inventory.inventory import inventory_manager
+        return inventory_manager.get_party_inventory()
     
     def get_character(self, character_id: str) -> Optional[Character]:
         """キャラクターを取得"""

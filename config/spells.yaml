@@ -1,0 +1,240 @@
+# 魔法・祈祷定義
+
+# 魔法・祈祷の共通設定
+settings:
+  # 使用回数リセット
+  reset_on_overworld_return: true
+  # スロット数（レベルごと）
+  slots_per_level:
+    1: 4   # レベル1の魔法スロット数
+    2: 3   # レベル2の魔法スロット数
+    3: 3   # レベル3の魔法スロット数
+    4: 2   # レベル4の魔法スロット数
+    5: 2   # レベル5の魔法スロット数
+    6: 2   # レベル6の魔法スロット数
+    7: 1   # レベル7の魔法スロット数
+
+# 攻撃魔法（Mage系）
+offensive_spells:
+  fire:
+    name_key: "spell.fire"
+    description_key: "spell.fire_desc"
+    level: 1
+    type: "offensive"
+    school: "mage"
+    target: "single_enemy"
+    effect_type: "damage"
+    base_damage: 10
+    damage_scaling: "intelligence"
+    element: "fire"
+    cost: 200  # 習得費用
+    
+  fireball:
+    name_key: "spell.fireball"
+    description_key: "spell.fireball_desc"
+    level: 3
+    type: "offensive"
+    school: "mage"
+    target: "group_enemy"
+    effect_type: "damage"
+    base_damage: 25
+    damage_scaling: "intelligence"
+    element: "fire"
+    cost: 500
+    
+  ice_storm:
+    name_key: "spell.ice_storm"
+    description_key: "spell.ice_storm_desc"
+    level: 4
+    type: "offensive"
+    school: "mage"
+    target: "all_enemies"
+    effect_type: "damage"
+    base_damage: 35
+    damage_scaling: "intelligence"
+    element: "ice"
+    cost: 800
+    
+  lightning:
+    name_key: "spell.lightning"
+    description_key: "spell.lightning_desc"
+    level: 2
+    type: "offensive"
+    school: "mage"
+    target: "single_enemy"
+    effect_type: "damage"
+    base_damage: 18
+    damage_scaling: "intelligence"
+    element: "lightning"
+    cost: 350
+
+# 回復・補助魔法（Priest系）
+divine_spells:
+  heal:
+    name_key: "spell.heal"
+    description_key: "spell.heal_desc"
+    level: 1
+    type: "healing"
+    school: "priest"
+    target: "single_ally"
+    effect_type: "heal"
+    base_heal: 15
+    heal_scaling: "faith"
+    cost: 200
+    
+  cure:
+    name_key: "spell.cure"
+    description_key: "spell.cure_desc"
+    level: 1
+    type: "utility"
+    school: "priest"
+    target: "single_ally"
+    effect_type: "status_cure"
+    cures: ["poisoned", "paralyzed", "sleeping"]
+    cost: 150
+    
+  bless:
+    name_key: "spell.bless"
+    description_key: "spell.bless_desc"
+    level: 2
+    type: "buff"
+    school: "priest"
+    target: "single_ally"
+    effect_type: "stat_boost"
+    stat_boosts:
+      attack_power: 5
+      defense: 3
+    duration: 5  # ターン数
+    cost: 300
+    
+  greater_heal:
+    name_key: "spell.greater_heal"
+    description_key: "spell.greater_heal_desc"
+    level: 3
+    type: "healing"
+    school: "priest"
+    target: "single_ally"
+    effect_type: "heal"
+    base_heal: 35
+    heal_scaling: "faith"
+    cost: 500
+    
+  group_heal:
+    name_key: "spell.group_heal"
+    description_key: "spell.group_heal_desc"
+    level: 4
+    type: "healing"
+    school: "priest"
+    target: "all_allies"
+    effect_type: "heal"
+    base_heal: 20
+    heal_scaling: "faith"
+    cost: 700
+    
+  resurrection:
+    name_key: "spell.resurrection"
+    description_key: "spell.resurrection_desc"
+    level: 7
+    type: "revival"
+    school: "priest"
+    target: "single_ally"
+    effect_type: "revive"
+    revive_hp_ratio: 0.5  # 最大HPの50%で復活
+    cost: 2000
+
+# 汎用魔法（Bishop系）
+utility_spells:
+  light:
+    name_key: "spell.light"
+    description_key: "spell.light_desc"
+    level: 1
+    type: "utility"
+    school: "both"
+    target: "self"
+    effect_type: "light"
+    duration: 10  # 探索ターン数
+    cost: 100
+    
+  detect_magic:
+    name_key: "spell.detect_magic"
+    description_key: "spell.detect_magic_desc"
+    level: 2
+    type: "utility"
+    school: "both"
+    target: "area"
+    effect_type: "detection"
+    detects: ["magic_items", "traps", "secret_doors"]
+    cost: 250
+    
+  teleport:
+    name_key: "spell.teleport"
+    description_key: "spell.teleport_desc"
+    level: 5
+    type: "utility"
+    school: "both"
+    target: "party"
+    effect_type: "teleport"
+    destination: "town"
+    cost: 1000
+    
+  dispel:
+    name_key: "spell.dispel"
+    description_key: "spell.dispel_desc"
+    level: 3
+    type: "utility"
+    school: "both"
+    target: "single_target"
+    effect_type: "dispel"
+    removes: ["all_buffs", "all_debuffs"]
+    cost: 400
+
+# 高レベル魔法
+advanced_spells:
+  meteor:
+    name_key: "spell.meteor"
+    description_key: "spell.meteor_desc"
+    level: 6
+    type: "offensive"
+    school: "mage"
+    target: "all_enemies"
+    effect_type: "damage"
+    base_damage: 60
+    damage_scaling: "intelligence"
+    element: "fire"
+    cost: 1500
+    
+  divine_intervention:
+    name_key: "spell.divine_intervention"
+    description_key: "spell.divine_intervention_desc"
+    level: 6
+    type: "ultimate"
+    school: "priest"
+    target: "all_allies"
+    effect_type: "full_restore"
+    restores: ["hp", "mp", "status"]
+    cost: 1500
+    
+  time_stop:
+    name_key: "spell.time_stop"
+    description_key: "spell.time_stop_desc"
+    level: 7
+    type: "utility"
+    school: "both"
+    target: "battlefield"
+    effect_type: "time_manipulation"
+    effect: "extra_turn"
+    cost: 2500
+
+# クラス別習得可能魔法
+class_spell_access:
+  mage:
+    allowed_schools: ["mage", "both"]
+    allowed_types: ["offensive", "utility"]
+    
+  priest:
+    allowed_schools: ["priest", "both"]
+    allowed_types: ["healing", "buff", "utility", "revival"]
+    
+  bishop:
+    allowed_schools: ["mage", "priest", "both"]
+    allowed_types: ["offensive", "healing", "buff", "utility", "revival", "ultimate"]

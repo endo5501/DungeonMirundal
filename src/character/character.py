@@ -77,9 +77,13 @@ class Character:
     # 状態
     status: CharacterStatus = CharacterStatus.GOOD
     
-    # インベントリ・装備
-    inventory: List[str] = field(default_factory=list)  # アイテムID
-    equipped_items: Dict[str, str] = field(default_factory=dict)  # スロット -> アイテムID
+    # インベントリ・装備（旧形式、互換性のため残す）
+    inventory: List[str] = field(default_factory=list)  # アイテムID（廃止予定）
+    equipped_items: Dict[str, str] = field(default_factory=dict)  # スロット -> アイテムID（廃止予定）
+    
+    # 新しいインベントリシステム
+    _inventory_initialized: bool = field(default=False, init=False)
+    _equipment_initialized: bool = field(default=False, init=False)
     
     # メタ情報
     created_at: datetime = field(default_factory=datetime.now)
@@ -88,6 +92,34 @@ class Character:
         """初期化後処理"""
         if not self.name:
             self.name = f"Character_{self.character_id[:8]}"
+    
+    def initialize_inventory(self):
+        """インベントリを初期化（遅延初期化）"""
+        if not self._inventory_initialized:
+            from src.inventory.inventory import inventory_manager
+            inventory_manager.create_character_inventory(self.character_id)
+            self._inventory_initialized = True
+            logger.debug(f"キャラクターインベントリを初期化: {self.character_id}")
+    
+    def get_inventory(self):
+        """インベントリを取得"""
+        self.initialize_inventory()
+        from src.inventory.inventory import inventory_manager
+        return inventory_manager.get_character_inventory(self.character_id)
+    
+    def initialize_equipment(self):
+        """装備システムを初期化（遅延初期化）"""
+        if not self._equipment_initialized:
+            from src.equipment.equipment import equipment_manager
+            equipment_manager.create_character_equipment(self.character_id)
+            self._equipment_initialized = True
+            logger.debug(f"キャラクター装備システムを初期化: {self.character_id}")
+    
+    def get_equipment(self):
+        """装備システムを取得"""
+        self.initialize_equipment()
+        from src.equipment.equipment import equipment_manager
+        return equipment_manager.get_character_equipment(self.character_id)
     
     @classmethod
     def create_character(
@@ -196,6 +228,55 @@ class Character:
         
         if healed > 0:
             logger.info(f"{self.name} がHP回復: +{healed}")
+    
+    def get_effective_stats(self) -> BaseStats:
+        """装備ボーナスを含む実効能力値を取得"""
+        effective_stats = BaseStats(
+            strength=self.base_stats.strength,
+            agility=self.base_stats.agility,
+            intelligence=self.base_stats.intelligence,
+            faith=self.base_stats.faith,
+            luck=self.base_stats.luck
+        )
+        
+        # 装備ボーナスを追加
+        if self._equipment_initialized:
+            equipment = self.get_equipment()
+            if equipment:
+                bonus = equipment.calculate_equipment_bonus()
+                effective_stats.strength += bonus.strength
+                effective_stats.agility += bonus.agility
+                effective_stats.intelligence += bonus.intelligence
+                effective_stats.faith += bonus.faith
+                effective_stats.luck += bonus.luck
+        
+        return effective_stats
+    
+    def get_attack_power(self) -> int:
+        """攻撃力を取得（装備ボーナス含む）"""
+        base_attack = self.base_stats.strength  # 基本攻撃力は力に依存
+        
+        equipment_bonus = 0
+        if self._equipment_initialized:
+            equipment = self.get_equipment()
+            if equipment:
+                bonus = equipment.calculate_equipment_bonus()
+                equipment_bonus = bonus.attack_power
+        
+        return base_attack + equipment_bonus
+    
+    def get_defense(self) -> int:
+        """防御力を取得（装備ボーナス含む）"""
+        base_defense = self.base_stats.strength // 2  # 基本防御力は力の半分
+        
+        equipment_bonus = 0
+        if self._equipment_initialized:
+            equipment = self.get_equipment()
+            if equipment:
+                bonus = equipment.calculate_equipment_bonus()
+                equipment_bonus = bonus.defense
+        
+        return base_defense + equipment_bonus
     
     def take_damage(self, amount: int):
         """ダメージを受ける"""
