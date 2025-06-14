@@ -49,10 +49,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Phase 1**: 基盤構築（Panda3D環境）
 - **Phase 2**: コア機能（キャラクター・UI）
 - **Phase 3**: 地上部（施設システム）
-- **Phase 4**: ダンジョン（3D探索・戦闘）
-- **Phase 5**: 統合・最適化
+- **Phase 4**: 装備・魔法システム
+- **Phase 5**: ダンジョン（3D探索・戦闘）
+- **Phase 6**: 統合・最適化
 
 各フェーズの詳細TODO: `docs/phase*_todos.md`
 
 ## 作業後のTODO管理
 - 作業後、TODOファイルを更新してください
+
+## 関連資料
+- [Panda3D Document Repository](https://github.com/panda3d/panda3d-docs)
