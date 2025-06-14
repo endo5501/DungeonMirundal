@@ -217,25 +217,60 @@ class MagicGuild(BaseFacility):
     
     def _show_identification_menu(self):
         """アイテム鑑定メニューを表示"""
-        # TODO: Phase 4でインベントリシステム実装後に実装
-        identification_info = (
-            "【アイテム鑑定サービス】\n\n"
-            "未鑑定のアイテムの正体を\n"
-            "魔法的手段により明らかにします。\n\n"
-            f"鑑定費用: {self.service_costs['item_identification']}G/個\n\n"
-            "申し訳ありませんが、\n"
-            "現在インベントリシステムの\n"
-            "実装が完了していないため、\n"
-            "このサービスは一時的に\n"
-            "利用できません。\n\n"
-            "しばらくお待ちください。"
+        if not self.current_party:
+            self._show_error_message("パーティが設定されていません")
+            return
+        
+        # パーティインベントリから未鑑定アイテムを検索
+        party_inventory = self.current_party.get_party_inventory()
+        unidentified_items = []
+        
+        for slot in party_inventory.slots:
+            if not slot.is_empty():
+                item_instance = slot.item_instance
+                if not item_instance.identified:
+                    item = item_manager.get_item(item_instance.item_id)
+                    if item:
+                        unidentified_items.append((slot, item_instance, item))
+        
+        if not unidentified_items:
+            self._show_dialog(
+                "no_unidentified_items_dialog",
+                "アイテム鑑定",
+                "現在、未鑑定のアイテムはありません。\n\n"
+                "ダンジョンで見つけた未知のアイテムを\n"
+                "持参してください。\n\n"
+                f"鑑定費用: {self.service_costs['item_identification']}G/個"
+            )
+            return
+        
+        # 鑑定メニューを作成
+        identification_menu = UIMenu("identification_menu", "アイテム鑑定")
+        
+        for slot, item_instance, item in unidentified_items:
+            # アイテム表示名を作成
+            item_name = f"未鑑定の{item.item_type.value}"
+            if item_instance.quantity > 1:
+                item_name += f" x{item_instance.quantity}"
+            
+            identification_cost = self.service_costs['item_identification']
+            total_cost = identification_cost * item_instance.quantity
+            
+            item_info = f"{item_name} ({total_cost}G)"
+            
+            identification_menu.add_menu_item(
+                item_info,
+                self._show_identification_confirmation,
+                [slot, item_instance, item]
+            )
+        
+        identification_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_main_menu_from_submenu,
+            [identification_menu]
         )
         
-        self._show_dialog(
-            "identification_dialog",
-            "アイテム鑑定",
-            identification_info
-        )
+        self._show_submenu(identification_menu)
     
     def _show_analysis_menu(self):
         """魔法分析メニューを表示"""
@@ -596,3 +631,119 @@ class MagicGuild(BaseFacility):
         
         if self.main_menu:
             ui_manager.show_element(self.main_menu.element_id)
+    
+    def _show_identification_confirmation(self, slot, item_instance: ItemInstance, item: Item):
+        """鑑定確認ダイアログを表示"""
+        if not self.current_party:
+            return
+        
+        identification_cost = self.service_costs['item_identification']
+        
+        # アイテム情報を作成
+        details = f"【アイテム鑑定】\n\n"
+        details += f"対象: 未鑑定の{item.item_type.value}\n"
+        
+        if item_instance.quantity > 1:
+            details += f"数量: {item_instance.quantity}個\n"
+            total_cost = identification_cost * item_instance.quantity
+            details += f"鑑定費用: {identification_cost}G x{item_instance.quantity} = {total_cost}G\n"
+        else:
+            total_cost = identification_cost
+            details += f"鑑定費用: {identification_cost}G\n"
+        
+        details += f"\n現在のゴールド: {self.current_party.gold}G\n"
+        
+        if self.current_party.gold >= total_cost:
+            details += f"鑑定後: {self.current_party.gold - total_cost}G\n"
+            details += "\n鑑定を実行しますか？\n"
+            details += "※ 鑑定したアイテムの正体が明らかになります。"
+            
+            dialog = UIDialog(
+                "identification_confirmation_dialog",
+                "鑑定確認",
+                details,
+                buttons=[
+                    {
+                        'text': "鑑定する",
+                        'command': lambda: self._identify_item(slot, item_instance, item, total_cost)
+                    },
+                    {
+                        'text': "戻る",
+                        'command': self._close_dialog
+                    }
+                ]
+            )
+        else:
+            details += "\n※ ゴールドが不足しています"
+            
+            dialog = UIDialog(
+                "identification_confirmation_dialog",
+                "鑑定確認",
+                details,
+                buttons=[
+                    {
+                        'text': "戻る",
+                        'command': self._close_dialog
+                    }
+                ]
+            )
+        
+        ui_manager.register_element(dialog)
+        ui_manager.show_element(dialog.element_id, modal=True)
+    
+    def _identify_item(self, slot, item_instance: ItemInstance, item: Item, cost: int):
+        """アイテム鑑定処理"""
+        if not self.current_party:
+            return
+        
+        self._close_dialog()
+        
+        # ゴールドチェック
+        if self.current_party.gold < cost:
+            self._show_error_message("ゴールドが不足しています")
+            return
+        
+        # 鑑定処理
+        self.current_party.gold -= cost
+        item_instance.identified = True
+        
+        # 鑑定結果を表示
+        result_message = f"【鑑定結果】\n\n"
+        result_message += f"アイテム名: {item.get_name()}\n\n"
+        result_message += f"説明: {item.get_description()}\n\n"
+        
+        if item.is_weapon():
+            result_message += f"タイプ: 武器\n"
+            result_message += f"攻撃力: +{item.get_attack_power()}\n"
+            if item.get_attribute():
+                result_message += f"属性: {item.get_attribute()}\n"
+        elif item.is_armor():
+            result_message += f"タイプ: 防具\n"
+            result_message += f"防御力: +{item.get_defense()}\n"
+        elif item.is_consumable():
+            result_message += f"タイプ: 消耗品\n"
+            result_message += f"効果: {item.get_effect_type()}\n"
+            if item.get_effect_value() > 0:
+                result_message += f"効果値: {item.get_effect_value()}\n"
+        
+        result_message += f"\n希少度: {item.rarity.value}\n"
+        result_message += f"重量: {item.weight}\n"
+        result_message += f"価値: {item.price}G\n"
+        
+        if item.usable_classes:
+            result_message += f"使用可能クラス: {', '.join(item.usable_classes)}\n"
+        
+        if item_instance.quantity > 1:
+            result_message += f"\n所持数: {item_instance.quantity}個\n"
+        
+        result_message += f"\n鑑定費用: {cost}G\n"
+        result_message += f"残りゴールド: {self.current_party.gold}G\n\n"
+        result_message += "鑑定完了！ アイテムの正体が判明しました。"
+        
+        self._show_dialog(
+            "identification_result_dialog",
+            "鑑定結果",
+            result_message
+        )
+        
+        logger.info(f"アイテム鑑定: {item.item_id} x{item_instance.quantity} ({cost}G)")

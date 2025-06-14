@@ -162,6 +162,7 @@ consumables:
     description_key: "item.resurrection_powder_desc"
     type: "consumable"
     effect_type: "resurrect"
+    effect_value: 50  # 最大HPの50%で蘇生
     price: 1000
     weight: 1
     usable_in_combat: false

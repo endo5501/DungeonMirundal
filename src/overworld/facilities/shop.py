@@ -236,8 +236,15 @@ class Shop(BaseFacility):
         # 購入処理
         self.current_party.gold -= item.price
         
-        # TODO: Phase 4でインベントリシステム実装後、パーティにアイテム追加
-        # self.current_party.add_item(instance)
+        # パーティインベントリにアイテム追加
+        party_inventory = self.current_party.get_party_inventory()
+        if party_inventory:
+            success = party_inventory.add_item(instance)
+            if not success:
+                # インベントリが満杯の場合の処理
+                self.current_party.gold += item.price  # ゴールドを戻す
+                self._show_error_message("パーティインベントリが満杯です")
+                return
         
         success_message = f"{item.get_name()} を購入しました！\n残りゴールド: {self.current_party.gold}G"
         self._show_success_message(success_message)
@@ -246,16 +253,62 @@ class Shop(BaseFacility):
     
     def _show_sell_menu(self):
         """売却メニューを表示"""
-        # TODO: Phase 4でインベントリシステム実装後に実装
-        self._show_dialog(
-            "sell_menu_dialog",
-            "アイテム売却",
-            "申し訳ありません。\n"
-            "アイテム売却機能は\n"
-            "インベントリシステムの実装後に\n"
-            "提供予定です。\n\n"
-            "しばらくお待ちください。"
+        if not self.current_party:
+            self._show_error_message("パーティが設定されていません")
+            return
+        
+        # パーティインベントリを取得
+        party_inventory = self.current_party.get_party_inventory()
+        if not party_inventory:
+            self._show_error_message("パーティインベントリが見つかりません")
+            return
+        
+        # 売却可能なアイテムを取得
+        sellable_items = []
+        for slot in party_inventory.slots:
+            if not slot.is_empty():
+                item_instance = slot.item_instance
+                item = self.item_manager.get_item(item_instance.item_id)
+                if item and item.price > 0:  # 価格が設定されているアイテムのみ売却可能
+                    sellable_items.append((slot, item_instance, item))
+        
+        if not sellable_items:
+            self._show_dialog(
+                "no_items_dialog",
+                "アイテム売却",
+                "売却可能なアイテムがありません。\n\n"
+                "※未鑑定のアイテムは売却できません。"
+            )
+            return
+        
+        # 売却メニューを作成
+        sell_menu = UIMenu("sell_menu", "アイテム売却")
+        
+        for slot, item_instance, item in sellable_items:
+            # 売却価格を計算（購入価格の50%）
+            sell_price = max(1, item.price // 2)
+            
+            # アイテム情報を表示
+            item_info = f"{item.get_name()}"
+            if item_instance.quantity > 1:
+                item_info += f" x{item_instance.quantity}"
+            item_info += f" - {sell_price}G"
+            if item_instance.quantity > 1:
+                item_info += f" (各{sell_price}G)"
+            
+            sell_menu.add_menu_item(
+                item_info,
+                self._show_sell_confirmation,
+                [slot, item_instance, item, sell_price]
+            )
+        
+        sell_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_main_menu_from_submenu,
+            [sell_menu]
         )
+        
+        self._show_submenu(sell_menu)
     
     def _show_inventory(self):
         """在庫確認を表示"""
@@ -363,6 +416,124 @@ class Shop(BaseFacility):
         if item_id in self.inventory:
             self.inventory.remove(item_id)
             logger.info(f"商店在庫から削除: {item_id}")
+    
+    def _show_sell_confirmation(self, slot, item_instance: ItemInstance, item: Item, sell_price: int):
+        """売却確認ダイアログを表示"""
+        if not self.current_party:
+            return
+        
+        # アイテム詳細情報を作成
+        details = f"【{item.get_name()}】\n\n"
+        details += f"説明: {item.get_description()}\n"
+        details += f"購入価格: {item.price}G\n"
+        details += f"売却価格: {sell_price}G\n"
+        
+        if item_instance.quantity > 1:
+            details += f"所持数: {item_instance.quantity}\n"
+            details += f"全て売却した場合: {sell_price * item_instance.quantity}G\n"
+        
+        details += f"\n現在のゴールド: {self.current_party.gold}G\n"
+        details += f"売却後: {self.current_party.gold + (sell_price * item_instance.quantity)}G\n"
+        
+        if item_instance.quantity > 1:
+            details += "\n売却する数量を選択してください。"
+            
+            # 数量選択メニューを表示
+            quantity_menu = UIMenu("sell_quantity_menu", "売却数量選択")
+            
+            # 1個ずつ、半分、全部のオプションを追加
+            quantity_menu.add_menu_item(
+                "1個売却",
+                self._sell_item,
+                [slot, item_instance, item, sell_price, 1]
+            )
+            
+            if item_instance.quantity >= 2:
+                half_quantity = item_instance.quantity // 2
+                quantity_menu.add_menu_item(
+                    f"{half_quantity}個売却（半分）",
+                    self._sell_item,
+                    [slot, item_instance, item, sell_price, half_quantity]
+                )
+            
+            quantity_menu.add_menu_item(
+                f"{item_instance.quantity}個売却（全部）",
+                self._sell_item,
+                [slot, item_instance, item, sell_price, item_instance.quantity]
+            )
+            
+            quantity_menu.add_menu_item(
+                "戻る",
+                self._show_sell_menu
+            )
+            
+            self._show_submenu(quantity_menu)
+        else:
+            details += "\n売却しますか？"
+            
+            dialog = UIDialog(
+                "sell_confirmation_dialog",
+                "売却確認",
+                details,
+                buttons=[
+                    {
+                        'text': "売却する",
+                        'command': lambda: self._sell_item(slot, item_instance, item, sell_price, 1)
+                    },
+                    {
+                        'text': "戻る",
+                        'command': self._close_dialog
+                    }
+                ]
+            )
+            
+            ui_manager.register_element(dialog)
+            ui_manager.show_element(dialog.element_id, modal=True)
+    
+    def _sell_item(self, slot, item_instance: ItemInstance, item: Item, sell_price: int, quantity: int):
+        """アイテム売却処理"""
+        if not self.current_party:
+            return
+        
+        self._close_dialog()
+        
+        # 数量チェック
+        if quantity > item_instance.quantity:
+            self._show_error_message("指定された数量が所持数を超えています")
+            return
+        
+        # パーティインベントリを取得
+        party_inventory = self.current_party.get_party_inventory()
+        if not party_inventory:
+            self._show_error_message("パーティインベントリが見つかりません")
+            return
+        
+        # 売却処理
+        total_price = sell_price * quantity
+        
+        if quantity == item_instance.quantity:
+            # 全部売却の場合、スロットを空にする
+            slot.remove_item()
+        else:
+            # 一部売却の場合、数量を減らす
+            item_instance.quantity -= quantity
+        
+        # ゴールドを追加
+        self.current_party.gold += total_price
+        
+        # 成功メッセージ
+        success_message = f"{item.get_name()}"
+        if quantity > 1:
+            success_message += f" x{quantity}"
+        success_message += f" を {total_price}G で売却しました！\n"
+        success_message += f"現在のゴールド: {self.current_party.gold}G"
+        
+        self._show_success_message(success_message)
+        
+        logger.info(f"アイテム売却: {item.item_id} x{quantity} ({total_price}G)")
+        
+        # 売却メニューに戻る
+        self._show_sell_menu()
     
     def get_inventory_items(self) -> List[Item]:
         """在庫アイテム一覧を取得"""
