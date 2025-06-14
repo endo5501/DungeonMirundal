@@ -265,17 +265,28 @@ class TestItemUsage:
     
     def test_status_cure_items(self):
         """状態異常治療アイテムテスト"""
+        # まず毒状態にする
+        from src.effects.status_effects import PoisonEffect
+        status_effects = self.character.get_status_effects()
+        poison = PoisonEffect(duration=3)
+        status_effects.add_effect(poison, self.character)
+        
         # 解毒剤
         antidote_instance = ItemInstance(item_id="antidote", quantity=1, identified=True)
         
-        # アイテム使用（状態異常システム未実装のため、基本的な動作確認のみ）
+        # アイテム使用
         result, message, results = self.usage_manager.use_item(
             antidote_instance, self.character, self.character, self.party
         )
         
         # 結果確認
         assert result == UsageResult.SUCCESS
-        assert "毒" in message and "治療" in message
+        assert "毒" in message and ("治り" in message or "治療" in message)
         assert antidote_instance.quantity == 0  # アイテムが消費されている
         assert 'cured' in results
         assert results['cured'] == 'poison'
+        assert results['effective'] == True  # 効果があった
+        
+        # 毒状態が治っていることを確認
+        from src.effects.status_effects import StatusEffectType
+        assert not status_effects.has_effect(StatusEffectType.POISON)

@@ -84,6 +84,7 @@ class Character:
     # 新しいインベントリシステム
     _inventory_initialized: bool = field(default=False, init=False)
     _equipment_initialized: bool = field(default=False, init=False)
+    _status_effects_initialized: bool = field(default=False, init=False)
     
     # メタ情報
     created_at: datetime = field(default_factory=datetime.now)
@@ -120,6 +121,20 @@ class Character:
         self.initialize_equipment()
         from src.equipment.equipment import equipment_manager
         return equipment_manager.get_character_equipment(self.character_id)
+    
+    def initialize_status_effects(self):
+        """ステータス効果システムを初期化（遅延初期化）"""
+        if not self._status_effects_initialized:
+            from src.effects.status_effects import status_effect_manager
+            # ステータス効果管理は自動的に作成されるため、ここでは単にフラグを設定
+            self._status_effects_initialized = True
+            logger.debug(f"キャラクターステータス効果システムを初期化: {self.character_id}")
+    
+    def get_status_effects(self):
+        """ステータス効果管理を取得"""
+        self.initialize_status_effects()
+        from src.effects.status_effects import status_effect_manager
+        return status_effect_manager.get_character_effects(self.character_id)
     
     @classmethod
     def create_character(
@@ -230,7 +245,7 @@ class Character:
             logger.info(f"{self.name} がHP回復: +{healed}")
     
     def get_effective_stats(self) -> BaseStats:
-        """装備ボーナスを含む実効能力値を取得"""
+        """装備ボーナスとステータス効果を含む実効能力値を取得"""
         effective_stats = BaseStats(
             strength=self.base_stats.strength,
             agility=self.base_stats.agility,
@@ -250,10 +265,20 @@ class Character:
                 effective_stats.faith += bonus.faith
                 effective_stats.luck += bonus.luck
         
+        # ステータス効果による修正値を追加
+        if self._status_effects_initialized:
+            status_effects = self.get_status_effects()
+            modifiers = status_effects.get_stat_modifiers()
+            effective_stats.strength += modifiers.get('strength', 0)
+            effective_stats.agility += modifiers.get('agility', 0)
+            effective_stats.intelligence += modifiers.get('intelligence', 0)
+            effective_stats.faith += modifiers.get('faith', 0)
+            effective_stats.luck += modifiers.get('luck', 0)
+        
         return effective_stats
     
     def get_attack_power(self) -> int:
-        """攻撃力を取得（装備ボーナス含む）"""
+        """攻撃力を取得（装備ボーナス・ステータス効果含む）"""
         base_attack = self.base_stats.strength  # 基本攻撃力は力に依存
         
         equipment_bonus = 0
@@ -263,10 +288,17 @@ class Character:
                 bonus = equipment.calculate_equipment_bonus()
                 equipment_bonus = bonus.attack_power
         
-        return base_attack + equipment_bonus
+        # ステータス効果による攻撃力修正
+        status_bonus = 0
+        if self._status_effects_initialized:
+            status_effects = self.get_status_effects()
+            modifiers = status_effects.get_stat_modifiers()
+            status_bonus = modifiers.get('attack', 0)
+        
+        return base_attack + equipment_bonus + status_bonus
     
     def get_defense(self) -> int:
-        """防御力を取得（装備ボーナス含む）"""
+        """防御力を取得（装備ボーナス・ステータス効果含む）"""
         base_defense = self.base_stats.strength // 2  # 基本防御力は力の半分
         
         equipment_bonus = 0
@@ -276,7 +308,14 @@ class Character:
                 bonus = equipment.calculate_equipment_bonus()
                 equipment_bonus = bonus.defense
         
-        return base_defense + equipment_bonus
+        # ステータス効果による防御力修正
+        status_bonus = 0
+        if self._status_effects_initialized:
+            status_effects = self.get_status_effects()
+            modifiers = status_effects.get_stat_modifiers()
+            status_bonus = modifiers.get('defense', 0)
+        
+        return base_defense + equipment_bonus + status_bonus
     
     def take_damage(self, amount: int):
         """ダメージを受ける"""

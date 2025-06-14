@@ -172,30 +172,73 @@ class ItemUsageManager:
     
     def _handle_cure_poison(self, item: Item, item_instance: ItemInstance, user: Character, target: Character, party: Optional[Party], effect_value: int) -> Tuple[bool, str, Dict[str, Any]]:
         """毒治療処理"""
-        # TODO: ステータス効果システム実装後に本格実装
-        message = f"{target.name if target else user.name}の毒が治療されました"
-        results = {'target': target.name if target else user.name, 'cured': 'poison'}
+        target_char = target if target else user
+        status_effects = target_char.get_status_effects()
+        
+        from src.effects.status_effects import StatusEffectType
+        if status_effects.has_effect(StatusEffectType.POISON):
+            success, result = status_effects.remove_effect(StatusEffectType.POISON, target_char)
+            if success:
+                message = result.get('message', f"{target_char.name}の毒が治療されました")
+                results = {'target': target_char.name, 'cured': 'poison', 'effective': True}
+                return True, message, results
+        
+        # 毒状態でない場合
+        message = f"{target_char.name}は毒状態ではありません"
+        results = {'target': target_char.name, 'cured': 'poison', 'effective': False}
         return True, message, results
     
     def _handle_cure_paralysis(self, item: Item, item_instance: ItemInstance, user: Character, target: Character, party: Optional[Party], effect_value: int) -> Tuple[bool, str, Dict[str, Any]]:
         """麻痺治療処理"""
-        # TODO: ステータス効果システム実装後に本格実装
-        message = f"{target.name if target else user.name}の麻痺が治療されました"
-        results = {'target': target.name if target else user.name, 'cured': 'paralysis'}
+        target_char = target if target else user
+        status_effects = target_char.get_status_effects()
+        
+        from src.effects.status_effects import StatusEffectType
+        if status_effects.has_effect(StatusEffectType.PARALYSIS):
+            success, result = status_effects.remove_effect(StatusEffectType.PARALYSIS, target_char)
+            if success:
+                message = result.get('message', f"{target_char.name}の麻痺が治療されました")
+                results = {'target': target_char.name, 'cured': 'paralysis', 'effective': True}
+                return True, message, results
+        
+        # 麻痺状態でない場合
+        message = f"{target_char.name}は麻痺状態ではありません"
+        results = {'target': target_char.name, 'cured': 'paralysis', 'effective': False}
         return True, message, results
     
     def _handle_cure_sleep(self, item: Item, item_instance: ItemInstance, user: Character, target: Character, party: Optional[Party], effect_value: int) -> Tuple[bool, str, Dict[str, Any]]:
         """睡眠治療処理"""
-        # TODO: ステータス効果システム実装後に本格実装
-        message = f"{target.name if target else user.name}の睡眠が治療されました"
-        results = {'target': target.name if target else user.name, 'cured': 'sleep'}
+        target_char = target if target else user
+        status_effects = target_char.get_status_effects()
+        
+        from src.effects.status_effects import StatusEffectType
+        if status_effects.has_effect(StatusEffectType.SLEEP):
+            success, result = status_effects.remove_effect(StatusEffectType.SLEEP, target_char)
+            if success:
+                message = result.get('message', f"{target_char.name}の睡眠が治療されました")
+                results = {'target': target_char.name, 'cured': 'sleep', 'effective': True}
+                return True, message, results
+        
+        # 睡眠状態でない場合
+        message = f"{target_char.name}は睡眠状態ではありません"
+        results = {'target': target_char.name, 'cured': 'sleep', 'effective': False}
         return True, message, results
     
     def _handle_cure_all_status(self, item: Item, item_instance: ItemInstance, user: Character, target: Character, party: Optional[Party], effect_value: int) -> Tuple[bool, str, Dict[str, Any]]:
         """全状態異常治療処理"""
-        # TODO: ステータス効果システム実装後に本格実装
-        message = f"{target.name if target else user.name}の全ての状態異常が治療されました"
-        results = {'target': target.name if target else user.name, 'cured': 'all_status'}
+        target_char = target if target else user
+        status_effects = target_char.get_status_effects()
+        
+        cured_effects = status_effects.cure_negative_effects(target_char)
+        
+        if cured_effects:
+            cured_names = [result.get('message', '') for result in cured_effects]
+            message = f"{target_char.name}の全ての状態異常が治療されました"
+            results = {'target': target_char.name, 'cured': 'all_status', 'cured_effects': cured_names, 'effective': True}
+        else:
+            message = f"{target_char.name}には治療すべき状態異常がありません"
+            results = {'target': target_char.name, 'cured': 'all_status', 'effective': False}
+        
         return True, message, results
     
     def _handle_revive(self, item: Item, item_instance: ItemInstance, user: Character, target: Character, party: Optional[Party], effect_value: int) -> Tuple[bool, str, Dict[str, Any]]:
