@@ -1,0 +1,234 @@
+# キャラクター定義ファイル
+
+# 種族定義
+races:
+  human:
+    name_key: "race.human"
+    base_stats:
+      strength: 0
+      agility: 0
+      intelligence: 0
+      faith: 0
+      luck: 0
+    stat_modifiers:
+      strength: 1.0
+      agility: 1.0
+      intelligence: 1.0
+      faith: 1.0
+      luck: 1.0
+    description_key: "race.human_desc"
+    
+  elf:
+    name_key: "race.elf"
+    base_stats:
+      strength: -1
+      agility: 2
+      intelligence: 2
+      faith: 1
+      luck: 1
+    stat_modifiers:
+      strength: 0.9
+      agility: 1.2
+      intelligence: 1.1
+      faith: 1.0
+      luck: 1.0
+    description_key: "race.elf_desc"
+    
+  dwarf:
+    name_key: "race.dwarf"
+    base_stats:
+      strength: 2
+      agility: -1
+      intelligence: 0
+      faith: 1
+      luck: 0
+    stat_modifiers:
+      strength: 1.2
+      agility: 0.8
+      intelligence: 1.0
+      faith: 1.1
+      luck: 1.0
+    description_key: "race.dwarf_desc"
+    
+  hobbit:
+    name_key: "race.hobbit"
+    base_stats:
+      strength: -1
+      agility: 1
+      intelligence: 0
+      faith: 0
+      luck: 3
+    stat_modifiers:
+      strength: 0.8
+      agility: 1.1
+      intelligence: 1.0
+      faith: 1.0
+      luck: 1.3
+    description_key: "race.hobbit_desc"
+
+# 職業定義
+classes:
+  fighter:
+    name_key: "class.fighter"
+    base_stats:
+      strength: 3
+      agility: 1
+      intelligence: 0
+      faith: 0
+      luck: 1
+    hp_multiplier: 1.3
+    mp_multiplier: 0.5
+    requirements:
+      strength: 11
+    weapon_types: ["sword", "axe", "mace", "bow"]
+    armor_types: ["light", "medium", "heavy"]
+    description_key: "class.fighter_desc"
+    
+  mage:
+    name_key: "class.mage"
+    base_stats:
+      strength: 0
+      agility: 0
+      intelligence: 3
+      faith: 0
+      luck: 1
+    hp_multiplier: 0.7
+    mp_multiplier: 1.5
+    requirements:
+      intelligence: 11
+    weapon_types: ["staff", "dagger"]
+    armor_types: ["light"]
+    spell_schools: ["fire", "ice", "lightning"]
+    description_key: "class.mage_desc"
+    
+  priest:
+    name_key: "class.priest"
+    base_stats:
+      strength: 1
+      agility: 0
+      intelligence: 1
+      faith: 3
+      luck: 1
+    hp_multiplier: 1.0
+    mp_multiplier: 1.2
+    requirements:
+      faith: 11
+    weapon_types: ["mace", "staff"]
+    armor_types: ["light", "medium"]
+    spell_schools: ["healing", "blessing", "protection"]
+    description_key: "class.priest_desc"
+    
+  thief:
+    name_key: "class.thief"
+    base_stats:
+      strength: 1
+      agility: 3
+      intelligence: 1
+      faith: 0
+      luck: 2
+    hp_multiplier: 0.9
+    mp_multiplier: 0.8
+    requirements:
+      agility: 11
+    weapon_types: ["dagger", "sword", "bow"]
+    armor_types: ["light"]
+    special_abilities: ["lockpick", "trap_detection", "stealth"]
+    description_key: "class.thief_desc"
+    
+  bishop:
+    name_key: "class.bishop"
+    base_stats:
+      strength: 1
+      agility: 0
+      intelligence: 2
+      faith: 2
+      luck: 1
+    hp_multiplier: 0.8
+    mp_multiplier: 1.3
+    requirements:
+      intelligence: 12
+      faith: 12
+    weapon_types: ["staff", "mace"]
+    armor_types: ["light", "medium"]
+    spell_schools: ["healing", "blessing", "protection", "fire", "ice"]
+    description_key: "class.bishop_desc"
+    
+  samurai:
+    name_key: "class.samurai"
+    base_stats:
+      strength: 2
+      agility: 2
+      intelligence: 1
+      faith: 1
+      luck: 1
+    hp_multiplier: 1.2
+    mp_multiplier: 0.9
+    requirements:
+      strength: 15
+      intelligence: 11
+      faith: 10
+    weapon_types: ["sword", "bow"]
+    armor_types: ["light", "medium", "heavy"]
+    description_key: "class.samurai_desc"
+    
+  lord:
+    name_key: "class.lord"
+    base_stats:
+      strength: 2
+      agility: 1
+      intelligence: 1
+      faith: 2
+      luck: 2
+    hp_multiplier: 1.1
+    mp_multiplier: 1.0
+    requirements:
+      strength: 15
+      intelligence: 12
+      faith: 12
+      luck: 15
+    weapon_types: ["sword", "mace", "axe"]
+    armor_types: ["medium", "heavy"]
+    spell_schools: ["healing", "blessing"]
+    description_key: "class.lord_desc"
+    
+  ninja:
+    name_key: "class.ninja"
+    base_stats:
+      strength: 1
+      agility: 3
+      intelligence: 2
+      faith: 0
+      luck: 2
+    hp_multiplier: 0.8
+    mp_multiplier: 1.1
+    requirements:
+      strength: 17
+      intelligence: 17
+      agility: 17
+    weapon_types: ["dagger", "sword", "throwing"]
+    armor_types: ["light"]
+    special_abilities: ["stealth", "critical_strike", "dual_wield"]
+    spell_schools: ["illusion"]
+    description_key: "class.ninja_desc"
+
+# レベルアップテーブル
+level_progression:
+  experience_table:
+    1: 0
+    2: 100
+    3: 300
+    4: 600
+    5: 1000
+    6: 1500
+    7: 2100
+    8: 2800
+    9: 3600
+    10: 4500
+  
+# キャラクター作成設定
+character_creation:
+  stat_roll_method: "4d6_drop_lowest"  # 3d6, 4d6_drop_lowest, point_buy
+  starting_level: 1
+  starting_gold: 90
+  max_stat_value: 18
+  min_stat_value: 3

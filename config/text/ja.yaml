@@ -39,6 +39,10 @@ race:
   elf: "エルフ"
   dwarf: "ドワーフ"
   hobbit: "ホビット"
+  human_desc: "バランスの取れた能力を持つ"
+  elf_desc: "魔法に優れ、素早い"
+  dwarf_desc: "力強く、信仰心が厚い"
+  hobbit_desc: "幸運に恵まれた小柄な民族"
   
 # 職業
 class:
@@ -50,6 +54,25 @@ class:
   samurai: "侍"
   lord: "君主"
   ninja: "忍者"
+  fighter_desc: "近接戦闘のエキスパート"
+  mage_desc: "攻撃魔法の使い手"
+  priest_desc: "回復・補助魔法の専門家"
+  thief_desc: "敏捷性と特殊技能に優れる"
+  bishop_desc: "魔法と祈祷の両方を使える"
+  samurai_desc: "武士道を極めた戦士"
+  lord_desc: "指導力に優れた貴族"
+  ninja_desc: "隠密と暗殺の達人"
+
+# キャラクター作成
+character:
+  creation_title: "キャラクター作成"
+  enter_name: "名前を入力"
+  select_race: "種族を選択"
+  select_class: "職業を選択"
+  generated_stats: "能力値"
+  reroll: "振り直し"
+  confirm_creation: "作成確認"
+  create: "作成"
   
 # 地上部施設
 facility:

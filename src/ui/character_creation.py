@@ -1,0 +1,353 @@
+"""キャラクター作成ウィザード"""
+
+from typing import Dict, List, Optional, Any
+from enum import Enum
+
+from src.ui.base_ui import UIElement, UIText, UIButton, UIMenu, UIDialog, ui_manager
+from src.character.character import Character
+from src.character.stats import BaseStats, StatGenerator, StatValidator
+from src.core.config_manager import config_manager
+from src.utils.logger import logger
+
+
+class CreationStep(Enum):
+    """作成ステップ"""
+    NAME_INPUT = "name_input"
+    RACE_SELECTION = "race_selection"
+    STATS_GENERATION = "stats_generation"
+    CLASS_SELECTION = "class_selection"
+    CONFIRMATION = "confirmation"
+    COMPLETED = "completed"
+
+
+class CharacterCreationWizard:
+    """キャラクター作成ウィザード"""
+    
+    def __init__(self, callback: Optional[callable] = None):
+        self.callback = callback  # 作成完了時のコールバック
+        self.current_step = CreationStep.NAME_INPUT
+        
+        # 作成中のキャラクターデータ
+        self.character_data = {
+            'name': '',
+            'race': '',
+            'character_class': '',
+            'base_stats': None
+        }
+        
+        # UI要素
+        self.main_container = None
+        self.step_title = None
+        self.current_ui = None
+        
+        # 設定データ
+        self.char_config = config_manager.load_config("characters")
+        self.races_config = self.char_config.get("races", {})
+        self.classes_config = self.char_config.get("classes", {})
+        
+        self._initialize_ui()
+    
+    def _initialize_ui(self):
+        """UI初期化"""
+        # メインコンテナ
+        self.main_container = UIElement("character_creation_main")
+        
+        # ステップタイトル
+        self.step_title = UIText(
+            "creation_step_title",
+            ui_manager.get_text("character.creation_title"),
+            pos=(0, 0.9),
+            scale=0.08,
+            color=(1, 1, 0, 1)
+        )
+        
+        ui_manager.register_element(self.main_container)
+        ui_manager.register_element(self.step_title)
+        
+        logger.info("キャラクター作成ウィザードを初期化しました")
+    
+    def start(self):
+        """ウィザード開始"""
+        self.current_step = CreationStep.NAME_INPUT
+        self._show_step()
+        
+        ui_manager.show_element("character_creation_main", modal=True)
+        ui_manager.show_element("creation_step_title")
+        
+        logger.info("キャラクター作成を開始しました")
+    
+    def _show_step(self):
+        """現在のステップを表示"""
+        # 前のUIを隠す
+        if self.current_ui:
+            ui_manager.hide_element(self.current_ui.element_id)
+            ui_manager.unregister_element(self.current_ui.element_id)
+        
+        # ステップに応じたUIを表示
+        if self.current_step == CreationStep.NAME_INPUT:
+            self._show_name_input()
+        elif self.current_step == CreationStep.RACE_SELECTION:
+            self._show_race_selection()
+        elif self.current_step == CreationStep.STATS_GENERATION:
+            self._show_stats_generation()
+        elif self.current_step == CreationStep.CLASS_SELECTION:
+            self._show_class_selection()
+        elif self.current_step == CreationStep.CONFIRMATION:
+            self._show_confirmation()
+    
+    def _show_name_input(self):
+        """名前入力ステップ"""
+        # TODO: テキスト入力UIの実装（簡易版として固定名前を使用）
+        self.character_data['name'] = "Hero"
+        
+        dialog = UIDialog(
+            "name_input_dialog",
+            ui_manager.get_text("character.enter_name"),
+            f"名前: {self.character_data['name']}",
+            buttons=[
+                {
+                    'text': ui_manager.get_text("common.ok"),
+                    'command': self._next_step
+                }
+            ]
+        )
+        
+        self.current_ui = dialog
+        ui_manager.register_element(dialog)
+        ui_manager.show_element(dialog.element_id)
+    
+    def _show_race_selection(self):
+        """種族選択ステップ"""
+        menu = UIMenu("race_selection_menu", ui_manager.get_text("character.select_race"))
+        
+        for race_id, race_config in self.races_config.items():
+            race_name = ui_manager.get_text(race_config.get('name_key', f'race.{race_id}'))
+            menu.add_menu_item(
+                race_name,
+                self._select_race,
+                [race_id]
+            )
+        
+        # 戻るボタン
+        menu.add_menu_item(
+            ui_manager.get_text("menu.back"),
+            self._previous_step
+        )
+        
+        self.current_ui = menu
+        ui_manager.register_element(menu)
+        ui_manager.show_element(menu.element_id)
+    
+    def _show_stats_generation(self):
+        """統計値生成ステップ"""
+        # 統計値を生成
+        creation_config = self.char_config.get("character_creation", {})
+        method = creation_config.get("stat_roll_method", "4d6_drop_lowest")
+        base_stats = StatGenerator.generate_stats(method)
+        
+        # 種族ボーナスを適用
+        race_config = self.races_config[self.character_data['race']]
+        race_bonuses = race_config.get("base_stats", {})
+        final_stats = base_stats.add_bonuses(race_bonuses)
+        
+        self.character_data['base_stats'] = final_stats
+        
+        # 統計値表示
+        stats_text = self._format_stats(final_stats)
+        
+        dialog = UIDialog(
+            "stats_generation_dialog",
+            ui_manager.get_text("character.generated_stats"),
+            stats_text,
+            buttons=[
+                {
+                    'text': ui_manager.get_text("character.reroll"),
+                    'command': self._show_stats_generation
+                },
+                {
+                    'text': ui_manager.get_text("common.ok"),
+                    'command': self._next_step
+                },
+                {
+                    'text': ui_manager.get_text("menu.back"),
+                    'command': self._previous_step
+                }
+            ]
+        )
+        
+        self.current_ui = dialog
+        ui_manager.register_element(dialog)
+        ui_manager.show_element(dialog.element_id)
+    
+    def _show_class_selection(self):
+        """職業選択ステップ"""
+        # 選択可能な職業を取得
+        available_classes = StatValidator.get_available_classes(
+            self.character_data['base_stats'],
+            self.classes_config
+        )
+        
+        menu = UIMenu("class_selection_menu", ui_manager.get_text("character.select_class"))
+        
+        for class_id in available_classes:
+            class_config = self.classes_config[class_id]
+            class_name = ui_manager.get_text(class_config.get('name_key', f'class.{class_id}'))
+            menu.add_menu_item(
+                class_name,
+                self._select_class,
+                [class_id]
+            )
+        
+        # 戻るボタン
+        menu.add_menu_item(
+            ui_manager.get_text("menu.back"),
+            self._previous_step
+        )
+        
+        self.current_ui = menu
+        ui_manager.register_element(menu)
+        ui_manager.show_element(menu.element_id)
+    
+    def _show_confirmation(self):
+        """確認ステップ"""
+        # キャラクター情報をまとめて表示
+        char_info = self._format_character_info()
+        
+        dialog = UIDialog(
+            "confirmation_dialog",
+            ui_manager.get_text("character.confirm_creation"),
+            char_info,
+            buttons=[
+                {
+                    'text': ui_manager.get_text("character.create"),
+                    'command': self._create_character
+                },
+                {
+                    'text': ui_manager.get_text("menu.back"),
+                    'command': self._previous_step
+                },
+                {
+                    'text': ui_manager.get_text("common.cancel"),
+                    'command': self._cancel_creation
+                }
+            ]
+        )
+        
+        self.current_ui = dialog
+        ui_manager.register_element(dialog)
+        ui_manager.show_element(dialog.element_id)
+    
+    def _select_race(self, race_id: str):
+        """種族選択"""
+        self.character_data['race'] = race_id
+        logger.info(f"種族を選択: {race_id}")
+        self._next_step()
+    
+    def _select_class(self, class_id: str):
+        """職業選択"""
+        self.character_data['character_class'] = class_id
+        logger.info(f"職業を選択: {class_id}")
+        self._next_step()
+    
+    def _next_step(self):
+        """次のステップに進む"""
+        step_order = [
+            CreationStep.NAME_INPUT,
+            CreationStep.RACE_SELECTION,
+            CreationStep.STATS_GENERATION,
+            CreationStep.CLASS_SELECTION,
+            CreationStep.CONFIRMATION
+        ]
+        
+        current_index = step_order.index(self.current_step)
+        if current_index < len(step_order) - 1:
+            self.current_step = step_order[current_index + 1]
+            self._show_step()
+    
+    def _previous_step(self):
+        """前のステップに戻る"""
+        step_order = [
+            CreationStep.NAME_INPUT,
+            CreationStep.RACE_SELECTION,
+            CreationStep.STATS_GENERATION,
+            CreationStep.CLASS_SELECTION,
+            CreationStep.CONFIRMATION
+        ]
+        
+        current_index = step_order.index(self.current_step)
+        if current_index > 0:
+            self.current_step = step_order[current_index - 1]
+            self._show_step()
+    
+    def _create_character(self):
+        """キャラクター作成実行"""
+        try:
+            character = Character.create_character(
+                name=self.character_data['name'],
+                race=self.character_data['race'],
+                character_class=self.character_data['character_class'],
+                base_stats=self.character_data['base_stats']
+            )
+            
+            logger.info(f"キャラクターを作成しました: {character.name}")
+            
+            # コールバック実行
+            if self.callback:
+                self.callback(character)
+            
+            self._close_wizard()
+            
+        except Exception as e:
+            logger.error(f"キャラクター作成に失敗しました: {e}")
+            
+            error_dialog = UIDialog(
+                "creation_error_dialog",
+                ui_manager.get_text("common.error"),
+                f"キャラクター作成に失敗しました: {str(e)}",
+                buttons=[
+                    {
+                        'text': ui_manager.get_text("common.ok"),
+                        'command': lambda: ui_manager.hide_element("creation_error_dialog")
+                    }
+                ]
+            )
+            
+            ui_manager.register_element(error_dialog)
+            ui_manager.show_element(error_dialog.element_id)
+    
+    def _cancel_creation(self):
+        """作成キャンセル"""
+        logger.info("キャラクター作成をキャンセルしました")
+        self._close_wizard()
+    
+    def _close_wizard(self):
+        """ウィザードを閉じる"""
+        ui_manager.hide_element("character_creation_main")
+        ui_manager.hide_element("creation_step_title")
+        
+        if self.current_ui:
+            ui_manager.hide_element(self.current_ui.element_id)
+            ui_manager.unregister_element(self.current_ui.element_id)
+        
+        ui_manager.unregister_element("character_creation_main")
+        ui_manager.unregister_element("creation_step_title")
+    
+    def _format_stats(self, stats: BaseStats) -> str:
+        """統計値を整形して表示"""
+        return f"""力: {stats.strength}
+素早さ: {stats.agility}
+知恵: {stats.intelligence}
+信仰心: {stats.faith}
+運: {stats.luck}"""
+    
+    def _format_character_info(self) -> str:
+        """キャラクター情報を整形して表示"""
+        race_name = ui_manager.get_text(f"race.{self.character_data['race']}")
+        class_name = ui_manager.get_text(f"class.{self.character_data['character_class']}")
+        stats_text = self._format_stats(self.character_data['base_stats'])
+        
+        return f"""名前: {self.character_data['name']}
+種族: {race_name}
+職業: {class_name}
+
+{stats_text}"""
