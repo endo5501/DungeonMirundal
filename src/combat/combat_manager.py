@@ -10,8 +10,8 @@ from src.character.character import Character
 from src.character.party import Party
 from src.monsters.monster import Monster
 from src.dungeon.dungeon_generator import DungeonAttribute
-# from src.magic.spell_manager import spell_manager
-# from src.items.item_usage import item_usage_manager
+from src.magic.spells import spell_manager
+from src.items.item_usage import item_usage_manager
 from src.utils.logger import logger
 
 
@@ -275,21 +275,20 @@ class CombatManager:
         if not spell_id:
             return f"{self._get_actor_name(actor)}の魔法詠唱に失敗しました"
         
-        # 魔法使用可能かチェック（簡易実装）
-        # spell = spell_manager.get_spell(spell_id)
-        # if not spell:
-        #     return f"未知の魔法: {spell_id}"
-        spell = None  # 一時的な実装
+        # 魔法使用可能かチェック
+        spell = spell_manager.get_spell(spell_id)
+        if not spell:
+            return f"未知の魔法: {spell_id}"
         
-        # MP消費（簡易実装）
-        # if not actor.can_use_spell(spell):
-        #     return f"{self._get_actor_name(actor)}のMPが足りません"
+        # MP消費チェック
+        if not actor.can_use_spell(spell):
+            return f"{self._get_actor_name(actor)}のMPが足りません"
         
         # 魔法効果適用
         result = self._apply_spell_effect(actor, spell, target)
         
-        # MP消費（簡易実装）
-        # actor.use_mp(spell.mp_cost)
+        # MP消費
+        actor.use_mp(spell.mp_cost)
         
         # 統計更新
         self.party_stats.spells_cast += 1
@@ -306,11 +305,10 @@ class CombatManager:
         if not item_instance:
             return f"{self._get_actor_name(actor)}のアイテム使用に失敗しました"
         
-        # アイテム使用（簡易実装）
-        # result, message, results = item_usage_manager.use_item(
-        #     item_instance, actor, target, self.party
-        # )
-        message = f"{self._get_actor_name(actor)}がアイテムを使用しました"
+        # アイテム使用
+        result, message, results = item_usage_manager.use_item(
+            item_instance, actor, target, self.party
+        )
         
         # 統計更新
         self.party_stats.items_used += 1
@@ -428,21 +426,57 @@ class CombatManager:
     def _apply_spell_effect(self, caster: Character, spell: Any, 
                            target: Optional[Union[Character, Monster]]) -> str:
         """魔法効果適用"""
-        # 簡易実装（詳細は魔法システムと連携）
-        spell_name = spell.name if hasattr(spell, 'name') else "不明な魔法"
+        spell_name = spell.name
+        effect = spell.effect
         
-        if hasattr(spell, 'spell_type'):
-            if spell.spell_type == 'damage':
-                if target and isinstance(target, Monster):
-                    damage = spell.base_damage if hasattr(spell, 'base_damage') else 10
-                    target.take_damage(damage)
-                    return f"{caster.name}の{spell_name}！{target.name}に{damage}ダメージ！"
-            elif spell.spell_type == 'heal':
-                if target and isinstance(target, Character):
-                    heal_amount = spell.heal_amount if hasattr(spell, 'heal_amount') else 10
-                    target.heal(heal_amount)
-                    return f"{caster.name}の{spell_name}！{target.name}が{heal_amount}回復！"
+        # ダメージ系魔法
+        if spell.spell_type.value in ['offensive']:
+            if target and isinstance(target, Monster):
+                # 基本ダメージ + 能力値スケーリング
+                damage = effect.base_value
+                if effect.scaling_stat:
+                    scaling_bonus = getattr(caster.base_stats, effect.scaling_stat, 10)
+                    damage += (scaling_bonus - 10) // 2
+                
+                # 最小ダメージ1保証
+                damage = max(1, damage)
+                actual_damage = target.take_damage(damage)
+                return f"{caster.name}の{spell_name}！{target.name}に{actual_damage}ダメージ！"
+            else:
+                return f"{caster.name}の{spell_name}は失敗した"
         
+        # 回復系魔法
+        elif spell.spell_type.value in ['healing']:
+            if target and isinstance(target, Character):
+                # 基本回復 + 能力値スケーリング
+                heal_amount = effect.base_value
+                if effect.scaling_stat:
+                    scaling_bonus = getattr(caster.base_stats, effect.scaling_stat, 10)
+                    heal_amount += (scaling_bonus - 10) // 2
+                
+                heal_amount = max(1, heal_amount)
+                actual_heal = target.heal(heal_amount)
+                return f"{caster.name}の{spell_name}！{target.name}が{actual_heal}回復！"
+            else:
+                return f"{caster.name}の{spell_name}は失敗した"
+        
+        # バフ・デバフ系魔法
+        elif spell.spell_type.value in ['buff', 'debuff']:
+            if target:
+                # 状態効果適用（簡易実装）
+                effect_name = effect.effect_type
+                target.add_status_effect(effect_name)
+                return f"{caster.name}の{spell_name}！{target.name}に{effect_name}効果が付与された！"
+        
+        # 蘇生系魔法
+        elif spell.spell_type.value == 'revival':
+            if target and isinstance(target, Character) and not target.is_alive:
+                target.revive()
+                return f"{caster.name}の{spell_name}！{target.name}が蘇生した！"
+            else:
+                return f"{caster.name}の{spell_name}は失敗した"
+        
+        # その他の魔法
         return f"{caster.name}は{spell_name}を唱えた"
     
     def _calculate_flee_chance(self) -> float:

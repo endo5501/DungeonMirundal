@@ -70,6 +70,7 @@ class Spell:
         self.spell_type = SpellType(spell_data.get('type', 'utility'))
         self.target = SpellTarget(spell_data.get('target', 'self'))
         self.cost = spell_data.get('cost', 100)  # 習得費用
+        self.mp_cost = spell_data.get('mp_cost', max(1, self.level))  # MP消費量
         
         # 効果
         self.effect = self._parse_effect(spell_data)
@@ -106,9 +107,14 @@ class Spell:
             special_properties=data.get('special_properties', {})
         )
     
-    def get_name(self) -> str:
+    @property
+    def name(self) -> str:
         """魔法名を取得"""
         return config_manager.get_text(self.name_key)
+    
+    def get_name(self) -> str:
+        """魔法名を取得"""
+        return self.name
     
     def get_description(self) -> str:
         """魔法説明を取得"""

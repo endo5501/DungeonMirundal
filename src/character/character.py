@@ -362,6 +362,84 @@ class Character:
         """職業名を取得"""
         return config_manager.get_text(f"class.{self.character_class}")
     
+    def can_use_spell(self, spell) -> bool:
+        """魔法が使用可能かチェック"""
+        if not spell:
+            return False
+        
+        # MPチェック
+        if hasattr(spell, 'mp_cost'):
+            mp_cost = spell.mp_cost
+        else:
+            # スペルコストから推定（簡易実装）
+            mp_cost = getattr(spell, 'cost', 0) // 100  # コストの1/100をMP消費とする
+        
+        if self.derived_stats.current_mp < mp_cost:
+            return False
+        
+        # レベルチェック
+        if hasattr(spell, 'level') and spell.level > self.experience.level:
+            return False
+        
+        # クラス制限チェック
+        if hasattr(spell, 'school'):
+            school = spell.school.value if hasattr(spell.school, 'value') else str(spell.school)
+            if school == 'mage' and self.character_class not in ['mage', 'bishop', 'samurai']:
+                return False
+            elif school == 'priest' and self.character_class not in ['priest', 'bishop', 'lord']:
+                return False
+        
+        return True
+    
+    def use_mp(self, amount: int):
+        """MPを消費"""
+        self.derived_stats.current_mp = max(0, self.derived_stats.current_mp - amount)
+        logger.debug(f"{self.name}がMP {amount}を消費（残り: {self.derived_stats.current_mp}/{self.derived_stats.max_mp}）")
+    
+    def restore_mp(self, amount: int):
+        """MPを回復"""
+        old_mp = self.derived_stats.current_mp
+        self.derived_stats.current_mp = min(self.derived_stats.max_mp, self.derived_stats.current_mp + amount)
+        actual_restore = self.derived_stats.current_mp - old_mp
+        logger.debug(f"{self.name}がMP {actual_restore}を回復（現在: {self.derived_stats.current_mp}/{self.derived_stats.max_mp}）")
+        return actual_restore
+    
+    def add_status_effect(self, effect: str):
+        """状態効果を追加"""
+        # 状態効果システムとの連携（簡易実装）
+        self.initialize_status_effects()
+        from src.effects.status_effects import status_effect_manager, StatusEffectType, effect_registry
+        
+        # 文字列から StatusEffectType への変換
+        try:
+            effect_type = StatusEffectType(effect)
+            if effect_type in effect_registry:
+                effect_instance = effect_registry[effect_type](effect_type, duration=3, strength=1)
+                character_manager = status_effect_manager.get_character_effects(self.character_id)
+                success, result = character_manager.add_effect(effect_instance, self)
+                logger.debug(f"{self.name}に{effect}が付与されました")
+            else:
+                logger.warning(f"未対応の状態効果: {effect}")
+        except ValueError:
+            # カスタム効果（defending等）の場合は簡易実装
+            logger.debug(f"{self.name}に{effect}が付与されました（簡易実装）")
+    
+    def initialize_status_effects(self):
+        """状態効果システムを初期化（遅延初期化）"""
+        if not self._status_effects_initialized:
+            from src.effects.status_effects import status_effect_manager
+            # 必要に応じて初期化処理
+            self._status_effects_initialized = True
+    
+    def revive(self):
+        """蘇生"""
+        if self.status in [CharacterStatus.DEAD, CharacterStatus.ASHES]:
+            self.status = CharacterStatus.GOOD
+            self.derived_stats.current_hp = max(1, self.derived_stats.max_hp // 4)  # 最大HPの1/4で蘇生
+            logger.info(f"{self.name}が蘇生しました")
+        else:
+            logger.warning(f"{self.name}は死亡していないため蘇生できません")
+    
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式でシリアライズ"""
         return {
