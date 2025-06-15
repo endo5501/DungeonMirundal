@@ -28,6 +28,7 @@ from src.dungeon.dungeon_generator import DungeonLevel, DungeonCell, CellType, D
 from src.character.party import Party
 from src.ui.dungeon_ui import DungeonUIManager
 from src.utils.logger import logger
+from src.core.config_manager import config_manager
 
 
 class ViewMode(Enum):
@@ -118,7 +119,12 @@ class DungeonRenderer:
             return
         
         props = WindowProperties()
-        props.setTitle("Dungeon Explorer")
+        # 国際化対応：ウィンドウタイトルを取得
+        try:
+            title = config_manager.get_text("app.title")
+        except:
+            title = "ダンジョンエクスプローラー"  # フォールバック
+        props.setTitle(title)
         props.setSize(1024, 768)
         self.win.requestProperties(props)
         

@@ -1,5 +1,9 @@
 # English Text
 
+# Application
+app:
+  title: "Dungeon Explorer"
+
 # Menu & UI
 menu:
   main_menu: "Main Menu"
