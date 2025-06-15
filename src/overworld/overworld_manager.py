@@ -122,17 +122,17 @@ class OverworldManager:
         if self.main_menu:
             ui_manager.unregister_element(self.main_menu.element_id)
         
-        self.main_menu = UIMenu("overworld_main_menu", "町の中心部")
+        self.main_menu = UIMenu("overworld_main_menu", config_manager.get_text("overworld.town_center"))
         
         # 施設への移動
         self.main_menu.add_menu_item(
-            config_manager.get_text("facility.guild"),
+            config_manager.get_text("menu.facilities"),
             self._show_location_menu
         )
         
         # パーティ状況確認
         self.main_menu.add_menu_item(
-            "パーティ状況",
+            config_manager.get_text("menu.party_status"),
             self._show_party_status
         )
         
@@ -167,7 +167,7 @@ class OverworldManager:
         if self.location_menu:
             ui_manager.unregister_element(self.location_menu.element_id)
         
-        self.location_menu = UIMenu("location_menu", "施設選択")
+        self.location_menu = UIMenu("location_menu", config_manager.get_text("overworld.facility_selection"))
         
         # 各施設への移動
         facilities = [

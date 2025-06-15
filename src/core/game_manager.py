@@ -372,16 +372,18 @@ class GameManager(ShowBase):
         
         logger.info("地上部へ遷移開始")
         
-        # ダンジョンを退場
-        self.dungeon_manager.exit_dungeon()
+        # ダンジョンを退場（ダンジョンにいる場合のみ）
+        if self.current_location == "dungeon":
+            self.dungeon_manager.exit_dungeon()
         
         # 地上部に入場（自動回復付き）
-        success = self.overworld_manager.enter_overworld(self.current_party)
+        from_dungeon = (self.current_location == "dungeon")
+        success = self.overworld_manager.enter_overworld(self.current_party, from_dungeon)
         
         if success:
             self.current_location = "overworld"
             self.set_game_state("overworld_exploration")
-            logger.info("地上部への遷移が完了しました（自動回復済み）")
+            logger.info("地上部への遷移が完了しました")
             return True
         else:
             logger.error("地上部への遷移に失敗しました")
@@ -503,18 +505,86 @@ class GameManager(ShowBase):
         """ゲームの実行"""
         logger.info("ゲームを開始します")
         
-        # スタートアップメッセージ
+        # 初回起動処理
+        self._initialize_game_flow()
+        
+        # メインループの開始
+        self.run()
+    
+    def _initialize_game_flow(self):
+        """ゲーム開始時の初期化フロー"""
+        # フォントを取得
+        font = None
+        try:
+            from src.ui.font_manager import font_manager
+            font = font_manager.get_default_font()
+        except:
+            pass
+        
+        # スタートアップメッセージを短時間表示
         startup_text = OnscreenText(
             text=self.get_text("system.startup"),
             pos=(0, 0),
             scale=0.1,
             fg=(1, 1, 1, 1),
-            align=TextNode.ACenter
+            align=TextNode.ACenter,
+            font=font
         )
         
-        # メインループの開始
-        self.set_game_state("main_menu")
-        self.run()
+        # 初期パーティを作成（テスト用）
+        if not self.current_party:
+            self._create_test_party()
+        
+        # 少し待ってから地上部に遷移
+        def transition_to_town():
+            startup_text.destroy()
+            self.transition_to_overworld()
+        
+        # 2秒後に地上部に遷移
+        self.taskMgr.doMethodLater(2.0, lambda task: transition_to_town(), "startup_transition")
+        
+        self.set_game_state("startup")
+    
+    def _create_test_party(self):
+        """テスト用パーティの作成"""
+        try:
+            from src.character.party import Party
+            from src.character.character import Character
+            from src.character.character_classes import CharacterClass
+            from src.character.races import CharacterRace
+            from src.character.stats import BaseStats
+            
+            # テスト用キャラクターを手動作成
+            test_character = Character(
+                name="テスト冒険者",
+                race=CharacterRace.HUMAN,
+                character_class=CharacterClass.FIGHTER
+            )
+            
+            # 基本ステータスを設定
+            test_character.base_stats = BaseStats(
+                strength=16, intelligence=10, piety=10,
+                vitality=15, agility=12, luck=8
+            )
+            
+            # レベル1で初期化
+            test_character.initialize_for_level_1()
+            
+            # テスト用パーティを作成
+            test_party = Party("テストパーティ")
+            test_party.add_character(test_character)
+            test_party.gold = 1000  # 初期ゴールド
+            
+            self.set_current_party(test_party)
+            logger.info("テスト用パーティを作成しました")
+            
+        except Exception as e:
+            logger.error(f"テストパーティ作成エラー: {e}")
+            # エラーの場合でも空のパーティを作成
+            from src.character.party import Party
+            empty_party = Party("空のパーティ")
+            empty_party.gold = 1000
+            self.set_current_party(empty_party)
 
 
 def create_game() -> GameManager:

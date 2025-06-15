@@ -9,6 +9,8 @@ menu:
   settings: "設定"
   exit: "終了"
   back: "戻る"
+  facilities: "施設選択"
+  party_status: "パーティ状況"
   
 # ゲーム共通
 common:
@@ -160,6 +162,11 @@ facility:
   temple: "教会"
   magic_guild: "魔術師ギルド"
   dungeon_entrance: "ダンジョン入口"
+
+# 地上部
+overworld:
+  town_center: "町の中心部"
+  facility_selection: "施設選択"
   
 # システムメッセージ
 system:

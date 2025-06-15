@@ -133,7 +133,7 @@ class UIButton(UIElement):
             pos=Vec3(pos[0], 0, pos[1]),
             scale=Vec3(scale[0], 1, scale[1]),
             command=self._on_click,
-            text_scale=0.8,
+            text_scale=0.45,  # フォントサイズをさらに小さく
             relief=DGG.RAISED,
             borderWidth=(0.01, 0.01),
             text_font=font
@@ -161,8 +161,8 @@ class UIMenu(UIElement):
             self.title_text = UIText(
                 f"{element_id}_title",
                 title,
-                pos=(0, 0.8),
-                scale=0.08,
+                pos=(0, 0.75),
+                scale=0.05,  # タイトルのフォントサイズをさらに小さく
                 color=(1, 1, 0, 1)
             )
     
@@ -184,7 +184,7 @@ class UIMenu(UIElement):
         
         # 新しいボタンを作成
         start_y = 0.4
-        spacing = 0.15
+        spacing = 0.18  # 間隔を拡大
         
         for i, item in enumerate(self.menu_items):
             button = UIButton(
