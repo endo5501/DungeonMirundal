@@ -14,8 +14,8 @@ menu:
   
 # ゲーム共通
 common:
-  yes: "はい"
-  no: "いいえ"
+  "yes": "はい"
+  "no": "いいえ"
   ok: "OK"
   cancel: "キャンセル"
   confirm: "確認"
@@ -176,3 +176,4 @@ system:
   game_loaded: "ゲームをロードしました"
   startup: "ゲームを開始します"
   shutdown: "ゲームを終了します"
+  exit_confirm: "ゲームを終了しますか？"

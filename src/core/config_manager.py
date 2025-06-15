@@ -70,19 +70,30 @@ class ConfigManager:
         if language is None:
             language = self.current_language
             
-        text_data = self.load_text_data(language)
-        
-        # ネストされたキーの処理
-        keys = key.split('.')
-        current_data = text_data
-        
-        for k in keys:
-            if isinstance(current_data, dict) and k in current_data:
-                current_data = current_data[k]
-            else:
-                return f"[{key}]"
-                
-        return str(current_data)
+        try:
+            text_data = self.load_text_data(language)
+            
+            # ネストされたキーの処理
+            keys = key.split('.')
+            current_data = text_data
+            
+            for k in keys:
+                if isinstance(current_data, dict) and k in current_data:
+                    current_data = current_data[k]
+                else:
+                    logger.warning(f"テキストキーが見つかりません: {key}")
+                    return f"[{key}]"
+                    
+            result = str(current_data)
+            # テキストに不正な文字が含まれていないかチェック
+            if '[' in result and ']' in result and result.startswith('['):
+                logger.error(f"不正なテキスト形式: {key} -> {result}")
+                return key.split('.')[-1]  # キーの最後の部分をフォールバックとして使用
+            
+            return result
+        except Exception as e:
+            logger.error(f"テキスト取得エラー: {key}, エラー: {e}")
+            return key.split('.')[-1]
     
     def set_language(self, language: str):
         """言語の設定"""

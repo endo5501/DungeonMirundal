@@ -283,6 +283,7 @@ class GameManager(ShowBase):
         # 地上部マネージャーの初期化
         self.overworld_manager = OverworldManager()
         self.overworld_manager.set_enter_dungeon_callback(self.transition_to_dungeon)
+        self.overworld_manager.set_exit_game_callback(self.exit_game)
         
         # ダンジョンマネージャーの初期化
         self.dungeon_manager = DungeonManager()
@@ -488,6 +489,17 @@ class GameManager(ShowBase):
     def get_input_manager(self):
         """入力マネージャーを取得"""
         return self.input_manager if hasattr(self, 'input_manager') else None
+    
+    def exit_game(self):
+        """ゲーム終了処理"""
+        logger.info("ゲーム終了処理を開始します")
+        
+        # リソースのクリーンアップ
+        self.cleanup()
+        
+        # Panda3Dアプリケーションを終了
+        import sys
+        sys.exit(0)
     
     def cleanup(self):
         """リソースのクリーンアップ"""

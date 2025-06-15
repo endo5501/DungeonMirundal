@@ -317,7 +317,7 @@ class OverworldManager:
     def _exit_game(self):
         """ゲーム終了"""
         self._show_confirmation_dialog(
-            "ゲームを終了しますか？",
+            config_manager.get_text("system.exit_confirm"),
             self._confirm_exit_game
         )
     
@@ -352,6 +352,9 @@ class OverworldManager:
     
     def _show_confirmation_dialog(self, message: str, on_confirm: Callable):
         """確認ダイアログの表示"""
+        # テキストキャッシュをリロードして最新の設定を取得
+        config_manager.reload_all()
+        
         dialog = UIDialog(
             "overworld_confirm_dialog",
             config_manager.get_text("common.confirm"),

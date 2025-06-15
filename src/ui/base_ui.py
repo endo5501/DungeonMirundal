@@ -271,13 +271,15 @@ class UIDialog(UIElement):
     def _create_buttons(self, buttons: List[Dict[str, Any]]):
         """ダイアログボタンを作成"""
         button_count = len(buttons)
-        start_x = -(button_count - 1) * 0.3 / 2
+        button_spacing = 0.5  # ボタン間隔を拡大
+        start_x = -(button_count - 1) * button_spacing / 2
         
         for i, btn_config in enumerate(buttons):
             button = UIButton(
                 f"{self.element_id}_btn_{i}",
                 btn_config.get('text', 'OK'),
-                pos=(start_x + i * 0.3, -0.3),
+                pos=(start_x + i * button_spacing, -0.3),
+                scale=(0.4, 0.3),  # ボタンの幅を拡大
                 command=btn_config.get('command'),
                 extraArgs=btn_config.get('args', [])
             )
