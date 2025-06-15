@@ -107,8 +107,9 @@ class BaseFacility(ABC):
     
     def _exit_facility(self):
         """施設から出る（UI用）"""
-        self.exit()
-        # 地上部メインメニューに戻る処理は OverworldManager が担当
+        # FacilityManagerを通して退場処理を行う
+        # これにより on_facility_exit_callback が正しく呼ばれる
+        facility_manager.exit_current_facility()
     
     def _cleanup_ui(self):
         """UI要素のクリーンアップ"""
