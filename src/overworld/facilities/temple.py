@@ -353,7 +353,7 @@ class Temple(BaseFacility):
                     },
                     {
                         'text': "戻る",
-                        'command': self._close_dialog
+                        'command': self._close_blessing_dialog
                     }
                 ]
             )
@@ -365,13 +365,22 @@ class Temple(BaseFacility):
                 buttons=[
                     {
                         'text': "戻る",
-                        'command': self._close_dialog
+                        'command': self._close_blessing_dialog
                     }
                 ]
             )
         
         ui_manager.register_element(dialog)
         ui_manager.show_element(dialog.element_id, modal=True)
+    
+    def _close_blessing_dialog(self):
+        """祝福ダイアログを閉じてメインメニューに戻る"""
+        ui_manager.hide_element("blessing_dialog")
+        ui_manager.unregister_element("blessing_dialog")
+        
+        # メインメニューを再表示
+        if self.main_menu:
+            ui_manager.show_element(self.main_menu.element_id)
     
     def _perform_blessing(self, cost: int):
         """祝福実行"""

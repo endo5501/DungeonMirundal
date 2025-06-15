@@ -355,12 +355,57 @@ class OverworldManager:
     
     def _show_load_menu(self):
         """ロードメニュー表示"""
-        # 簡易版: スロット1からロード
-        game_save = save_manager.load_game(1)
+        # セーブスロット一覧を取得
+        save_slots = save_manager.get_save_slots()
+        
+        if not save_slots:
+            self._show_error_dialog("ロードエラー", "利用可能なセーブデータがありません")
+            return
+        
+        # セーブデータ選択メニューを作成
+        load_menu = UIMenu("load_game_menu", "セーブデータ選択")
+        
+        for slot in save_slots:
+            slot_info = f"スロット {slot.slot_id}: {slot.name} (Lv.{slot.party_level})"
+            load_menu.add_menu_item(
+                slot_info,
+                self._load_selected_save,
+                [slot.slot_id]
+            )
+        
+        load_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_settings_menu
+        )
+        
+        # 現在のメニューを隠してロードメニューを表示
+        if self.location_menu:
+            ui_manager.hide_element(self.location_menu.element_id)
+        
+        ui_manager.register_element(load_menu)
+        ui_manager.show_element(load_menu.element_id, modal=True)
+    
+    def _load_selected_save(self, slot_id: int):
+        """選択されたセーブデータをロード"""
+        game_save = save_manager.load_game(slot_id)
         
         if game_save:
             self.current_party = game_save.party
-            self._show_info_dialog("ロード完了", "ゲームをロードしました")
+            self._show_info_dialog("ロード完了", f"スロット {slot_id} のデータをロードしました")
+            
+            # メインメニューを更新
+            self._back_to_main_menu()
+        else:
+            self._show_error_dialog("ロード失敗", "セーブデータの読み込みに失敗しました")
+    
+    def _back_to_settings_menu(self):
+        """設定メニューに戻る"""
+        ui_manager.hide_element("load_game_menu")
+        ui_manager.unregister_element("load_game_menu")
+        
+        # 設定メニューを再表示
+        if self.location_menu:
+            ui_manager.show_element(self.location_menu.element_id)
             
             # メインメニューを更新
             self._show_main_menu()

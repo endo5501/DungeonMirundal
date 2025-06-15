@@ -25,6 +25,7 @@ class CharacterCreationWizard:
     
     def __init__(self, callback: Optional[callable] = None):
         self.callback = callback  # 作成完了時のコールバック
+        self.on_cancel = None  # キャンセル時のコールバック
         self.current_step = CreationStep.NAME_INPUT
         
         # 作成中のキャラクターデータ
@@ -100,10 +101,16 @@ class CharacterCreationWizard:
         # 現在の名前があればそれを初期値とする、なければデフォルト名
         current_name = self.character_data.get('name', 'Hero')
         
+        # メッセージテキストを取得（重複を避けるため、詳細メッセージのみ使用）
+        try:
+            message = config_manager.get_text("character.enter_name_detail")
+        except:
+            message = "キャラクターの名前を入力してください:"
+        
         dialog = UIInputDialog(
             "name_input_dialog",
-            config_manager.get_text("character.enter_name"),
-            "キャラクターの名前を入力してください:",
+            "名前入力",  # タイトルはシンプルに
+            message,
             initial_text=current_name,
             placeholder="名前を入力...",
             on_confirm=self._on_name_confirmed,
@@ -200,7 +207,7 @@ class CharacterCreationWizard:
             buttons=[
                 {
                     'text': ui_manager.get_text("character.reroll"),
-                    'command': self._show_stats_generation
+                    'command': self._reroll_stats
                 },
                 {
                     'text': ui_manager.get_text("common.ok"),
@@ -316,6 +323,17 @@ class CharacterCreationWizard:
         if current_index > 0:
             self.current_step = step_order[current_index - 1]
             self._show_step()
+    
+    def _reroll_stats(self):
+        """統計値を振り直し"""
+        # 現在のダイアログを閉じる
+        if self.current_ui:
+            ui_manager.hide_element(self.current_ui.element_id)
+            ui_manager.unregister_element(self.current_ui.element_id)
+            self.current_ui = None
+        
+        # 統計値を再生成してステップを再表示
+        self._show_stats_generation()
     
     def _create_character(self):
         """キャラクター作成実行"""

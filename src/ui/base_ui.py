@@ -581,6 +581,13 @@ class UIInputDialog(UIElement):
             width=15.0
         )
         
+        # フォント取得
+        try:
+            from src.ui.font_manager import font_manager
+            font = font_manager.get_default_font()
+        except:
+            font = None
+        
         # ボタン
         self.ok_button = DirectButton(
             text="OK",
@@ -589,6 +596,7 @@ class UIInputDialog(UIElement):
             command=self._on_ok,
             frameColor=(0.2, 0.7, 0.2, 1),
             text_fg=(1, 1, 1, 1),
+            text_font=font,
             rolloverSound=None,
             clickSound=None
         )
@@ -600,6 +608,7 @@ class UIInputDialog(UIElement):
             command=self._on_cancel,
             frameColor=(0.7, 0.2, 0.2, 1),
             text_fg=(1, 1, 1, 1),
+            text_font=font,
             rolloverSound=None,
             clickSound=None
         )

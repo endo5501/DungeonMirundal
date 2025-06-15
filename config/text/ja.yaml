@@ -82,6 +82,7 @@ class:
 character:
   creation_title: "キャラクター作成"
   enter_name: "名前を入力"
+  enter_name_detail: "キャラクターの名前を入力してください:"
   select_race: "種族を選択"
   select_class: "職業を選択"
   generated_stats: "能力値"

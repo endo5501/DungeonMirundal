@@ -409,32 +409,60 @@ class MagicGuild(BaseFacility):
         analysis += f"知恵: {character.base_stats.intelligence}\n"
         analysis += f"信仰心: {character.base_stats.faith}\n\n"
         
-        # 魔法適性判定
-        class_name = character.get_class_name()
-        if class_name in ['mage', 'priest', 'bishop']:
+        # 魔法適性判定を改善（クラス名の正規化）
+        class_name = character.get_class_name().lower()
+        magic_classes = ['mage', 'priest', 'bishop', '魔術師', '僧侶', '司教', 'wizard', 'cleric']
+        
+        # 知恵と信仰心による魔法使用可能判定も追加
+        intelligence_check = character.base_stats.intelligence >= 12  # 最低知恵要件
+        faith_check = character.base_stats.faith >= 12  # 最低信仰心要件
+        
+        can_use_magic = (any(magic_class in class_name for magic_class in magic_classes) or 
+                        (intelligence_check and faith_check))
+        
+        if can_use_magic:
             analysis += "【魔法適性】\n"
             
-            if class_name == 'mage':
+            if 'mage' in class_name or '魔術師' in class_name:
                 analysis += "• 攻撃魔法の習得・使用が可能\n"
                 analysis += "• 知恵の値が魔法威力に影響\n"
                 analysis += "• 高レベル破壊魔法の習得可能\n"
-            elif class_name == 'priest':
+            elif 'priest' in class_name or '僧侶' in class_name:
                 analysis += "• 回復・補助魔法の習得・使用が可能\n"
                 analysis += "• 信仰心の値が魔法効果に影響\n"
                 analysis += "• 蘇生魔法の習得可能\n"
-            elif class_name == 'bishop':
+            elif 'bishop' in class_name or '司教' in class_name:
                 analysis += "• 全系統の魔法習得・使用が可能\n"
                 analysis += "• 知恵と信仰心の両方が重要\n"
                 analysis += "• 最高位魔法の習得可能\n"
+            else:
+                # 能力値ベースの魔法使用
+                analysis += "• 能力値により限定的な魔法使用が可能\n"
+                if intelligence_check:
+                    analysis += "• 知恵により基本的な攻撃魔法が使用可能\n"
+                if faith_check:
+                    analysis += "• 信仰心により基本的な回復魔法が使用可能\n"
             
             # TODO: Phase 4で習得済み魔法一覧表示
             analysis += "\n【習得可能魔法レベル】\n"
             max_spell_level = min(character.experience.level, 9)
             analysis += f"Lv.1 ～ Lv.{max_spell_level} の魔法\n"
+            
+            # 具体的な魔法使用条件を表示
+            analysis += "\n【魔法使用条件】\n"
+            analysis += f"現在の知恵: {character.base_stats.intelligence} "
+            analysis += f"({'✓' if intelligence_check else '✗'} 攻撃魔法使用可能)\n"
+            analysis += f"現在の信仰心: {character.base_stats.faith} "
+            analysis += f"({'✓' if faith_check else '✗'} 回復魔法使用可能)\n"
         else:
             analysis += "【魔法適性】\n"
             analysis += "• 魔法の習得・使用はできません\n"
             analysis += "• 魔法系アイテムの使用は一部可能\n"
+            analysis += "\n【改善提案】\n"
+            if character.base_stats.intelligence < 12:
+                analysis += f"• 知恵を {12 - character.base_stats.intelligence} ポイント上げると攻撃魔法使用可能\n"
+            if character.base_stats.faith < 12:
+                analysis += f"• 信仰心を {12 - character.base_stats.faith} ポイント上げると回復魔法使用可能\n"
         
         analysis += "\n※ この分析は無料サービスです"
         

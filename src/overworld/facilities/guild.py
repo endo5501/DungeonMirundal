@@ -210,11 +210,10 @@ class AdventurersGuild(BaseFacility):
         
         if success:
             self._show_success_message(f"{character.name} をパーティに追加しました")
+            # 追加後はメインメニューに戻る
+            self._back_to_main_menu_from_submenu()
         else:
             self._show_error_message("キャラクターの追加に失敗しました")
-        
-        # 編成メニューに戻る
-        self._show_party_formation()
     
     def _show_remove_character_menu(self):
         """キャラクター削除メニュー"""
@@ -333,7 +332,18 @@ class AdventurersGuild(BaseFacility):
     
     def _show_character_list(self):
         """キャラクター一覧表示"""
-        all_chars = self.created_characters + list(self.current_party.characters.values())
+        # 重複を避けるため、character_idベースで一意のキャラクターリストを作成
+        all_characters = {}
+        
+        # 作成済みキャラクターを追加
+        for char in self.created_characters:
+            all_characters[char.character_id] = char
+        
+        # パーティメンバーを追加（重複は上書きされる）
+        for char in self.current_party.characters.values():
+            all_characters[char.character_id] = char
+        
+        all_chars = list(all_characters.values())
         
         if not all_chars:
             self._show_error_message("キャラクターがいません")
