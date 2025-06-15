@@ -377,6 +377,43 @@ class SaveManager:
             
         except Exception as e:
             logger.error(f"セーブデータクリーンアップに失敗しました: {e}")
+    
+    def save_additional_data(self, slot_id: str, data_type: str, data: Any) -> bool:
+        """追加データの保存（遷移システム用）"""
+        try:
+            additional_dir = self.save_dir / slot_id / "additional"
+            additional_dir.mkdir(parents=True, exist_ok=True)
+            
+            data_path = additional_dir / f"{data_type}.json"
+            
+            with open(data_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            
+            logger.debug(f"追加データを保存しました: {slot_id}/{data_type}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"追加データ保存に失敗しました: {e}")
+            return False
+    
+    def load_additional_data(self, slot_id: str, data_type: str) -> Optional[Any]:
+        """追加データの読み込み（遷移システム用）"""
+        try:
+            data_path = self.save_dir / slot_id / "additional" / f"{data_type}.json"
+            
+            if not data_path.exists():
+                logger.debug(f"追加データが見つかりません: {slot_id}/{data_type}")
+                return None
+            
+            with open(data_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            logger.debug(f"追加データを読み込みました: {slot_id}/{data_type}")
+            return data
+            
+        except Exception as e:
+            logger.error(f"追加データ読み込みに失敗しました: {e}")
+            return None
 
 
 # グローバルインスタンス

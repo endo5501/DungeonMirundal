@@ -317,7 +317,7 @@ class Character:
         
         return base_defense + equipment_bonus + status_bonus
     
-    def take_damage(self, amount: int):
+    def take_damage(self, amount: int) -> int:
         """ダメージを受ける"""
         old_hp = self.derived_stats.current_hp
         self.derived_stats.current_hp = max(0, self.derived_stats.current_hp - amount)
@@ -333,6 +333,8 @@ class Character:
                 elif self.status == CharacterStatus.UNCONSCIOUS:
                     self.status = CharacterStatus.DEAD
                 logger.warning(f"{self.name} の状態が変化: {self.status.value}")
+        
+        return damage_taken
     
     def restore_mp(self, amount: int):
         """MP回復"""

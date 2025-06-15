@@ -47,7 +47,7 @@ class TestTransitionSystemSimple:
         
         # 瀕死状態のテスト
         character.take_damage(1000)
-        assert character.is_unconscious() or character.is_dead()
+        assert not character.is_conscious() or not character.is_alive()
     
     @patch('src.core.game_manager.ShowBase')
     def test_game_manager_basic_functionality(self, mock_showbase):
