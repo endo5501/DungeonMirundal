@@ -179,20 +179,9 @@ class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
         if not self.enabled:
             return
         
-        # キーバインド設定
-        self.accept('w', self._move_forward)
-        self.accept('s', self._move_backward)
-        self.accept('a', self._move_left)
-        self.accept('d', self._move_right)
-        self.accept('q', self._turn_left)
-        self.accept('e', self._turn_right)
-        self.accept('escape', self._show_menu)
-        
-        # 継続入力のためのタスク
-        self.accept('w-repeat', self._move_forward)
-        self.accept('s-repeat', self._move_backward)
-        self.accept('a-repeat', self._move_left)
-        self.accept('d-repeat', self._move_right)
+        # 新しい入力システムを使用する場合、直接キーバインドは不要
+        # GameManagerが入力を処理し、このクラスの移動メソッドを呼び出す
+        logger.info("ダンジョンレンダラーのコントロールを設定しました（入力はGameManagerで処理）")
     
     def set_dungeon_manager(self, dungeon_manager: DungeonManager):
         """ダンジョンマネージャー設定"""

@@ -44,6 +44,9 @@ class GameManager(ShowBase):
         # 入力システムの設定
         self._setup_input()
         
+        # 入力設定の読み込み（入力システム初期化後）
+        self._load_input_settings()
+        
         # デバッグ情報の表示
         self._setup_debug_info()
         
@@ -62,6 +65,16 @@ class GameManager(ShowBase):
         self.config.set_language(language)
         
         logger.info(f"初期設定を読み込みました: 言語={language}")
+    
+    def _load_input_settings(self):
+        """入力設定の読み込み"""
+        try:
+            input_settings = self.config.load_config("input_settings")
+            if input_settings and hasattr(self, 'input_manager'):
+                self.input_manager.load_bindings(input_settings)
+                logger.info("入力設定を読み込みました")
+        except Exception as e:
+            logger.warning(f"入力設定の読み込みに失敗（デフォルト設定を使用）: {e}")
         
     def _setup_window(self):
         """ウィンドウの設定"""
@@ -84,15 +97,35 @@ class GameManager(ShowBase):
     
     def _setup_input(self):
         """入力システムの設定"""
-        # 基本的な入力ハンドラー
-        self.input_manager.bind_action("menu", self._on_menu_key)
-        self.input_manager.bind_action("confirm", self._on_confirm_key)
-        self.input_manager.bind_action("debug_toggle", self._on_debug_toggle)
+        from src.core.input_manager import InputAction
+        
+        # アクションハンドラーのバインド
+        self.input_manager.bind_action(InputAction.MENU.value, self._on_menu_action)
+        self.input_manager.bind_action(InputAction.CONFIRM.value, self._on_confirm_action)
+        self.input_manager.bind_action(InputAction.CANCEL.value, self._on_cancel_action)
+        self.input_manager.bind_action(InputAction.ACTION.value, self._on_action_action)
+        self.input_manager.bind_action(InputAction.DEBUG_TOGGLE.value, self._on_debug_toggle)
+        self.input_manager.bind_action(InputAction.PAUSE.value, self._on_pause_action)
+        
+        # ゲーム機能のバインド
+        self.input_manager.bind_action(InputAction.INVENTORY.value, self._on_inventory_action)
+        self.input_manager.bind_action(InputAction.MAGIC.value, self._on_magic_action)
+        self.input_manager.bind_action(InputAction.EQUIPMENT.value, self._on_equipment_action)
+        self.input_manager.bind_action(InputAction.STATUS.value, self._on_status_action)
+        self.input_manager.bind_action(InputAction.CAMP.value, self._on_camp_action)
+        
+        # 移動アクションのバインド（ダンジョンレンダラーが処理）
+        self.input_manager.bind_action(InputAction.MOVE_FORWARD.value, self._on_movement_action)
+        self.input_manager.bind_action(InputAction.MOVE_BACKWARD.value, self._on_movement_action)
+        self.input_manager.bind_action(InputAction.MOVE_LEFT.value, self._on_movement_action)
+        self.input_manager.bind_action(InputAction.MOVE_RIGHT.value, self._on_movement_action)
+        self.input_manager.bind_action(InputAction.TURN_LEFT.value, self._on_movement_action)
+        self.input_manager.bind_action(InputAction.TURN_RIGHT.value, self._on_movement_action)
         
         # コントローラーのセットアップ
         self.input_manager.setup_controllers()
         
-        logger.info("入力システムを設定しました")
+        logger.info("拡張入力システムを設定しました")
     
     def _setup_debug_info(self):
         """デバッグ情報の設定"""
@@ -113,22 +146,102 @@ class GameManager(ShowBase):
                 
         logger.info(f"デバッグ設定: {'有効' if self.debug_enabled else '無効'}")
     
-    def _on_menu_key(self, action: str, pressed: bool):
-        """メニューキーの処理"""
+    def _on_menu_action(self, action: str, pressed: bool, input_type):
+        """メニューアクションの処理"""
         if pressed:
-            logger.info("メニューキーが押されました")
-            self.toggle_pause()
+            logger.info(f"メニューアクション ({input_type.value})")
+            
+            # ダンジョン内ではメニュー表示
+            if self.current_location == "dungeon" and self.dungeon_renderer:
+                self.dungeon_renderer._show_menu()
+            else:
+                self.toggle_pause()
     
-    def _on_confirm_key(self, action: str, pressed: bool):
-        """確認キーの処理"""
+    def _on_confirm_action(self, action: str, pressed: bool, input_type):
+        """確認アクションの処理"""
         if pressed:
-            logger.info("確認キーが押されました")
+            logger.info(f"確認アクション ({input_type.value})")
     
-    def _on_debug_toggle(self, action: str, pressed: bool):
+    def _on_cancel_action(self, action: str, pressed: bool, input_type):
+        """キャンセルアクションの処理"""
+        if pressed:
+            logger.info(f"キャンセルアクション ({input_type.value})")
+    
+    def _on_action_action(self, action: str, pressed: bool, input_type):
+        """アクションボタンの処理"""
+        if pressed:
+            logger.info(f"アクションボタン ({input_type.value})")
+    
+    def _on_debug_toggle(self, action: str, pressed: bool, input_type):
         """デバッグ切り替えの処理"""
         if pressed:
             self.debug_enabled = not self.debug_enabled
             logger.info(f"デバッグモード切り替え: {'有効' if self.debug_enabled else '無効'}")
+    
+    def _on_pause_action(self, action: str, pressed: bool, input_type):
+        """ポーズアクションの処理"""
+        if pressed:
+            logger.info(f"ポーズアクション ({input_type.value})")
+            self.toggle_pause()
+    
+    def _on_inventory_action(self, action: str, pressed: bool, input_type):
+        """インベントリアクションの処理"""
+        if pressed:
+            logger.info(f"インベントリアクション ({input_type.value})")
+            if self.current_location == "dungeon" and self.dungeon_renderer:
+                if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
+                    self.dungeon_renderer.ui_manager._open_inventory()
+    
+    def _on_magic_action(self, action: str, pressed: bool, input_type):
+        """魔法アクションの処理"""
+        if pressed:
+            logger.info(f"魔法アクション ({input_type.value})")
+            if self.current_location == "dungeon" and self.dungeon_renderer:
+                if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
+                    self.dungeon_renderer.ui_manager._open_magic()
+    
+    def _on_equipment_action(self, action: str, pressed: bool, input_type):
+        """装備アクションの処理"""
+        if pressed:
+            logger.info(f"装備アクション ({input_type.value})")
+            if self.current_location == "dungeon" and self.dungeon_renderer:
+                if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
+                    self.dungeon_renderer.ui_manager._open_equipment()
+    
+    def _on_status_action(self, action: str, pressed: bool, input_type):
+        """ステータスアクションの処理"""
+        if pressed:
+            logger.info(f"ステータスアクション ({input_type.value})")
+            if self.current_location == "dungeon" and self.dungeon_renderer:
+                if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
+                    self.dungeon_renderer.ui_manager._open_status()
+    
+    def _on_camp_action(self, action: str, pressed: bool, input_type):
+        """キャンプアクションの処理"""
+        if pressed:
+            logger.info(f"キャンプアクション ({input_type.value})")
+            if self.current_location == "dungeon" and self.dungeon_renderer:
+                if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
+                    self.dungeon_renderer.ui_manager._open_camp()
+    
+    def _on_movement_action(self, action: str, pressed: bool, input_type):
+        """移動アクションの処理"""
+        if pressed and self.current_location == "dungeon" and self.dungeon_renderer:
+            # ダンジョンレンダラーに移動処理を委譲
+            from src.core.input_manager import InputAction
+            
+            if action == InputAction.MOVE_FORWARD.value:
+                self.dungeon_renderer._move_forward()
+            elif action == InputAction.MOVE_BACKWARD.value:
+                self.dungeon_renderer._move_backward()
+            elif action == InputAction.MOVE_LEFT.value:
+                self.dungeon_renderer._move_left()
+            elif action == InputAction.MOVE_RIGHT.value:
+                self.dungeon_renderer._move_right()
+            elif action == InputAction.TURN_LEFT.value:
+                self.dungeon_renderer._turn_left()
+            elif action == InputAction.TURN_RIGHT.value:
+                self.dungeon_renderer._turn_right()
     
     def toggle_pause(self):
         """ポーズの切り替え"""
@@ -331,9 +444,28 @@ class GameManager(ShowBase):
         """テキストの取得"""
         return self.config.get_text(key)
     
+    def save_input_settings(self):
+        """入力設定を保存"""
+        try:
+            if hasattr(self, 'input_manager'):
+                bindings_data = self.input_manager.save_bindings()
+                self.config.save_config("input_settings", bindings_data)
+                logger.info("入力設定を保存しました")
+                return True
+        except Exception as e:
+            logger.error(f"入力設定保存エラー: {e}")
+        return False
+    
+    def get_input_manager(self):
+        """入力マネージャーを取得"""
+        return self.input_manager if hasattr(self, 'input_manager') else None
+    
     def cleanup(self):
         """リソースのクリーンアップ"""
         logger.info("GameManagerをクリーンアップしています")
+        
+        # 入力設定を自動保存
+        self.save_input_settings()
         
         if hasattr(self, 'input_manager'):
             self.input_manager.cleanup()
