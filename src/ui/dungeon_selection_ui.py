@@ -191,6 +191,10 @@ class DungeonSelectionUI:
         if self.on_cancel:
             self.on_cancel()
     
+    def _on_dungeon_selection_cancelled(self):
+        """ダンジョン選択キャンセル時の処理（テスト用別名）"""
+        self._cancel_selection()
+    
     def _show_no_dungeons_dialog(self):
         """利用可能なダンジョンがない場合のダイアログ"""
         # 既存のダイアログがあれば削除

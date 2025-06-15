@@ -334,44 +334,48 @@ class GameManager(ShowBase):
         """ダンジョンへの遷移"""
         if not self.current_party:
             logger.error("パーティが設定されていません")
-            return False
+            raise Exception("パーティが設定されていません")
         
         if not self.current_party.get_living_characters():
             logger.error("生存しているパーティメンバーがいません")
-            return False
+            raise Exception("生存しているパーティメンバーがいません")
         
         logger.info(f"ダンジョン '{dungeon_id}' への遷移開始")
         
-        # 地上部を退場
-        self.overworld_manager.exit_overworld()
-        
-        # ダンジョンに入場
-        success = self.dungeon_manager.enter_dungeon(dungeon_id, self.current_party)
-        
-        if success:
-            self.current_location = "dungeon"
-            self.set_game_state("dungeon_exploration")
+        try:
+            # ダンジョンに入場（地上部は保持したまま試行）
+            success = self.dungeon_manager.enter_dungeon(dungeon_id, self.current_party)
             
-            # ダンジョンが存在しない場合は作成
-            if dungeon_id not in self.dungeon_manager.active_dungeons:
-                # ダンジョン設定に基づいてシードを生成
-                dungeon_seed = self._generate_dungeon_seed(dungeon_id)
-                self.dungeon_manager.create_dungeon(dungeon_id, dungeon_seed)
-            
-            # ダンジョンレンダラーで描画開始
-            if self.dungeon_renderer and self.dungeon_renderer.enabled:
-                current_dungeon = self.dungeon_manager.current_dungeon
-                if current_dungeon:
-                    self.dungeon_renderer.render_dungeon(current_dungeon)
-                    self.dungeon_renderer.update_ui()
-            
-            logger.info("ダンジョンへの遷移が完了しました")
-            return True
-        else:
-            logger.error("ダンジョンへの遷移に失敗しました")
-            # 地上部に戻る
-            self.overworld_manager.enter_overworld(self.current_party)
-            return False
+            if success:
+                # 成功した場合のみ地上部を退場
+                self.overworld_manager.exit_overworld()
+                
+                self.current_location = "dungeon"
+                self.set_game_state("dungeon_exploration")
+                
+                # ダンジョンが存在しない場合は作成
+                if dungeon_id not in self.dungeon_manager.active_dungeons:
+                    # ダンジョン設定に基づいてシードを生成
+                    dungeon_seed = self._generate_dungeon_seed(dungeon_id)
+                    self.dungeon_manager.create_dungeon(dungeon_id, dungeon_seed)
+                
+                # ダンジョンレンダラーで描画開始
+                if self.dungeon_renderer and self.dungeon_renderer.enabled:
+                    current_dungeon = self.dungeon_manager.current_dungeon
+                    if current_dungeon:
+                        self.dungeon_renderer.render_dungeon(current_dungeon)
+                        self.dungeon_renderer.update_ui()
+                
+                logger.info("ダンジョンへの遷移が完了しました")
+                return True
+            else:
+                logger.error("ダンジョンへの遷移に失敗しました")
+                raise Exception("ダンジョンマネージャーでの入場処理に失敗しました")
+                
+        except Exception as e:
+            logger.error(f"ダンジョン遷移中にエラーが発生しました: {e}")
+            # 地上部の状態は保持されているため、エラーを再発生させて上位に処理を委ねる
+            raise e
     
     def transition_to_overworld(self):
         """地上部への遷移"""

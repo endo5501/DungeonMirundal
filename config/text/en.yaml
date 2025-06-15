@@ -84,3 +84,8 @@ system:
   game_loaded: "Game Loaded"
   startup: "Starting Game"
   shutdown: "Shutting Down"
+
+# Dungeon related
+dungeon:
+  entrance_error_title: "Dungeon Entrance Error"
+  entrance_error_prefix: "Unable to enter dungeon:"

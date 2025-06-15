@@ -277,3 +277,8 @@ system:
   startup: "ゲームを開始します"
   shutdown: "ゲームを終了します"
   exit_confirm: "ゲームを終了しますか？"
+
+# ダンジョン関連
+dungeon:
+  entrance_error_title: "ダンジョン入場エラー"
+  entrance_error_prefix: "ダンジョンに入場できませんでした:"

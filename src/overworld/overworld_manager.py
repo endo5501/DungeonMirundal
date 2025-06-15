@@ -433,8 +433,16 @@ class OverworldManager:
     def _on_dungeon_selected(self, dungeon_id: str):
         """ダンジョンが選択された時の処理"""
         if self.on_enter_dungeon:
-            self.exit_overworld()
-            self.on_enter_dungeon(dungeon_id)
+            try:
+                # ダンジョン遷移を試行（UIは保持）
+                self.on_enter_dungeon(dungeon_id)
+                # 成功した場合のみexit_overworld()を呼び出し
+                self.exit_overworld()
+            except Exception as e:
+                # ダンジョン遷移に失敗した場合、エラーメッセージを表示してメニューを復元
+                logger.error(f"ダンジョン遷移に失敗しました: {e}")
+                self._show_dungeon_entrance_error(str(e))
+                self._show_main_menu()
     
     def _on_dungeon_selection_cancelled(self):
         """ダンジョン選択がキャンセルされた時の処理"""
@@ -561,6 +569,23 @@ class OverworldManager:
         except Exception as e:
             logger.error(f"緊急メニュー復元中にエラー: {e}")
             raise
+    
+    def _show_dungeon_entrance_error(self, error_message: str):
+        """ダンジョン入場エラー表示"""
+        error_title = config_manager.get_text("dungeon.entrance_error_title", "ダンジョン入場エラー")
+        error_prefix = config_manager.get_text("dungeon.entrance_error_prefix", "ダンジョンに入場できませんでした:")
+        
+        ui_manager.show_dialog(
+            title=error_title,
+            message=f"{error_prefix}\n{error_message}",
+            buttons=[
+                {
+                    "text": config_manager.get_text("common.ok", "OK"),
+                    "command": lambda: ui_manager.hide_element("dungeon_entrance_error_dialog")
+                }
+            ],
+            element_id="dungeon_entrance_error_dialog"
+        )
     
     def _emergency_overworld_reset(self):
         """緊急地上部リセット処理"""
