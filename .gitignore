@@ -9,3 +9,10 @@ wheels/
 # Virtual environments
 .venv
 logs/
+
+# Game data and saves
+data/
+saves/
+
+# Test files with issues
+tests/test_transition_system.py
