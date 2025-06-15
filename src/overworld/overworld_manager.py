@@ -34,12 +34,16 @@ class OverworldManager:
         # UI要素
         self.main_menu: Optional[UIMenu] = None
         self.location_menu: Optional[UIMenu] = None
+        self.settings_menu_active = False
         
         # コールバック
         self.on_enter_dungeon: Optional[Callable] = None
         self.on_exit_game: Optional[Callable] = None
+        self.input_manager_ref: Optional[Any] = None
         
         self.facility_manager = facility_manager
+        # 施設退場時のコールバックを設定
+        self.facility_manager.set_facility_exit_callback(self.on_facility_exit)
         
         logger.info("OverworldManagerを初期化しました")
     
@@ -52,6 +56,10 @@ class OverworldManager:
         self.current_party = party
         self.current_location = OverworldLocation.TOWN_CENTER
         self.is_active = True
+        self.settings_menu_active = False
+        
+        # 入力管理との連携
+        self._setup_input_handling()
         
         # ダンジョンから戻った場合の自動回復
         if from_dungeon:
@@ -117,59 +125,37 @@ class OverworldManager:
         
         logger.info("地上部帰還時の自動回復を実行しました")
     
+    def _setup_input_handling(self):
+        """入力処理のセットアップ"""
+        if self.input_manager_ref:
+            # ESCキー（メニューアクション）のハンドリング
+            self.input_manager_ref.bind_action("menu", self._on_menu_key)
+            logger.debug("地上部入力ハンドリングを設定しました")
+    
+    def _on_menu_key(self, action: str, pressed: bool, input_type: Any):
+        """メニューキー（ESC）の処理"""
+        if not pressed or not self.is_active:
+            return
+        
+        # 現在設定画面が表示されている場合は閉じる
+        if self.settings_menu_active:
+            self._back_to_main_menu()
+        else:
+            # 地上マップから設定画面を表示
+            self.show_settings_menu()
+    
+    def set_input_manager(self, input_manager):
+        """入力管理システムの参照を設定"""
+        self.input_manager_ref = input_manager
+    
     def _show_main_menu(self):
-        """メインメニューの表示"""
+        """地上マップメニューの表示（直接施設アクセス）"""
         if self.main_menu:
             ui_manager.unregister_element(self.main_menu.element_id)
         
-        self.main_menu = UIMenu("overworld_main_menu", config_manager.get_text("overworld.town_center"))
+        self.main_menu = UIMenu("overworld_main_menu", config_manager.get_text("overworld.surface_map"))
         
-        # 施設への移動
-        self.main_menu.add_menu_item(
-            config_manager.get_text("menu.facilities"),
-            self._show_location_menu
-        )
-        
-        # パーティ状況確認
-        self.main_menu.add_menu_item(
-            config_manager.get_text("menu.party_status"),
-            self._show_party_status
-        )
-        
-        # セーブ・ロード
-        self.main_menu.add_menu_item(
-            config_manager.get_text("menu.save_game"),
-            self._show_save_menu
-        )
-        
-        self.main_menu.add_menu_item(
-            config_manager.get_text("menu.load_game"),
-            self._show_load_menu
-        )
-        
-        # ダンジョンへ
-        self.main_menu.add_menu_item(
-            config_manager.get_text("facility.dungeon_entrance"),
-            self._enter_dungeon
-        )
-        
-        # ゲーム終了
-        self.main_menu.add_menu_item(
-            config_manager.get_text("menu.exit"),
-            self._exit_game
-        )
-        
-        ui_manager.register_element(self.main_menu)
-        ui_manager.show_element(self.main_menu.element_id, modal=True)
-    
-    def _show_location_menu(self):
-        """施設選択メニューの表示"""
-        if self.location_menu:
-            ui_manager.unregister_element(self.location_menu.element_id)
-        
-        self.location_menu = UIMenu("location_menu", config_manager.get_text("overworld.facility_selection"))
-        
-        # 各施設への移動
+        # 各施設への直接アクセス
         facilities = [
             ("guild", config_manager.get_text("facility.guild")),
             ("inn", config_manager.get_text("facility.inn")),
@@ -179,11 +165,57 @@ class OverworldManager:
         ]
         
         for facility_id, facility_name in facilities:
-            self.location_menu.add_menu_item(
+            self.main_menu.add_menu_item(
                 facility_name,
                 self._enter_facility,
                 [facility_id]
             )
+        
+        # ダンジョン入口
+        self.main_menu.add_menu_item(
+            config_manager.get_text("facility.dungeon_entrance"),
+            self._enter_dungeon
+        )
+        
+        ui_manager.register_element(self.main_menu)
+        ui_manager.show_element(self.main_menu.element_id, modal=True)
+    
+    def show_settings_menu(self):
+        """設定画面の表示（ESCキー用）"""
+        if self.location_menu:
+            ui_manager.unregister_element(self.location_menu.element_id)
+        
+        self.location_menu = UIMenu("settings_menu", config_manager.get_text("menu.settings"))
+        self.settings_menu_active = True
+        
+        # パーティ状況確認
+        self.location_menu.add_menu_item(
+            config_manager.get_text("menu.party_status"),
+            self._show_party_status
+        )
+        
+        # セーブ・ロード
+        self.location_menu.add_menu_item(
+            config_manager.get_text("menu.save_game"),
+            self._show_save_menu
+        )
+        
+        self.location_menu.add_menu_item(
+            config_manager.get_text("menu.load_game"),
+            self._show_load_menu
+        )
+        
+        # ゲーム設定
+        self.location_menu.add_menu_item(
+            config_manager.get_text("menu.game_settings"),
+            self._show_game_settings
+        )
+        
+        # ゲーム終了
+        self.location_menu.add_menu_item(
+            config_manager.get_text("menu.exit"),
+            self._exit_game
+        )
         
         # 戻る
         self.location_menu.add_menu_item(
@@ -195,7 +227,10 @@ class OverworldManager:
         ui_manager.show_element(self.location_menu.element_id, modal=True)
         
         # メインメニューを隠す
-        ui_manager.hide_element(self.main_menu.element_id)
+        if self.main_menu:
+            ui_manager.hide_element(self.main_menu.element_id)
+        
+        logger.info("設定画面を表示しました")
     
     def _enter_facility(self, facility_id: str):
         """施設に入る"""
@@ -206,7 +241,8 @@ class OverworldManager:
         
         if success:
             # 施設メニューが表示されるので、地上部メニューを隠す
-            ui_manager.hide_element(self.location_menu.element_id)
+            if self.main_menu:
+                ui_manager.hide_element(self.main_menu.element_id)
             logger.info(f"施設に入りました: {facility_id}")
         else:
             self._show_error_dialog("エラー", f"施設 '{facility_id}' に入れませんでした。")
@@ -218,7 +254,12 @@ class OverworldManager:
             ui_manager.unregister_element(self.location_menu.element_id)
             self.location_menu = None
         
-        ui_manager.show_element(self.main_menu.element_id)
+        self.settings_menu_active = False
+        
+        if self.main_menu:
+            ui_manager.show_element(self.main_menu.element_id)
+        
+        logger.debug("メインメニューに戻りました")
     
     def _show_party_status(self):
         """パーティ状況表示"""
@@ -329,6 +370,16 @@ class OverworldManager:
         else:
             logger.info("ゲーム終了が要求されました")
     
+    def _show_game_settings(self):
+        """ゲーム設定画面の表示"""
+        settings_text = "ゲーム設定\n\n"
+        settings_text += f"言語: {config_manager.current_language}\n"
+        settings_text += f"音量: {config_manager.get_config('game_config', 'audio', {}).get('master_volume', 0.8):.1f}\n"
+        settings_text += f"フルスクリーン: {config_manager.get_config('game_config', 'window', {}).get('fullscreen', False)}\n"
+        settings_text += "\n設定変更は今後のアップデートで対応予定です。"
+        
+        self._show_info_dialog("ゲーム設定", settings_text)
+    
     def _show_info_dialog(self, title: str, message: str):
         """情報ダイアログの表示"""
         dialog = UIDialog(
@@ -400,11 +451,15 @@ class OverworldManager:
     def on_facility_exit(self):
         """施設退場時のコールバック"""
         # 施設から出たら地上部メニューに戻る
-        if self.is_active and self.main_menu:
-            if self.location_menu:
+        if self.is_active:
+            # 設定画面が表示されている場合はそちらを表示
+            if self.settings_menu_active and self.location_menu:
                 ui_manager.show_element(self.location_menu.element_id)
-            else:
+            # そうでなければメインメニュー（地上マップ）を表示
+            elif self.main_menu:
                 ui_manager.show_element(self.main_menu.element_id)
+        
+        logger.debug("施設から地上部メニューに戻りました")
     
     def get_current_party(self) -> Optional[Party]:
         """現在のパーティを取得"""

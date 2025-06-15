@@ -9,6 +9,9 @@ menu:
   settings: "Settings"
   exit: "Exit"
   back: "Back"
+  facilities: "Facilities"
+  party_status: "Party Status"
+  game_settings: "Game Settings"
   
 # Common
 common:
@@ -59,6 +62,12 @@ facility:
   temple: "Temple"
   magic_guild: "Magic Guild"
   dungeon_entrance: "Dungeon Entrance"
+
+# Overworld
+overworld:
+  town_center: "Town Center"
+  surface_map: "Surface"
+  facility_selection: "Facility Selection"
   
 # System Messages
 system:

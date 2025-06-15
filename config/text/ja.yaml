@@ -11,6 +11,7 @@ menu:
   back: "戻る"
   facilities: "施設選択"
   party_status: "パーティ状況"
+  game_settings: "ゲーム設定"
   
 # ゲーム共通
 common:
@@ -171,6 +172,7 @@ facility:
 # 地上部
 overworld:
   town_center: "町の中心部"
+  surface_map: "地上"
   facility_selection: "施設選択"
 
 # インベントリ

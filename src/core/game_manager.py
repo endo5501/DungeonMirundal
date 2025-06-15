@@ -174,6 +174,11 @@ class GameManager(ShowBase):
             # ダンジョン内ではメニュー表示
             if self.current_location == "dungeon" and self.dungeon_renderer:
                 self.dungeon_renderer._show_menu()
+            # 地上部では設定画面をオーバーワールドマネージャーに委譲
+            elif self.current_location == "overworld" and self.overworld_manager:
+                # オーバーワールドマネージャーが独自にESCキーを処理するため、
+                # ここでは何もしない（重複処理を避ける）
+                pass
             else:
                 self.toggle_pause()
     
@@ -284,6 +289,7 @@ class GameManager(ShowBase):
         self.overworld_manager = OverworldManager()
         self.overworld_manager.set_enter_dungeon_callback(self.transition_to_dungeon)
         self.overworld_manager.set_exit_game_callback(self.exit_game)
+        self.overworld_manager.set_input_manager(self.input_manager)
         
         # ダンジョンマネージャーの初期化
         self.dungeon_manager = DungeonManager()

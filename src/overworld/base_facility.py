@@ -219,6 +219,7 @@ class FacilityManager:
     def __init__(self):
         self.facilities: Dict[str, BaseFacility] = {}
         self.current_facility: Optional[str] = None
+        self.on_facility_exit_callback: Optional[Callable] = None
         
         logger.info("FacilityManagerを初期化しました")
     
@@ -261,6 +262,11 @@ class FacilityManager:
         facility = self.facilities[self.current_facility]
         if facility.exit():
             self.current_facility = None
+            
+            # 施設退場コールバックを呼び出し
+            if self.on_facility_exit_callback:
+                self.on_facility_exit_callback()
+            
             return True
         
         return False
@@ -279,6 +285,11 @@ class FacilityManager:
         """全施設のリストを取得"""
         return list(self.facilities.values())
     
+    def set_facility_exit_callback(self, callback: Callable):
+        """施設退場時のコールバックを設定"""
+        self.on_facility_exit_callback = callback
+        logger.debug("施設退場コールバックを設定しました")
+    
     def cleanup(self):
         """リソースのクリーンアップ"""
         for facility in self.facilities.values():
@@ -287,6 +298,7 @@ class FacilityManager:
         
         self.facilities.clear()
         self.current_facility = None
+        self.on_facility_exit_callback = None
         logger.info("FacilityManagerをクリーンアップしました")
 
 
