@@ -106,6 +106,7 @@ class GameManager(ShowBase):
         self.input_manager.bind_action(InputAction.ACTION.value, self._on_action_action)
         self.input_manager.bind_action(InputAction.DEBUG_TOGGLE.value, self._on_debug_toggle)
         self.input_manager.bind_action(InputAction.PAUSE.value, self._on_pause_action)
+        self.input_manager.bind_action(InputAction.HELP.value, self._on_help_action)
         
         # ゲーム機能のバインド
         self.input_manager.bind_action(InputAction.INVENTORY.value, self._on_inventory_action)
@@ -223,6 +224,13 @@ class GameManager(ShowBase):
             if self.current_location == "dungeon" and self.dungeon_renderer:
                 if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
                     self.dungeon_renderer.ui_manager._open_camp()
+    
+    def _on_help_action(self, action: str, pressed: bool, input_type):
+        """ヘルプアクションの処理"""
+        if pressed:
+            logger.info(f"ヘルプアクション ({input_type.value})")
+            from src.ui.help_ui import help_ui
+            help_ui.show_help_menu()
     
     def _on_movement_action(self, action: str, pressed: bool, input_type):
         """移動アクションの処理"""

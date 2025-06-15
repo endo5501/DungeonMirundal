@@ -60,6 +60,7 @@ class InputAction(Enum):
     # システム系
     DEBUG_TOGGLE = "debug_toggle"
     PAUSE = "pause"
+    HELP = "help"
 
 
 class InputManager(DirectObject):
@@ -127,6 +128,7 @@ class InputManager(DirectObject):
             # システム
             "f1": InputAction.DEBUG_TOGGLE.value,
             "p": InputAction.PAUSE.value,
+            "h": InputAction.HELP.value,
         }
         
         # ゲームパッドバインディング
@@ -149,7 +151,7 @@ class InputManager(DirectObject):
             
             # システム
             GamepadButton.START.value: InputAction.MENU.value,
-            GamepadButton.SELECT.value: InputAction.STATUS.value,
+            GamepadButton.SELECT.value: InputAction.HELP.value,
         }
         
         # バインディングを設定
