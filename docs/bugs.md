@@ -18,7 +18,6 @@
 - [ ] 教会の祝福サービスにおいて、[戻る]キーが効かない
 - [ ] 冒険者ギルドのキャラクター一覧において、メンバーが重複して表示される(2名しかメンバーがいないのに、その2名が2回表示される)
 - [ ] 魔術師ギルドで、魔法分析が正しく行われない(エルフ魔術師 知恵:20でも魔法が使えない判定になっていた)
-- [ ] ダンジョンの入口に入るとクラッシュする
 
 ## Fixed bugs
 
@@ -36,4 +35,17 @@
   - 修正内容: UITextInputとUIInputDialogクラスを実装。キャラクター作成ウィザードで実際のテキスト入力機能を有効化
   - 関連ファイル: `src/ui/base_ui.py`, `src/ui/character_creation.py`, `tests/test_name_validation.py`
   - 修正日: 2025-06-15
+
+- [x] ダンジョンの入口に入るとクラッシュする
+  - 修正内容: **根本原因修正** - DungeonSelectionUIの実装における互換性問題を解決
+  - 詳細:
+    * **根本原因1**: PartyクラスにDungeonSelectionUIが要求するget_max_level()メソッドが存在しなかった
+    * **根本原因2**: UIDialogのボタン形式がタプル形式で実装されていたが、base_ui.pyは辞書形式を期待していた
+    * **問題**: party.get_max_level()呼び出し時にAttributeError、UIDialog作成時にボタン処理エラー
+    * **解決策**: 
+      - Party.get_max_level()メソッドを追加実装
+      - DungeonSelectionUIのUIDialogボタン形式を辞書形式に変更
+    * **結果**: ダンジョン選択画面が正常に表示され、レベル制限チェックが正常動作
+  - 関連ファイル: `src/character/party.py`, `src/ui/dungeon_selection_ui.py`
+  - 修正日: 2025-06-16
 
