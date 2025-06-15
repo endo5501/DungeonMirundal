@@ -204,16 +204,28 @@ class AdventurersGuild(BaseFacility):
     def _add_character_to_party(self, character: Character):
         """パーティにキャラクターを追加"""
         if not self.current_party:
+            logger.warning("パーティが設定されていないため、キャラクターを追加できません")
+            self._show_error_message("パーティが設定されていません")
             return
         
-        success = self.current_party.add_character(character)
-        
-        if success:
-            self._show_success_message(f"{character.name} をパーティに追加しました")
-            # 追加後はメインメニューに戻る
-            self._back_to_main_menu_from_submenu()
-        else:
-            self._show_error_message("キャラクターの追加に失敗しました")
+        try:
+            success = self.current_party.add_character(character)
+            
+            if success:
+                self._show_success_message(f"{character.name} をパーティに追加しました")
+                # 追加後はメインメニューに戻る - すべてのサブメニューを閉じる
+                self._close_all_submenus_and_return_to_main()
+            else:
+                self._show_error_message("キャラクターの追加に失敗しました")
+                
+        except Exception as e:
+            logger.error(f"キャラクター追加処理でエラーが発生しました: {e}")
+            self._show_error_message(f"キャラクター追加でエラーが発生しました: {str(e)}")
+            # エラーが発生しても最低限メインメニューに戻る
+            try:
+                self._back_to_main_menu_fallback()
+            except Exception:
+                pass  # フォールバックが失敗しても続行
     
     def _show_remove_character_menu(self):
         """キャラクター削除メニュー"""
@@ -404,3 +416,48 @@ class AdventurersGuild(BaseFacility):
         
         if self.main_menu:
             ui_manager.show_element(self.main_menu.element_id)
+    
+    def _back_to_main_menu_fallback(self):
+        """フォールバック: 直接メインメニューに戻る"""
+        # アクティブなサブメニューを全て非表示にする
+        possible_menus = [
+            "party_formation_menu",
+            "add_character_menu", 
+            "remove_character_menu",
+            "position_menu",
+            "new_position_menu"
+        ]
+        
+        for menu_id in possible_menus:
+            if ui_manager.get_element(menu_id):
+                ui_manager.hide_element(menu_id)
+                ui_manager.unregister_element(menu_id)
+        
+        # メインメニューを表示
+        if self.main_menu:
+            ui_manager.show_element(self.main_menu.element_id)
+    
+    def _close_all_submenus_and_return_to_main(self):
+        """すべてのサブメニューを閉じてメインメニューに戻る"""
+        try:
+            # 既存の_back_to_main_menu_from_submenuの動作をエミュレート
+            # 実際のUI要素を見つけて適切に閉じる
+            add_menu = ui_manager.get_element("add_character_menu")
+            if add_menu:
+                self._back_to_main_menu_from_submenu(add_menu)
+            else:
+                # フォールバック処理
+                self._back_to_main_menu_fallback()
+        except Exception as e:
+            logger.warning(f"メニュー遷移でエラーが発生しました: {e}")
+            # エラーが発生した場合は強制的にフォールバック処理を実行
+            try:
+                self._back_to_main_menu_fallback()
+            except Exception as fallback_error:
+                logger.error(f"フォールバック処理でもエラーが発生しました: {fallback_error}")
+                # 最後の手段：基本的なメインメニュー表示
+                if self.main_menu:
+                    try:
+                        ui_manager.show_element(self.main_menu.element_id)
+                    except Exception:
+                        pass  # 最後の手段が失敗しても続行

@@ -32,8 +32,8 @@ class TestOtherUIBugFixes:
         # add_character が成功する場合をモック
         self.mock_party.add_character.return_value = True
         
-        # _back_to_main_menu_from_submenu メソッドをモック
-        with patch.object(guild, '_back_to_main_menu_from_submenu') as mock_back, \
+        # 新しいメソッドをモック
+        with patch.object(guild, '_close_all_submenus_and_return_to_main') as mock_close, \
              patch.object(guild, '_show_success_message') as mock_success:
             
             guild._add_character_to_party(mock_character)
@@ -41,8 +41,8 @@ class TestOtherUIBugFixes:
             # 成功メッセージが表示されることを確認
             mock_success.assert_called_once_with("テストキャラ をパーティに追加しました")
             
-            # メインメニューに戻ることを確認（パーティ編成画面を再表示しない）
-            mock_back.assert_called_once()
+            # メインメニューに戻る処理が呼ばれることを確認
+            mock_close.assert_called_once()
             
             # add_character が呼ばれることを確認
             self.mock_party.add_character.assert_called_once_with(mock_character)
