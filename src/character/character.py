@@ -85,6 +85,7 @@ class Character:
     _inventory_initialized: bool = field(default=False, init=False)
     _equipment_initialized: bool = field(default=False, init=False)
     _status_effects_initialized: bool = field(default=False, init=False)
+    _spellbook_initialized: bool = field(default=False, init=False)
     
     # メタ情報
     created_at: datetime = field(default_factory=datetime.now)
@@ -135,6 +136,23 @@ class Character:
         self.initialize_status_effects()
         from src.effects.status_effects import status_effect_manager
         return status_effect_manager.get_character_effects(self.character_id)
+    
+    def initialize_spellbook(self):
+        """魔法書を初期化（遅延初期化）"""
+        if not self._spellbook_initialized:
+            from src.magic.spells import SpellBook
+            # 魔法書は個別管理されるため、キャラクターIDで管理
+            self._spellbook_initialized = True
+            logger.debug(f"キャラクター魔法書を初期化: {self.character_id}")
+    
+    def get_spellbook(self):
+        """魔法書を取得"""
+        self.initialize_spellbook()
+        from src.magic.spells import SpellBook
+        # 魔法書マネージャーが実装されていない場合、直接作成
+        if not hasattr(self, '_spellbook'):
+            self._spellbook = SpellBook(self.character_id)
+        return self._spellbook
     
     @classmethod
     def create_character(

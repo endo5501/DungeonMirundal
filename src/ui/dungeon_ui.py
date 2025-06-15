@@ -9,6 +9,7 @@ from panda3d.core import TextNode, Vec3
 from src.ui.base_ui import UIElement, UIButton, UIText, UIMenu, UIState
 from src.ui.inventory_ui import InventoryUI
 from src.ui.equipment_ui import EquipmentUI
+from src.ui.magic_ui import MagicUI
 from src.character.party import Party
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -255,6 +256,7 @@ class DungeonUIManager:
         self.status_bar: Optional[DungeonStatusBar] = None
         self.inventory_ui: Optional[InventoryUI] = None
         self.equipment_ui: Optional[EquipmentUI] = None
+        self.magic_ui: Optional[MagicUI] = None
         
         # 状態管理
         self.current_menu: Optional[DungeonMenuType] = None
@@ -336,6 +338,9 @@ class DungeonUIManager:
         if self.equipment_ui:
             self.equipment_ui.hide()
         
+        if self.magic_ui:
+            self.magic_ui.hide()
+        
         self.current_menu = None
         self.is_menu_open = False
         
@@ -377,7 +382,15 @@ class DungeonUIManager:
     def _open_magic(self):
         """魔法メニューを開く"""
         logger.info("魔法メニューを開きます")
-        # TODO: 魔法メニューの実装
+        
+        if not self.magic_ui and self.party:
+            self.magic_ui = MagicUI()
+            self.magic_ui.set_party(self.party)
+        
+        if self.magic_ui:
+            self.main_menu.hide()
+            self.magic_ui.show()
+            self.current_menu = DungeonMenuType.MAGIC
     
     def _open_equipment(self):
         """装備メニューを開く"""
@@ -422,5 +435,7 @@ class DungeonUIManager:
             self.inventory_ui.destroy()
         if self.equipment_ui:
             self.equipment_ui.destroy()
+        if self.magic_ui:
+            self.magic_ui.destroy()
         
         logger.info("DungeonUIManagerをクリーンアップしました")
