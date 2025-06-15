@@ -47,6 +47,9 @@ class GameManager(ShowBase):
         # 入力設定の読み込み（入力システム初期化後）
         self._load_input_settings()
         
+        # フォントシステムの初期化
+        self._setup_fonts()
+        
         # デバッグ情報の表示
         self._setup_debug_info()
         
@@ -130,6 +133,17 @@ class GameManager(ShowBase):
         self.input_manager.setup_controllers()
         
         logger.info("拡張入力システムを設定しました")
+    
+    def _setup_fonts(self):
+        """フォントシステムの初期化"""
+        try:
+            from src.ui.font_manager import font_manager
+            if font_manager.default_font:
+                logger.info("日本語フォントシステムを初期化しました")
+            else:
+                logger.warning("日本語フォントの初期化に失敗しました")
+        except Exception as e:
+            logger.error(f"フォントシステム初期化エラー: {e}")
     
     def _setup_debug_info(self):
         """デバッグ情報の設定"""

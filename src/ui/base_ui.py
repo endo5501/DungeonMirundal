@@ -81,12 +81,20 @@ class UIText(UIElement):
             "right": TextNode.ARight
         }
         
+        # フォント設定
+        try:
+            from src.ui.font_manager import font_manager
+            font = font_manager.get_default_font()
+        except:
+            font = None
+        
         self.gui_element = OnscreenText(
             text=text,
             pos=pos,
             scale=scale,
             fg=color,
-            align=align_map.get(align, TextNode.ACenter)
+            align=align_map.get(align, TextNode.ACenter),
+            font=font
         )
         self.hide()  # 初期状態は非表示
     
@@ -113,6 +121,13 @@ class UIButton(UIElement):
         self.command = command
         self.extraArgs = extraArgs or []
         
+        # フォント設定
+        try:
+            from src.ui.font_manager import font_manager
+            font = font_manager.get_default_font()
+        except:
+            font = None
+        
         self.gui_element = DirectButton(
             text=text,
             pos=Vec3(pos[0], 0, pos[1]),
@@ -120,7 +135,8 @@ class UIButton(UIElement):
             command=self._on_click,
             text_scale=0.8,
             relief=DGG.RAISED,
-            borderWidth=(0.01, 0.01)
+            borderWidth=(0.01, 0.01),
+            text_font=font
         )
         self.hide()
     

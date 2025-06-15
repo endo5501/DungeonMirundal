@@ -163,12 +163,21 @@ class DungeonRenderer:
         if not self.enabled:
             return
         
+        # フォントを取得
+        font = None
+        try:
+            from src.ui.font_manager import font_manager
+            font = font_manager.get_default_font()
+        except:
+            pass
+        
         # コンパス表示
         self.ui_elements['compass'] = OnscreenText(
             text='N',
             pos=(0.85, 0.85),
             scale=0.1,
-            fg=(1, 1, 1, 1)
+            fg=(1, 1, 1, 1),
+            font=font
         )
         
         # 位置情報表示
@@ -177,7 +186,8 @@ class DungeonRenderer:
             pos=(-0.95, 0.85),
             scale=0.06,
             fg=(1, 1, 1, 1),
-            align=TextNode.ALeft
+            align=TextNode.ALeft,
+            font=font
         )
         
         # ヘルプテキスト
@@ -186,7 +196,8 @@ class DungeonRenderer:
             pos=(-0.95, -0.9),
             scale=0.05,
             fg=(0.7, 0.7, 0.7, 1),
-            align=TextNode.ALeft
+            align=TextNode.ALeft,
+            font=font
         )
         
         # ダンジョンUIマネージャーの初期化
