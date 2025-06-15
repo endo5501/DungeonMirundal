@@ -10,6 +10,7 @@ from src.ui.base_ui import UIElement, UIButton, UIText, UIMenu, UIState
 from src.ui.inventory_ui import InventoryUI
 from src.ui.equipment_ui import EquipmentUI
 from src.ui.magic_ui import MagicUI
+from src.ui.status_effects_ui import StatusEffectsUI
 from src.character.party import Party
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -23,6 +24,7 @@ class DungeonMenuType(Enum):
     EQUIPMENT = "equipment" # 装備
     CAMP = "camp"           # キャンプ
     STATUS = "status"       # ステータス
+    STATUS_EFFECTS = "status_effects" # 状態効果
 
 
 class DungeonMainMenu(UIElement):
@@ -38,6 +40,7 @@ class DungeonMainMenu(UIElement):
             {"text": "装備", "action": "equipment"},
             {"text": "キャンプ", "action": "camp"},
             {"text": "ステータス", "action": "status"},
+            {"text": "状態効果", "action": "status_effects"},
             {"text": "地上部に戻る", "action": "return_overworld"},
             {"text": "閉じる", "action": "close"}
         ]
@@ -257,6 +260,7 @@ class DungeonUIManager:
         self.inventory_ui: Optional[InventoryUI] = None
         self.equipment_ui: Optional[EquipmentUI] = None
         self.magic_ui: Optional[MagicUI] = None
+        self.status_effects_ui: Optional[StatusEffectsUI] = None
         
         # 状態管理
         self.current_menu: Optional[DungeonMenuType] = None
@@ -293,6 +297,7 @@ class DungeonUIManager:
         self.main_menu.set_callback("equipment", self._open_equipment)
         self.main_menu.set_callback("camp", self._open_camp)
         self.main_menu.set_callback("status", self._open_status)
+        self.main_menu.set_callback("status_effects", self._open_status_effects)
         self.main_menu.set_callback("return_overworld", self._return_to_overworld)
     
     def set_party(self, party: Party):
@@ -340,6 +345,9 @@ class DungeonUIManager:
         
         if self.magic_ui:
             self.magic_ui.hide()
+        
+        if self.status_effects_ui:
+            self.status_effects_ui.hide()
         
         self.current_menu = None
         self.is_menu_open = False
@@ -415,6 +423,19 @@ class DungeonUIManager:
         logger.info("ステータスメニューを開きます")
         # TODO: ステータスメニューの実装
     
+    def _open_status_effects(self):
+        """状態効果メニューを開く"""
+        logger.info("状態効果メニューを開きます")
+        
+        if not self.status_effects_ui and self.party:
+            self.status_effects_ui = StatusEffectsUI()
+            self.status_effects_ui.set_party(self.party)
+        
+        if self.status_effects_ui:
+            self.main_menu.hide()
+            self.status_effects_ui.show()
+            self.current_menu = DungeonMenuType.STATUS_EFFECTS
+    
     def _return_to_overworld(self):
         """地上部に戻る"""
         logger.info("地上部への帰還を実行します")
@@ -437,5 +458,7 @@ class DungeonUIManager:
             self.equipment_ui.destroy()
         if self.magic_ui:
             self.magic_ui.destroy()
+        if self.status_effects_ui:
+            self.status_effects_ui.destroy()
         
         logger.info("DungeonUIManagerをクリーンアップしました")
