@@ -417,5 +417,253 @@ class UIManager:
         logger.info("UIManagerをクリーンアップしました")
 
 
+class UITextInput(UIElement):
+    """テキスト入力UI要素"""
+    
+    def __init__(
+        self, 
+        element_id: str, 
+        initial_text: str = "",
+        max_chars: int = 20,
+        placeholder: str = "",
+        pos: tuple = (0, 0, 0),
+        width: float = 10.0,
+        on_change: Optional[Callable[[str], None]] = None
+    ):
+        super().__init__(element_id)
+        self.initial_text = initial_text
+        self.max_chars = max_chars
+        self.placeholder = placeholder
+        self.on_change = on_change
+        self.current_text = initial_text
+        
+        # DirectEntryを使用したテキスト入力フィールド
+        self.text_input = DirectEntry(
+            text=initial_text,
+            scale=0.05,
+            pos=pos,
+            width=width,
+            numLines=1,
+            focus=False,
+            command=self._on_text_submit,
+            focusInCommand=self._on_focus_in,
+            focusOutCommand=self._on_focus_out,
+            frameColor=(1, 1, 1, 0.8),
+            text_fg=(0, 0, 0, 1),
+            rolloverSound=None,
+            clickSound=None
+        )
+        
+        # プレースホルダーテキスト
+        if placeholder and not initial_text:
+            self.text_input.set(placeholder)
+            self.text_input['text_fg'] = (0.5, 0.5, 0.5, 1)
+        
+        self.gui_element = self.text_input
+        self.is_placeholder_shown = bool(placeholder and not initial_text)
+        
+        logger.debug(f"テキスト入力を作成: {element_id}")
+    
+    def _on_text_submit(self, text):
+        """テキスト送信時のコールバック"""
+        self.current_text = text
+        if self.on_change:
+            self.on_change(text)
+        logger.debug(f"テキスト入力送信: {text}")
+    
+    def _on_focus_in(self):
+        """フォーカス取得時の処理"""
+        if self.is_placeholder_shown:
+            self.text_input.set("")
+            self.text_input['text_fg'] = (0, 0, 0, 1)
+            self.is_placeholder_shown = False
+        logger.debug(f"テキスト入力フォーカス取得: {self.element_id}")
+    
+    def _on_focus_out(self):
+        """フォーカス失失時の処理"""
+        current_text = self.text_input.get()
+        if not current_text and self.placeholder:
+            self.text_input.set(self.placeholder)
+            self.text_input['text_fg'] = (0.5, 0.5, 0.5, 1)
+            self.is_placeholder_shown = True
+        else:
+            self.current_text = current_text
+        logger.debug(f"テキスト入力フォーカス失失: {self.element_id}")
+    
+    def get_text(self) -> str:
+        """現在のテキストを取得"""
+        if self.is_placeholder_shown:
+            return ""
+        return self.text_input.get()
+    
+    def set_text(self, text: str):
+        """テキストを設定"""
+        self.text_input.set(text)
+        self.current_text = text
+        self.is_placeholder_shown = False
+        if text:
+            self.text_input['text_fg'] = (0, 0, 0, 1)
+    
+    def clear(self):
+        """テキストをクリア"""
+        self.text_input.set("")
+        self.current_text = ""
+        self.is_placeholder_shown = False
+    
+    def set_focus(self, focus: bool = True):
+        """フォーカスを設定"""
+        if focus:
+            self.text_input['focus'] = True
+        else:
+            self.text_input['focus'] = False
+    
+    def is_empty(self) -> bool:
+        """テキストが空かチェック"""
+        return not self.get_text()
+    
+    def destroy(self):
+        """テキスト入力を破棄"""
+        if self.text_input:
+            self.text_input.destroy()
+        super().destroy()
+
+
+class UIInputDialog(UIElement):
+    """テキスト入力付きダイアログ"""
+    
+    def __init__(
+        self,
+        element_id: str,
+        title: str,
+        message: str,
+        initial_text: str = "",
+        placeholder: str = "",
+        on_confirm: Optional[Callable[[str], None]] = None,
+        on_cancel: Optional[Callable] = None
+    ):
+        super().__init__(element_id)
+        self.title = title
+        self.message = message
+        self.on_confirm = on_confirm
+        self.on_cancel = on_cancel
+        
+        # 背景
+        self.background = DirectFrame(
+            frameColor=(0, 0, 0, 0.8),
+            frameSize=(-1.5, 1.5, -1, 1),
+            pos=(0, 0, 0)
+        )
+        
+        # タイトル
+        self.title_text = UIText(
+            f"{element_id}_title",
+            title,
+            pos=(0, 0, 0.5),
+            scale=0.06,
+            color=(1, 1, 1, 1)
+        )
+        
+        # メッセージ
+        self.message_text = UIText(
+            f"{element_id}_message", 
+            message,
+            pos=(0, 0, 0.2),
+            scale=0.04,
+            color=(1, 1, 1, 1)
+        )
+        
+        # テキスト入力
+        self.text_input = UITextInput(
+            f"{element_id}_input",
+            initial_text=initial_text,
+            placeholder=placeholder,
+            pos=(0, 0, -0.1),
+            width=15.0
+        )
+        
+        # ボタン
+        self.ok_button = DirectButton(
+            text="OK",
+            scale=0.06,
+            pos=(-0.3, 0, -0.4),
+            command=self._on_ok,
+            frameColor=(0.2, 0.7, 0.2, 1),
+            text_fg=(1, 1, 1, 1),
+            rolloverSound=None,
+            clickSound=None
+        )
+        
+        self.cancel_button = DirectButton(
+            text="キャンセル",
+            scale=0.06,
+            pos=(0.3, 0, -0.4),
+            command=self._on_cancel,
+            frameColor=(0.7, 0.2, 0.2, 1),
+            text_fg=(1, 1, 1, 1),
+            rolloverSound=None,
+            clickSound=None
+        )
+        
+        self.gui_element = self.background
+        
+        # 子要素リスト
+        self.child_elements = [
+            self.title_text, 
+            self.message_text, 
+            self.text_input,
+            self.ok_button,
+            self.cancel_button
+        ]
+        
+        logger.debug(f"入力ダイアログを作成: {element_id}")
+    
+    def _on_ok(self):
+        """OKボタンが押された時の処理"""
+        text = self.text_input.get_text()
+        if self.on_confirm:
+            self.on_confirm(text)
+    
+    def _on_cancel(self):
+        """キャンセルボタンが押された時の処理"""
+        if self.on_cancel:
+            self.on_cancel()
+    
+    def show(self):
+        """ダイアログを表示"""
+        super().show()
+        self.title_text.show()
+        self.message_text.show()
+        self.text_input.show()
+        self.ok_button.show()
+        self.cancel_button.show()
+        
+        # テキスト入力にフォーカスを設定
+        self.text_input.set_focus(True)
+    
+    def hide(self):
+        """ダイアログを非表示"""
+        super().hide()
+        for element in self.child_elements:
+            if hasattr(element, 'hide'):
+                element.hide()
+            else:
+                element.hide()
+    
+    def destroy(self):
+        """ダイアログを破棄"""
+        for element in self.child_elements:
+            if hasattr(element, 'destroy'):
+                element.destroy()
+            else:
+                element.destroy()
+        
+        if self.ok_button:
+            self.ok_button.destroy()
+        if self.cancel_button:
+            self.cancel_button.destroy()
+            
+        super().destroy()
+
+
 # グローバルインスタンス
 ui_manager = UIManager()

@@ -54,6 +54,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Phase 6**: 統合・最適化
 
 各フェーズの詳細TODO: `docs/phase*_todos.md`
+不具合: `docs/bugs.md`
 
 ## 作業後のTODO管理
 - 作業後、TODOファイルを更新してください

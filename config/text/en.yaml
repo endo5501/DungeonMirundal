@@ -35,6 +35,9 @@ character:
   intelligence: "Intelligence"
   faith: "Faith"
   luck: "Luck"
+  enter_name: "Enter Name"
+  select_race: "Select Race"
+  select_class: "Select Class"
   
 # Race
 race:

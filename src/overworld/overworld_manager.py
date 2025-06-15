@@ -448,18 +448,94 @@ class OverworldManager:
         
         self._close_dialog()
     
+    def _emergency_menu_recovery(self):
+        """緊急メニュー復元処理"""
+        logger.info("緊急メニュー復元を開始します")
+        
+        try:
+            # 全てのUI要素をクリーンアップ
+            self._cleanup_ui()
+            
+            # 状態をリセット
+            self.settings_menu_active = False
+            
+            # メインメニューを強制再生成
+            self._show_main_menu()
+            
+            logger.info("緊急メニュー復元が完了しました")
+            
+        except Exception as e:
+            logger.error(f"緊急メニュー復元中にエラー: {e}")
+            raise
+    
+    def _emergency_overworld_reset(self):
+        """緊急地上部リセット処理"""
+        logger.critical("緊急地上部リセットを実行します")
+        
+        try:
+            # パーティ情報を保持
+            saved_party = self.current_party
+            
+            # 地上部を一度完全にリセット
+            self.exit_overworld()
+            
+            # パーティがある場合は再入場
+            if saved_party:
+                self.enter_overworld(saved_party)
+                logger.info("緊急リセット後、パーティを地上部に復帰させました")
+            else:
+                # パーティがない場合は最低限のメニューを表示
+                self.is_active = True
+                self._show_main_menu()
+                logger.warning("パーティ情報なしで地上部をリセットしました")
+                
+        except Exception as e:
+            logger.critical(f"緊急地上部リセットでエラー: {e}")
+            # 最終的にアプリケーションの終了も検討する必要がある
+    
     def on_facility_exit(self):
         """施設退場時のコールバック"""
         # 施設から出たら地上部メニューに戻る
-        if self.is_active:
+        if not self.is_active:
+            return
+        
+        try:
             # 設定画面が表示されている場合はそちらを表示
             if self.settings_menu_active and self.location_menu:
-                ui_manager.show_element(self.location_menu.element_id)
-            # そうでなければメインメニュー（地上マップ）を表示
-            elif self.main_menu:
+                # 設定メニューが正常に存在するか確認
+                if ui_manager.get_element(self.location_menu.element_id):
+                    ui_manager.show_element(self.location_menu.element_id)
+                    logger.debug("設定メニューに戻りました")
+                    return
+                else:
+                    # 設定メニューが破棄されている場合は状態をリセット
+                    logger.warning("設定メニューが見つからないため状態をリセットします")
+                    self.settings_menu_active = False
+                    self.location_menu = None
+            
+            # メインメニューの表示を試行
+            if self.main_menu and ui_manager.get_element(self.main_menu.element_id):
                 ui_manager.show_element(self.main_menu.element_id)
-        
-        logger.debug("施設から地上部メニューに戻りました")
+                logger.debug("メインメニューに戻りました")
+                return
+            
+            # メインメニューが利用できない場合は強制再生成
+            logger.warning("メインメニューが利用できないため再生成します")
+            self._show_main_menu()
+            logger.info("メインメニューを再生成しました")
+            
+        except Exception as e:
+            # 全ての復元処理が失敗した場合の最終的なフェイルセーフ
+            logger.error(f"施設退場時のメニュー復元でエラーが発生: {e}")
+            logger.info("緊急メニュー復元を実行します")
+            
+            try:
+                # UI状態をクリアして再生成
+                self._emergency_menu_recovery()
+            except Exception as recovery_error:
+                logger.critical(f"緊急メニュー復元も失敗: {recovery_error}")
+                # 最後の手段：地上部をリセット
+                self._emergency_overworld_reset()
     
     def get_current_party(self) -> Optional[Party]:
         """現在のパーティを取得"""

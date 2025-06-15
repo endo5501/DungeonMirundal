@@ -3,7 +3,7 @@
 from typing import Dict, List, Optional, Any
 from enum import Enum
 
-from src.ui.base_ui import UIElement, UIText, UIButton, UIMenu, UIDialog, ui_manager
+from src.ui.base_ui import UIElement, UIText, UIButton, UIMenu, UIDialog, UIInputDialog, ui_manager
 from src.character.character import Character
 from src.character.stats import BaseStats, StatGenerator, StatValidator
 from src.core.config_manager import config_manager
@@ -97,24 +97,62 @@ class CharacterCreationWizard:
     
     def _show_name_input(self):
         """名前入力ステップ"""
-        # TODO: テキスト入力UIの実装（簡易版として固定名前を使用）
-        self.character_data['name'] = "Hero"
+        # 現在の名前があればそれを初期値とする、なければデフォルト名
+        current_name = self.character_data.get('name', 'Hero')
         
-        dialog = UIDialog(
+        dialog = UIInputDialog(
             "name_input_dialog",
-            ui_manager.get_text("character.enter_name"),
-            f"名前: {self.character_data['name']}",
-            buttons=[
-                {
-                    'text': ui_manager.get_text("common.ok"),
-                    'command': self._next_step
-                }
-            ]
+            config_manager.get_text("character.enter_name"),
+            "キャラクターの名前を入力してください:",
+            initial_text=current_name,
+            placeholder="名前を入力...",
+            on_confirm=self._on_name_confirmed,
+            on_cancel=self._on_name_cancelled
         )
         
         self.current_ui = dialog
         ui_manager.register_element(dialog)
         ui_manager.show_element(dialog.element_id)
+    
+    def _on_name_confirmed(self, name: str):
+        """名前入力確認時の処理"""
+        # 名前の検証
+        if not name or not name.strip():
+            # 名前が空の場合はデフォルト名を使用
+            name = "Hero"
+        
+        # 名前の文字数制限チェック
+        name = name.strip()[:20]  # 最大20文字
+        
+        # 特殊文字の除去（アルファベット、数字、日本語のみ許可）
+        allowed_chars = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789ひらがなカタカナ漢字")
+        # 簡易版：基本的な文字チェック
+        if any(c in name for c in ['<', '>', '&', '"', "'"]):
+            name = "Hero"  # 危険な文字がある場合はデフォルト名
+        
+        self.character_data['name'] = name
+        
+        # UIを閉じて次のステップへ
+        ui_manager.hide_element(self.current_ui.element_id)
+        ui_manager.unregister_element(self.current_ui.element_id)
+        self.current_ui = None
+        
+        self._next_step()
+        
+        logger.info(f"キャラクター名が設定されました: {name}")
+    
+    def _on_name_cancelled(self):
+        """名前入力キャンセル時の処理"""
+        # UIを閉じて前のステップに戻る
+        ui_manager.hide_element(self.current_ui.element_id)
+        ui_manager.unregister_element(self.current_ui.element_id)
+        self.current_ui = None
+        
+        # キャラクター作成をキャンセル
+        if self.on_cancel:
+            self.on_cancel()
+        
+        logger.info("キャラクター作成がキャンセルされました")
     
     def _show_race_selection(self):
         """種族選択ステップ"""

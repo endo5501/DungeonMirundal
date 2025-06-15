@@ -40,6 +40,9 @@ character:
   intelligence: "知恵"
   faith: "信仰心"
   luck: "運"
+  enter_name: "名前入力"
+  select_race: "種族選択"
+  select_class: "クラス選択"
   
 # 種族
 race:
