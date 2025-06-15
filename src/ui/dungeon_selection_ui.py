@@ -145,8 +145,8 @@ class DungeonSelectionUI:
             "ダンジョン入場確認",
             message,
             [
-                ("はい", lambda: self._confirm_dungeon_selection(dungeon_id)),
-                ("いいえ", self._back_to_dungeon_menu)
+                {"text": "はい", "command": lambda: self._confirm_dungeon_selection(dungeon_id)},
+                {"text": "いいえ", "command": self._back_to_dungeon_menu}
             ]
         )
         
@@ -202,7 +202,7 @@ class DungeonSelectionUI:
             "ダンジョン",
             "現在利用可能なダンジョンがありません。\\n\\n"
             "パーティのレベルを上げてから再度お試しください。",
-            [("戻る", self._cancel_selection)]
+            [{"text": "戻る", "command": self._cancel_selection}]
         )
         
         ui_manager.register_element(dialog)
