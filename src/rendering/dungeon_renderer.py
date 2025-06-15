@@ -44,10 +44,10 @@ class RenderQuality(Enum):
     HIGH = "high"
 
 
-class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
+class DungeonRenderer:
     """ダンジョン3D描画システム"""
     
-    def __init__(self, window_title: str = "Dungeon Explorer"):
+    def __init__(self, show_base_instance=None):
         if not PANDA3D_AVAILABLE:
             logger.error("Panda3Dが利用できません。3D描画は無効化されます。")
             self.enabled = False
@@ -57,11 +57,30 @@ class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
             self.ui_manager = None
             return
         
-        super().__init__()
+        # ShowBaseインスタンスを外部から受け取る
+        self.base_instance = show_base_instance
+        if not self.base_instance:
+            # baseグローバル変数を使用
+            try:
+                self.base_instance = base
+            except NameError:
+                logger.error("ShowBaseインスタンスが見つかりません")
+                self.enabled = False
+                return
+        
+        # 実際には別のShowBaseを作らずに、既存のものを使用
         self.enabled = True
         
+        # ShowBaseメソッドの参照を設定
+        self.render = self.base_instance.render
+        self.camera = self.base_instance.camera
+        self.cam = self.base_instance.cam
+        self.win = self.base_instance.win
+        self.taskMgr = self.base_instance.taskMgr
+        self.loader = self.base_instance.loader
+        self.setBackgroundColor = self.base_instance.setBackgroundColor
+        
         # 基本設定
-        self.window_title = window_title
         self.view_mode = ViewMode.FIRST_PERSON
         self.render_quality = RenderQuality.MEDIUM
         
@@ -99,7 +118,7 @@ class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
             return
         
         props = WindowProperties()
-        props.setTitle(self.window_title)
+        props.setTitle("Dungeon Explorer")
         props.setSize(1024, 768)
         self.win.requestProperties(props)
         

@@ -194,7 +194,11 @@ class InputManager(DirectObject):
     def _start_input_polling(self):
         """入力ポーリング開始"""
         # ゲームパッドの定期的な状態チェック
-        self.taskMgr.add(self._poll_gamepad_input, "poll_gamepad")
+        try:
+            from direct.task import Task
+            base.taskMgr.add(self._poll_gamepad_input, "poll_gamepad")
+        except:
+            logger.warning("タスクマネージャーが利用できません（テスト環境）")
     
     def _poll_gamepad_input(self, task):
         """ゲームパッド入力ポーリング"""

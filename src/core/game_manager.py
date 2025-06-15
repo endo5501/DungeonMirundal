@@ -25,8 +25,8 @@ class GameManager(ShowBase):
         self.paused = False
         self.current_location = "overworld"  # "overworld" or "dungeon"
         
-        # マネージャーの初期化
-        self.config = config_manager
+        # マネージャーの初期化（名前衝突を避ける）
+        self.game_config = config_manager
         self.input_manager = InputManager()
         self.overworld_manager = None
         self.dungeon_manager = None
@@ -58,18 +58,18 @@ class GameManager(ShowBase):
     def _load_initial_config(self):
         """初期設定の読み込み"""
         # ゲーム設定の読み込み
-        self.game_config = self.config.load_config("game_config")
+        game_config = self.game_config.load_config("game_config")
         
         # 言語設定
-        language = self.game_config.get("gameplay", {}).get("language", "ja")
-        self.config.set_language(language)
+        language = game_config.get("gameplay", {}).get("language", "ja")
+        self.game_config.set_language(language)
         
         logger.info(f"初期設定を読み込みました: 言語={language}")
     
     def _load_input_settings(self):
         """入力設定の読み込み"""
         try:
-            input_settings = self.config.load_config("input_settings")
+            input_settings = self.game_config.load_config("input_settings")
             if input_settings and hasattr(self, 'input_manager'):
                 self.input_manager.load_bindings(input_settings)
                 logger.info("入力設定を読み込みました")
@@ -78,7 +78,9 @@ class GameManager(ShowBase):
         
     def _setup_window(self):
         """ウィンドウの設定"""
-        window_config = self.game_config.get("window", {})
+        # 設定データを取得
+        game_config = self.game_config.load_config("game_config")
+        window_config = game_config.get("window", {})
         
         # ウィンドウタイトル
         title = window_config.get("title", GAME_TITLE)
@@ -89,7 +91,8 @@ class GameManager(ShowBase):
         height = window_config.get("height", WINDOW_HEIGHT)
         
         # FPS制限
-        fps = self.game_config.get("graphics", {}).get("fps", FPS)
+        graphics_config = game_config.get("graphics", {})
+        fps = graphics_config.get("fps", FPS)
         globalClock.setMode(globalClock.MLimited)
         globalClock.setFrameRate(fps)
         
@@ -130,7 +133,9 @@ class GameManager(ShowBase):
     
     def _setup_debug_info(self):
         """デバッグ情報の設定"""
-        self.debug_enabled = self.game_config.get("debug", {}).get("enabled", False)
+        game_config = self.game_config.load_config("game_config")
+        debug_config = game_config.get("debug", {})
+        self.debug_enabled = debug_config.get("enabled", False)
         
         if self.debug_enabled:
             self.debug_text = OnscreenText(
@@ -142,7 +147,7 @@ class GameManager(ShowBase):
             )
             
             # FPS表示
-            if self.game_config.get("debug", {}).get("show_fps", False):
+            if debug_config.get("show_fps", False):
                 self.setFrameRateMeter(True)
                 
         logger.info(f"デバッグ設定: {'有効' if self.debug_enabled else '無効'}")
@@ -271,7 +276,7 @@ class GameManager(ShowBase):
         
         # ダンジョンレンダラーの初期化
         try:
-            self.dungeon_renderer = DungeonRenderer()
+            self.dungeon_renderer = DungeonRenderer(show_base_instance=self)
             if self.dungeon_renderer.enabled:
                 self.dungeon_renderer.set_dungeon_manager(self.dungeon_manager)
                 self.dungeon_renderer.set_game_manager(self)
@@ -450,14 +455,14 @@ class GameManager(ShowBase):
     
     def get_text(self, key: str) -> str:
         """テキストの取得"""
-        return self.config.get_text(key)
+        return self.game_config.get_text(key)
     
     def save_input_settings(self):
         """入力設定を保存"""
         try:
             if hasattr(self, 'input_manager'):
                 bindings_data = self.input_manager.save_bindings()
-                self.config.save_config("input_settings", bindings_data)
+                self.game_config.save_config("input_settings", bindings_data)
                 logger.info("入力設定を保存しました")
                 return True
         except Exception as e:
