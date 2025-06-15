@@ -269,7 +269,7 @@ class Shop(BaseFacility):
             if not slot.is_empty():
                 item_instance = slot.item_instance
                 item = self.item_manager.get_item(item_instance.item_id)
-                if item and item.price > 0:  # 価格が設定されているアイテムのみ売却可能
+                if item and item.price > 0 and item_instance.identified:  # 鑑定済みかつ価格設定アイテムのみ売却可能
                     sellable_items.append((slot, item_instance, item))
         
         if not sellable_items:

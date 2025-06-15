@@ -219,3 +219,36 @@ class TestShopSelling:
         # 差額確認（購入価格の約50%の損失）
         loss = purchase_price - sell_price
         assert loss == purchase_price - sell_price
+    
+    def test_sell_unidentified_item_restriction(self):
+        """未鑑定アイテムの売却制限テスト"""
+        # パーティインベントリに未鑑定アイテムを追加
+        party_inventory = self.party.get_party_inventory()
+        
+        # 未鑑定のダガーを追加
+        unidentified_dagger = ItemInstance(item_id="dagger", quantity=1, identified=False)
+        success = party_inventory.add_item(unidentified_dagger)
+        assert success
+        
+        # 鑑定済みアイテムも追加
+        identified_short_sword = ItemInstance(item_id="short_sword", quantity=1, identified=True)
+        success = party_inventory.add_item(identified_short_sword)
+        assert success
+        
+        # 売却可能アイテムを取得
+        sellable_items = []
+        for slot in party_inventory.slots:
+            if not slot.is_empty():
+                item_instance = slot.item_instance
+                item = item_manager.get_item(item_instance.item_id)
+                if item and item.price > 0 and item_instance.identified:
+                    sellable_items.append((slot, item_instance, item))
+        
+        # 鑑定済みアイテムのみが売却可能であることを確認
+        assert len(sellable_items) == 1
+        assert sellable_items[0][1].item_id == "short_sword"
+        assert sellable_items[0][1].identified == True
+        
+        # 未鑑定アイテムが売却リストに含まれていないことを確認
+        sellable_item_ids = [item_instance.item_id for _, item_instance, _ in sellable_items]
+        assert "dagger" not in sellable_item_ids
