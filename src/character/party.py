@@ -216,6 +216,12 @@ class Party:
         back_ids = self.formation.get_back_row()
         return [self.characters[char_id] for char_id in back_ids if char_id and char_id in self.characters]
     
+    def get_max_level(self) -> int:
+        """パーティの最高レベルを取得"""
+        if not self.characters:
+            return 0
+        return max(char.experience.level for char in self.characters.values())
+    
     def move_character(self, character_id: str, new_position: PartyPosition) -> bool:
         """キャラクターの位置を変更"""
         if character_id not in self.characters:

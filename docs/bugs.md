@@ -37,15 +37,14 @@
   - 修正日: 2025-06-15
 
 - [x] ダンジョンの入口に入るとクラッシュする
-  - 修正内容: **根本原因修正** - DungeonSelectionUIの実装における互換性問題を解決
+  - 修正内容: **2つの根本原因を修正** - Partyクラスのget_max_levelメソッド追加とUIDialogボタン形式の統一
   - 詳細:
-    * **根本原因1**: PartyクラスにDungeonSelectionUIが要求するget_max_level()メソッドが存在しなかった
-    * **根本原因2**: UIDialogのボタン形式がタプル形式で実装されていたが、base_ui.pyは辞書形式を期待していた
-    * **問題**: party.get_max_level()呼び出し時にAttributeError、UIDialog作成時にボタン処理エラー
-    * **解決策**: 
-      - Party.get_max_level()メソッドを追加実装
-      - DungeonSelectionUIのUIDialogボタン形式を辞書形式に変更
-    * **結果**: ダンジョン選択画面が正常に表示され、レベル制限チェックが正常動作
-  - 関連ファイル: `src/character/party.py`, `src/ui/dungeon_selection_ui.py`
+    * **原因1**: DungeonSelectionUIがParty.get_max_level()を呼び出すが、メソッドが存在しなかった
+    * **原因2**: UIDialogのボタン引数形式が不一致（タプル形式 vs 辞書形式）
+    * **解決策1**: Party.get_max_level()メソッドを実装（パーティの最高レベルを返す）
+    * **解決策2**: UIDialogボタンを辞書形式 `{"text": "テキスト", "command": コールバック}` に統一
+    * **結果**: ダンジョン選択システムが正常動作、全12テストが通過
+  - 関連ファイル: `src/character/party.py`, `src/ui/dungeon_selection_ui.py`, `tests/test_dungeon_selection_ui.py`
   - 修正日: 2025-06-16
+
 

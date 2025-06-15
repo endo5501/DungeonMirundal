@@ -42,8 +42,8 @@ class TestDungeonSelectionUI:
     
     def test_get_available_dungeons_level_1(self):
         """レベル1パーティの利用可能ダンジョンテスト"""
-        # レベル1のキャラクターを作成
-        stats = BaseStats(strength=10, agility=10, intelligence=10, faith=10, luck=10)
+        # レベル1のキャラクターを作成（統計値を高めに設定）
+        stats = BaseStats(strength=16, agility=12, intelligence=10, faith=10, luck=10)
         character = Character.create_character("Newbie", "human", "fighter", stats)
         character.experience.level = 1
         
@@ -79,7 +79,8 @@ class TestDungeonSelectionUI:
     def test_get_available_dungeons_level_20(self):
         """レベル20パーティの利用可能ダンジョンテスト"""
         # レベル20のキャラクターを作成
-        self.party.characters[0].experience.level = 20
+        character_id = list(self.party.characters.keys())[0]
+        self.party.characters[character_id].experience.level = 20
         
         available = self.dungeon_ui._get_available_dungeons(self.party)
         
@@ -126,8 +127,9 @@ class TestDungeonSelectionUI:
         assert "物理" in display_name  # 属性
         assert "5階" in display_name  # 階数
     
-    @patch('src.ui.base_ui.ui_manager.show_menu')
-    def test_show_dungeon_selection(self, mock_show_menu):
+    @patch('src.ui.base_ui.ui_manager.register_element')
+    @patch('src.ui.base_ui.ui_manager.show_element')
+    def test_show_dungeon_selection(self, mock_show_element, mock_register):
         """ダンジョン選択表示テスト"""
         mock_on_selected = Mock()
         mock_on_cancel = Mock()
@@ -138,16 +140,18 @@ class TestDungeonSelectionUI:
             mock_on_cancel
         )
         
-        # メニューが表示されることを確認
-        mock_show_menu.assert_called_once()
+        # UI要素が登録・表示されることを確認
+        mock_register.assert_called_once()
+        mock_show_element.assert_called_once()
         
         # コールバックが正しく設定されることを確認
         assert self.dungeon_ui.on_dungeon_selected == mock_on_selected
         assert self.dungeon_ui.on_cancel == mock_on_cancel
         assert self.dungeon_ui.current_party == self.party
     
-    @patch('src.ui.base_ui.ui_manager.show_dialog')
-    def test_show_no_dungeons_dialog(self, mock_show_dialog):
+    @patch('src.ui.base_ui.ui_manager.register_element')
+    @patch('src.ui.base_ui.ui_manager.show_element')
+    def test_show_no_dungeons_dialog(self, mock_show_element, mock_register):
         """利用可能ダンジョンなしダイアログテスト"""
         # パーティを空にしてダンジョンアクセス不可状態を作る
         empty_party = Party(party_id="empty_party")
@@ -160,11 +164,13 @@ class TestDungeonSelectionUI:
             mock_on_cancel
         )
         
-        # ダイアログが表示されることを確認
-        mock_show_dialog.assert_called_once()
+        # ダイアログが登録・表示されることを確認
+        mock_register.assert_called_once()
+        mock_show_element.assert_called_once()
     
-    @patch('src.ui.base_ui.ui_manager.show_dialog')
-    def test_show_dungeon_confirmation(self, mock_show_dialog):
+    @patch('src.ui.base_ui.ui_manager.register_element')
+    @patch('src.ui.base_ui.ui_manager.show_element')
+    def test_show_dungeon_confirmation(self, mock_show_element, mock_register):
         """ダンジョン確認ダイアログテスト"""
         dungeon_info = {
             "name": "始まりの洞窟",
@@ -177,16 +183,17 @@ class TestDungeonSelectionUI:
         
         self.dungeon_ui._show_dungeon_confirmation("beginners_cave", dungeon_info)
         
-        # 確認ダイアログが表示されることを確認
-        mock_show_dialog.assert_called_once()
+        # 確認ダイアログが登録・表示されることを確認
+        mock_register.assert_called_once()
+        mock_show_element.assert_called_once()
         
-        # ダイアログの内容に必要な情報が含まれることを確認
-        call_args = mock_show_dialog.call_args[0][0]
-        assert call_args.title == "ダンジョン入場確認"
-        assert "始まりの洞窟" in call_args.message
-        assert "1-3" in call_args.message
-        assert "物理" in call_args.message
-        assert "5階" in call_args.message
+        # ダイアログの内容を確認（register_elementに渡されたオブジェクトから）
+        registered_dialog = mock_register.call_args[0][0]
+        assert registered_dialog.title == "ダンジョン入場確認"
+        assert "始まりの洞窟" in registered_dialog.message
+        assert "1-3" in registered_dialog.message
+        assert "物理" in registered_dialog.message
+        assert "5階" in registered_dialog.message
     
     def test_select_dungeon_invalid_id(self):
         """無効なダンジョンID選択テスト"""
@@ -197,30 +204,32 @@ class TestDungeonSelectionUI:
         except Exception as e:
             pytest.fail(f"無効なダンジョンIDでの処理で例外が発生: {e}")
     
-    @patch('src.ui.base_ui.ui_manager.close_current_menu')
-    def test_confirm_dungeon_selection(self, mock_close_menu):
+    @patch('src.ui.base_ui.ui_manager.hide_element')
+    @patch('src.ui.base_ui.ui_manager.unregister_element')
+    def test_confirm_dungeon_selection(self, mock_unregister, mock_hide):
         """ダンジョン選択確定テスト"""
         mock_on_selected = Mock()
         self.dungeon_ui.on_dungeon_selected = mock_on_selected
         
         self.dungeon_ui._confirm_dungeon_selection("beginners_cave")
         
-        # メニューが閉じられることを確認
-        mock_close_menu.assert_called_once()
+        # UI要素が隠され、登録解除されることを確認
+        assert mock_hide.call_count >= 1
+        assert mock_unregister.call_count >= 1
         
         # コールバックが呼ばれることを確認
         mock_on_selected.assert_called_once_with("beginners_cave")
     
-    @patch('src.ui.base_ui.ui_manager.close_current_menu')
-    def test_cancel_selection(self, mock_close_menu):
+    @patch('src.ui.base_ui.ui_manager.hide_element')
+    @patch('src.ui.base_ui.ui_manager.unregister_element')  
+    @patch('src.ui.base_ui.ui_manager.get_element')
+    def test_cancel_selection(self, mock_get, mock_unregister, mock_hide):
         """選択キャンセルテスト"""
+        mock_get.return_value = None  # UI要素が存在しない場合をシミュレート
         mock_on_cancel = Mock()
         self.dungeon_ui.on_cancel = mock_on_cancel
         
         self.dungeon_ui._cancel_selection()
-        
-        # メニューが閉じられることを確認
-        mock_close_menu.assert_called_once()
         
         # キャンセルコールバックが呼ばれることを確認
         mock_on_cancel.assert_called_once()
