@@ -8,6 +8,7 @@ from panda3d.core import TextNode, Vec3
 
 from src.ui.base_ui import UIElement, UIButton, UIText, UIMenu, UIState
 from src.ui.inventory_ui import InventoryUI
+from src.ui.equipment_ui import EquipmentUI
 from src.character.party import Party
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -253,6 +254,7 @@ class DungeonUIManager:
         self.main_menu: Optional[DungeonMainMenu] = None
         self.status_bar: Optional[DungeonStatusBar] = None
         self.inventory_ui: Optional[InventoryUI] = None
+        self.equipment_ui: Optional[EquipmentUI] = None
         
         # 状態管理
         self.current_menu: Optional[DungeonMenuType] = None
@@ -331,6 +333,9 @@ class DungeonUIManager:
         if self.inventory_ui:
             self.inventory_ui.hide()
         
+        if self.equipment_ui:
+            self.equipment_ui.hide()
+        
         self.current_menu = None
         self.is_menu_open = False
         
@@ -377,7 +382,15 @@ class DungeonUIManager:
     def _open_equipment(self):
         """装備メニューを開く"""
         logger.info("装備メニューを開きます")
-        # TODO: 装備メニューの実装
+        
+        if not self.equipment_ui and self.party:
+            self.equipment_ui = EquipmentUI()
+            self.equipment_ui.set_party(self.party)
+        
+        if self.equipment_ui:
+            self.main_menu.hide()
+            self.equipment_ui.show()
+            self.current_menu = DungeonMenuType.EQUIPMENT
     
     def _open_camp(self):
         """キャンプメニューを開く"""
@@ -407,5 +420,7 @@ class DungeonUIManager:
             self.status_bar.destroy()
         if self.inventory_ui:
             self.inventory_ui.destroy()
+        if self.equipment_ui:
+            self.equipment_ui.destroy()
         
         logger.info("DungeonUIManagerをクリーンアップしました")
