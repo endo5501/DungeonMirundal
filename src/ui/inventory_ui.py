@@ -597,6 +597,32 @@ class InventoryUI:
         # 実装簡略化のため、メニューを閉じて再表示
         self._back_to_inventory_contents()
     
+    def show(self):
+        """インベントリUIを表示"""
+        if self.current_party:
+            self.show_party_inventory_menu(self.current_party)
+        else:
+            logger.warning("パーティが設定されていません")
+    
+    def hide(self):
+        """インベントリUIを非表示"""
+        # 現在開いているメニューを閉じる
+        try:
+            ui_manager.hide_element("party_inventory_main")
+        except:
+            pass
+        logger.debug("インベントリUIを非表示にしました")
+    
+    def destroy(self):
+        """インベントリUIを破棄"""
+        self.hide()
+        self.current_party = None
+        self.current_inventory = None
+        self.current_character = None
+        self.selected_slot = None
+        self.transfer_source = None
+        logger.debug("InventoryUIを破棄しました")
+    
     def _back_to_main_inventory_menu(self):
         """メインインベントリメニューに戻る"""
         if self.current_party:

@@ -8,6 +8,7 @@ from src.core.input_manager import InputManager
 from src.overworld.overworld_manager import OverworldManager
 from src.dungeon.dungeon_manager import DungeonManager
 from src.character.party import Party
+from src.rendering.dungeon_renderer import DungeonRenderer
 from src.utils.logger import logger
 from src.utils.constants import *
 
@@ -29,6 +30,7 @@ class GameManager(ShowBase):
         self.input_manager = InputManager()
         self.overworld_manager = None
         self.dungeon_manager = None
+        self.dungeon_renderer = None
         
         # 現在のパーティ
         self.current_party = None
@@ -146,6 +148,19 @@ class GameManager(ShowBase):
         self.dungeon_manager = DungeonManager()
         self.dungeon_manager.set_return_to_overworld_callback(self.transition_to_overworld)
         
+        # ダンジョンレンダラーの初期化
+        try:
+            self.dungeon_renderer = DungeonRenderer()
+            if self.dungeon_renderer.enabled:
+                self.dungeon_renderer.set_dungeon_manager(self.dungeon_manager)
+                self.dungeon_renderer.set_game_manager(self)
+                logger.info("ダンジョンレンダラーを初期化しました")
+            else:
+                logger.warning("ダンジョンレンダラーが無効化されています")
+        except Exception as e:
+            logger.error(f"ダンジョンレンダラー初期化エラー: {e}")
+            self.dungeon_renderer = None
+        
         logger.info("遷移システムを初期化しました")
     
     def set_game_state(self, state: str):
@@ -157,6 +172,11 @@ class GameManager(ShowBase):
     def set_current_party(self, party: Party):
         """現在のパーティを設定"""
         self.current_party = party
+        
+        # ダンジョンレンダラーにもパーティを設定
+        if self.dungeon_renderer and self.dungeon_renderer.enabled:
+            self.dungeon_renderer.set_party(party)
+        
         logger.info(f"パーティを設定: {party.name} ({len(party.get_living_characters())}人)")
     
     def get_current_party(self) -> Party:
@@ -184,6 +204,18 @@ class GameManager(ShowBase):
         if success:
             self.current_location = "dungeon"
             self.set_game_state("dungeon_exploration")
+            
+            # ダンジョンが存在しない場合は作成
+            if "main_dungeon" not in self.dungeon_manager.active_dungeons:
+                self.dungeon_manager.create_dungeon("main_dungeon", "default_seed")
+            
+            # ダンジョンレンダラーで描画開始
+            if self.dungeon_renderer and self.dungeon_renderer.enabled:
+                current_dungeon = self.dungeon_manager.current_dungeon
+                if current_dungeon:
+                    self.dungeon_renderer.render_dungeon(current_dungeon)
+                    self.dungeon_renderer.update_ui()
+            
             logger.info("ダンジョンへの遷移が完了しました")
             return True
         else:

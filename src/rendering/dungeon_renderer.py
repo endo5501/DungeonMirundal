@@ -26,6 +26,7 @@ except ImportError:
 from src.dungeon.dungeon_manager import DungeonManager, DungeonState, PlayerPosition
 from src.dungeon.dungeon_generator import DungeonLevel, DungeonCell, CellType, Direction, DungeonAttribute
 from src.character.party import Party
+from src.ui.dungeon_ui import DungeonUIManager
 from src.utils.logger import logger
 
 
@@ -50,6 +51,10 @@ class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
         if not PANDA3D_AVAILABLE:
             logger.error("Panda3Dが利用できません。3D描画は無効化されます。")
             self.enabled = False
+            # 基本属性を初期化
+            self.dungeon_manager = None
+            self.current_party = None
+            self.ui_manager = None
             return
         
         super().__init__()
@@ -77,6 +82,7 @@ class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
         
         # UI要素
         self.ui_elements: Dict[str, Any] = {}
+        self.ui_manager: Optional[DungeonUIManager] = None
         
         # 初期化
         self._initialize_window()
@@ -163,6 +169,10 @@ class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
             fg=(0.7, 0.7, 0.7, 1),
             align=TextNode.ALeft
         )
+        
+        # ダンジョンUIマネージャーの初期化
+        self.ui_manager = DungeonUIManager()
+        self.ui_manager.set_callback("return_overworld", self._return_to_overworld)
     
     def _setup_controls(self):
         """コントロール設定"""
@@ -192,6 +202,9 @@ class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
     def set_party(self, party: Party):
         """パーティ設定"""
         self.current_party = party
+        if hasattr(self, 'ui_manager') and self.ui_manager:
+            self.ui_manager.set_party(party)
+            self.ui_manager.show_status_bar()
         logger.info(f"パーティ{party.name}を設定しました")
     
     def render_dungeon(self, dungeon_state: DungeonState) -> bool:
@@ -508,6 +521,7 @@ class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
             success, message = self.dungeon_manager.move_player(facing)
             if success:
                 self.render_dungeon(self.dungeon_manager.current_dungeon)
+                self.update_ui()
     
     def _move_backward(self):
         """後退"""
@@ -523,6 +537,7 @@ class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
             success, message = self.dungeon_manager.move_player(opposite[facing])
             if success:
                 self.render_dungeon(self.dungeon_manager.current_dungeon)
+                self.update_ui()
     
     def _move_left(self):
         """左移動"""
@@ -538,6 +553,7 @@ class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
             success, message = self.dungeon_manager.move_player(left[facing])
             if success:
                 self.render_dungeon(self.dungeon_manager.current_dungeon)
+                self.update_ui()
     
     def _move_right(self):
         """右移動"""
@@ -553,6 +569,7 @@ class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
             success, message = self.dungeon_manager.move_player(right[facing])
             if success:
                 self.render_dungeon(self.dungeon_manager.current_dungeon)
+                self.update_ui()
     
     def _turn_left(self):
         """左回転"""
@@ -566,6 +583,7 @@ class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
             }
             self.dungeon_manager.turn_player(left[facing])
             self.render_dungeon(self.dungeon_manager.current_dungeon)
+            self.update_ui()
     
     def _turn_right(self):
         """右回転"""
@@ -579,10 +597,50 @@ class DungeonRenderer(ShowBase if PANDA3D_AVAILABLE else object):
             }
             self.dungeon_manager.turn_player(right[facing])
             self.render_dungeon(self.dungeon_manager.current_dungeon)
+            self.update_ui()
     
     def _show_menu(self):
         """メニュー表示"""
-        logger.info("メニュー表示（未実装）")
+        if hasattr(self, 'ui_manager') and self.ui_manager:
+            self.ui_manager.toggle_main_menu()
+        else:
+            logger.info("メニュー表示（UIマネージャー未初期化）")
+    
+    def _return_to_overworld(self):
+        """地上部に帰還"""
+        if self.dungeon_manager and hasattr(self.dungeon_manager, 'return_to_overworld'):
+            success = self.dungeon_manager.return_to_overworld()
+            if success:
+                logger.info("地上部への帰還が完了しました")
+            else:
+                logger.error("地上部への帰還に失敗しました")
+        else:
+            logger.error("地上部帰還: ダンジョンマネージャーが設定されていません")
+    
+    def set_game_manager(self, game_manager):
+        """ゲームマネージャーを設定"""
+        if hasattr(self, 'ui_manager') and self.ui_manager:
+            self.ui_manager.set_managers(self.dungeon_manager, game_manager)
+        logger.debug("ゲームマネージャーを設定しました")
+    
+    def update_ui(self):
+        """UI情報を更新"""
+        if not hasattr(self, 'ui_manager') or not self.ui_manager or not self.dungeon_manager:
+            return
+        
+        # 位置情報更新
+        if (self.dungeon_manager.current_dungeon and 
+            self.dungeon_manager.current_dungeon.player_position):
+            pos = self.dungeon_manager.current_dungeon.player_position
+            location_info = f"({pos.x}, {pos.y}) レベル: {pos.level}"
+            self.ui_manager.update_location(location_info)
+            
+            # 既存のUI要素も更新
+            if 'position' in self.ui_elements:
+                self.ui_elements['position'].setText(f'位置: {location_info}')
+        
+        # パーティステータス更新
+        self.ui_manager.update_party_status()
 
 
 # グローバルインスタンス
