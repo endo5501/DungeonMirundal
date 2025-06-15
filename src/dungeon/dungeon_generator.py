@@ -20,6 +20,7 @@ class CellType(Enum):
     TREASURE = "treasure"   # 宝箱
     TRAP = "trap"           # トラップ
     SPECIAL = "special"     # 特殊
+    BOSS = "boss"           # ボス
 
 
 class DungeonAttribute(Enum):
@@ -246,6 +247,18 @@ class DungeonGenerator:
         logger.info(f"ダンジョンレベル{level}を生成: {attribute.value}, {width}x{height}")
         return dungeon_level
     
+    def _get_max_floors_for_dungeon(self, dungeon_id: str) -> int:
+        """ダンジョンの最大フロア数を取得"""
+        try:
+            import yaml
+            with open("config/dungeons.yaml", 'r', encoding='utf-8') as f:
+                dungeons_config = yaml.safe_load(f)
+            
+            dungeon_info = dungeons_config.get("dungeons", {}).get(dungeon_id, {})
+            return dungeon_info.get("floors", 20)
+        except Exception:
+            return 20  # デフォルト値
+    
     def _determine_level_attribute(self, level: int, rng: random.Random) -> DungeonAttribute:
         """レベル属性を決定"""
         # レベルに基づく属性決定ロジック
@@ -463,11 +476,19 @@ class DungeonGenerator:
             floor_cells.remove((up_pos, up_cell))
         
         # 下階段を配置（最終レベル以外）
-        if dungeon_level.level < 20:  # 最大20レベル
+        max_floors = self._get_max_floors_for_dungeon(dungeon_id)
+        if dungeon_level.level < max_floors:
             down_pos, down_cell = rng.choice(floor_cells)
             down_cell.cell_type = CellType.STAIRS_DOWN
             dungeon_level.stairs_down_position = down_pos
             floor_cells.remove((down_pos, down_cell))
+        
+        # ボス配置（最終レベルのみ）
+        if dungeon_level.level == max_floors:
+            boss_pos, boss_cell = rng.choice(floor_cells)
+            boss_cell.cell_type = CellType.BOSS
+            dungeon_level.boss_position = boss_pos
+            floor_cells.remove((boss_pos, boss_cell))
         
         # 宝箱配置
         treasure_count = max(1, int(len(floor_cells) * dungeon_level.treasure_rate))

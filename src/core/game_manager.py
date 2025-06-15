@@ -330,7 +330,7 @@ class GameManager(ShowBase):
         """現在のパーティを取得"""
         return self.current_party
     
-    def transition_to_dungeon(self):
+    def transition_to_dungeon(self, dungeon_id: str = "main_dungeon"):
         """ダンジョンへの遷移"""
         if not self.current_party:
             logger.error("パーティが設定されていません")
@@ -340,21 +340,23 @@ class GameManager(ShowBase):
             logger.error("生存しているパーティメンバーがいません")
             return False
         
-        logger.info("ダンジョンへ遷移開始")
+        logger.info(f"ダンジョン '{dungeon_id}' への遷移開始")
         
         # 地上部を退場
         self.overworld_manager.exit_overworld()
         
         # ダンジョンに入場
-        success = self.dungeon_manager.enter_dungeon("main_dungeon", self.current_party)
+        success = self.dungeon_manager.enter_dungeon(dungeon_id, self.current_party)
         
         if success:
             self.current_location = "dungeon"
             self.set_game_state("dungeon_exploration")
             
             # ダンジョンが存在しない場合は作成
-            if "main_dungeon" not in self.dungeon_manager.active_dungeons:
-                self.dungeon_manager.create_dungeon("main_dungeon", "default_seed")
+            if dungeon_id not in self.dungeon_manager.active_dungeons:
+                # ダンジョン設定に基づいてシードを生成
+                dungeon_seed = self._generate_dungeon_seed(dungeon_id)
+                self.dungeon_manager.create_dungeon(dungeon_id, dungeon_seed)
             
             # ダンジョンレンダラーで描画開始
             if self.dungeon_renderer and self.dungeon_renderer.enabled:
@@ -395,6 +397,23 @@ class GameManager(ShowBase):
         else:
             logger.error("地上部への遷移に失敗しました")
             return False
+    
+    def _generate_dungeon_seed(self, dungeon_id: str) -> str:
+        """ダンジョンIDに基づいてシードを生成"""
+        # ダンジョン設定を読み込み
+        try:
+            import yaml
+            with open("config/dungeons.yaml", 'r', encoding='utf-8') as f:
+                dungeons_config = yaml.safe_load(f)
+            
+            dungeon_info = dungeons_config.get("dungeons", {}).get(dungeon_id, {})
+            seed_base = dungeon_info.get("seed_base", dungeon_id)
+            
+            # 基本シードをベースに一意なシードを生成
+            return f"{seed_base}_seed"
+        except Exception as e:
+            logger.warning(f"ダンジョン設定の読み込みに失敗: {e}")
+            return f"{dungeon_id}_default_seed"
     
     def save_game_state(self, slot_id: str) -> bool:
         """ゲーム状態の保存"""

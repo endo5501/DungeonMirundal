@@ -7,6 +7,7 @@ from src.character.party import Party
 from src.character.character import Character, CharacterStatus
 from src.overworld.base_facility import BaseFacility, FacilityManager, facility_manager
 from src.ui.base_ui import UIMenu, UIDialog, ui_manager
+from src.ui.dungeon_selection_ui import DungeonSelectionUI
 from src.core.config_manager import config_manager
 from src.core.save_manager import save_manager
 from src.utils.logger import logger
@@ -35,6 +36,7 @@ class OverworldManager:
         self.main_menu: Optional[UIMenu] = None
         self.location_menu: Optional[UIMenu] = None
         self.settings_menu_active = False
+        self.dungeon_selection_ui = DungeonSelectionUI()
         
         # コールバック
         self.on_enter_dungeon: Optional[Callable] = None
@@ -376,17 +378,29 @@ class OverworldManager:
             self._show_error_dialog("エラー", "意識のあるメンバーがいません")
             return
         
-        # ダンジョン入場確認
-        self._show_confirmation_dialog(
-            "ダンジョンに入りますか？",
-            self._confirm_enter_dungeon
+        # ダンジョン選択UIを表示
+        self.dungeon_selection_ui.show_dungeon_selection(
+            self.current_party,
+            self._on_dungeon_selected,
+            self._on_dungeon_selection_cancelled
         )
     
-    def _confirm_enter_dungeon(self):
-        """ダンジョン入場確認"""
+    def _on_dungeon_selected(self, dungeon_id: str):
+        """ダンジョンが選択された時の処理"""
         if self.on_enter_dungeon:
             self.exit_overworld()
-            self.on_enter_dungeon(self.current_party)
+            self.on_enter_dungeon(dungeon_id)
+    
+    def _on_dungeon_selection_cancelled(self):
+        """ダンジョン選択がキャンセルされた時の処理"""
+        # メインメニューに戻る
+        self._show_main_menu()
+    
+    def _confirm_enter_dungeon(self):
+        """ダンジョン入場確認（旧バージョン・互換性維持）"""
+        if self.on_enter_dungeon:
+            self.exit_overworld()
+            self.on_enter_dungeon("main_dungeon")
         else:
             self._show_info_dialog("ダンジョン", "ダンジョンシステムは未実装です")
     

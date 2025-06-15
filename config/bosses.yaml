@@ -1,0 +1,292 @@
+# ダンジョンボス設定ファイル
+bosses:
+  # 始まりの洞窟のボス
+  cave_boss:
+    name: "洞窟の支配者"
+    description: "洞窟の最深部に住む巨大な熊。鋭い爪と強力な腕力を持つ。"
+    dungeon_id: "beginners_cave"
+    floor: 5
+    
+    # 基本ステータス
+    level: 5
+    hp: 150
+    mp: 0
+    attack: 20
+    defense: 15
+    agility: 8
+    intelligence: 5
+    faith: 0
+    luck: 10
+    
+    # 属性耐性（-100〜100、負数は弱点）
+    resistances:
+      physical: 20
+      fire: -30
+      ice: 10
+      lightning: 0
+      dark: 0
+      light: 0
+    
+    # 特殊能力
+    special_abilities:
+      - name: "強撃"
+        description: "強力な爪攻撃"
+        damage_multiplier: 1.5
+        accuracy: 90
+        mp_cost: 0
+      - name: "咆哮"
+        description: "敵全体を威嚇し、攻撃力を下げる"
+        effect: "attack_down"
+        target: "all_enemies"
+        duration: 3
+        mp_cost: 0
+    
+    # ドロップアイテム
+    drops:
+      - item_id: "iron_sword"
+        probability: 0.8
+        quantity: 1
+      - item_id: "leather_armor"
+        probability: 0.6
+        quantity: 1
+      - item_id: "healing_potion"
+        probability: 1.0
+        quantity: 3
+    
+    # 経験値・ゴールド
+    exp_reward: 100
+    gold_reward: 200
+    
+  # 古の遺跡のボス
+  ruins_boss:
+    name: "古代の守護者"
+    description: "古代遺跡を守る魔法構造物。強力な魔法攻撃を得意とする。"
+    dungeon_id: "ancient_ruins"
+    floor: 8
+    
+    level: 10
+    hp: 300
+    mp: 100
+    attack: 15
+    defense: 25
+    agility: 12
+    intelligence: 25
+    faith: 20
+    luck: 15
+    
+    resistances:
+      physical: 30
+      fire: 0
+      ice: 0
+      lightning: 20
+      dark: -20
+      light: 50
+    
+    special_abilities:
+      - name: "魔力弾"
+        description: "強力な魔法攻撃"
+        damage_multiplier: 2.0
+        accuracy: 95
+        mp_cost: 15
+      - name: "古代の呪い"
+        description: "敵全体に状態異常を与える"
+        effect: "curse"
+        target: "all_enemies"
+        duration: 5
+        mp_cost: 25
+    
+    drops:
+      - item_id: "magic_staff"
+        probability: 0.9
+        quantity: 1
+      - item_id: "mage_robe"
+        probability: 0.7
+        quantity: 1
+      - item_id: "mana_potion"
+        probability: 1.0
+        quantity: 2
+    
+    exp_reward: 250
+    gold_reward: 500
+    
+  # 魔の迷宮のボス
+  labyrinth_boss:
+    name: "迷宮の魔王"
+    description: "迷宮の奥に潜む強大な魔王。闇の力を操り、恐るべき魔法を使う。"
+    dungeon_id: "demon_labyrinth"
+    floor: 12
+    
+    level: 15
+    hp: 500
+    mp: 150
+    attack: 30
+    defense: 30
+    agility: 18
+    intelligence: 30
+    faith: 5
+    luck: 20
+    
+    resistances:
+      physical: 20
+      fire: 30
+      ice: -10
+      lightning: 10
+      dark: 80
+      light: -50
+    
+    special_abilities:
+      - name: "闇の一撃"
+        description: "闇属性の強力な攻撃"
+        damage_multiplier: 2.5
+        accuracy: 90
+        mp_cost: 20
+      - name: "魔王の呪縛"
+        description: "敵全体を麻痺させる"
+        effect: "paralysis"
+        target: "all_enemies"
+        duration: 2
+        mp_cost: 30
+      - name: "暗黒治癒"
+        description: "自分のHPを回復"
+        heal_amount: 100
+        target: "self"
+        mp_cost: 25
+    
+    drops:
+      - item_id: "demon_blade"
+        probability: 1.0
+        quantity: 1
+      - item_id: "shadow_cloak"
+        probability: 0.8
+        quantity: 1
+      - item_id: "elixir"
+        probability: 0.5
+        quantity: 1
+    
+    exp_reward: 500
+    gold_reward: 1000
+    
+  # 竜の巣窟のボス
+  dragon_boss:
+    name: "古竜ドラゴナード"
+    description: "伝説の古竜。炎のブレスと強靭な鱗を持つ最強の敵。"
+    dungeon_id: "dragon_lair"
+    floor: 20
+    
+    level: 20
+    hp: 800
+    mp: 200
+    attack: 40
+    defense: 40
+    agility: 25
+    intelligence: 35
+    faith: 10
+    luck: 30
+    
+    resistances:
+      physical: 40
+      fire: 90
+      ice: -30
+      lightning: 20
+      dark: 30
+      light: 10
+    
+    special_abilities:
+      - name: "炎のブレス"
+        description: "全体攻撃の炎ブレス"
+        damage_multiplier: 1.8
+        accuracy: 95
+        target: "all_enemies"
+        mp_cost: 30
+      - name: "竜の怒り"
+        description: "自分の攻撃力を大幅に上昇"
+        effect: "attack_up_major"
+        target: "self"
+        duration: 5
+        mp_cost: 20
+      - name: "古竜の威光"
+        description: "敵全体に恐怖を与える"
+        effect: "fear"
+        target: "all_enemies"
+        duration: 3
+        mp_cost: 25
+    
+    drops:
+      - item_id: "dragon_sword"
+        probability: 1.0
+        quantity: 1
+      - item_id: "dragon_scale_armor"
+        probability: 1.0
+        quantity: 1
+      - item_id: "phoenix_feather"
+        probability: 0.7
+        quantity: 1
+    
+    exp_reward: 1000
+    gold_reward: 2000
+    
+  # 練習用ダンジョンのボス（開発用）
+  practice_boss:
+    name: "練習用ボス"
+    description: "開発テスト用のボス敵。"
+    dungeon_id: "main_dungeon"
+    floor: 20
+    
+    level: 10
+    hp: 200
+    mp: 50
+    attack: 20
+    defense: 20
+    agility: 15
+    intelligence: 15
+    faith: 10
+    luck: 15
+    
+    resistances:
+      physical: 0
+      fire: 0
+      ice: 0
+      lightning: 0
+      dark: 0
+      light: 0
+    
+    special_abilities:
+      - name: "テスト攻撃"
+        description: "テスト用の攻撃"
+        damage_multiplier: 1.5
+        accuracy: 90
+        mp_cost: 10
+    
+    drops:
+      - item_id: "iron_sword"
+        probability: 1.0
+        quantity: 1
+    
+    exp_reward: 200
+    gold_reward: 300
+
+# ボス戦の特別な設定
+boss_battle_settings:
+  # ボス戦開始時の特別なメッセージ
+  intro_messages:
+    cave_boss: "洞窟の奥から巨大な影が現れた！\\n洞窟の支配者が立ちはだかる！"
+    ruins_boss: "古代の魔法陣が光り、守護者が姿を現した！\\n古代の守護者との戦いが始まる！"
+    labyrinth_boss: "迷宮の最奥で禍々しい気配が立ち込める...\\n魔王が復活した！"
+    dragon_boss: "洞窟の最深部で巨大な竜が目を覚ました！\\n伝説の古竜ドラゴナードとの最終決戦！"
+    practice_boss: "練習用ボスが現れた！"
+  
+  # ボス撃破時のメッセージ
+  victory_messages:
+    cave_boss: "洞窟の支配者を倒した！\\n洞窟に平和が戻った。"
+    ruins_boss: "古代の守護者が崩れ去った！\\n遺跡の謎が解けた。"
+    labyrinth_boss: "魔王を封印した！\\n迷宮の呪いが解かれた。"
+    dragon_boss: "古竜ドラゴナードを倒した！\\nあなたは真の勇者となった！"
+    practice_boss: "練習用ボスを倒した！"
+  
+  # 帰還ポータル出現メッセージ
+  portal_messages:
+    cave_boss: "洞窟の出口への魔法のポータルが現れた！"
+    ruins_boss: "古代の転送魔法陣が起動した！"
+    labyrinth_boss: "迷宮から脱出するポータルが開いた！"
+    dragon_boss: "伝説の帰還ポータルが現れた！"
+    practice_boss: "帰還ポータルが現れた！"
