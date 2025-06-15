@@ -550,7 +550,7 @@ class UIInputDialog(UIElement):
         # 背景
         self.background = DirectFrame(
             frameColor=(0, 0, 0, 0.8),
-            frameSize=(-1.5, 1.5, -1, 1),
+            frameSize=(-1.5, 1.5, -1.0, 0.8),
             pos=(0, 0, 0)
         )
         
@@ -559,8 +559,8 @@ class UIInputDialog(UIElement):
             f"{element_id}_title",
             title,
             pos=(0, 0, 0.5),
-            scale=0.06,
-            color=(1, 1, 1, 1)
+            scale=0.05,
+            color=(1, 1, 0.8, 1)
         )
         
         # メッセージ
@@ -569,7 +569,7 @@ class UIInputDialog(UIElement):
             message,
             pos=(0, 0, 0.2),
             scale=0.04,
-            color=(1, 1, 1, 1)
+            color=(0.9, 0.9, 0.9, 1)
         )
         
         # テキスト入力

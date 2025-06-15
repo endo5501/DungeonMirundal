@@ -61,6 +61,8 @@ class AdventurersGuild(BaseFacility):
         
         # キャラクター作成ウィザードを起動
         wizard = CharacterCreationWizard(callback=self._on_character_created)
+        # キャンセル時のコールバックを設定
+        wizard.on_cancel = self._on_character_creation_cancelled
         wizard.start()
     
     def _on_character_created(self, character: Character):
@@ -75,6 +77,14 @@ class AdventurersGuild(BaseFacility):
             ui_manager.show_element(self.main_menu.element_id)
         
         logger.info(f"新しいキャラクターを作成: {character.name}")
+    
+    def _on_character_creation_cancelled(self):
+        """キャラクター作成キャンセル時のコールバック"""
+        # メインメニューを再表示
+        if self.main_menu:
+            ui_manager.show_element(self.main_menu.element_id)
+        
+        logger.info("キャラクター作成がキャンセルされ、ギルドメインメニューに戻りました")
     
     def _show_party_formation(self):
         """パーティ編成画面を表示"""

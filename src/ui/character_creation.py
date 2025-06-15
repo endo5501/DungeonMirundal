@@ -25,7 +25,7 @@ class CharacterCreationWizard:
     
     def __init__(self, callback: Optional[callable] = None):
         self.callback = callback  # 作成完了時のコールバック
-        self.on_cancel = None  # キャンセル時のコールバック
+        self.on_cancel = self._default_cancel_handler  # キャンセル時のコールバック
         self.current_step = CreationStep.NAME_INPUT
         
         # 作成中のキャラクターデータ
@@ -101,18 +101,18 @@ class CharacterCreationWizard:
         # 現在の名前があればそれを初期値とする、なければデフォルト名
         current_name = self.character_data.get('name', 'Hero')
         
-        # メッセージテキストを取得（重複を避けるため、詳細メッセージのみ使用）
+        # メッセージテキストを取得（シンプルなメッセージを使用してラベル重複を回避）
         try:
-            message = config_manager.get_text("character.enter_name_detail")
+            message = config_manager.get_text("character.enter_name")
         except:
-            message = "キャラクターの名前を入力してください:"
+            message = "名前を入力してください"
         
         dialog = UIInputDialog(
             "name_input_dialog",
-            "名前入力",  # タイトルはシンプルに
-            message,
+            "",  # タイトルを空にして重複回避（ページ上部に既に表示済み）
+            message,  # メッセージのみ表示
             initial_text=current_name,
-            placeholder="名前を入力...",
+            placeholder="",  # プレースホルダーは空のまま
             on_confirm=self._on_name_confirmed,
             on_cancel=self._on_name_cancelled
         )
@@ -160,6 +160,12 @@ class CharacterCreationWizard:
             self.on_cancel()
         
         logger.info("キャラクター作成がキャンセルされました")
+    
+    def _default_cancel_handler(self):
+        """デフォルトのキャンセル処理"""
+        # ウィザードを適切に閉じる
+        self._close_wizard()
+        logger.info("キャラクター作成をキャンセルしました（デフォルト処理）")
     
     def _show_race_selection(self):
         """種族選択ステップ"""
