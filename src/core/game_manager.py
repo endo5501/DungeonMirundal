@@ -5,6 +5,9 @@ from direct.gui.OnscreenText import OnscreenText
 from panda3d.core import TextNode, PandaSystem
 from src.core.config_manager import config_manager
 from src.core.input_manager import InputManager
+from src.overworld.overworld_manager import OverworldManager
+from src.dungeon.dungeon_manager import DungeonManager
+from src.character.party import Party
 from src.utils.logger import logger
 from src.utils.constants import *
 
@@ -19,10 +22,16 @@ class GameManager(ShowBase):
         # ゲーム状態
         self.game_state = "startup"
         self.paused = False
+        self.current_location = "overworld"  # "overworld" or "dungeon"
         
         # マネージャーの初期化
         self.config = config_manager
         self.input_manager = InputManager()
+        self.overworld_manager = None
+        self.dungeon_manager = None
+        
+        # 現在のパーティ
+        self.current_party = None
         
         # 初期設定の読み込み
         self._load_initial_config()
@@ -35,6 +44,9 @@ class GameManager(ShowBase):
         
         # デバッグ情報の表示
         self._setup_debug_info()
+        
+        # 遷移システムの初期化
+        self._setup_transition_system()
         
         logger.info("GameManagerが初期化されました")
         
@@ -124,11 +136,164 @@ class GameManager(ShowBase):
         else:
             logger.info("ゲームを再開しました")
     
+    def _setup_transition_system(self):
+        """遷移システムの初期化"""
+        # 地上部マネージャーの初期化
+        self.overworld_manager = OverworldManager()
+        self.overworld_manager.set_enter_dungeon_callback(self.transition_to_dungeon)
+        
+        # ダンジョンマネージャーの初期化
+        self.dungeon_manager = DungeonManager()
+        self.dungeon_manager.set_return_to_overworld_callback(self.transition_to_overworld)
+        
+        logger.info("遷移システムを初期化しました")
+    
     def set_game_state(self, state: str):
         """ゲーム状態の設定"""
         old_state = self.game_state
         self.game_state = state
         logger.info(f"ゲーム状態変更: {old_state} -> {state}")
+    
+    def set_current_party(self, party: Party):
+        """現在のパーティを設定"""
+        self.current_party = party
+        logger.info(f"パーティを設定: {party.name} ({len(party.get_living_characters())}人)")
+    
+    def get_current_party(self) -> Party:
+        """現在のパーティを取得"""
+        return self.current_party
+    
+    def transition_to_dungeon(self):
+        """ダンジョンへの遷移"""
+        if not self.current_party:
+            logger.error("パーティが設定されていません")
+            return False
+        
+        if not self.current_party.get_living_characters():
+            logger.error("生存しているパーティメンバーがいません")
+            return False
+        
+        logger.info("ダンジョンへ遷移開始")
+        
+        # 地上部を退場
+        self.overworld_manager.exit_overworld()
+        
+        # ダンジョンに入場
+        success = self.dungeon_manager.enter_dungeon("main_dungeon", self.current_party)
+        
+        if success:
+            self.current_location = "dungeon"
+            self.set_game_state("dungeon_exploration")
+            logger.info("ダンジョンへの遷移が完了しました")
+            return True
+        else:
+            logger.error("ダンジョンへの遷移に失敗しました")
+            # 地上部に戻る
+            self.overworld_manager.enter_overworld(self.current_party)
+            return False
+    
+    def transition_to_overworld(self):
+        """地上部への遷移"""
+        if not self.current_party:
+            logger.error("パーティが設定されていません")
+            return False
+        
+        logger.info("地上部へ遷移開始")
+        
+        # ダンジョンを退場
+        self.dungeon_manager.exit_dungeon()
+        
+        # 地上部に入場（自動回復付き）
+        success = self.overworld_manager.enter_overworld(self.current_party)
+        
+        if success:
+            self.current_location = "overworld"
+            self.set_game_state("overworld_exploration")
+            logger.info("地上部への遷移が完了しました（自動回復済み）")
+            return True
+        else:
+            logger.error("地上部への遷移に失敗しました")
+            return False
+    
+    def save_game_state(self, slot_id: str) -> bool:
+        """ゲーム状態の保存"""
+        try:
+            # 現在の場所に応じてセーブ
+            if self.current_location == "overworld":
+                success = self.overworld_manager.save_overworld_state(slot_id)
+            elif self.current_location == "dungeon":
+                success = self.dungeon_manager.save_dungeon(slot_id)
+            else:
+                logger.error(f"未知の場所: {self.current_location}")
+                return False
+            
+            if success:
+                # 統合状態情報も保存
+                state_data = {
+                    'current_location': self.current_location,
+                    'game_state': self.game_state,
+                    'party_id': self.current_party.party_id if self.current_party else None
+                }
+                
+                from src.core.save_manager import save_manager
+                save_manager.save_additional_data(slot_id, 'game_state', state_data)
+                
+                logger.info(f"ゲーム状態を保存しました（場所: {self.current_location}）")
+                return True
+            else:
+                return False
+                
+        except Exception as e:
+            logger.error(f"ゲーム状態保存エラー: {e}")
+            return False
+    
+    def load_game_state(self, slot_id: str) -> bool:
+        """ゲーム状態の読み込み"""
+        try:
+            from src.core.save_manager import save_manager
+            
+            # 統合状態情報を読み込み
+            state_data = save_manager.load_additional_data(slot_id, 'game_state')
+            if not state_data:
+                logger.error("ゲーム状態データが見つかりません")
+                return False
+            
+            location = state_data.get('current_location', 'overworld')
+            game_state = state_data.get('game_state', 'overworld_exploration')
+            party_id = state_data.get('party_id')
+            
+            # パーティを読み込み
+            if party_id:
+                party_data = save_manager.load_additional_data(slot_id, 'party')
+                if party_data:
+                    from src.character.party import Party
+                    self.current_party = Party.from_dict(party_data)
+            
+            # 場所に応じて読み込み
+            if location == "overworld":
+                success = self.overworld_manager.load_overworld_state(slot_id)
+                if success and self.current_party:
+                    self.overworld_manager.enter_overworld(self.current_party)
+            elif location == "dungeon":
+                success = self.dungeon_manager.load_dungeon(slot_id)
+                if success and self.current_party:
+                    # ダンジョン状態を復元
+                    pass
+            else:
+                logger.error(f"未知の場所: {location}")
+                return False
+            
+            if success:
+                self.current_location = location
+                self.set_game_state(game_state)
+                logger.info(f"ゲーム状態を読み込みました（場所: {location}）")
+                return True
+            else:
+                return False
+                
+        except Exception as e:
+            logger.error(f"ゲーム状態読み込みエラー: {e}")
+            return False
     
     def get_text(self, key: str) -> str:
         """テキストの取得"""

@@ -241,6 +241,11 @@ class Party:
         conscious_chars = self.get_conscious_characters()
         return len(conscious_chars) > 0
     
+    def is_exploration_ready(self) -> bool:
+        """ダンジョン探索準備ができているかチェック"""
+        living_chars = self.get_living_characters()
+        return len(living_chars) > 0
+    
     def rest(self):
         """休息処理（地上でのHP/MP全回復）"""
         for character in self.characters.values():

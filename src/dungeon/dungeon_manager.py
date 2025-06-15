@@ -120,10 +120,18 @@ class DungeonManager:
         self.active_dungeons: Dict[str, DungeonState] = {}
         self.current_dungeon: Optional[DungeonState] = None
         
+        # 地上部帰還コールバック
+        self.return_to_overworld_callback = None
+        
         # セーブディレクトリを作成
         os.makedirs(self.save_directory, exist_ok=True)
         
         logger.info("DungeonManager初期化完了")
+    
+    def set_return_to_overworld_callback(self, callback):
+        """地上部帰還コールバックを設定"""
+        self.return_to_overworld_callback = callback
+        logger.debug("地上部帰還コールバックを設定しました")
     
     def create_dungeon(self, dungeon_id: str, seed: str = "default") -> DungeonState:
         """新しいダンジョンを作成"""
@@ -198,6 +206,22 @@ class DungeonManager:
         self.current_dungeon = None
         
         return True
+    
+    def return_to_overworld(self) -> bool:
+        """地上部に帰還"""
+        if not self.current_dungeon:
+            logger.warning("現在アクティブなダンジョンがありません")
+            return False
+        
+        # ダンジョンを退出
+        success = self.exit_dungeon()
+        
+        if success and self.return_to_overworld_callback:
+            # 地上部帰還コールバックを実行
+            logger.info("地上部帰還処理を開始します")
+            return self.return_to_overworld_callback()
+        
+        return success
     
     def move_player(self, direction: Direction) -> Tuple[bool, str]:
         """プレイヤーを移動"""
