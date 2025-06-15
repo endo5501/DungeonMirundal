@@ -33,16 +33,17 @@ class DungeonMainMenu(UIElement):
     def __init__(self, element_id: str = "dungeon_main_menu"):
         super().__init__(element_id)
         
-        # メニュー項目
+        # メニュー項目（国際化対応）
+        from src.core.config_manager import config_manager
         self.menu_items = [
-            {"text": "インベントリ", "action": "inventory"},
-            {"text": "魔法", "action": "magic"},
-            {"text": "装備", "action": "equipment"},
-            {"text": "キャンプ", "action": "camp"},
-            {"text": "ステータス", "action": "status"},
-            {"text": "状態効果", "action": "status_effects"},
-            {"text": "地上部に戻る", "action": "return_overworld"},
-            {"text": "閉じる", "action": "close"}
+            {"text": config_manager.get_text("dungeon.menu.inventory"), "action": "inventory"},
+            {"text": config_manager.get_text("dungeon.menu.magic"), "action": "magic"},
+            {"text": config_manager.get_text("dungeon.menu.equipment"), "action": "equipment"},
+            {"text": config_manager.get_text("dungeon.menu.camp"), "action": "camp"},
+            {"text": config_manager.get_text("dungeon.menu.status"), "action": "status"},
+            {"text": config_manager.get_text("dungeon.menu.status_effects"), "action": "status_effects"},
+            {"text": config_manager.get_text("dungeon.menu.return_overworld"), "action": "return_overworld"},
+            {"text": config_manager.get_text("common.close"), "action": "close"}
         ]
         
         # コールバック

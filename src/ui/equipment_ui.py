@@ -47,7 +47,7 @@ class EquipmentUI:
         self.set_party(party)
         self.current_mode = EquipmentUIMode.OVERVIEW
         
-        main_menu = UIMenu("party_equipment_main", "パーティ装備")
+        main_menu = UIMenu("party_equipment_main", config_manager.get_text("equipment.party_title"))
         
         # 各キャラクターの装備
         for character in party.get_all_characters():
@@ -64,12 +64,12 @@ class EquipmentUI:
         
         # パーティ装備統計
         main_menu.add_menu_item(
-            "パーティ装備統計",
+            config_manager.get_text("equipment.party_stats"),
             self._show_party_equipment_stats
         )
         
         main_menu.add_menu_item(
-            config_manager.get_text("menu.close"),
+            config_manager.get_text("common.close"),
             self._close_equipment_ui
         )
         

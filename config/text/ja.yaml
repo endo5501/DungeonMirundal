@@ -22,6 +22,11 @@ common:
   error: "エラー"
   warning: "警告"
   info: "情報"
+  back: "戻る"
+  close: "閉じる"
+  empty: "(空)"
+  view_details: "詳細を見る"
+  unknown: "不明"
   
 # キャラクター関連
 character:
@@ -167,6 +172,91 @@ facility:
 overworld:
   town_center: "町の中心部"
   facility_selection: "施設選択"
+
+# インベントリ
+inventory:
+  party_title: "パーティインベントリ"
+  shared_items: "パーティ共有アイテム"
+  item_management: "アイテム整理"
+  slot_empty: "(空)"
+  unidentified_item: "未鑑定の{item_type}"
+  slot_usage: "使用中: {used}/{max}"
+  use_item: "使用する"
+  equip_item: "装備する"
+  move_item: "別の場所に移動"
+  drop_item: "破棄する"
+  unidentified_header: "【未鑑定のアイテム】"
+  item_header: "【{name}】"
+  description_label: "説明"
+  type_label: "種類"
+  quantity_label: "数量"
+  weight_label: "重量"
+  value_label: "価値"
+
+# 装備
+equipment:
+  party_title: "パーティ装備"
+  party_stats: "パーティ装備統計"
+  character_title: "{name}の装備"
+  bonus_details: "装備ボーナス詳細"
+  effect_check: "装備効果確認"
+  slot:
+    weapon: "武器"
+    armor: "防具"
+    accessory1: "アクセサリ1"
+    accessory2: "アクセサリ2"
+
+# 魔法
+magic:
+  party_title: "パーティ魔法管理"
+  slot_management: "魔法スロット管理"
+  learned_spells: "習得済み魔法一覧"
+  spell_usage: "魔法使用"
+  stats_details: "魔法統計・詳細"
+  school:
+    mage: "魔術"
+    priest: "神聖"
+    both: "汎用"
+  type:
+    offensive: "攻撃"
+    healing: "回復"
+    buff: "強化"
+    debuff: "弱体化"
+    utility: "汎用"
+    revival: "蘇生"
+    ultimate: "究極"
+
+# ダンジョン
+dungeon:
+  menu:
+    inventory: "インベントリ"
+    magic: "魔法"
+    equipment: "装備"
+    camp: "キャンプ"
+    status: "ステータス"
+    status_effects: "状態効果"
+    return_overworld: "地上部に戻る"
+
+# 設定
+settings:
+  category:
+    gameplay: "ゲームプレイ"
+    controls: "操作設定"
+    audio: "音声設定"
+    graphics: "表示設定"
+    accessibility: "アクセシビリティ"
+
+# ステータス
+stats:
+  strength: "筋力"
+  agility: "敏捷性"
+  intelligence: "知力"
+  faith: "信仰"
+  luck: "運"
+  attack_power: "攻撃力"
+  defense: "防御力"
+  magic_power: "魔法力"
+  magic_resistance: "魔法抵抗"
   
 # システムメッセージ
 system:

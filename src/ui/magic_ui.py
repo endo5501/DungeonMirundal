@@ -50,7 +50,7 @@ class MagicUI:
         self.set_party(party)
         self.current_mode = MagicUIMode.OVERVIEW
         
-        main_menu = UIMenu("party_magic_main", "パーティ魔法管理")
+        main_menu = UIMenu("party_magic_main", config_manager.get_text("magic.party_title"))
         
         # 各キャラクターの魔法
         for character in party.get_all_characters():

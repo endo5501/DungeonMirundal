@@ -43,11 +43,11 @@ class InventoryUI:
         """パーティインベントリメニューを表示"""
         self.set_party(party)
         
-        main_menu = UIMenu("party_inventory_main", "パーティインベントリ")
+        main_menu = UIMenu("party_inventory_main", config_manager.get_text("inventory.party_title"))
         
         # パーティ共有インベントリ
         main_menu.add_menu_item(
-            "パーティ共有アイテム",
+            config_manager.get_text("inventory.shared_items"),
             self._show_party_shared_inventory
         )
         
@@ -62,12 +62,12 @@ class InventoryUI:
         
         # アイテム整理
         main_menu.add_menu_item(
-            "アイテム整理",
+            config_manager.get_text("inventory.item_management"),
             self._show_inventory_management_menu
         )
         
         main_menu.add_menu_item(
-            config_manager.get_text("menu.close"),
+            config_manager.get_text("common.close"),
             self._close_inventory_ui
         )
         

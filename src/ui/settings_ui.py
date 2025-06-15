@@ -84,15 +84,16 @@ class SettingsUI:
     
     def show_settings_menu(self):
         """設定メインメニューを表示"""
-        settings_menu = UIMenu("settings_main", "設定")
+        from src.core.config_manager import config_manager
+        settings_menu = UIMenu("settings_main", config_manager.get_text("menu.settings"))
         
-        # カテゴリ別設定
+        # カテゴリ別設定（国際化対応）
         categories = [
-            (SettingsCategory.GAMEPLAY, "ゲームプレイ"),
-            (SettingsCategory.CONTROLS, "操作設定"),
-            (SettingsCategory.AUDIO, "音声設定"),
-            (SettingsCategory.GRAPHICS, "表示設定"),
-            (SettingsCategory.ACCESSIBILITY, "アクセシビリティ")
+            (SettingsCategory.GAMEPLAY, config_manager.get_text("settings.category.gameplay")),
+            (SettingsCategory.CONTROLS, config_manager.get_text("settings.category.controls")),
+            (SettingsCategory.AUDIO, config_manager.get_text("settings.category.audio")),
+            (SettingsCategory.GRAPHICS, config_manager.get_text("settings.category.graphics")),
+            (SettingsCategory.ACCESSIBILITY, config_manager.get_text("settings.category.accessibility"))
         ]
         
         for category, title in categories:
