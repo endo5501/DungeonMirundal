@@ -61,11 +61,6 @@ class MagicGuild(BaseFacility):
         )
         
         menu.add_menu_item(
-            "魔法書購入",
-            self._show_spellbook_shop
-        )
-        
-        menu.add_menu_item(
             "大魔術師と話す",
             self._talk_to_archmage
         )
@@ -493,105 +488,6 @@ class MagicGuild(BaseFacility):
             "魔法使用回数について",
             info_text
         )
-    
-    def _show_spellbook_shop(self):
-        """魔法書購入ショップ"""
-        spellbook_items = self.item_manager.get_items_by_type(ItemType.SPELLBOOK)
-        
-        if not spellbook_items:
-            self._show_error_message("現在、魔法書の在庫がありません")
-            return
-        
-        spellbook_menu = UIMenu("spellbook_shop_menu", "魔法書購入")
-        
-        for item in spellbook_items:
-            item_info = f"{item.get_name()} - {item.price}G"
-            spellbook_menu.add_menu_item(
-                item_info,
-                self._show_spellbook_details,
-                [item]
-            )
-        
-        spellbook_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [spellbook_menu]
-        )
-        
-        self._show_submenu(spellbook_menu)
-    
-    def _show_spellbook_details(self, item: Item):
-        """魔法書詳細表示"""
-        if not self.current_party:
-            return
-        
-        details = f"【{item.get_name()}】\n\n"
-        details += f"説明: {item.get_description()}\n"
-        details += f"価格: {item.price}G\n"
-        details += f"習得魔法: {item.get_spell_id()}\n"
-        details += f"現在のゴールド: {self.current_party.gold}G\n"
-        
-        if self.current_party.gold >= item.price:
-            details += "\n購入しますか？"
-            
-            dialog = UIDialog(
-                "spellbook_detail_dialog",
-                "魔法書詳細",
-                details,
-                buttons=[
-                    {
-                        'text': "購入する",
-                        'command': lambda: self._buy_spellbook(item)
-                    },
-                    {
-                        'text': "戻る",
-                        'command': self._close_dialog
-                    }
-                ]
-            )
-        else:
-            details += "\n※ ゴールドが不足しています"
-            
-            dialog = UIDialog(
-                "spellbook_detail_dialog",
-                "魔法書詳細",
-                details,
-                buttons=[
-                    {
-                        'text': "戻る",
-                        'command': self._close_dialog
-                    }
-                ]
-            )
-        
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id, modal=True)
-    
-    def _buy_spellbook(self, item: Item):
-        """魔法書購入処理"""
-        if not self.current_party:
-            return
-        
-        self._close_dialog()
-        
-        if self.current_party.gold < item.price:
-            self._show_error_message("ゴールドが不足しています")
-            return
-        
-        # 購入処理
-        self.current_party.gold -= item.price
-        
-        # TODO: Phase 4でインベントリシステム実装後、アイテム追加
-        
-        success_message = (
-            f"{item.get_name()} を購入しました！\n\n"
-            "魔法書を使用することで\n"
-            "新しい魔法を習得できます。\n\n"
-            f"残りゴールド: {self.current_party.gold}G"
-        )
-        
-        self._show_success_message(success_message)
-        logger.info(f"魔法書購入: {item.item_id} ({item.price}G)")
     
     def _talk_to_archmage(self):
         """大魔術師との会話"""

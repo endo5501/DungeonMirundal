@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Any
 from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.party import Party
 from src.character.character import Character, CharacterStatus
+from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
 from src.ui.base_ui import UIMenu, UIDialog, ui_manager
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -48,6 +49,11 @@ class Temple(BaseFacility):
         menu.add_menu_item(
             "神父と話す",
             self._talk_to_priest
+        )
+        
+        menu.add_menu_item(
+            "祈祷書購入",
+            self._show_prayerbook_shop
         )
         
         menu.add_menu_item(
@@ -454,6 +460,108 @@ class Temple(BaseFacility):
         
         self._show_success_message(gratitude_message)
         logger.info(f"教会寄付: {amount}G by {self.current_party.name}")
+    
+    def _show_prayerbook_shop(self):
+        """祈祷書購入ショップ"""
+        # 祈祷書（SPELLBOOK）タイプのアイテムを取得
+        prayerbook_items = item_manager.get_items_by_type(ItemType.SPELLBOOK)
+        
+        if not prayerbook_items:
+            self._show_error_message("現在、祈祷書の在庫がありません")
+            return
+        
+        prayerbook_menu = UIMenu("prayerbook_shop_menu", "祈祷書購入")
+        
+        for item in prayerbook_items:
+            item_info = f"{item.get_name()} - {item.price}G"
+            prayerbook_menu.add_menu_item(
+                item_info,
+                self._show_prayerbook_details,
+                [item]
+            )
+        
+        prayerbook_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_main_menu_from_submenu,
+            [prayerbook_menu]
+        )
+        
+        self._show_submenu(prayerbook_menu)
+    
+    def _show_prayerbook_details(self, item: Item):
+        """祈祷書詳細表示"""
+        if not self.current_party:
+            return
+        
+        details = f"【{item.get_name()}】\n\n"
+        details += f"説明: {item.get_description()}\n"
+        details += f"価格: {item.price}G\n"
+        details += f"習得祈祷: {item.get_spell_id()}\n"
+        details += f"現在のゴールド: {self.current_party.gold}G\n"
+        
+        if self.current_party.gold >= item.price:
+            details += "\n購入しますか？"
+            
+            dialog = UIDialog(
+                "prayerbook_detail_dialog",
+                "祈祷書詳細",
+                details,
+                buttons=[
+                    {
+                        'text': "購入する",
+                        'command': lambda: self._buy_prayerbook(item)
+                    },
+                    {
+                        'text': "戻る",
+                        'command': self._close_dialog
+                    }
+                ]
+            )
+        else:
+            details += "\n※ ゴールドが不足しています"
+            
+            dialog = UIDialog(
+                "prayerbook_detail_dialog",
+                "祈祷書詳細",
+                details,
+                buttons=[
+                    {
+                        'text': "戻る",
+                        'command': self._close_dialog
+                    }
+                ]
+            )
+        
+        ui_manager.register_element(dialog)
+        ui_manager.show_element(dialog.element_id, modal=True)
+    
+    def _buy_prayerbook(self, item: Item):
+        """祈祷書購入処理"""
+        if not self.current_party:
+            return
+        
+        self._close_dialog()
+        
+        if self.current_party.gold < item.price:
+            self._show_error_message("ゴールドが不足しています")
+            return
+        
+        # 購入処理
+        self.current_party.gold -= item.price
+        
+        # TODO: Phase 4でインベントリシステム実装後、アイテム追加
+        
+        success_message = (
+            f"{item.get_name()} を購入しました！\n\n"
+            "祈祷書を使用することで\n"
+            "新しい祈祷を習得できます。\n\n"
+            "神の教えが込められた聖なる書物です。\n"
+            "大切に扱ってください。\n\n"
+            f"残りゴールド: {self.current_party.gold}G"
+        )
+        
+        self._show_success_message(success_message)
+        logger.info(f"祈祷書購入: {item.item_id} ({item.price}G)")
     
     def _talk_to_priest(self):
         """神父との会話"""
