@@ -590,16 +590,14 @@ class GameManager(ShowBase):
         """テスト用パーティの作成"""
         try:
             from src.character.party import Party
-            from src.character.character import Character
-            from src.character.character_classes import CharacterClass
-            from src.character.races import CharacterRace
+            from src.character.character import Character, CharacterStatus
             from src.character.stats import BaseStats
             
             # テスト用キャラクターを手動作成
             test_character = Character(
                 name="テスト冒険者",
-                race=CharacterRace.HUMAN,
-                character_class=CharacterClass.FIGHTER
+                race="human",
+                character_class="fighter"
             )
             
             # 基本ステータスを設定
@@ -608,8 +606,9 @@ class GameManager(ShowBase):
                 vitality=15, agility=12, luck=8
             )
             
-            # レベル1で初期化
-            test_character.initialize_for_level_1()
+            # キャラクターステータスを適切に初期化
+            test_character.status = CharacterStatus.GOOD
+            test_character.experience.level = 1
             
             # テスト用パーティを作成
             test_party = Party("テストパーティ")

@@ -731,14 +731,7 @@ class OverworldManager:
         
         ui_manager.show_dialog(
             title=error_title,
-            message=f"{error_prefix}\n{error_message}",
-            buttons=[
-                {
-                    "text": config_manager.get_text("common.ok", "OK"),
-                    "command": lambda: ui_manager.hide_element("dungeon_entrance_error_dialog")
-                }
-            ],
-            element_id="dungeon_entrance_error_dialog"
+            message=f"{error_prefix}\n{error_message}"
         )
     
     def _emergency_overworld_reset(self):
