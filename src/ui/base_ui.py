@@ -176,21 +176,34 @@ class UIMenu(UIElement):
         self._rebuild_menu()
     
     def _rebuild_menu(self):
-        """メニューを再構築"""
+        """メニューを再構築（横一列配置）"""
         # 既存ボタンを削除
         for button in self.buttons:
             button.destroy()
         self.buttons.clear()
         
-        # 新しいボタンを作成
-        start_y = 0.4
-        spacing = 0.18  # 間隔を拡大
+        # ボタンを横一列で下部に配置
+        button_count = len(self.menu_items)
+        if button_count == 0:
+            return
+        
+        # 横配置の設定
+        button_spacing = 0.4  # 横方向の間隔
+        button_y = -0.4  # 下部固定位置
+        start_x = -(button_count - 1) * button_spacing / 2  # 中央揃え
+        
+        # ボタンサイズを調整（項目数に応じて）
+        if button_count <= 4:
+            button_scale = (0.3, 0.15)  # 通常サイズ
+        else:
+            button_scale = (0.25, 0.12)  # 小さめサイズ
         
         for i, item in enumerate(self.menu_items):
             button = UIButton(
                 f"{self.element_id}_btn_{i}",
                 item['text'],
-                pos=(0, start_y - i * spacing),
+                pos=(start_x + i * button_spacing, button_y),
+                scale=button_scale,
                 command=item['command'],
                 extraArgs=item['args']
             )
