@@ -681,7 +681,7 @@ class SettingsUI:
     
     def _close_dialog(self):
         """ダイアログを閉じる"""
-        ui_manager.hide_all_elements()
+        ui_manager.hide_all()
     
     def _show_message(self, message: str):
         """メッセージを表示"""

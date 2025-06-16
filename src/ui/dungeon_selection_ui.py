@@ -85,8 +85,8 @@ class DungeonSelectionUI:
         if ui_manager.get_element("dungeon_selection_menu"):
             ui_manager.unregister_element("dungeon_selection_menu")
         
-        title = (f"ダンジョン選択\\n\\n"
-                f"挑戦するダンジョンを選択してください\\n"
+        title = (f"ダンジョン選択\n\n"
+                f"挑戦するダンジョンを選択してください\n"
                 f"パーティ最高レベル: {self.current_party.get_max_level()}")
         
         menu = UIMenu("dungeon_selection_menu", title)
@@ -108,7 +108,7 @@ class DungeonSelectionUI:
     def _format_dungeon_display_name(self, dungeon: Dict[str, Any]) -> str:
         """ダンジョン表示名をフォーマット"""
         difficulty_stars = "★" * dungeon["difficulty"]
-        return (f"{dungeon['name']} ({difficulty_stars})\\n"
+        return (f"{dungeon['name']} ({difficulty_stars})\n"
                 f"推奨Lv.{dungeon['recommended_level']} | "
                 f"{dungeon['attribute']}属性 | "
                 f"{dungeon['floors']}階")
@@ -132,11 +132,11 @@ class DungeonSelectionUI:
         difficulty_stars = "★" * dungeon_info.get("difficulty", 1)
         
         message = (
-            f"『{dungeon_info.get('name', dungeon_id)}』 ({difficulty_stars})\\n\\n"
-            f"{dungeon_info.get('description', '')}\\n\\n"
-            f"推奨レベル: {dungeon_info.get('recommended_level', '1-20')}\\n"
-            f"属性: {dungeon_info.get('attribute', '物理')}\\n"
-            f"階層数: {dungeon_info.get('floors', 20)}階\\n\\n"
+            f"『{dungeon_info.get('name', dungeon_id)}』 ({difficulty_stars})\n\n"
+            f"{dungeon_info.get('description', '')}\n\n"
+            f"推奨レベル: {dungeon_info.get('recommended_level', '1-20')}\n"
+            f"属性: {dungeon_info.get('attribute', '物理')}\n"
+            f"階層数: {dungeon_info.get('floors', 20)}階\n\n"
             f"このダンジョンに入りますか？"
         )
         
@@ -204,7 +204,7 @@ class DungeonSelectionUI:
         dialog = UIDialog(
             "no_dungeons_dialog",
             "ダンジョン",
-            "現在利用可能なダンジョンがありません。\\n\\n"
+            "現在利用可能なダンジョンがありません。\n\n"
             "パーティのレベルを上げてから再度お試しください。",
             [{"text": "戻る", "command": self._cancel_selection}]
         )

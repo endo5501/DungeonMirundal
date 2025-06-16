@@ -403,14 +403,12 @@ class OverworldManager:
         ui_manager.hide_element("load_game_menu")
         ui_manager.unregister_element("load_game_menu")
         
-        # 設定メニューを再表示
+        # 設定メニューを再表示（メインメニューは表示しない）
         if self.location_menu:
             ui_manager.show_element(self.location_menu.element_id)
-            
-            # メインメニューを更新
-            self._show_main_menu()
         else:
-            self._show_error_dialog("ロード失敗", "セーブデータが見つかりません")
+            # 設定メニューが存在しない場合は新規作成
+            self.show_settings_menu()
     
     def _enter_dungeon(self):
         """ダンジョンに入る"""
