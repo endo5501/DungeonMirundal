@@ -303,9 +303,35 @@ class OverworldManager:
         if not self.current_party:
             return
         
-        status_text = self._format_party_status()
+        # 詳細パーティ状況メニューを表示
+        party_menu = UIMenu("party_status_menu", "パーティ状況")
         
-        self._show_info_dialog("パーティ状況", status_text)
+        # パーティ全体情報
+        party_menu.add_menu_item(
+            "パーティ全体情報",
+            self._show_party_overview
+        )
+        
+        # 各キャラクターの詳細情報
+        for i, character in enumerate(self.current_party.get_all_characters()):
+            char_info = f"{character.name} (Lv.{character.experience.level})"
+            party_menu.add_menu_item(
+                char_info,
+                self._show_character_details,
+                [character]
+            )
+        
+        party_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_settings_menu
+        )
+        
+        ui_manager.register_element(party_menu)
+        ui_manager.show_element(party_menu.element_id, modal=True)
+        
+        # 設定メニューを隠す
+        if self.location_menu:
+            ui_manager.hide_element(self.location_menu.element_id)
     
     def _format_party_status(self) -> str:
         """パーティ状況をフォーマット"""
@@ -328,6 +354,136 @@ class OverworldManager:
             lines.append(status_line)
         
         return "\n".join(lines)
+    
+    def _show_party_overview(self):
+        """パーティ全体情報を表示"""
+        if not self.current_party:
+            return
+        
+        status_text = f"【{self.current_party.name}】\n\n"
+        status_text += f"ゴールド: {self.current_party.gold}G\n"
+        status_text += f"メンバー数: {len(self.current_party.characters)}\n\n"
+        
+        # パーティの総合戦闘力
+        total_hp = sum(char.derived_stats.max_hp for char in self.current_party.get_all_characters())
+        total_mp = sum(char.derived_stats.max_mp for char in self.current_party.get_all_characters())
+        avg_level = sum(char.experience.level for char in self.current_party.get_all_characters()) / len(self.current_party.characters) if self.current_party.characters else 0
+        
+        status_text += f"【パーティ戦力】\n"
+        status_text += f"平均レベル: {avg_level:.1f}\n"
+        status_text += f"総HP: {total_hp}\n"
+        status_text += f"総MP: {total_mp}\n\n"
+        
+        # 職業構成
+        status_text += "【職業構成】\n"
+        class_counts = {}
+        for character in self.current_party.get_all_characters():
+            class_name = character.get_class_name()
+            class_counts[class_name] = class_counts.get(class_name, 0) + 1
+        
+        for class_name, count in class_counts.items():
+            status_text += f"{class_name}: {count}人\n"
+        
+        status_text += "\n【メンバー一覧】\n"
+        for character in self.current_party.get_all_characters():
+            status_line = f"• {character.name} Lv.{character.experience.level} "
+            status_line += f"({character.get_race_name()}/{character.get_class_name()}) "
+            status_line += f"[{character.status.value}]"
+            status_text += status_line + "\n"
+        
+        self._show_info_dialog("パーティ全体情報", status_text)
+    
+    def _show_character_details(self, character):
+        """キャラクター詳細情報を表示"""
+        details_text = f"【{character.name}】\n\n"
+        
+        # 基本情報
+        details_text += f"種族: {character.get_race_name()}\n"
+        details_text += f"職業: {character.get_class_name()}\n"
+        details_text += f"レベル: {character.experience.level}\n"
+        details_text += f"経験値: {character.experience.current_xp}\n"
+        details_text += f"状態: {character.status.value}\n\n"
+        
+        # HP/MP
+        details_text += f"【生命力・魔力】\n"
+        details_text += f"HP: {character.derived_stats.current_hp} / {character.derived_stats.max_hp}\n"
+        details_text += f"MP: {character.derived_stats.current_mp} / {character.derived_stats.max_mp}\n\n"
+        
+        # 基本能力値
+        details_text += f"【基本能力値】\n"
+        details_text += f"力: {character.base_stats.strength}\n"
+        details_text += f"知恵: {character.base_stats.intelligence}\n"
+        details_text += f"信仰心: {character.base_stats.faith}\n"
+        details_text += f"素早さ: {character.base_stats.agility}\n"
+        details_text += f"運: {character.base_stats.luck}\n"
+        details_text += f"体力: {character.base_stats.vitality}\n\n"
+        
+        # 戦闘能力
+        details_text += f"【戦闘能力】\n"
+        details_text += f"攻撃力: {character.derived_stats.attack_power}\n"
+        details_text += f"防御力: {character.derived_stats.defense}\n"
+        details_text += f"命中率: {character.derived_stats.accuracy}\n"
+        details_text += f"回避率: {character.derived_stats.evasion}\n"
+        details_text += f"クリティカル率: {character.derived_stats.critical_chance}\n\n"
+        
+        # 装備品情報
+        details_text += f"【装備品】\n"
+        equipment = character.equipment
+        if equipment.weapon:
+            details_text += f"武器: {equipment.weapon.get_name()}\n"
+        else:
+            details_text += "武器: なし\n"
+            
+        if equipment.armor:
+            details_text += f"防具: {equipment.armor.get_name()}\n"
+        else:
+            details_text += "防具: なし\n"
+            
+        if equipment.shield:
+            details_text += f"盾: {equipment.shield.get_name()}\n"
+        else:
+            details_text += "盾: なし\n"
+            
+        if equipment.accessory:
+            details_text += f"装飾品: {equipment.accessory.get_name()}\n"
+        else:
+            details_text += "装飾品: なし\n"
+        
+        # 個人インベントリ
+        details_text += f"\n【所持品】\n"
+        personal_inventory = character.get_personal_inventory()
+        if personal_inventory and personal_inventory.slots:
+            item_count = 0
+            for slot in personal_inventory.slots:
+                if not slot.is_empty():
+                    item_instance = slot.item_instance
+                    if item_instance:
+                        details_text += f"• {item_instance.get_display_name()}"
+                        if item_instance.quantity > 1:
+                            details_text += f" x{item_instance.quantity}"
+                        details_text += "\n"
+                        item_count += 1
+            
+            if item_count == 0:
+                details_text += "なし\n"
+        else:
+            details_text += "なし\n"
+        
+        # TODO: Phase 4で魔法習得情報追加
+        details_text += f"\n【習得魔法】\n"
+        details_text += "Phase 4で実装予定\n"
+        
+        self._show_info_dialog(f"{character.name} の詳細", details_text)
+    
+    def _back_to_settings_menu(self):
+        """設定メニューに戻る"""
+        # パーティ状況メニューを隠す
+        ui_manager.hide_element("party_status_menu")
+        ui_manager.unregister_element("party_status_menu")
+        
+        # 設定メニューを再表示
+        if self.location_menu:
+            ui_manager.show_element(self.location_menu.element_id)
     
     def _show_save_menu(self):
         """セーブメニュー表示"""
