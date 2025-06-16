@@ -44,11 +44,6 @@ class Inn(BaseFacility):
             "パーティ名を変更",
             self._change_party_name
         )
-        
-        menu.add_menu_item(
-            "宿泊について",
-            self._show_lodging_info
-        )
     
     def _on_enter(self):
         """宿屋入場時の処理"""
@@ -180,28 +175,6 @@ class Inn(BaseFacility):
             "rumor_dialog",
             f"酒場の噂 - {title}",
             rumor
-        )
-    
-    def _show_lodging_info(self):
-        """宿泊についての説明"""
-        lodging_info = (
-            "【宿泊について】\n\n"
-            "申し訳ございませんが、現在この町では\n"
-            "特別な魔法の効果により、地上部に戻るだけで\n"
-            "完全に体力が回復するようになっております。\n\n"
-            "そのため、宿泊による休息サービスは\n"
-            "一時的に停止させていただいています。\n\n"
-            "ご不便をおかけして申し訳ありません。\n"
-            "代わりに、旅の情報や美味しい食事で\n"
-            "おもてなしいたします！\n\n"
-            "※ システム上、地上部帰還時に自動回復するため\n"
-            "　 宿屋での休息機能は提供していません"
-        )
-        
-        self._show_dialog(
-            "lodging_info_dialog",
-            "宿泊について",
-            lodging_info
         )
     
     def _change_party_name(self):

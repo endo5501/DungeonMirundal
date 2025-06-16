@@ -26,7 +26,6 @@ class Temple(BaseFacility):
             'ash_restoration': 1000,  # 灰化回復
             'blessing': 100,  # 祝福
             'curse_removal': 200,  # 呪い解除
-            'status_heal': 50  # 状態異常治療
         }
     
     def _setup_menu_items(self, menu: UIMenu):
@@ -34,11 +33,6 @@ class Temple(BaseFacility):
         menu.add_menu_item(
             "蘇生サービス",
             self._show_resurrection_menu
-        )
-        
-        menu.add_menu_item(
-            "治療サービス",
-            self._show_healing_menu
         )
         
         menu.add_menu_item(
@@ -236,95 +230,6 @@ class Temple(BaseFacility):
         
         self._show_success_message(success_message)
         logger.info(f"灰化復活: {character.name}")
-    
-    def _show_healing_menu(self):
-        """治療メニューを表示"""
-        if not self.current_party:
-            self._show_error_message("パーティが設定されていません")
-            return
-        
-        # 状態異常のキャラクターを探す
-        healing_candidates = []
-        
-        for character in self.current_party.get_all_characters():
-            if character.status not in [CharacterStatus.GOOD, CharacterStatus.DEAD, CharacterStatus.ASHES]:
-                healing_candidates.append(character)
-        
-        if not healing_candidates:
-            self._show_dialog(
-                "no_healing_dialog",
-                "治療サービス",
-                "治療が必要なキャラクターはいません。\n\n"
-                "注意: 地上部に戻ると自動で\n"
-                "状態異常が治癒されます。\n"
-                "（死亡・灰化以外）"
-            )
-            return
-        
-        healing_menu = UIMenu("healing_menu", "治療サービス")
-        
-        for character in healing_candidates:
-            cost = self.service_costs['status_heal']
-            char_info = f"{character.name} ({character.status.value}) - {cost}G"
-            healing_menu.add_menu_item(
-                char_info,
-                self._heal_character,
-                [character]
-            )
-        
-        healing_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [healing_menu]
-        )
-        
-        self._show_submenu(healing_menu)
-    
-    def _heal_character(self, character: Character):
-        """キャラクター治療"""
-        if not self.current_party:
-            return
-        
-        cost = self.service_costs['status_heal']
-        
-        if self.current_party.gold < cost:
-            self._show_error_message(f"ゴールドが不足しています。（必要: {cost}G）")
-            return
-        
-        # 治療確認
-        confirmation_text = (
-            f"{character.name} の状態異常を治療しますか？\n\n"
-            f"現在の状態: {character.status.value}\n"
-            f"費用: {cost}G\n"
-            f"現在のゴールド: {self.current_party.gold}G\n\n"
-            "注意: 地上部に戻ると自動で治癒されます。"
-        )
-        
-        self._show_confirmation(
-            confirmation_text,
-            lambda: self._perform_healing(character, cost)
-        )
-    
-    def _perform_healing(self, character: Character, cost: int):
-        """治療実行"""
-        if not self.current_party:
-            return
-        
-        # ゴールド支払い
-        self.current_party.gold -= cost
-        
-        # 治療処理
-        old_status = character.status.value
-        character.status = CharacterStatus.GOOD
-        
-        success_message = (
-            f"{character.name} の状態異常が治癒されました！\n\n"
-            f"{old_status} → 正常\n\n"
-            f"残りゴールド: {self.current_party.gold}G"
-        )
-        
-        self._show_success_message(success_message)
-        logger.info(f"状態異常治療: {character.name} ({old_status})")
     
     def _show_blessing_menu(self):
         """祝福メニューを表示"""

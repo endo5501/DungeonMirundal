@@ -305,8 +305,28 @@ class MagicGuild(BaseFacility):
         
         cost = self.service_costs['magical_analysis']
         
-        if self.current_party.gold < cost:
+        # 分析料金の確認ダイアログを表示
+        confirmation_text = (
+            f"【パーティ魔法適性分析】\n\n"
+            f"パーティ全体の魔法適性を詳細に分析いたします。\n\n"
+            f"分析費用: {cost}G\n"
+            f"現在のゴールド: {self.current_party.gold}G\n\n"
+            f"分析には魔法的なエネルギーを大量に消費するため、\n"
+            f"費用をいただいております。\n\n"
+            f"分析を実行しますか？"
+        )
+        
+        if self.current_party.gold >= cost:
+            self._show_confirmation(
+                confirmation_text,
+                lambda: self._perform_party_magic_analysis(cost)
+            )
+        else:
             self._show_error_message(f"ゴールドが不足しています。（必要: {cost}G）")
+    
+    def _perform_party_magic_analysis(self, cost: int):
+        """パーティ魔法適性分析実行"""
+        if not self.current_party:
             return
         
         # 分析実行
@@ -469,24 +489,116 @@ class MagicGuild(BaseFacility):
     
     def _show_spell_usage_info(self):
         """魔法使用回数情報表示"""
-        info_text = (
-            "【魔法使用回数について】\n\n"
-            "このゲームシステムでは、\n"
-            "地上部に戻ると魔法使用回数が\n"
-            "自動的に全回復します。\n\n"
-            "そのため、ダンジョン探索中は\n"
-            "魔法使用回数を気にせず\n"
-            "積極的に魔法を活用できます。\n\n"
-            "詳細な魔法システムは\n"
-            "Phase 4で実装予定です。\n\n"
-            "※ 現在は魔法使用回数の\n"
-            "　 詳細表示はできません"
+        if not self.current_party:
+            self._show_error_message("パーティが設定されていません")
+            return
+        
+        # 魔法使用可能なキャラクターを探す
+        magic_users = []
+        for character in self.current_party.get_all_characters():
+            class_name = character.get_class_name().lower()
+            if any(magic_class in class_name for magic_class in ['mage', 'priest', 'bishop', '魔術師', '僧侶', '司教']):
+                magic_users.append(character)
+        
+        if not magic_users:
+            info_text = (
+                "【魔法使用回数確認】\n\n"
+                "現在のパーティには魔法を使用できる\n"
+                "キャラクターがいません。\n\n"
+                "魔法使用可能クラス:\n"
+                "• 魔術師 (Mage)\n"
+                "• 僧侶 (Priest)\n"
+                "• 司教 (Bishop)\n\n"
+                "これらのクラスのキャラクターを\n"
+                "パーティに加えてから再度お越しください。"
+            )
+            
+            self._show_dialog(
+                "no_magic_users_dialog",
+                "魔法使用回数確認",
+                info_text
+            )
+            return
+        
+        usage_menu = UIMenu("spell_usage_menu", "魔法使用回数確認")
+        
+        for character in magic_users:
+            char_info = f"{character.name} (Lv.{character.experience.level} {character.get_class_name()})"
+            usage_menu.add_menu_item(
+                char_info,
+                self._show_character_spell_usage,
+                [character]
+            )
+        
+        usage_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_main_menu_from_submenu,
+            [usage_menu]
         )
         
+        self._show_submenu(usage_menu)
+    
+    def _show_character_spell_usage(self, character):
+        """キャラクター個別の魔法使用回数表示"""
+        usage_info = f"【{character.name} の魔法使用状況】\n\n"
+        
+        usage_info += f"種族: {character.get_race_name()}\n"
+        usage_info += f"職業: {character.get_class_name()}\n"
+        usage_info += f"レベル: {character.experience.level}\n\n"
+        
+        # 基本能力値による魔法適性
+        usage_info += f"【魔法適性能力値】\n"
+        usage_info += f"知恵: {character.base_stats.intelligence} "
+        usage_info += f"({'✓' if character.base_stats.intelligence >= 12 else '✗'} 攻撃魔法)\n"
+        usage_info += f"信仰心: {character.base_stats.faith} "
+        usage_info += f"({'✓' if character.base_stats.faith >= 12 else '✗'} 回復魔法)\n\n"
+        
+        # 現在のMP状況
+        current_mp = character.derived_stats.current_mp
+        max_mp = character.derived_stats.max_mp
+        mp_percentage = (current_mp / max_mp * 100) if max_mp > 0 else 0
+        
+        usage_info += f"【現在の魔力状況】\n"
+        usage_info += f"MP: {current_mp} / {max_mp} ({mp_percentage:.1f}%)\n"
+        
+        if mp_percentage >= 80:
+            usage_info += "状態: 十分な魔力があります\n"
+        elif mp_percentage >= 50:
+            usage_info += "状態: 魔力は中程度です\n"
+        elif mp_percentage >= 20:
+            usage_info += "状態: 魔力が少なくなっています\n"
+        else:
+            usage_info += "状態: 魔力がほとんどありません\n"
+        
+        usage_info += "\n【魔法使用回数システム】\n"
+        usage_info += "• 地上部帰還時に魔力が全回復します\n"
+        usage_info += "• ダンジョン内では魔法使用でMPが消費されます\n"
+        usage_info += "• レベルアップでMP最大値が上昇します\n\n"
+        
+        # TODO: Phase 4で実装予定の詳細情報
+        usage_info += "【習得魔法一覧】\n"
+        usage_info += "Phase 4で実装予定\n"
+        usage_info += "現在は魔法習得・使用システムが未実装のため、\n"
+        usage_info += "詳細な魔法使用回数は表示できません。\n\n"
+        
+        usage_info += "【魔法習得のススメ】\n"
+        if character.base_stats.intelligence >= 15:
+            usage_info += "• 高い知恵を活かして攻撃魔法の習得をお勧めします\n"
+        if character.base_stats.faith >= 15:
+            usage_info += "• 高い信仰心を活かして回復魔法の習得をお勧めします\n"
+        
+        class_name = character.get_class_name().lower()
+        if 'mage' in class_name or '魔術師' in class_name:
+            usage_info += "• 魔術師として攻撃魔法を中心に習得しましょう\n"
+        elif 'priest' in class_name or '僧侶' in class_name:
+            usage_info += "• 僧侶として回復・補助魔法を中心に習得しましょう\n"
+        elif 'bishop' in class_name or '司教' in class_name:
+            usage_info += "• 司教として全系統の魔法を習得できます\n"
+        
         self._show_dialog(
-            "spell_usage_info_dialog",
-            "魔法使用回数について",
-            info_text
+            "character_spell_usage_dialog",
+            f"{character.name} の魔法使用状況",
+            usage_info
         )
     
     def _talk_to_archmage(self):
