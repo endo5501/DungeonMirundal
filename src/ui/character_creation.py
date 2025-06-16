@@ -169,7 +169,8 @@ class CharacterCreationWizard:
     
     def _show_race_selection(self):
         """種族選択ステップ"""
-        menu = UIMenu("race_selection_menu", ui_manager.get_text("character.select_race"))
+        menu = UIMenu("race_selection_menu", ui_manager.get_text("character.select_race"), 
+                     character_creation_mode=True)
         
         for race_id, race_config in self.races_config.items():
             race_name = ui_manager.get_text(race_config.get('name_key', f'race.{race_id}'))
@@ -223,7 +224,8 @@ class CharacterCreationWizard:
                     'text': ui_manager.get_text("menu.back"),
                     'command': self._previous_step
                 }
-            ]
+            ],
+            character_creation_mode=True
         )
         
         self.current_ui = dialog
@@ -238,7 +240,8 @@ class CharacterCreationWizard:
             self.classes_config
         )
         
-        menu = UIMenu("class_selection_menu", ui_manager.get_text("character.select_class"))
+        menu = UIMenu("class_selection_menu", ui_manager.get_text("character.select_class"),
+                     character_creation_mode=True)
         
         for class_id in available_classes:
             class_config = self.classes_config[class_id]
@@ -281,7 +284,8 @@ class CharacterCreationWizard:
                     'text': ui_manager.get_text("common.cancel"),
                     'command': self._cancel_creation
                 }
-            ]
+            ],
+            character_creation_mode=True
         )
         
         self.current_ui = dialog

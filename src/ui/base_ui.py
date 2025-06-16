@@ -129,7 +129,8 @@ class UIButton(UIElement):
         pos: tuple = (0, 0),
         scale: tuple = (0.3, 0.3),
         command: Optional[Callable] = None,
-        extraArgs: List = None
+        extraArgs: List = None,
+        text_scale: float = 0.45
     ):
         super().__init__(element_id)
         
@@ -148,7 +149,7 @@ class UIButton(UIElement):
             pos=Vec3(pos[0], 0, pos[1]),
             scale=Vec3(scale[0], 1, scale[1]),
             command=self._on_click,
-            text_scale=0.45,  # フォントサイズをさらに小さく
+            text_scale=text_scale,  # カスタマイズ可能なフォントサイズ
             relief=DGG.RAISED,
             borderWidth=(0.01, 0.01),
             text_font=font
@@ -165,10 +166,12 @@ class UIButton(UIElement):
 class UIMenu(UIElement):
     """メニューUI要素"""
     
-    def __init__(self, element_id: str, title: str = "", alignment: str = "center"):
+    def __init__(self, element_id: str, title: str = "", alignment: str = "center", 
+                 character_creation_mode: bool = False):
         super().__init__(element_id)
         self.title = title
         self.alignment = alignment  # "left", "center", "right"
+        self.character_creation_mode = character_creation_mode  # キャラクター作成画面専用モード
         self.menu_items: List[Dict[str, Any]] = []
         self.title_text = None
         self.buttons: List[UIButton] = []
@@ -206,27 +209,36 @@ class UIMenu(UIElement):
             return
         
         # 横配置の設定
-        if self.alignment == "left":
+        if self.character_creation_mode:
+            button_spacing = 0.3  # キャラクター作成画面では広めの間隔
+            button_y = -0.45  # キャラクター作成画面では更に下部に配置
+        elif self.alignment == "left":
             button_spacing = 0.25  # 左寄せ時は間隔を縮める
+            button_y = -0.4  # 下部固定位置
         else:
             button_spacing = 0.4  # 通常の間隔
-        button_y = -0.4  # 下部固定位置
+            button_y = -0.4  # 下部固定位置
         start_x = self._get_button_start_x(button_count, button_spacing)
         
         # ボタンサイズを調整（項目数に応じて）
-        if button_count <= 4:
+        if self.character_creation_mode:
+            button_scale = (0.25, 0.12)  # キャラクター作成画面では小さめサイズ
+        elif button_count <= 4:
             button_scale = (0.3, 0.15)  # 通常サイズ
         else:
             button_scale = (0.25, 0.12)  # 小さめサイズ
         
         for i, item in enumerate(self.menu_items):
+            # キャラクター作成モード時は小さいフォント使用
+            text_scale = 0.35 if self.character_creation_mode else 0.45
             button = UIButton(
                 f"{self.element_id}_btn_{i}",
                 item['text'],
                 pos=(start_x + i * button_spacing, button_y),
                 scale=button_scale,
                 command=item['command'],
-                extraArgs=item['args']
+                extraArgs=item['args'],
+                text_scale=text_scale
             )
             self.buttons.append(button)
             self.add_child(button)
@@ -287,12 +299,14 @@ class UIDialog(UIElement):
         title: str, 
         message: str,
         buttons: List[Dict[str, Any]] = None,
-        alignment: str = "center"
+        alignment: str = "center",
+        character_creation_mode: bool = False
     ):
         super().__init__(element_id)
         self.title = title
         self.message = message
         self.alignment = alignment
+        self.character_creation_mode = character_creation_mode
         
         # 背景
         self.background = DirectFrame(
@@ -329,17 +343,23 @@ class UIDialog(UIElement):
     def _create_buttons(self, buttons: List[Dict[str, Any]]):
         """ダイアログボタンを作成"""
         button_count = len(buttons)
-        button_spacing = 0.5  # ボタン間隔を拡大
+        button_spacing = 0.6 if self.character_creation_mode else 0.5  # キャラクター作成時は間隔拡大
         start_x = self._get_dialog_button_start_x(button_count, button_spacing)
+        button_y = -0.35 if self.character_creation_mode else -0.3  # キャラクター作成時は下部配置
         
         for i, btn_config in enumerate(buttons):
+            # キャラクター作成モード時は小さいフォント使用
+            text_scale = 0.35 if self.character_creation_mode else 0.45
+            button_scale = (0.35, 0.25) if self.character_creation_mode else (0.4, 0.3)
+            
             button = UIButton(
                 f"{self.element_id}_btn_{i}",
                 btn_config.get('text', 'OK'),
-                pos=(start_x + i * button_spacing, -0.3),
-                scale=(0.4, 0.3),  # ボタンの幅を拡大
+                pos=(start_x + i * button_spacing, button_y),
+                scale=button_scale,
                 command=btn_config.get('command'),
-                extraArgs=btn_config.get('args', [])
+                extraArgs=btn_config.get('args', []),
+                text_scale=text_scale
             )
             self.dialog_buttons.append(button)
     
