@@ -11,7 +11,7 @@
 
 ### 優先度:中
 
-- [ ] 設定画面にて、ロードすると地上のメニューと設定画面のメニューが同時に表示される
+(修正済み)
 
 ## Fixed bugs
 
@@ -231,6 +231,28 @@
       - 堅牢なエラーハンドリングによりアプリケーション安定性大幅向上
       - 6つのテストケース中5つが通過（改善率83%）
   - 関連ファイル: `src/overworld/overworld_manager.py`, `src/core/game_manager.py`, `src/ui/dungeon_selection_ui.py`, `config/text/ja.yaml`, `config/text/en.yaml`, `tests/test_dungeon_entrance_menu_fix.py`
+  - 修正日: 2025-06-16
+
+- [x] 設定画面にて、ロードすると地上のメニューと設定画面のメニューが同時に表示される
+  - 修正内容: **設定メニュー遷移処理改善** - メニュー重複表示の根本原因解決とUIメソッド名修正
+  - 詳細:
+    * **根本原因**: OverworldManager._back_to_settings_menu()メソッドで不適切なメインメニュー表示
+    * **問題の詳細**: 
+      - 設定画面でロード処理後、_back_to_settings_menu()でメインメニューも同時表示
+      - SettingsUIで存在しないメソッドhide_all_elements()を呼び出し
+      - メニュー状態管理が不適切で重複表示が発生
+    * **解決策**: 
+      - **OverworldManager修正**: _back_to_settings_menu()から_show_main_menu()呼び出しを削除
+      - **設定メニュー単独表示**: ロード後は設定メニューのみを表示するよう変更
+      - **SettingsUI修正**: hide_all_elements()をhide_all()に修正
+      - **フォールバック処理**: location_menuが存在しない場合のshow_settings_menu()呼び出し追加
+    * **結果**: 
+      - 設定画面でのロード後にメニュー重複が解消
+      - 正しいUIメソッドが呼び出されてエラーなく動作
+      - 設定メニューのみが適切に表示される
+      - ユーザビリティとメニュー遷移の安定性が向上
+      - 包括的なテストによる動作検証完了
+  - 関連ファイル: `src/overworld/overworld_manager.py`, `src/ui/settings_ui.py`, `tests/test_settings_load_menu_fix.py`
   - 修正日: 2025-06-16
 
 
