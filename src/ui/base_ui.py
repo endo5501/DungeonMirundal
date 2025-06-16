@@ -222,11 +222,11 @@ class UIMenu(UIElement):
             start_y = 0.3  # 上部から開始
             button_x = 0  # 中央配置
         
-        # ボタンサイズを調整（高さを増加）
+        # ボタンサイズを調整（縦横比率を同じにし、全体的に小さく）
         if self.character_creation_mode:
-            button_scale = (0.35, 0.18)  # キャラクター作成画面では小さめだが高さ増加
+            button_scale = (0.28, 0.28)  # キャラクター作成画面では小さめで正方形
         else:
-            button_scale = (0.45, 0.22)  # 通常サイズの高さを大幅に増加
+            button_scale = (0.35, 0.35)  # 通常サイズを小さくし、正方形に
         
         for i, item in enumerate(self.menu_items):
             # フォントサイズを適切に調整

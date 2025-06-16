@@ -5,6 +5,7 @@ from direct.gui.OnscreenText import OnscreenText
 from panda3d.core import TextNode, PandaSystem
 from src.core.config_manager import config_manager
 from src.core.input_manager import InputManager
+from src.core.save_manager import SaveManager
 from src.overworld.overworld_manager import OverworldManager
 from src.dungeon.dungeon_manager import DungeonManager
 from src.character.party import Party
@@ -34,6 +35,9 @@ class GameManager(ShowBase):
         
         # 現在のパーティ
         self.current_party = None
+        
+        # セーブマネージャー
+        self.save_manager = SaveManager()
         
         # 初期設定の読み込み
         self._load_initial_config()
@@ -572,8 +576,11 @@ class GameManager(ShowBase):
             font=font
         )
         
-        # 初期パーティを作成（テスト用）
-        if not self.current_party:
+        # 自動セーブデータロードを試行
+        auto_load_success = self._try_auto_load()
+        
+        # 自動ロードに失敗した場合はテスト用パーティを作成
+        if not auto_load_success and not self.current_party:
             self._create_test_party()
         
         # 少し待ってから地上部に遷移
@@ -585,6 +592,67 @@ class GameManager(ShowBase):
         self.taskMgr.doMethodLater(2.0, lambda task: transition_to_town(), "startup_transition")
         
         self.set_game_state("startup")
+    
+    def _try_auto_load(self):
+        """自動セーブデータロードを試行"""
+        try:
+            # 利用可能なセーブスロットを取得（最新順にソート済み）
+            save_slots = self.save_manager.get_save_slots()
+            
+            if not save_slots:
+                logger.info("セーブデータが存在しないため、新規ゲームを開始します")
+                return False
+            
+            # 最新のセーブデータを取得（リストの最初の要素）
+            latest_save = save_slots[0]
+            slot_id = latest_save['slot_id']
+            
+            logger.info(f"最新のセーブデータを自動ロードします: スロット{slot_id} ({latest_save.get('party_name', '不明')})")
+            
+            # セーブデータをロード
+            save_data = self.save_manager.load_game(slot_id)
+            
+            # パーティ情報を復元
+            if 'party' in save_data:
+                self.current_party = Party.from_dict(save_data['party'])
+                logger.info(f"パーティを復元しました: {self.current_party.name}")
+            
+            # ゲーム状態を復元
+            if 'game_state' in save_data:
+                game_state = save_data['game_state']
+                if 'location' in game_state:
+                    self.current_location = game_state['location']
+                    logger.info(f"現在位置を復元しました: {self.current_location}")
+            
+            logger.info("自動ロードが成功しました")
+            return True
+            
+        except Exception as e:
+            logger.error(f"自動ロード中にエラーが発生しました: {e}")
+            logger.info("新規ゲームで開始します")
+            return False
+    
+    def load_game_state(self, slot_id: int):
+        """ゲーム状態をロードして復元する"""
+        try:
+            save_data = self.save_manager.load_game(slot_id)
+            
+            # パーティ情報を復元
+            if 'party' in save_data:
+                self.current_party = Party.from_dict(save_data['party'])
+            
+            # ゲーム状態を復元
+            if 'game_state' in save_data:
+                game_state = save_data['game_state']
+                if 'location' in game_state:
+                    self.current_location = game_state['location']
+            
+            logger.info(f"ゲーム状態をロードしました: スロット{slot_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"ゲーム状態のロードに失敗しました: {e}")
+            return False
     
     def _create_test_party(self):
         """テスト用パーティの作成"""
