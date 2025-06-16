@@ -102,6 +102,21 @@ class UIText(UIElement):
         """テキストを設定"""
         if self.gui_element:
             self.gui_element.setText(text)
+    
+    def set_position(self, x: float, y: float):
+        """テキストの位置を設定"""
+        if self.gui_element:
+            # 複数の方法を試して確実に位置を設定
+            try:
+                self.gui_element.setPos(x, y)
+            except:
+                try:
+                    self.gui_element['pos'] = (x, y)
+                except:
+                    try:
+                        self.gui_element.configure(pos=(x, y))
+                    except:
+                        pass
 
 
 class UIButton(UIElement):
@@ -150,18 +165,21 @@ class UIButton(UIElement):
 class UIMenu(UIElement):
     """メニューUI要素"""
     
-    def __init__(self, element_id: str, title: str = ""):
+    def __init__(self, element_id: str, title: str = "", alignment: str = "center"):
         super().__init__(element_id)
         self.title = title
+        self.alignment = alignment  # "left", "center", "right"
         self.menu_items: List[Dict[str, Any]] = []
         self.title_text = None
         self.buttons: List[UIButton] = []
         
         if title:
+            # タイトルの位置をalignmentに応じて調整
+            title_x = self._get_title_x_position()
             self.title_text = UIText(
                 f"{element_id}_title",
                 title,
-                pos=(0, 0.75),
+                pos=(title_x, 0.75),
                 scale=0.05,  # タイトルのフォントサイズをさらに小さく
                 color=(1, 1, 0, 1)
             )
@@ -188,9 +206,12 @@ class UIMenu(UIElement):
             return
         
         # 横配置の設定
-        button_spacing = 0.4  # 横方向の間隔
+        if self.alignment == "left":
+            button_spacing = 0.25  # 左寄せ時は間隔を縮める
+        else:
+            button_spacing = 0.4  # 通常の間隔
         button_y = -0.4  # 下部固定位置
-        start_x = -(button_count - 1) * button_spacing / 2  # 中央揃え
+        start_x = self._get_button_start_x(button_count, button_spacing)
         
         # ボタンサイズを調整（項目数に応じて）
         if button_count <= 4:
@@ -233,6 +254,28 @@ class UIMenu(UIElement):
         for button in self.buttons:
             button.destroy()
         super().destroy()
+    
+    def _get_title_x_position(self) -> float:
+        """alignmentに応じたタイトルのX座標を取得"""
+        if self.alignment == "left":
+            return -1.0  # 左寄せ
+        elif self.alignment == "right":
+            return 1.0   # 右寄せ
+        else:  # center (default)
+            return 0.0   # 中央
+    
+    def _get_button_start_x(self, button_count: int, button_spacing: float) -> float:
+        """alignmentに応じたボタン開始X座標を計算"""
+        if self.alignment == "left":
+            # 左寄せ：固定位置から開始
+            return -1.3
+        elif self.alignment == "right":
+            # 右寄せ：右端から左に向かって配置
+            total_width = (button_count - 1) * button_spacing
+            return 1.3 - total_width
+        else:  # center (default)
+            # 中央揃え：中央を基準に左右に展開
+            return -(button_count - 1) * button_spacing / 2
 
 
 class UIDialog(UIElement):
@@ -243,11 +286,13 @@ class UIDialog(UIElement):
         element_id: str, 
         title: str, 
         message: str,
-        buttons: List[Dict[str, Any]] = None
+        buttons: List[Dict[str, Any]] = None,
+        alignment: str = "center"
     ):
         super().__init__(element_id)
         self.title = title
         self.message = message
+        self.alignment = alignment
         
         # 背景
         self.background = DirectFrame(
@@ -285,7 +330,7 @@ class UIDialog(UIElement):
         """ダイアログボタンを作成"""
         button_count = len(buttons)
         button_spacing = 0.5  # ボタン間隔を拡大
-        start_x = -(button_count - 1) * button_spacing / 2
+        start_x = self._get_dialog_button_start_x(button_count, button_spacing)
         
         for i, btn_config in enumerate(buttons):
             button = UIButton(
@@ -297,6 +342,19 @@ class UIDialog(UIElement):
                 extraArgs=btn_config.get('args', [])
             )
             self.dialog_buttons.append(button)
+    
+    def _get_dialog_button_start_x(self, button_count: int, button_spacing: float) -> float:
+        """alignmentに応じたダイアログボタン開始X座標を計算"""
+        if self.alignment == "left":
+            # 左寄せ：固定位置から開始
+            return -1.0
+        elif self.alignment == "right":
+            # 右寄せ：右端から左に向かって配置
+            total_width = (button_count - 1) * button_spacing
+            return 1.0 - total_width
+        else:  # center (default)
+            # 中央揃え：中央を基準に左右に展開
+            return -(button_count - 1) * button_spacing / 2
     
     def show(self):
         """ダイアログを表示"""

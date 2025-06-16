@@ -159,7 +159,7 @@ class OverworldManager:
         if self.main_menu:
             ui_manager.unregister_element(self.main_menu.element_id)
         
-        self.main_menu = UIMenu("overworld_main_menu", config_manager.get_text("overworld.surface_map"))
+        self.main_menu = UIMenu("overworld_main_menu", config_manager.get_text("overworld.surface_map"), alignment="left")
         
         # 各施設への直接アクセス
         facilities = [
