@@ -197,44 +197,46 @@ class UIMenu(UIElement):
         self._rebuild_menu()
     
     def _rebuild_menu(self):
-        """メニューを再構築（横一列配置）"""
+        """メニューを再構築（縦配置）"""
         # 既存ボタンを削除
         for button in self.buttons:
             button.destroy()
         self.buttons.clear()
         
-        # ボタンを横一列で下部に配置
+        # ボタンを縦列で配置
         button_count = len(self.menu_items)
         if button_count == 0:
             return
         
-        # 横配置の設定
+        # 縦配置の設定
         if self.character_creation_mode:
-            button_spacing = 0.3  # キャラクター作成画面では広めの間隔
-            button_y = -0.45  # キャラクター作成画面では更に下部に配置
+            button_spacing = 0.12  # キャラクター作成画面では縦間隔
+            start_y = 0.25  # キャラクター作成画面では上部から開始
+            button_x = 0  # 中央配置
         elif self.alignment == "left":
-            button_spacing = 0.25  # 左寄せ時は間隔を縮める
-            button_y = -0.4  # 下部固定位置
+            button_spacing = 0.15  # 左寄せ時の縦間隔
+            start_y = 0.3  # 上部から開始
+            button_x = -0.7  # 左寄せ位置
         else:
-            button_spacing = 0.4  # 通常の間隔
-            button_y = -0.4  # 下部固定位置
-        start_x = self._get_button_start_x(button_count, button_spacing)
+            button_spacing = 0.15  # 通常の縦間隔
+            start_y = 0.3  # 上部から開始
+            button_x = 0  # 中央配置
         
-        # ボタンサイズを調整（項目数に応じて）
+        # ボタンサイズを調整（高さを増加）
         if self.character_creation_mode:
-            button_scale = (0.25, 0.12)  # キャラクター作成画面では小さめサイズ
-        elif button_count <= 4:
-            button_scale = (0.3, 0.15)  # 通常サイズ
+            button_scale = (0.35, 0.18)  # キャラクター作成画面では小さめだが高さ増加
         else:
-            button_scale = (0.25, 0.12)  # 小さめサイズ
+            button_scale = (0.45, 0.22)  # 通常サイズの高さを大幅に増加
         
         for i, item in enumerate(self.menu_items):
-            # キャラクター作成モード時は小さいフォント使用
-            text_scale = 0.35 if self.character_creation_mode else 0.45
+            # フォントサイズを適切に調整
+            text_scale = 0.4 if self.character_creation_mode else 0.5
+            button_y = start_y - i * button_spacing
+            
             button = UIButton(
                 f"{self.element_id}_btn_{i}",
                 item['text'],
-                pos=(start_x + i * button_spacing, button_y),
+                pos=(button_x, button_y),
                 scale=button_scale,
                 command=item['command'],
                 extraArgs=item['args'],
@@ -345,12 +347,14 @@ class UIDialog(UIElement):
         button_count = len(buttons)
         button_spacing = 0.6 if self.character_creation_mode else 0.5  # キャラクター作成時は間隔拡大
         start_x = self._get_dialog_button_start_x(button_count, button_spacing)
-        button_y = -0.35 if self.character_creation_mode else -0.3  # キャラクター作成時は下部配置
+        # ボタンを更に下部に配置してメッセージと重ならないようにする
+        button_y = -0.5 if self.character_creation_mode else -0.45
         
         for i, btn_config in enumerate(buttons):
             # キャラクター作成モード時は小さいフォント使用
-            text_scale = 0.35 if self.character_creation_mode else 0.45
-            button_scale = (0.35, 0.25) if self.character_creation_mode else (0.4, 0.3)
+            text_scale = 0.4 if self.character_creation_mode else 0.5
+            # ボタンサイズを高さ増加
+            button_scale = (0.4, 0.25) if self.character_creation_mode else (0.45, 0.3)
             
             button = UIButton(
                 f"{self.element_id}_btn_{i}",
@@ -495,6 +499,24 @@ class UIManager:
     def get_text(self, key: str) -> str:
         """テキストキーから表示テキストを取得"""
         return config_manager.get_text(key)
+    
+    def show_dialog(self, title: str, message: str, buttons: List[Dict[str, Any]] = None):
+        """ダイアログを表示"""
+        dialog_id = f"system_dialog_{len(self.ui_elements)}"
+        
+        if buttons is None:
+            buttons = [
+                {
+                    'text': 'OK',
+                    'command': lambda: self.hide_element(dialog_id)
+                }
+            ]
+        
+        dialog = UIDialog(dialog_id, title, message, buttons)
+        self.register_element(dialog)
+        self.show_element(dialog_id, modal=True)
+        
+        logger.debug(f"システムダイアログを表示: {title}")
     
     def cleanup(self):
         """リソースのクリーンアップ"""
