@@ -109,7 +109,8 @@ class BaseFacility(ABC):
         """施設から出る（UI用）"""
         # FacilityManagerを通して退場処理を行う
         # これにより on_facility_exit_callback が正しく呼ばれる
-        facility_manager.exit_current_facility()
+        # グローバルなfacility_managerを使用（ファイル末尾で定義）
+        globals()['facility_manager'].exit_current_facility()
     
     def _cleanup_ui(self):
         """UI要素のクリーンアップ"""
