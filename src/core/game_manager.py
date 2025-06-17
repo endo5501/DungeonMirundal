@@ -605,9 +605,9 @@ class GameManager(ShowBase):
             
             # 最新のセーブデータを取得（リストの最初の要素）
             latest_save = save_slots[0]
-            slot_id = latest_save['slot_id']
+            slot_id = latest_save.slot_id
             
-            logger.info(f"{config_manager.get_text('game_manager.auto_load')}: スロット{slot_id} ({latest_save.get('party_name', '不明')})")
+            logger.info(f"{config_manager.get_text('game_manager.auto_load')}: スロット{slot_id} ({latest_save.party_name})")
             
             # セーブデータをロード
             save_data = self.save_manager.load_game(slot_id)

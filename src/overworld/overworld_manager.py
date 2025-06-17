@@ -540,7 +540,7 @@ class OverworldManager:
         for slot_id in range(1, 6):
             if slot_id in save_slot_info:
                 slot = save_slot_info[slot_id]
-                slot_text = f"スロット {slot_id}: {slot.name} (Lv.{slot.party_level}) [{slot.timestamp.strftime('%m/%d %H:%M')}]"
+                slot_text = f"スロット {slot_id}: {slot.name} (Lv.{slot.party_level}) [{slot.last_saved.strftime('%m/%d %H:%M')}]"
             else:
                 slot_text = f"スロット {slot_id}: [空]"
             
