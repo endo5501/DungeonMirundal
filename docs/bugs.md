@@ -7,23 +7,31 @@
 
 ### 優先度:高
 
-- [ ] [ダンジョン入口]を選択すると、ダンジョンが一つしか表示されない。複数登録可能か確認してください
-- [ ] [ダンジョン入口]からダンジョンへ入ると、以下ログを出力してダンジョンへの遷移に失敗する(地上部に戻る)
-```
-2025-06-18 07:29:32 - dungeon - WARNING - UI要素が見つかりません: dungeon_selection_menu
-2025-06-18 07:29:32 - dungeon - INFO - ダンジョン 'beginners_cave' への遷移開始
-2025-06-18 07:29:32 - dungeon - ERROR - ダンジョンbeginners_caveが見つかりません
-2025-06-18 07:29:32 - dungeon - ERROR - ダンジョンへの遷移に失敗しました
-2025-06-18 07:29:32 - dungeon - ERROR - ダンジョン遷移中にエラーが発生しました: ダンジョンマネージャーでの入場処理に失敗しました
-2025-06-18 07:29:32 - dungeon - ERROR - ダンジョン遷移に失敗しました: ダンジョンマネージャーでの入場処理に失敗しました
-```
-
 ### 優先度:低
 
-- [ ] 商店の[在庫確認]を実行するとクラッシュする
-- [ ] 商店の[アイテム購入]から[武器]などを実行するとクラッシュする
-
 ## Fixed bugs
+
+### 優先度:高 (2025-06-18修正完了) - 新規修正
+
+- [x] [ダンジョン入口]を選択すると、ダンジョンが一つしか表示されない。複数登録可能か確認してください
+    - 問題: DungeonSelectionUIは正常に複数ダンジョンを表示していた、設定確認により問題なし
+    - 修正: ダンジョン設定（config/dungeons.yaml）の確認、複数ダンジョンが正常に登録・表示されることを確認
+    - ファイル: `config/dungeons.yaml`, `src/ui/dungeon_selection_ui.py`
+- [x] [ダンジョン入口]からダンジョンへ入ると、以下ログを出力してダンジョンへの遷移に失敗する(地上部に戻る)
+    - 問題: GameManagerでダンジョン作成とenter_dungeonの処理順序が逆、DungeonGeneratorでdungeon_idパラメータ不足
+    - 修正: transition_to_dungeonでcreate_dungeonを先に実行、generate_levelメソッドにdungeon_idパラメータ追加
+    - ファイル: `src/core/game_manager.py`, `src/dungeon/dungeon_generator.py`, `src/dungeon/dungeon_manager.py`
+
+### 優先度:低 (2025-06-18修正完了) - 新規修正
+
+- [x] 商店の[在庫確認]を実行するとクラッシュする
+    - 問題: ConfigManager.get_text()メソッドでキーワード引数が使用不可、TypeError発生
+    - 修正: config_manager.get_text(key, parameter=value)を.format(parameter=value)形式に変更
+    - ファイル: `src/overworld/facilities/shop.py`
+- [x] 商店の[アイテム購入]から[武器]などを実行するとクラッシュする
+    - 問題: 商店在庫確認と同じConfigManager.get_text()のキーワード引数問題
+    - 修正: 購入成功メッセージ、カテゴリ表示、売却メッセージ等の文字列フォーマット修正
+    - ファイル: `src/overworld/facilities/shop.py`
 
 ### 優先度:高 (2025-06-18修正完了) - バッチ修正
 
