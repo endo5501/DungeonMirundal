@@ -6,7 +6,7 @@ from enum import Enum
 from src.character.party import Party
 from src.character.character import Character, CharacterStatus
 from src.overworld.base_facility import BaseFacility, FacilityManager, facility_manager
-from src.ui.base_ui import UIMenu, UIDialog, ui_manager
+from src.ui.base_ui import UIMenu, UIDialog, UITileDialog, ui_manager
 from src.ui.dungeon_selection_ui import DungeonSelectionUI
 from src.core.config_manager import config_manager
 from src.core.save_manager import save_manager
@@ -356,133 +356,158 @@ class OverworldManager:
         return "\n".join(lines)
     
     def _show_party_overview(self):
-        """パーティ全体情報を表示"""
+        """パーティ全体情報をタイル形式で表示"""
         if not self.current_party:
             return
         
-        status_text = f"【{self.current_party.name}】\n\n"
-        status_text += f"ゴールド: {self.current_party.gold}G\n"
-        status_text += f"メンバー数: {len(self.current_party.characters)}\n\n"
+        # パーティの統計情報を計算
+        characters = self.current_party.get_all_characters()
+        total_hp = sum(char.derived_stats.max_hp for char in characters)
+        total_mp = sum(char.derived_stats.max_mp for char in characters)
+        avg_level = sum(char.experience.level for char in characters) / len(characters) if characters else 0
         
-        # パーティの総合戦闘力
-        total_hp = sum(char.derived_stats.max_hp for char in self.current_party.get_all_characters())
-        total_mp = sum(char.derived_stats.max_mp for char in self.current_party.get_all_characters())
-        avg_level = sum(char.experience.level for char in self.current_party.get_all_characters()) / len(self.current_party.characters) if self.current_party.characters else 0
-        
-        status_text += f"【パーティ戦力】\n"
-        status_text += f"平均レベル: {avg_level:.1f}\n"
-        status_text += f"総HP: {total_hp}\n"
-        status_text += f"総MP: {total_mp}\n\n"
-        
-        # 職業構成
-        status_text += "【職業構成】\n"
+        # 職業構成を計算
         class_counts = {}
-        for character in self.current_party.get_all_characters():
+        for character in characters:
             class_name = character.get_class_name()
             class_counts[class_name] = class_counts.get(class_name, 0) + 1
         
-        for class_name, count in class_counts.items():
-            status_text += f"{class_name}: {count}人\n"
+        class_list = "\n".join([f"{cls}: {count}人" for cls, count in class_counts.items()])
         
-        status_text += "\n【メンバー一覧】\n"
-        for character in self.current_party.get_all_characters():
-            status_line = f"• {character.name} Lv.{character.experience.level} "
-            status_line += f"({character.get_race_name()}/{character.get_class_name()}) "
-            status_line += f"[{character.status.value}]"
-            status_text += status_line + "\n"
+        # メンバー一覧を作成
+        member_list = "\n".join([
+            f"{char.name} Lv.{char.experience.level}\n({char.get_race_name()}/{char.get_class_name()})\n[{char.status.value}]"
+            for char in characters[:3]  # 最大3人まで表示
+        ])
         
-        self._show_info_dialog("パーティ全体情報", status_text)
+        # タイルデータを作成
+        tiles_data = [
+            {
+                'title': 'パーティ基本情報',
+                'content': f"名前: {self.current_party.name}\nゴールド: {self.current_party.gold}G\nメンバー数: {len(characters)}人"
+            },
+            {
+                'title': 'パーティ戦力',
+                'content': f"平均レベル: {avg_level:.1f}\n総HP: {total_hp}\n総MP: {total_mp}"
+            },
+            {
+                'title': '職業構成',
+                'content': class_list if class_list else "なし"
+            },
+            {
+                'title': 'メンバー一覧',
+                'content': member_list if member_list else "なし"
+            },
+            {
+                'title': '状態異常',
+                'content': f"正常: {sum(1 for char in characters if char.status == CharacterStatus.GOOD)}人\n異常: {sum(1 for char in characters if char.status != CharacterStatus.GOOD)}人"
+            },
+            {
+                'title': '探索状況',
+                'content': "地上部\n準備完了\n探索可能"
+            }
+        ]
+        
+        # タイルダイアログを作成・表示
+        tile_dialog = UITileDialog(
+            "party_overview_tiles",
+            f"【{self.current_party.name}】パーティ全体情報",
+            tiles_data,
+            rows=2,
+            cols=3
+        )
+        
+        ui_manager.register_element(tile_dialog)
+        ui_manager.show_element(tile_dialog.element_id, modal=True)
     
     def _show_character_details(self, character):
-        """キャラクター詳細情報を表示（エラーハンドリング付き）"""
+        """キャラクター詳細情報をタイル形式で表示（エラーハンドリング付き）"""
         try:
-            details_text = f"【{character.name}】\n\n"
-            
             # 基本情報
-            details_text += f"種族: {character.get_race_name()}\n"
-            details_text += f"職業: {character.get_class_name()}\n"
-            details_text += f"レベル: {character.experience.level}\n"
-            details_text += f"経験値: {character.experience.current_xp}\n"
-            details_text += f"状態: {character.status.value}\n\n"
-        
-            # HP/MP
-            details_text += f"【生命力・魔力】\n"
-            details_text += f"HP: {character.derived_stats.current_hp} / {character.derived_stats.max_hp}\n"
-            details_text += f"MP: {character.derived_stats.current_mp} / {character.derived_stats.max_mp}\n\n"
+            basic_info = f"種族: {character.get_race_name()}\n職業: {character.get_class_name()}\nレベル: {character.experience.level}\n経験値: {character.experience.current_xp}\n状態: {character.status.value}"
+            
+            # HP/MP情報
+            hp_mp_info = f"HP: {character.derived_stats.current_hp} / {character.derived_stats.max_hp}\nMP: {character.derived_stats.current_mp} / {character.derived_stats.max_mp}"
             
             # 基本能力値
-            details_text += f"【基本能力値】\n"
-            details_text += f"力: {character.base_stats.strength}\n"
-            details_text += f"知恵: {character.base_stats.intelligence}\n"
-            details_text += f"信仰心: {character.base_stats.faith}\n"
-            details_text += f"素早さ: {character.base_stats.agility}\n"
-            details_text += f"運: {character.base_stats.luck}\n"
-            details_text += f"体力: {character.base_stats.vitality}\n\n"
+            base_stats = f"力: {character.base_stats.strength}\n知恵: {character.base_stats.intelligence}\n信仰心: {character.base_stats.faith}\n素早さ: {character.base_stats.agility}\n運: {character.base_stats.luck}\n体力: {character.base_stats.vitality}"
             
             # 戦闘能力
-            details_text += f"【戦闘能力】\n"
-            details_text += f"攻撃力: {character.derived_stats.attack_power}\n"
-            details_text += f"防御力: {character.derived_stats.defense}\n"
-            details_text += f"命中率: {character.derived_stats.accuracy}\n"
-            details_text += f"回避率: {character.derived_stats.evasion}\n"
-            details_text += f"クリティカル率: {character.derived_stats.critical_chance}\n\n"
-        
+            combat_stats = f"攻撃力: {character.derived_stats.attack_power}\n防御力: {character.derived_stats.defense}\n命中率: {character.derived_stats.accuracy}\n回避率: {character.derived_stats.evasion}\nクリティカル率: {character.derived_stats.critical_chance}"
+            
             # 装備品情報
-            details_text += f"【装備品】\n"
+            equipment_info = ""
             try:
                 equipment = character.equipment
-                if hasattr(equipment, 'weapon') and equipment.weapon:
-                    details_text += f"武器: {equipment.weapon.get_name()}\n"
-                else:
-                    details_text += "武器: なし\n"
-                    
-                if hasattr(equipment, 'armor') and equipment.armor:
-                    details_text += f"防具: {equipment.armor.get_name()}\n"
-                else:
-                    details_text += "防具: なし\n"
-                    
-                if hasattr(equipment, 'shield') and equipment.shield:
-                    details_text += f"盾: {equipment.shield.get_name()}\n"
-                else:
-                    details_text += "盾: なし\n"
-                    
-                if hasattr(equipment, 'accessory') and equipment.accessory:
-                    details_text += f"装飾品: {equipment.accessory.get_name()}\n"
-                else:
-                    details_text += "装飾品: なし\n"
+                weapon = equipment.weapon.get_name() if hasattr(equipment, 'weapon') and equipment.weapon else "なし"
+                armor = equipment.armor.get_name() if hasattr(equipment, 'armor') and equipment.armor else "なし"
+                shield = equipment.shield.get_name() if hasattr(equipment, 'shield') and equipment.shield else "なし"
+                accessory = equipment.accessory.get_name() if hasattr(equipment, 'accessory') and equipment.accessory else "なし"
+                equipment_info = f"武器: {weapon}\n防具: {armor}\n盾: {shield}\n装飾品: {accessory}"
             except (AttributeError, Exception) as e:
-                details_text += "装備情報を取得できません\n"
+                equipment_info = "装備情報を取得できません"
                 logger.warning(f"装備情報取得エラー: {e}")
-        
+            
             # 個人インベントリ
-            details_text += f"\n【所持品】\n"
+            inventory_info = ""
             try:
                 personal_inventory = character.get_personal_inventory()
                 if personal_inventory and hasattr(personal_inventory, 'slots') and personal_inventory.slots:
-                    item_count = 0
-                    for slot in personal_inventory.slots:
+                    items = []
+                    for slot in personal_inventory.slots[:5]:  # 最大5つまで表示
                         if hasattr(slot, 'is_empty') and not slot.is_empty():
                             item_instance = slot.item_instance
                             if item_instance:
-                                details_text += f"• {item_instance.get_display_name()}"
+                                item_name = item_instance.get_display_name()
                                 if hasattr(item_instance, 'quantity') and item_instance.quantity > 1:
-                                    details_text += f" x{item_instance.quantity}"
-                                details_text += "\n"
-                                item_count += 1
-                    
-                    if item_count == 0:
-                        details_text += "なし\n"
+                                    item_name += f" x{item_instance.quantity}"
+                                items.append(item_name)
+                    inventory_info = "\n".join(items) if items else "なし"
                 else:
-                    details_text += "なし\n"
+                    inventory_info = "なし"
             except (AttributeError, Exception) as e:
-                details_text += "インベントリ情報を取得できません\n"
+                inventory_info = "インベントリ情報を取得できません"
                 logger.warning(f"インベントリ情報取得エラー: {e}")
-        
-            # TODO: Phase 4で魔法習得情報追加
-            details_text += f"\n【習得魔法】\n"
-            details_text += "Phase 4で実装予定\n"
             
-            self._show_info_dialog(f"{character.name} の詳細", details_text)
+            # タイルデータを作成
+            tiles_data = [
+                {
+                    'title': '基本情報',
+                    'content': basic_info
+                },
+                {
+                    'title': '生命力・魔力',
+                    'content': hp_mp_info
+                },
+                {
+                    'title': '基本能力値',
+                    'content': base_stats
+                },
+                {
+                    'title': '戦闘能力',
+                    'content': combat_stats
+                },
+                {
+                    'title': '装備品',
+                    'content': equipment_info
+                },
+                {
+                    'title': '所持品',
+                    'content': inventory_info
+                }
+            ]
+            
+            # タイルダイアログを作成・表示
+            tile_dialog = UITileDialog(
+                f"character_details_{character.name}",
+                f"【{character.name}】詳細情報",
+                tiles_data,
+                rows=2,
+                cols=3
+            )
+            
+            ui_manager.register_element(tile_dialog)
+            ui_manager.show_element(tile_dialog.element_id, modal=True)
             
         except (AttributeError, Exception) as e:
             logger.error(f"キャラクター詳細表示エラー: {e}")

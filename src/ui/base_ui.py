@@ -371,8 +371,8 @@ class UIDialog(UIElement):
         button_count = len(buttons)
         button_spacing = 0.6 if self.character_creation_mode else 0.5  # キャラクター作成時は間隔拡大
         start_x = self._get_dialog_button_start_x(button_count, button_spacing)
-        # ボタンを更に下部に配置してメッセージと重ならないようにする
-        button_y = -0.5 if self.character_creation_mode else -0.45
+        # ボタンをより下部に配置してメッセージと重ならないようにする
+        button_y = -0.65 if self.character_creation_mode else -0.6
         
         for i, btn_config in enumerate(buttons):
             # キャラクター作成モード時は小さいフォント使用
@@ -665,6 +665,182 @@ class UITextInput(UIElement):
         super().destroy()
 
 
+class UITile(UIElement):
+    """タイル形式の情報表示UI要素"""
+    
+    def __init__(
+        self,
+        element_id: str,
+        title: str,
+        content: str,
+        pos: tuple = (0, 0),
+        size: tuple = (0.4, 0.3),
+        title_color: tuple = (1, 1, 0, 1),
+        content_color: tuple = (1, 1, 1, 1)
+    ):
+        super().__init__(element_id)
+        self.title = title
+        self.content = content
+        
+        # 背景フレーム
+        self.background = DirectFrame(
+            frameColor=(0.2, 0.2, 0.3, 0.8),
+            frameSize=(-size[0]/2, size[0]/2, -size[1]/2, size[1]/2),
+            pos=(pos[0], 0, pos[1])
+        )
+        
+        # タイトル
+        self.title_text = UIText(
+            f"{element_id}_title",
+            title,
+            pos=(pos[0], pos[1] + size[1]/2 - 0.05),
+            scale=0.04,
+            color=title_color,
+            align="center"
+        )
+        
+        # コンテンツ
+        self.content_text = UIText(
+            f"{element_id}_content",
+            content,
+            pos=(pos[0], pos[1]),
+            scale=0.035,
+            color=content_color,
+            align="center"
+        )
+        
+        self.gui_element = self.background
+        self.hide()
+    
+    def show(self):
+        """タイルを表示"""
+        super().show()
+        self.title_text.show()
+        self.content_text.show()
+    
+    def hide(self):
+        """タイルを非表示"""
+        super().hide()
+        self.title_text.hide()
+        self.content_text.hide()
+    
+    def destroy(self):
+        """タイルを破棄"""
+        self.background.destroy()
+        self.title_text.destroy()
+        self.content_text.destroy()
+        super().destroy()
+    
+    def update_content(self, content: str):
+        """コンテンツを更新"""
+        self.content = content
+        self.content_text.set_text(content)
+
+
+class UITileDialog(UIElement):
+    """タイル配置ダイアログ"""
+    
+    def __init__(
+        self,
+        element_id: str,
+        title: str,
+        tiles_data: List[Dict[str, str]],
+        rows: int = 2,
+        cols: int = 3
+    ):
+        super().__init__(element_id)
+        self.title = title
+        self.tiles_data = tiles_data
+        self.rows = rows
+        self.cols = cols
+        self.tiles: List[UITile] = []
+        
+        # 背景
+        self.background = DirectFrame(
+            frameColor=(0, 0, 0, 0.8),
+            frameSize=(-1.5, 1.5, -1.2, 1.0),
+            pos=(0, 0, 0)
+        )
+        
+        # タイトル
+        self.title_text = UIText(
+            f"{element_id}_title",
+            title,
+            pos=(0, 0.8),
+            scale=0.06,
+            color=(1, 1, 0, 1)
+        )
+        
+        # タイルを配置
+        self._create_tiles()
+        
+        # 閉じるボタン
+        self.close_button = UIButton(
+            f"{element_id}_close",
+            "閉じる",
+            pos=(0, -0.9),
+            scale=(0.3, 0.15),
+            command=self._close_dialog,
+            text_scale=0.4
+        )
+        
+        self.gui_element = self.background
+        self.hide()
+    
+    def _create_tiles(self):
+        """タイルを作成・配置"""
+        tile_width = 0.45
+        tile_height = 0.25
+        start_x = -(self.cols - 1) * tile_width / 2
+        start_y = (self.rows - 1) * tile_height / 2
+        
+        for i, tile_data in enumerate(self.tiles_data[:self.rows * self.cols]):
+            row = i // self.cols
+            col = i % self.cols
+            
+            x = start_x + col * tile_width
+            y = start_y - row * tile_height
+            
+            tile = UITile(
+                f"{self.element_id}_tile_{i}",
+                tile_data.get('title', ''),
+                tile_data.get('content', ''),
+                pos=(x, y),
+                size=(tile_width * 0.9, tile_height * 0.9)
+            )
+            self.tiles.append(tile)
+    
+    def _close_dialog(self):
+        """ダイアログを閉じる"""
+        ui_manager.hide_element(self.element_id)
+        ui_manager.unregister_element(self.element_id)
+    
+    def show(self):
+        """ダイアログを表示"""
+        super().show()
+        self.title_text.show()
+        for tile in self.tiles:
+            tile.show()
+        self.close_button.show()
+    
+    def hide(self):
+        """ダイアログを非表示"""
+        super().hide()
+        self.title_text.hide()
+        for tile in self.tiles:
+            tile.hide()
+        self.close_button.hide()
+    
+    def destroy(self):
+        """ダイアログを破棄"""
+        self.background.destroy()
+        self.title_text.destroy()
+        for tile in self.tiles:
+            tile.destroy()
+        self.close_button.destroy()
+        super().destroy()
+
+
 class UIInputDialog(UIElement):
     """テキスト入力付きダイアログ"""
     
@@ -729,7 +905,7 @@ class UIInputDialog(UIElement):
         self.ok_button = DirectButton(
             text="OK",
             scale=0.06,
-            pos=(-0.3, 0, -0.4),
+            pos=(-0.3, 0, -0.55),
             command=self._on_ok,
             frameColor=(0.2, 0.7, 0.2, 1),
             text_fg=(1, 1, 1, 1),
@@ -741,7 +917,7 @@ class UIInputDialog(UIElement):
         self.cancel_button = DirectButton(
             text="キャンセル",
             scale=0.06,
-            pos=(0.3, 0, -0.4),
+            pos=(0.3, 0, -0.55),
             command=self._on_cancel,
             frameColor=(0.7, 0.2, 0.2, 1),
             text_fg=(1, 1, 1, 1),
