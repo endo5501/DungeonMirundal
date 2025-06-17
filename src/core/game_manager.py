@@ -678,6 +678,11 @@ class GameManager(ShowBase):
             test_character.status = CharacterStatus.GOOD
             test_character.experience.level = 1
             
+            # derived_statsを初期化してHP/MPを設定
+            test_character.initialize_derived_stats()
+            test_character.derived_stats.current_hp = test_character.derived_stats.max_hp
+            test_character.derived_stats.current_mp = test_character.derived_stats.max_mp
+            
             # テスト用パーティを作成
             test_party = Party(config_manager.get_text("game_manager.test_party"))
             test_party.add_character(test_character)
@@ -688,11 +693,31 @@ class GameManager(ShowBase):
             
         except Exception as e:
             logger.error(f"テストパーティ作成エラー: {e}")
-            # エラーの場合でも空のパーティを作成
+            # エラーの場合でも簡単なテストパーティを作成
             from src.character.party import Party
-            empty_party = Party(config_manager.get_text("game_manager.empty_party"))
-            empty_party.gold = 1000
-            self.set_current_party(empty_party)
+            from src.character.character import Character, CharacterStatus
+            from src.character.stats import BaseStats
+            
+            fallback_character = Character(
+                name="テスト戦士",
+                race="human", 
+                character_class="fighter"
+            )
+            fallback_character.base_stats = BaseStats(
+                strength=15, intelligence=10, piety=10,
+                vitality=14, agility=12, luck=8
+            )
+            fallback_character.status = CharacterStatus.GOOD
+            fallback_character.experience.level = 1
+            fallback_character.initialize_derived_stats()
+            fallback_character.derived_stats.current_hp = fallback_character.derived_stats.max_hp
+            fallback_character.derived_stats.current_mp = fallback_character.derived_stats.max_mp
+            
+            fallback_party = Party("緊急パーティ")
+            fallback_party.add_character(fallback_character)
+            fallback_party.gold = 1000
+            self.set_current_party(fallback_party)
+            logger.info("緊急用テストパーティを作成しました")
 
 
 def create_game() -> GameManager:
