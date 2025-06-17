@@ -5,26 +5,43 @@
 
 ## Known bugs
 
-### 優先度:高
-- [ ] [ダンジョン入口]を実行するとクラッシュする
-- [ ] ダンジョン入口の入場確認で[はい]を押しても、ダンジョンに入れず、地上メニューに戻ってしまう。修正が完了していないようです
-```
-2025-06-18 01:36:49 - dungeon - ERROR - 生存しているパーティメンバーがいません
-2025-06-18 01:36:49 - dungeon - ERROR - ダンジョン遷移に失敗しました: 生存しているパーティメンバーがいません
-2025-06-18 01:36:49 - dungeon - WARNING - テキストファイルが見つかりません: config/text/ダンジョン入場エラー.yaml
-2025-06-18 01:36:49 - dungeon - WARNING - テキストキーが見つかりません: dungeon.entrance_error_title
-2025-06-18 01:36:49 - dungeon - WARNING - テキストファイルが見つかりません: config/text/ダンジョンに入場できませんでした:.yaml
-2025-06-18 01:36:49 - dungeon - WARNING - テキストキーが見つかりません: dungeon.entrance_error_prefix
-```
-### 優先度:中
-- [ ] 起動時の前回セーブデータの自動ロード(@docs/change_spec.md の対応が不完全)
-- [ ] [ゲームを保存]を押すとゲームがクラッシュする
-
-### 優先度:低
-- [ ] 魔術師ギルドでは、魔術は魔術書から習得するので、[魔法習得]は削除して魔術書を購入出来る[魔術書購入]を追加するべき
+なし
 
 
 ## Fixed bugs
+
+### 優先度:高 (2025-06-18修正完了) - バッチ修正
+
+- [x] [ダンジョン入口]を実行するとクラッシュする
+    - 問題: DirectScrolledListのscrollBarWidthパラメータが無効、生存メンバーチェック不備、テキスト設定エラー
+    - 修正: `src/ui/dungeon_selection_ui.py`で無効パラメータ削除、`src/core/game_manager.py`でテストパーティ初期化改善、`src/core/config_manager.py`でdefaultパラメータ対応
+    - ファイル: `src/ui/dungeon_selection_ui.py`, `src/core/game_manager.py`, `src/core/config_manager.py`
+- [x] ダンジョン入口の入場確認で[はい]を押しても、ダンジョンに入れず、地上メニューに戻ってしまう
+    - 問題: テストパーティのHP/MP初期化不備により生存判定でfalse、SaveSlotオブジェクトのプロパティアクセス不正
+    - 修正: テストキャラクターのderived_stats初期化処理追加、SaveSlotの辞書アクセスをプロパティアクセスに修正
+    - ファイル: `src/core/game_manager.py`, `src/overworld/overworld_manager.py`
+- [x] テキスト設定ファイル不足によるエラーメッセージ表示問題
+    - 問題: config_manager.get_textメソッドがdefaultパラメータ未対応
+    - 修正: defaultパラメータ対応により適切なフォールバック処理を実装
+    - ファイル: `src/core/config_manager.py`
+
+### 優先度:中 (2025-06-18修正完了) - バッチ修正
+
+- [x] 起動時の前回セーブデータの自動ロード(@docs/change_spec.md の対応が不完全)
+    - 問題: SaveSlotオブジェクトを辞書としてアクセス、存在しないtimestampプロパティを使用
+    - 修正: latest_save['slot_id'] → latest_save.slot_id、slot.timestamp → slot.last_saved
+    - ファイル: `src/core/game_manager.py`, `src/overworld/overworld_manager.py`
+- [x] [ゲームを保存]を押すとゲームがクラッシュする
+    - 問題: CharacterクラスのシリアライゼーションでJSON非対応オブジェクト、属性不足
+    - 修正: 防御的属性チェックとエラーハンドリング強化、詳細ログ出力追加
+    - ファイル: `src/core/save_manager.py`, `src/character/character.py`, `src/overworld/overworld_manager.py`
+
+### 優先度:低 (2025-06-18修正完了) - バッチ修正
+
+- [x] 魔術師ギルドでは、魔術は魔術書から習得するので、[魔法習得]は削除して魔術書を購入出来る[魔術書購入]を追加するべき
+    - 修正: 「魔法習得」メニューを「魔術書購入」に変更、カテゴリ別魔術書ショップシステム実装
+    - 攻撃・回復・補助・高位魔法の魔術書を購入可能、ゴールド決済システム搭載
+    - ファイル: `src/overworld/facilities/magic_guild.py`
 
 ### 優先度:高 (2025-06-17修正完了) - 新規修正
 
