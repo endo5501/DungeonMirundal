@@ -612,16 +612,14 @@ class GameManager(ShowBase):
             # セーブデータをロード
             save_data = self.save_manager.load_game(slot_id)
             
-            # パーティ情報を復元
-            if 'party' in save_data:
-                self.current_party = Party.from_dict(save_data['party'])
+            if save_data:
+                # パーティ情報を復元
+                self.current_party = save_data.party
                 logger.info(f"パーティを復元しました: {self.current_party.name}")
-            
-            # ゲーム状態を復元
-            if 'game_state' in save_data:
-                game_state = save_data['game_state']
-                if 'location' in game_state:
-                    self.current_location = game_state['location']
+                
+                # ゲーム状態を復元
+                if save_data.game_state and 'location' in save_data.game_state:
+                    self.current_location = save_data.game_state['location']
                     logger.info(f"現在位置を復元しました: {self.current_location}")
             
             logger.info("自動ロードが成功しました")
@@ -670,7 +668,7 @@ class GameManager(ShowBase):
             
             # 基本ステータスを設定
             test_character.base_stats = BaseStats(
-                strength=16, intelligence=10, piety=10,
+                strength=16, intelligence=10, faith=10,
                 vitality=15, agility=12, luck=8
             )
             
@@ -704,7 +702,7 @@ class GameManager(ShowBase):
                 character_class="fighter"
             )
             fallback_character.base_stats = BaseStats(
-                strength=15, intelligence=10, piety=10,
+                strength=15, intelligence=10, faith=10,
                 vitality=14, agility=12, luck=8
             )
             fallback_character.status = CharacterStatus.GOOD
