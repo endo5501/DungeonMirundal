@@ -11,26 +11,22 @@ from src.core.input_manager import (
 class TestInputManager:
     """入力マネージャーのテスト"""
     
-    @patch('src.core.input_manager.logger')
-    @patch('src.core.input_manager.DirectObject.__init__')
-    def setup_method(self, mock_direct_object, mock_logger):
+    def setup_method(self):
         """各テストメソッドの前に実行"""
-        # DirectObjectの初期化をモック
-        mock_direct_object.return_value = None
+        # Panda3Dのbaseをモック
+        mock_base = Mock()
+        mock_base.devices = Mock()
+        mock_base.devices.getDevices.return_value = []
+        mock_base.taskMgr = Mock()
+        mock_base.taskMgr.add = Mock()
         
         # 必要なメソッドをモック
-        with patch.object(InputManager, 'accept'), \
-             patch.object(InputManager, 'taskMgr') as mock_task_mgr:
+        with patch('src.core.input_manager.DirectObject.__init__'), \
+             patch('src.core.input_manager.logger'), \
+             patch('builtins.base', mock_base), \
+             patch.object(InputManager, 'accept'):
             
-            mock_task_mgr.add = Mock()
-            
-            # Panda3Dのbaseをモック
-            self.mock_base = Mock()
-            self.mock_base.devices = Mock()
-            self.mock_base.devices.getDevices.return_value = []
-            
-            with patch('builtins.base', self.mock_base):
-                self.input_manager = InputManager()
+            self.input_manager = InputManager()
     
     def test_input_manager_initialization(self):
         """入力マネージャーの初期化テスト"""

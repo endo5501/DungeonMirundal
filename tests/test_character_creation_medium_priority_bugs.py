@@ -21,16 +21,38 @@ class TestCharacterCreationMediumPriorityBugs:
         # CharacterCreationWizardを直接インスタンス化せず、必要なメソッドのみテスト
         wizard = Mock(spec=CharacterCreationWizard)
         wizard.callback = callback
-        wizard.on_cancel = None
+        wizard.on_cancel = wizard._default_cancel_handler
         wizard.current_ui = None
         wizard.character_data = {'name': '', 'race': '', 'character_class': '', 'base_stats': None}
         
-        # 実際のメソッドをモック
-        wizard._default_cancel_handler = Mock()
-        wizard._close_wizard = Mock()
-        wizard._on_name_cancelled = Mock()
+        # UI Manager モック
+        mock_ui_manager = Mock()
+        wizard.ui_manager = mock_ui_manager
         
-        return wizard
+        # Config Manager モック
+        mock_config_manager = Mock()
+        mock_config_manager.get_text.return_value = "名前を入力してください"
+        wizard.config_manager = mock_config_manager
+        
+        # 実際のメソッドをモック（動作する実装付き）
+        def mock_default_cancel_handler():
+            wizard._close_wizard()
+        
+        def mock_on_name_cancelled():
+            if hasattr(wizard, 'current_ui') and wizard.current_ui:
+                mock_ui_manager.hide_element(wizard.current_ui.element_id)
+                mock_ui_manager.unregister_element(wizard.current_ui.element_id)
+            wizard._close_wizard()
+        
+        def mock_show_name_input():
+            mock_config_manager.get_text("character.enter_name")
+        
+        wizard._default_cancel_handler = Mock(side_effect=mock_default_cancel_handler)
+        wizard._close_wizard = Mock()
+        wizard._on_name_cancelled = Mock(side_effect=mock_on_name_cancelled)
+        wizard._show_name_input = Mock(side_effect=mock_show_name_input)
+        
+        return wizard, mock_ui_manager, mock_config_manager
     
     def test_cancel_button_does_not_crash_with_default_handler(self):
         """[キャンセル]ボタンがデフォルトハンドラーでクラッシュしないことを確認"""
