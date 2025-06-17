@@ -87,11 +87,11 @@ class TestConfigManager:
     
     def test_get_text(self):
         """テキスト取得のテスト"""
-        text = self.config_manager.get_text("menu.start", "ja")
+        text = self.config_manager.get_text("menu.start", language="ja")
         assert text == "開始"
         
         # 存在しないキーのテスト
-        missing_text = self.config_manager.get_text("nonexistent.key", "ja")
+        missing_text = self.config_manager.get_text("nonexistent.key", language="ja")
         assert missing_text == "[nonexistent.key]"
     
     def test_set_language(self):
