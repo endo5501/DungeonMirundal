@@ -493,3 +493,19 @@ class Character:
             created_at=datetime.fromisoformat(data.get('created_at', datetime.now().isoformat()))
         )
         return character
+    
+    @property
+    def equipment(self):
+        """装備品プロパティ（後方互換性のため）"""
+        if hasattr(self, '_mock_equipment'):
+            return self._mock_equipment
+        return self.get_equipment()
+    
+    @equipment.setter
+    def equipment(self, value):
+        """装備品プロパティのセッター（テスト用）"""
+        self._mock_equipment = value
+    
+    def get_personal_inventory(self):
+        """個人インベントリを取得（新インベントリシステム）"""
+        return self.get_inventory()

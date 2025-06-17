@@ -13,6 +13,7 @@ class BaseStats:
     agility: int = 10
     intelligence: int = 10
     faith: int = 10
+    vitality: int = 10
     luck: int = 10
     
     def apply_modifiers(self, modifiers: Dict[str, float]) -> 'BaseStats':
@@ -22,6 +23,7 @@ class BaseStats:
             agility=int(self.agility * modifiers.get('agility', 1.0)),
             intelligence=int(self.intelligence * modifiers.get('intelligence', 1.0)),
             faith=int(self.faith * modifiers.get('faith', 1.0)),
+            vitality=int(self.vitality * modifiers.get('vitality', 1.0)),
             luck=int(self.luck * modifiers.get('luck', 1.0))
         )
     
@@ -32,6 +34,7 @@ class BaseStats:
             agility=self.agility + bonuses.get('agility', 0),
             intelligence=self.intelligence + bonuses.get('intelligence', 0),
             faith=self.faith + bonuses.get('faith', 0),
+            vitality=self.vitality + bonuses.get('vitality', 0),
             luck=self.luck + bonuses.get('luck', 0)
         )
     
@@ -42,6 +45,7 @@ class BaseStats:
             'agility': self.agility,
             'intelligence': self.intelligence,
             'faith': self.faith,
+            'vitality': self.vitality,
             'luck': self.luck
         }
     
@@ -53,6 +57,7 @@ class BaseStats:
             agility=data.get('agility', 10),
             intelligence=data.get('intelligence', 10),
             faith=data.get('faith', 10),
+            vitality=data.get('vitality', 10),
             luck=data.get('luck', 10)
         )
 
@@ -66,6 +71,11 @@ class DerivedStats:
     current_mp: int = 0
     armor_class: int = 10
     attack_bonus: int = 0
+    attack_power: int = 0
+    defense: int = 0
+    accuracy: int = 80
+    evasion: int = 10
+    critical_chance: int = 5
     
     def to_dict(self) -> Dict[str, int]:
         """辞書形式での出力"""
@@ -75,7 +85,12 @@ class DerivedStats:
             'max_mp': self.max_mp,
             'current_mp': self.current_mp,
             'armor_class': self.armor_class,
-            'attack_bonus': self.attack_bonus
+            'attack_bonus': self.attack_bonus,
+            'attack_power': self.attack_power,
+            'defense': self.defense,
+            'accuracy': self.accuracy,
+            'evasion': self.evasion,
+            'critical_chance': self.critical_chance
         }
     
     @classmethod
@@ -87,7 +102,12 @@ class DerivedStats:
             max_mp=data.get('max_mp', 0),
             current_mp=data.get('current_mp', 0),
             armor_class=data.get('armor_class', 10),
-            attack_bonus=data.get('attack_bonus', 0)
+            attack_bonus=data.get('attack_bonus', 0),
+            attack_power=data.get('attack_power', 0),
+            defense=data.get('defense', 0),
+            accuracy=data.get('accuracy', 80),
+            evasion=data.get('evasion', 10),
+            critical_chance=data.get('critical_chance', 5)
         )
 
 

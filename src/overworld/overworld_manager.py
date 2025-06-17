@@ -323,7 +323,7 @@ class OverworldManager:
         
         party_menu.add_menu_item(
             config_manager.get_text("menu.back"),
-            self._back_to_settings_menu
+            lambda: self._back_to_settings_menu(from_party_status=True)
         )
         
         ui_manager.register_element(party_menu)
@@ -394,86 +394,99 @@ class OverworldManager:
         self._show_info_dialog("パーティ全体情報", status_text)
     
     def _show_character_details(self, character):
-        """キャラクター詳細情報を表示"""
-        details_text = f"【{character.name}】\n\n"
-        
-        # 基本情報
-        details_text += f"種族: {character.get_race_name()}\n"
-        details_text += f"職業: {character.get_class_name()}\n"
-        details_text += f"レベル: {character.experience.level}\n"
-        details_text += f"経験値: {character.experience.current_xp}\n"
-        details_text += f"状態: {character.status.value}\n\n"
-        
-        # HP/MP
-        details_text += f"【生命力・魔力】\n"
-        details_text += f"HP: {character.derived_stats.current_hp} / {character.derived_stats.max_hp}\n"
-        details_text += f"MP: {character.derived_stats.current_mp} / {character.derived_stats.max_mp}\n\n"
-        
-        # 基本能力値
-        details_text += f"【基本能力値】\n"
-        details_text += f"力: {character.base_stats.strength}\n"
-        details_text += f"知恵: {character.base_stats.intelligence}\n"
-        details_text += f"信仰心: {character.base_stats.faith}\n"
-        details_text += f"素早さ: {character.base_stats.agility}\n"
-        details_text += f"運: {character.base_stats.luck}\n"
-        details_text += f"体力: {character.base_stats.vitality}\n\n"
-        
-        # 戦闘能力
-        details_text += f"【戦闘能力】\n"
-        details_text += f"攻撃力: {character.derived_stats.attack_power}\n"
-        details_text += f"防御力: {character.derived_stats.defense}\n"
-        details_text += f"命中率: {character.derived_stats.accuracy}\n"
-        details_text += f"回避率: {character.derived_stats.evasion}\n"
-        details_text += f"クリティカル率: {character.derived_stats.critical_chance}\n\n"
-        
-        # 装備品情報
-        details_text += f"【装備品】\n"
-        equipment = character.equipment
-        if equipment.weapon:
-            details_text += f"武器: {equipment.weapon.get_name()}\n"
-        else:
-            details_text += "武器: なし\n"
+        """キャラクター詳細情報を表示（エラーハンドリング付き）"""
+        try:
+            details_text = f"【{character.name}】\n\n"
             
-        if equipment.armor:
-            details_text += f"防具: {equipment.armor.get_name()}\n"
-        else:
-            details_text += "防具: なし\n"
-            
-        if equipment.shield:
-            details_text += f"盾: {equipment.shield.get_name()}\n"
-        else:
-            details_text += "盾: なし\n"
-            
-        if equipment.accessory:
-            details_text += f"装飾品: {equipment.accessory.get_name()}\n"
-        else:
-            details_text += "装飾品: なし\n"
+            # 基本情報
+            details_text += f"種族: {character.get_race_name()}\n"
+            details_text += f"職業: {character.get_class_name()}\n"
+            details_text += f"レベル: {character.experience.level}\n"
+            details_text += f"経験値: {character.experience.current_xp}\n"
+            details_text += f"状態: {character.status.value}\n\n"
         
-        # 個人インベントリ
-        details_text += f"\n【所持品】\n"
-        personal_inventory = character.get_personal_inventory()
-        if personal_inventory and personal_inventory.slots:
-            item_count = 0
-            for slot in personal_inventory.slots:
-                if not slot.is_empty():
-                    item_instance = slot.item_instance
-                    if item_instance:
-                        details_text += f"• {item_instance.get_display_name()}"
-                        if item_instance.quantity > 1:
-                            details_text += f" x{item_instance.quantity}"
-                        details_text += "\n"
-                        item_count += 1
+            # HP/MP
+            details_text += f"【生命力・魔力】\n"
+            details_text += f"HP: {character.derived_stats.current_hp} / {character.derived_stats.max_hp}\n"
+            details_text += f"MP: {character.derived_stats.current_mp} / {character.derived_stats.max_mp}\n\n"
             
-            if item_count == 0:
-                details_text += "なし\n"
-        else:
-            details_text += "なし\n"
+            # 基本能力値
+            details_text += f"【基本能力値】\n"
+            details_text += f"力: {character.base_stats.strength}\n"
+            details_text += f"知恵: {character.base_stats.intelligence}\n"
+            details_text += f"信仰心: {character.base_stats.faith}\n"
+            details_text += f"素早さ: {character.base_stats.agility}\n"
+            details_text += f"運: {character.base_stats.luck}\n"
+            details_text += f"体力: {character.base_stats.vitality}\n\n"
+            
+            # 戦闘能力
+            details_text += f"【戦闘能力】\n"
+            details_text += f"攻撃力: {character.derived_stats.attack_power}\n"
+            details_text += f"防御力: {character.derived_stats.defense}\n"
+            details_text += f"命中率: {character.derived_stats.accuracy}\n"
+            details_text += f"回避率: {character.derived_stats.evasion}\n"
+            details_text += f"クリティカル率: {character.derived_stats.critical_chance}\n\n"
         
-        # TODO: Phase 4で魔法習得情報追加
-        details_text += f"\n【習得魔法】\n"
-        details_text += "Phase 4で実装予定\n"
+            # 装備品情報
+            details_text += f"【装備品】\n"
+            try:
+                equipment = character.equipment
+                if hasattr(equipment, 'weapon') and equipment.weapon:
+                    details_text += f"武器: {equipment.weapon.get_name()}\n"
+                else:
+                    details_text += "武器: なし\n"
+                    
+                if hasattr(equipment, 'armor') and equipment.armor:
+                    details_text += f"防具: {equipment.armor.get_name()}\n"
+                else:
+                    details_text += "防具: なし\n"
+                    
+                if hasattr(equipment, 'shield') and equipment.shield:
+                    details_text += f"盾: {equipment.shield.get_name()}\n"
+                else:
+                    details_text += "盾: なし\n"
+                    
+                if hasattr(equipment, 'accessory') and equipment.accessory:
+                    details_text += f"装飾品: {equipment.accessory.get_name()}\n"
+                else:
+                    details_text += "装飾品: なし\n"
+            except (AttributeError, Exception) as e:
+                details_text += "装備情報を取得できません\n"
+                logger.warning(f"装備情報取得エラー: {e}")
         
-        self._show_info_dialog(f"{character.name} の詳細", details_text)
+            # 個人インベントリ
+            details_text += f"\n【所持品】\n"
+            try:
+                personal_inventory = character.get_personal_inventory()
+                if personal_inventory and hasattr(personal_inventory, 'slots') and personal_inventory.slots:
+                    item_count = 0
+                    for slot in personal_inventory.slots:
+                        if hasattr(slot, 'is_empty') and not slot.is_empty():
+                            item_instance = slot.item_instance
+                            if item_instance:
+                                details_text += f"• {item_instance.get_display_name()}"
+                                if hasattr(item_instance, 'quantity') and item_instance.quantity > 1:
+                                    details_text += f" x{item_instance.quantity}"
+                                details_text += "\n"
+                                item_count += 1
+                    
+                    if item_count == 0:
+                        details_text += "なし\n"
+                else:
+                    details_text += "なし\n"
+            except (AttributeError, Exception) as e:
+                details_text += "インベントリ情報を取得できません\n"
+                logger.warning(f"インベントリ情報取得エラー: {e}")
+        
+            # TODO: Phase 4で魔法習得情報追加
+            details_text += f"\n【習得魔法】\n"
+            details_text += "Phase 4で実装予定\n"
+            
+            self._show_info_dialog(f"{character.name} の詳細", details_text)
+            
+        except (AttributeError, Exception) as e:
+            logger.error(f"キャラクター詳細表示エラー: {e}")
+            self._show_error_dialog("エラー", f"キャラクター情報の表示中にエラーが発生しました")
     
     def _back_to_settings_menu(self):
         """設定メニューに戻る"""
@@ -531,7 +544,7 @@ class OverworldManager:
         
         load_menu.add_menu_item(
             config_manager.get_text("menu.back"),
-            self._back_to_settings_menu
+            lambda: self._back_to_settings_menu(from_party_status=False)
         )
         
         # 現在のメニューを隠してロードメニューを表示
@@ -549,15 +562,20 @@ class OverworldManager:
             self.current_party = game_save.party
             self._show_info_dialog("ロード完了", f"スロット {slot_id} のデータをロードしました")
             
-            # メインメニューを更新
-            self._back_to_main_menu()
+            # 設定メニューに戻る（メインメニューと重複しないように）
         else:
             self._show_error_dialog("ロード失敗", "セーブデータの読み込みに失敗しました")
     
-    def _back_to_settings_menu(self):
+    def _back_to_settings_menu(self, from_party_status=False):
         """設定メニューに戻る"""
-        ui_manager.hide_element("load_game_menu")
-        ui_manager.unregister_element("load_game_menu")
+        # パーティ状況メニューからの場合
+        if from_party_status:
+            ui_manager.hide_element("party_status_menu")
+            ui_manager.unregister_element("party_status_menu")
+        else:
+            # ロードメニューからの場合
+            ui_manager.hide_element("load_game_menu")
+            ui_manager.unregister_element("load_game_menu")
         
         # 設定メニューを再表示（メインメニューは表示しない）
         if self.location_menu:
@@ -571,10 +589,10 @@ class OverworldManager:
         if not self.current_party:
             return
         
-        # パーティの状態チェック
-        conscious_members = self.current_party.get_conscious_characters()
-        if not conscious_members:
-            self._show_error_dialog("エラー", "意識のあるメンバーがいません")
+        # パーティの状態チェック（生存しているメンバーがいるか確認）
+        living_members = self.current_party.get_living_characters()
+        if not living_members:
+            self._show_error_dialog("エラー", "生存しているメンバーがいません")
             return
         
         # ダンジョン選択UIを表示

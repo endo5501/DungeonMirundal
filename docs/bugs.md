@@ -5,27 +5,34 @@
 
 ## Known bugs
 
-### 優先度:高
-
-- [ ] ダンジョン入口の入場確認で[はい]を押しても、ダンジョンに入れず、地上メニューに戻ってしまう。以下、現象発生時のログ
-```
-2025-06-17 07:57:52 - dungeon - ERROR - 生存しているパーティメンバーがいません
-2025-06-17 07:57:52 - dungeon - ERROR - ダンジョン遷移に失敗しました: 生存しているパーティメンバーがいません
-2025-06-17 07:57:52 - dungeon - WARNING - テキストファイルが見つかりません: config/text/ダンジョン入場エラー.yaml
-2025-06-17 07:57:52 - dungeon - WARNING - テキストキーが見つかりません: dungeon.entrance_error_title
-2025-06-17 07:57:52 - dungeon - WARNING - テキストファイルが見つかりません: config/text/ダンジョンに入場できませんでした:.yaml
-2025-06-17 07:57:52 - dungeon - WARNING - テキストキーが見つかりません: dungeon.entrance_error_prefix
-```
-
-### 優先度:中
-
-- [ ] 設定画面でゲームをロード後、[OK]を押すとロード画面のメニューと地上メニューが重なって表示されてしまう。ロード実行後は設定画面用メニュー表示に戻るべき
-- [ ] 設定画面の[パーティ状況]-[パーティ全体情報]からキャラクター選択ボタンを押すとゲームが落ちる
-- [ ] 設定画面で[パーティ状況]-[戻る]を押しても、[パーティ状況]のボタンが残り続ける
 
 ## Fixed bugs
 
-### 優先度:高 (2025-06-17修正完了)
+### 優先度:高 (2025-06-17修正完了) - 新規修正
+
+- [x] ダンジョン入口の入場確認で[はい]を押しても、ダンジョンに入れず、地上メニューに戻ってしまう
+    - 問題: OverworldManagerとGameManagerでチェック基準が不一致（意識vs生存）
+    - 修正: `overworld_manager.py`で`get_conscious_characters()`を`get_living_characters()`に変更
+    - ファイル: `src/overworld/overworld_manager.py:575`
+    - テスト: `tests/test_dungeon_entrance_logic_fix.py`
+
+### 優先度:中 (2025-06-17修正完了) - 新規修正
+
+- [x] 設定画面でゲームをロード後、[OK]を押すとロード画面のメニューと地上メニューが重なって表示されてしまう
+    - 問題: `_back_to_settings_menu`メソッドの重複定義とロード後のメインメニュー表示
+    - 修正: 重複メソッドの統合、ロード後に設定メニューに戻るよう修正
+    - ファイル: `src/overworld/overworld_manager.py:556`
+- [x] 設定画面の[パーティ状況]-[パーティ全体情報]からキャラクター選択ボタンを押すとゲームが落ちる
+    - 問題: Characterクラスに`equipment`プロパティ、`get_personal_inventory()`メソッドが不足
+    - 修正: 不足していたプロパティとメソッドを追加、BaseStatsにvitality、DerivedStatsに戦闘関連属性を追加
+    - ファイル: `src/character/character.py`, `src/character/stats.py`, `src/overworld/overworld_manager.py`
+    - テスト: `tests/test_character_details_crash_fix.py`
+- [x] 設定画面で[パーティ状況]-[戻る]を押しても、[パーティ状況]のボタンが残り続ける
+    - 問題: 重複した`_back_to_settings_menu`メソッド定義による意図しない動作
+    - 修正: メソッド統合と呼び出し元に応じた適切な処理を実装
+    - ファイル: `src/overworld/overworld_manager.py`
+
+### 優先度:高 (2025-06-17修正完了) - 既存修正
 
 - [x] ダンジョンに入るとUIManager.show_dialog AttributeErrorが発生してクラッシュする
     - 問題: `overworld_manager.py`で`ui_manager.show_dialog()`に存在しない`element_id`パラメータを渡していた
