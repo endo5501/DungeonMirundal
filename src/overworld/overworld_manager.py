@@ -599,7 +599,7 @@ class OverworldManager:
             # セーブメニューに戻る
             self._back_to_settings_menu(from_save_menu=True)
         else:
-            self._show_error_dialog("セーブ失敗", "ゲームの保存に失敗しました")
+            self._show_error_dialog("セーブ失敗", "ゲームの保存に失敗しました。\n詳細はログを確認してください。")
     
     def _show_load_menu(self):
         """ロードメニュー表示"""

@@ -462,19 +462,40 @@ class Character:
     
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式でシリアライズ"""
-        return {
-            'character_id': self.character_id,
-            'name': self.name,
-            'race': self.race,
-            'character_class': self.character_class,
-            'base_stats': self.base_stats.to_dict(),
-            'derived_stats': self.derived_stats.to_dict(),
-            'experience': self.experience.to_dict(),
-            'status': self.status.value,
-            'inventory': self.inventory.copy(),
-            'equipped_items': self.equipped_items.copy(),
-            'created_at': self.created_at.isoformat()
-        }
+        try:
+            # 必要な属性の存在確認と初期化
+            if not hasattr(self, 'base_stats') or self.base_stats is None:
+                from src.character.stats import BaseStats
+                self.base_stats = BaseStats()
+                
+            if not hasattr(self, 'derived_stats') or self.derived_stats is None:
+                self.initialize_derived_stats()
+                
+            if not hasattr(self, 'experience') or self.experience is None:
+                self.experience = Experience()
+                
+            if not hasattr(self, 'inventory'):
+                self.inventory = {}
+                
+            if not hasattr(self, 'equipped_items'):
+                self.equipped_items = {}
+                
+            return {
+                'character_id': self.character_id,
+                'name': self.name,
+                'race': self.race,
+                'character_class': self.character_class,
+                'base_stats': self.base_stats.to_dict(),
+                'derived_stats': self.derived_stats.to_dict(),
+                'experience': self.experience.to_dict(),
+                'status': self.status.value,
+                'inventory': self.inventory.copy(),
+                'equipped_items': self.equipped_items.copy(),
+                'created_at': self.created_at.isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Character.to_dict()でエラー: {e}")
+            raise e
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Character':

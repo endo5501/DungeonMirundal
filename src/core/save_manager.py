@@ -152,8 +152,21 @@ class SaveManager:
             )
             
             # JSONファイルに保存
-            with open(save_path, 'w', encoding='utf-8') as f:
-                json.dump(game_save.to_dict(), f, ensure_ascii=False, indent=2)
+            try:
+                save_data = game_save.to_dict()
+                logger.debug(f"セーブデータの変換に成功: {type(save_data)}")
+                
+                with open(save_path, 'w', encoding='utf-8') as f:
+                    json.dump(save_data, f, ensure_ascii=False, indent=2)
+                    
+                logger.debug(f"ファイル書き込み完了: {save_path}")
+                
+            except TypeError as te:
+                logger.error(f"JSONシリアライゼーションエラー: {te}")
+                raise te
+            except Exception as fe:
+                logger.error(f"ファイル書き込みエラー: {fe}")
+                raise fe
             
             # メタデータ更新
             self._update_metadata(save_slot)
