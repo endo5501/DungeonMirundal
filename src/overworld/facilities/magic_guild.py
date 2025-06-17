@@ -46,8 +46,8 @@ class MagicGuild(BaseFacility):
     def _setup_menu_items(self, menu: UIMenu):
         """魔術師ギルド固有のメニュー項目を設定"""
         menu.add_menu_item(
-            "魔法習得",
-            self._show_spell_learning_menu
+            "魔術書購入",
+            self._show_spellbook_shop_menu
         )
         
         menu.add_menu_item(
@@ -72,9 +72,10 @@ class MagicGuild(BaseFacility):
         # 入場時のメッセージ
         welcome_message = (
             "「ようこそ、魔術師ギルドへ。\n\n"
-            "ここでは魔法の習得、アイテムの鑑定、\n"
+            "ここでは魔術書の販売、アイテムの鑑定、\n"
             "そして様々な魔術的サービスを\n"
             "提供しております。\n\n"
+            "魔術書から魔法を習得し、\n"
             "知識こそ力、魔法こそ真理です。\n"
             "何かご用件はありますか？」"
         )
@@ -89,48 +90,163 @@ class MagicGuild(BaseFacility):
         """魔術師ギルド退場時の処理"""
         logger.info("魔術師ギルドから出ました")
     
-    def _show_spell_learning_menu(self):
-        """魔法習得メニューを表示"""
+    def _show_spellbook_shop_menu(self):
+        """魔術書購入メニューを表示"""
         if not self.current_party:
             self._show_error_message("パーティが設定されていません")
             return
         
-        # 魔法を習得可能なキャラクターを探す
-        magic_users = []
-        for character in self.current_party.get_all_characters():
-            if character.get_class_name() in ['mage', 'priest', 'bishop']:
-                magic_users.append(character)
+        spellbook_menu = UIMenu("spellbook_shop_menu", "魔術書購入")
         
-        if not magic_users:
-            self._show_dialog(
-                "no_magic_users_dialog",
-                "魔法習得",
-                "パーティに魔法を習得できる\n"
-                "キャラクターがいません。\n\n"
-                "魔法習得可能クラス:\n"
-                "• 魔術師 (Mage)\n"
-                "• 僧侶 (Priest)\n"
-                "• 司教 (Bishop)"
-            )
-            return
-        
-        learning_menu = UIMenu("spell_learning_menu", "魔法習得")
-        
-        for character in magic_users:
-            char_info = f"{character.name} (Lv.{character.experience.level} {character.get_class_name()})"
-            learning_menu.add_menu_item(
-                char_info,
-                self._show_available_spells,
-                [character]
-            )
-        
-        learning_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [learning_menu]
+        # 魔術書カテゴリごとにメニューを作成
+        spellbook_menu.add_menu_item(
+            "攻撃魔法の魔術書",
+            self._show_attack_spellbooks
         )
         
-        self._show_submenu(learning_menu)
+        spellbook_menu.add_menu_item(
+            "回復魔法の魔術書",
+            self._show_healing_spellbooks
+        )
+        
+        spellbook_menu.add_menu_item(
+            "補助魔法の魔術書",
+            self._show_utility_spellbooks
+        )
+        
+        spellbook_menu.add_menu_item(
+            "高位魔法の魔術書",
+            self._show_advanced_spellbooks
+        )
+        
+        spellbook_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_main_menu_from_submenu,
+            [spellbook_menu]
+        )
+        
+        self._show_submenu(spellbook_menu)
+    
+    def _show_attack_spellbooks(self):
+        """攻撃魔法の魔術書一覧を表示"""
+        attack_spellbooks = [
+            {"name": "ファイア魔術書", "price": 300, "description": "ファイア魔法を習得できる魔術書"},
+            {"name": "ファイアボール魔術書", "price": 800, "description": "ファイアボール魔法を習得できる魔術書"},
+            {"name": "サンダー魔術書", "price": 350, "description": "サンダー魔法を習得できる魔術書"},
+            {"name": "ブリザード魔術書", "price": 400, "description": "ブリザード魔法を習得できる魔術書"},
+        ]
+        self._show_spellbook_category("攻撃魔法の魔術書", attack_spellbooks)
+    
+    def _show_healing_spellbooks(self):
+        """回復魔法の魔術書一覧を表示"""
+        healing_spellbooks = [
+            {"name": "ヒール魔術書", "price": 250, "description": "ヒール魔法を習得できる魔術書"},
+            {"name": "キュア魔術書", "price": 200, "description": "キュア魔法を習得できる魔術書"},
+            {"name": "グレーターヒール魔術書", "price": 600, "description": "グレーターヒール魔法を習得できる魔術書"},
+            {"name": "リジェネレート魔術書", "price": 500, "description": "リジェネレート魔法を習得できる魔術書"},
+        ]
+        self._show_spellbook_category("回復魔法の魔術書", healing_spellbooks)
+    
+    def _show_utility_spellbooks(self):
+        """補助魔法の魔術書一覧を表示"""
+        utility_spellbooks = [
+            {"name": "ライト魔術書", "price": 150, "description": "ライト魔法を習得できる魔術書"},
+            {"name": "ディテクト魔術書", "price": 180, "description": "ディテクト魔法を習得できる魔術書"},
+            {"name": "プロテクション魔術書", "price": 400, "description": "プロテクション魔法を習得できる魔術書"},
+            {"name": "ハスト魔術書", "price": 450, "description": "ハスト魔法を習得できる魔術書"},
+        ]
+        self._show_spellbook_category("補助魔法の魔術書", utility_spellbooks)
+    
+    def _show_advanced_spellbooks(self):
+        """高位魔法の魔術書一覧を表示"""
+        advanced_spellbooks = [
+            {"name": "テレポート魔術書", "price": 1200, "description": "テレポート魔法を習得できる魔術書"},
+            {"name": "リザレクション魔術書", "price": 2500, "description": "リザレクション魔法を習得できる魔術書"},
+            {"name": "メテオ魔術書", "price": 3000, "description": "メテオ魔法を習得できる魔術書"},
+            {"name": "ミラクル魔術書", "price": 2800, "description": "ミラクル魔法を習得できる魔術書"},
+        ]
+        self._show_spellbook_category("高位魔法の魔術書", advanced_spellbooks)
+    
+    def _show_spellbook_category(self, category_name: str, spellbooks: List[Dict[str, Any]]):
+        """魔術書カテゴリの商品一覧を表示"""
+        if not self.current_party:
+            return
+        
+        shop_menu = UIMenu("spellbook_category_menu", category_name)
+        
+        for spellbook in spellbooks:
+            spellbook_info = f"{spellbook['name']} - {spellbook['price']}G"
+            shop_menu.add_menu_item(
+                spellbook_info,
+                self._show_spellbook_details,
+                [spellbook]
+            )
+        
+        shop_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._show_spellbook_shop_menu
+        )
+        
+        self._show_submenu(shop_menu)
+    
+    def _show_spellbook_details(self, spellbook: Dict[str, Any]):
+        """魔術書の詳細情報と購入確認を表示"""
+        if not self.current_party:
+            return
+        
+        details = f"【{spellbook['name']} 詳細】\n\n"
+        details += f"説明: {spellbook['description']}\n\n"
+        details += f"価格: {spellbook['price']}G\n"
+        details += f"現在のゴールド: {self.current_party.gold}G\n"
+        
+        if self.current_party.gold >= spellbook['price']:
+            details += f"購入後: {self.current_party.gold - spellbook['price']}G\n\n"
+            details += "この魔術書を購入しますか？\n\n"
+            details += "※ 魔術書はパーティのインベントリに追加されます\n"
+            details += "※ 読むことで対応する魔法を習得できます"
+            
+            self._show_confirmation(
+                details,
+                lambda: self._purchase_spellbook(spellbook)
+            )
+        else:
+            details += "\n※ ゴールドが不足しています"
+            self._show_dialog(
+                "spellbook_details_dialog",
+                "魔術書詳細",
+                details
+            )
+    
+    def _purchase_spellbook(self, spellbook: Dict[str, Any]):
+        """魔術書購入処理"""
+        if not self.current_party:
+            return
+        
+        price = spellbook['price']
+        
+        if self.current_party.gold < price:
+            self._show_error_message("ゴールドが不足しています")
+            return
+        
+        # ゴールド支払い
+        self.current_party.gold -= price
+        
+        # TODO: Phase 4で魔術書アイテムをインベントリに追加
+        # spellbook_item = create_spellbook_item(spellbook['name'])
+        # self.current_party.get_party_inventory().add_item(spellbook_item)
+        
+        success_message = (
+            f"【{spellbook['name']} 購入完了】\n\n"
+            f"{spellbook['description']}\n\n"
+            f"支払い金額: {price}G\n"
+            f"残りゴールド: {self.current_party.gold}G\n\n"
+            "魔術書がパーティのインベントリに追加されました。\n"
+            "※ Phase 4でアイテムシステム実装時に\n"
+            "　 実際のアイテムとして使用可能になります"
+        )
+        
+        self._show_success_message(success_message)
+        logger.info(f"魔術書購入: {spellbook['name']} ({price}G)")
     
     def _show_available_spells(self, character: Character):
         """習得可能魔法一覧を表示"""
