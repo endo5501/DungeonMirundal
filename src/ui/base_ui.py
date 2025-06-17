@@ -130,7 +130,8 @@ class UIButton(UIElement):
         scale: tuple = (0.3, 0.3),
         command: Optional[Callable] = None,
         extraArgs: List = None,
-        text_scale: float = 0.45
+        text_scale: float = 0.38,
+        text_align: str = "center"
     ):
         super().__init__(element_id)
         
@@ -144,12 +145,29 @@ class UIButton(UIElement):
         except:
             font = None
         
+        # 標準的なテキストアライメント設定
+        align_map = {
+            "left": TextNode.ALeft,
+            "center": TextNode.ACenter,
+            "right": TextNode.ARight
+        }
+        
+        # テキストの位置調整（必要に応じて）
+        if text_align == "left":
+            text_pos = (-scale[0] * 0.7, 0)  # 左寄せ時の微調整
+        elif text_align == "right":
+            text_pos = (scale[0] * 0.7, 0)   # 右寄せ時の微調整
+        else:  # center
+            text_pos = (0, 0)                # 中央は調整不要
+        
         self.gui_element = DirectButton(
             text=text,
             pos=Vec3(pos[0], 0, pos[1]),
             scale=Vec3(scale[0], 1, scale[1]),
             command=self._on_click,
             text_scale=text_scale,  # カスタマイズ可能なフォントサイズ
+            text_align=align_map.get(text_align, TextNode.ACenter),  # 標準的なアライメント
+            text_pos=text_pos,      # 位置の微調整
             relief=DGG.RAISED,
             borderWidth=(0.01, 0.01),
             text_font=font
@@ -210,28 +228,33 @@ class UIMenu(UIElement):
         
         # 縦配置の設定
         if self.character_creation_mode:
-            button_spacing = 0.12  # キャラクター作成画面では縦間隔
+            button_spacing = 0.12  # キャラクター作成画面では適度な縦間隔
             start_y = 0.25  # キャラクター作成画面では上部から開始
             button_x = 0  # 中央配置
         elif self.alignment == "left":
-            button_spacing = 0.15  # 左寄せ時の縦間隔
+            button_spacing = 0.16  # 左寄せ時の縦間隔を広げる
             start_y = 0.3  # 上部から開始
-            button_x = -0.7  # 左寄せ位置
+            button_x = -0.7  # 左寄せ位置（固定）
         else:
-            button_spacing = 0.15  # 通常の縦間隔
+            button_spacing = 0.16  # 通常の縦間隔を広げる
             start_y = 0.3  # 上部から開始
             button_x = 0  # 中央配置
         
         # ボタンサイズを調整（縦横比率を同じにし、全体的に小さく）
         if self.character_creation_mode:
-            button_scale = (0.28, 0.28)  # キャラクター作成画面では小さめで正方形
+            button_scale = (0.22, 0.22)  # キャラクター作成画面ではより小さめで正方形
         else:
-            button_scale = (0.35, 0.35)  # 通常サイズを小さくし、正方形に
+            button_scale = (0.28, 0.28)  # 通常サイズをより小さくし、正方形に
         
         for i, item in enumerate(self.menu_items):
-            # フォントサイズを適切に調整
-            text_scale = 0.4 if self.character_creation_mode else 0.5
+            # フォントサイズを適切に調整（更に小さく）
+            text_scale = 0.35 if self.character_creation_mode else 0.42
             button_y = start_y - i * button_spacing
+            
+            # テキストアライメントを設定
+            text_align = "left" if self.alignment == "left" else "center"
+            
+            # ボタンの位置は既に設定済み（button_x変数を使用）
             
             button = UIButton(
                 f"{self.element_id}_btn_{i}",
@@ -240,7 +263,8 @@ class UIMenu(UIElement):
                 scale=button_scale,
                 command=item['command'],
                 extraArgs=item['args'],
-                text_scale=text_scale
+                text_scale=text_scale,
+                text_align=text_align
             )
             self.buttons.append(button)
             self.add_child(button)
@@ -352,9 +376,9 @@ class UIDialog(UIElement):
         
         for i, btn_config in enumerate(buttons):
             # キャラクター作成モード時は小さいフォント使用
-            text_scale = 0.4 if self.character_creation_mode else 0.5
+            text_scale = 0.35 if self.character_creation_mode else 0.42
             # ボタンサイズを高さ増加
-            button_scale = (0.4, 0.25) if self.character_creation_mode else (0.45, 0.3)
+            button_scale = (0.35, 0.22) if self.character_creation_mode else (0.4, 0.25)
             
             button = UIButton(
                 f"{self.element_id}_btn_{i}",

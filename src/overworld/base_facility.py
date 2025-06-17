@@ -61,8 +61,8 @@ class BaseFacility(ABC):
         # 施設固有の入場処理
         self._on_enter()
         
-        # メインメニューの表示
-        self._show_main_menu()
+        # 入場時にウェルカムメッセージを表示
+        self._show_welcome_message()
         
         logger.info(f"パーティが施設に入りました: {self.facility_id}")
         return True
@@ -148,6 +148,32 @@ class BaseFacility(ABC):
             ui_manager.hide_element(self.current_dialog.element_id)
             ui_manager.unregister_element(self.current_dialog.element_id)
             self.current_dialog = None
+    
+    def _show_welcome_message(self):
+        """入場時のウェルカムメッセージを表示"""
+        welcome_message = self._get_welcome_message()
+        
+        self._show_dialog(
+            f"{self.facility_id}_welcome",
+            self.get_name(),
+            welcome_message,
+            buttons=[
+                {
+                    'text': config_manager.get_text("common.ok"),
+                    'command': self._on_welcome_ok
+                }
+            ]
+        )
+    
+    def _on_welcome_ok(self):
+        """ウェルカムメッセージのOKボタンが押された時の処理"""
+        self._close_dialog()
+        # ウェルカムメッセージを閉じた後にメインメニューを表示
+        self._show_main_menu()
+    
+    def _get_welcome_message(self) -> str:
+        """施設のウェルカムメッセージを取得（サブクラスでオーバーライド可能）"""
+        return f"{self.get_name()}へようこそ！"
     
     def _show_success_message(self, message: str):
         """成功メッセージの表示"""
