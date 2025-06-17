@@ -6,7 +6,8 @@
 
 ## New Specifications
 
-なし
+- [ ] 商店のアイテム購入、アイテム売却、教会の祈祷書購入、魔術協会の魔術書購入でも、DirectScrolledListを使用して一覧表示してください。
+https://raw.githubusercontent.com/panda3d/panda3d-docs/f645db193247d008e52ff76de6a173c3ec95c9ef/programming/gui/directgui/directscrolledlist.rst
 
 ## Changed Specifications
 
