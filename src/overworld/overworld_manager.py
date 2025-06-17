@@ -524,12 +524,64 @@ class OverworldManager:
             ui_manager.show_element(self.location_menu.element_id)
     
     def _show_save_menu(self):
-        """セーブメニュー表示"""
-        # 簡易版: クイックセーブ
+        """セーブスロット選択メニュー表示"""
         if not self.current_party:
             self._show_error_dialog("エラー", "セーブするパーティがありません")
             return
         
+        # 現在のセーブスロット状況を取得
+        save_slots = save_manager.get_save_slots()
+        save_slot_info = {slot.slot_id: slot for slot in save_slots}
+        
+        # セーブスロット選択メニューを作成
+        save_menu = UIMenu("save_slot_menu", "セーブスロット選択")
+        
+        # 5つのセーブスロットを表示
+        for slot_id in range(1, 6):
+            if slot_id in save_slot_info:
+                slot = save_slot_info[slot_id]
+                slot_text = f"スロット {slot_id}: {slot.name} (Lv.{slot.party_level}) [{slot.timestamp.strftime('%m/%d %H:%M')}]"
+            else:
+                slot_text = f"スロット {slot_id}: [空]"
+            
+            save_menu.add_menu_item(
+                slot_text,
+                self._save_to_slot,
+                [slot_id]
+            )
+        
+        save_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            lambda: self._back_to_settings_menu(from_save_menu=True)
+        )
+        
+        # 現在のメニューを隠してセーブメニューを表示
+        if self.location_menu:
+            ui_manager.hide_element(self.location_menu.element_id)
+        
+        ui_manager.register_element(save_menu)
+        ui_manager.show_element(save_menu.element_id, modal=True)
+    
+    def _save_to_slot(self, slot_id: int):
+        """指定されたスロットにセーブ"""
+        if not self.current_party:
+            self._show_error_dialog("エラー", "セーブするパーティがありません")
+            return
+        
+        # 既存のセーブがある場合は確認
+        save_slots = save_manager.get_save_slots()
+        existing_save = next((slot for slot in save_slots if slot.slot_id == slot_id), None)
+        
+        if existing_save:
+            self._show_confirmation_dialog(
+                f"スロット {slot_id} には既にセーブデータがあります。\n上書きしますか？",
+                lambda: self._confirm_save_to_slot(slot_id)
+            )
+        else:
+            self._confirm_save_to_slot(slot_id)
+    
+    def _confirm_save_to_slot(self, slot_id: int):
+        """セーブ実行"""
         game_state = {
             'location': 'overworld',
             'current_location': self.current_location.value
@@ -537,13 +589,15 @@ class OverworldManager:
         
         success = save_manager.save_game(
             party=self.current_party,
-            slot_id=1,
+            slot_id=slot_id,
             save_name=f"{self.current_party.name} - 町",
             game_state=game_state
         )
         
         if success:
-            self._show_info_dialog("セーブ完了", "ゲームを保存しました")
+            self._show_info_dialog("セーブ完了", f"スロット {slot_id} にゲームを保存しました")
+            # セーブメニューに戻る
+            self._back_to_settings_menu(from_save_menu=True)
         else:
             self._show_error_dialog("セーブ失敗", "ゲームの保存に失敗しました")
     
@@ -569,7 +623,7 @@ class OverworldManager:
         
         load_menu.add_menu_item(
             config_manager.get_text("menu.back"),
-            lambda: self._back_to_settings_menu(from_party_status=False)
+            lambda: self._back_to_settings_menu(from_load_menu=True)
         )
         
         # 現在のメニューを隠してロードメニューを表示
@@ -591,12 +645,16 @@ class OverworldManager:
         else:
             self._show_error_dialog("ロード失敗", "セーブデータの読み込みに失敗しました")
     
-    def _back_to_settings_menu(self, from_party_status=False):
+    def _back_to_settings_menu(self, from_party_status=False, from_save_menu=False, from_load_menu=False):
         """設定メニューに戻る"""
         # パーティ状況メニューからの場合
         if from_party_status:
             ui_manager.hide_element("party_status_menu")
             ui_manager.unregister_element("party_status_menu")
+        elif from_save_menu:
+            # セーブメニューからの場合
+            ui_manager.hide_element("save_slot_menu")
+            ui_manager.unregister_element("save_slot_menu")
         else:
             # ロードメニューからの場合
             ui_manager.hide_element("load_game_menu")

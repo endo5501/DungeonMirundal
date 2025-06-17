@@ -3,6 +3,7 @@
 from typing import Dict, List, Optional, Callable, Any
 import yaml
 from src.ui.base_ui import UIMenu, UIDialog, ui_manager
+from direct.gui.DirectGui import DirectScrolledList, DirectButton
 from src.character.party import Party
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -80,30 +81,105 @@ class DungeonSelectionUI:
             return True  # 不明な条件は常に許可
     
     def _show_dungeon_menu(self, available_dungeons: List[Dict[str, Any]]):
-        """ダンジョン選択メニューを表示"""
+        """ダンジョン選択メニューをDirectScrolledListで表示"""
         # 既存のメニューがあれば削除
-        if ui_manager.get_element("dungeon_selection_menu"):
-            ui_manager.unregister_element("dungeon_selection_menu")
+        if hasattr(self, 'dungeon_ui_elements'):
+            self._cleanup_dungeon_ui()
         
-        title = (f"{config_manager.get_text('dungeon.selection_title')}\n\n"
-                f"{config_manager.get_text('dungeon.selection_message')}\n"
-                f"{config_manager.get_text('dungeon.max_level_info').format(level=self.current_party.get_max_level())}")
+        # DirectScrolledListを使用したダンジョン選択UIを作成
+        self._create_scrolled_dungeon_list(available_dungeons)
+    
+    def _create_scrolled_dungeon_list(self, available_dungeons: List[Dict[str, Any]]):
+        """DirectScrolledListでダンジョン一覧を作成"""
+        from direct.gui.DirectGui import DirectFrame, DirectLabel
+        from panda3d.core import Vec3
         
-        menu = UIMenu("dungeon_selection_menu", title)
+        # 背景フレーム
+        background = DirectFrame(
+            frameColor=(0, 0, 0, 0.8),
+            frameSize=(-1.5, 1.5, -1.2, 1.0),
+            pos=(0, 0, 0)
+        )
         
-        # 各ダンジョンをメニューに追加
-        for dungeon in available_dungeons:
+        # タイトル
+        try:
+            from src.ui.font_manager import font_manager
+            font = font_manager.get_default_font()
+        except:
+            font = None
+        
+        title_label = DirectLabel(
+            text="ダンジョン選択",
+            scale=0.08,
+            pos=(0, 0, 0.8),
+            text_fg=(1, 1, 0, 1),
+            frameColor=(0, 0, 0, 0),
+            text_font=font
+        )
+        
+        # ダンジョンリスト用のアイテムを作成
+        dungeon_items = []
+        for i, dungeon in enumerate(available_dungeons):
             display_name = self._format_dungeon_display_name(dungeon)
-            menu.add_menu_item(
-                display_name,
-                lambda d_id=dungeon["id"]: self._select_dungeon(d_id)
+            
+            # リストアイテムとしてのボタンを作成
+            item_button = DirectButton(
+                text=display_name,
+                scale=0.06,
+                text_scale=0.8,
+                text_align=0,  # 左寄せ
+                command=lambda d_id=dungeon["id"]: self._select_dungeon(d_id),
+                frameColor=(0.3, 0.3, 0.5, 0.8),
+                text_fg=(1, 1, 1, 1),
+                text_font=font,
+                relief=1,  # RAISED
+                borderWidth=(0.01, 0.01)
             )
+            dungeon_items.append(item_button)
         
-        # 戻るオプション
-        menu.add_menu_item(config_manager.get_text("dungeon.back_option"), self._cancel_selection)
+        # DirectScrolledListを作成
+        self.scrolled_list = DirectScrolledList(
+            # リスト表示領域
+            frameSize=(-1.2, 1.2, -0.6, 0.6),
+            frameColor=(0.2, 0.2, 0.3, 0.9),
+            pos=(0, 0, 0.1),
+            
+            # アイテム設定
+            numItemsVisible=5,  # 一度に表示するアイテム数
+            items=dungeon_items,
+            itemFrame_frameSize=(-1.1, 1.1, -0.11, 0.11),
+            itemFrame_pos=(0, 0, 0),
+            
+            # スクロールバー設定
+            scrollBarWidth=0.08,
+            
+            # デコレーション
+            relief=1,  # RAISED
+            borderWidth=(0.01, 0.01)
+        )
         
-        ui_manager.register_element(menu)
-        ui_manager.show_element(menu.element_id, modal=True)
+        # キャンセルボタン
+        cancel_button = DirectButton(
+            text="キャンセル",
+            scale=0.08,
+            pos=(0, 0, -0.8),
+            command=self._cancel_selection,
+            frameColor=(0.7, 0.3, 0.3, 0.9),
+            text_fg=(1, 1, 1, 1),
+            text_font=font
+        )
+        
+        # UI要素を管理用のコンテナに格納
+        self.dungeon_ui_elements = {
+            'background': background,
+            'title': title_label,
+            'scrolled_list': self.scrolled_list,
+            'cancel_button': cancel_button
+        }
+        
+        # 全て表示
+        for element in self.dungeon_ui_elements.values():
+            element.show()
     
     def _format_dungeon_display_name(self, dungeon: Dict[str, Any]) -> str:
         """ダンジョン表示名をフォーマット"""
@@ -157,6 +233,9 @@ class DungeonSelectionUI:
     
     def _confirm_dungeon_selection(self, dungeon_id: str):
         """ダンジョン選択を確定"""
+        # DirectScrolledListUIをクリーンアップ
+        self._cleanup_dungeon_ui()
+        
         # ダイアログを閉じる
         ui_manager.hide_element("dungeon_confirmation_dialog")
         ui_manager.unregister_element("dungeon_confirmation_dialog")
@@ -178,8 +257,25 @@ class DungeonSelectionUI:
         available_dungeons = self._get_available_dungeons(self.current_party)
         self._show_dungeon_menu(available_dungeons)
     
+    def _cleanup_dungeon_ui(self):
+        """ダンジョンUI要素のクリーンアップ"""
+        if hasattr(self, 'dungeon_ui_elements'):
+            for element in self.dungeon_ui_elements.values():
+                if element:
+                    element.hide()
+                    element.destroy()
+            self.dungeon_ui_elements.clear()
+            
+        # DirectScrolledListの個別クリーンアップ
+        if hasattr(self, 'scrolled_list'):
+            self.scrolled_list.destroy()
+            del self.scrolled_list
+    
     def _cancel_selection(self):
         """選択をキャンセル"""
+        # DirectScrolledListUIをクリーンアップ
+        self._cleanup_dungeon_ui()
+        
         # メニューを閉じる
         if ui_manager.get_element("dungeon_selection_menu"):
             ui_manager.hide_element("dungeon_selection_menu")

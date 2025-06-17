@@ -6,9 +6,7 @@
 
 ## New Specifications
 
-- [ ] 設定-[ゲームを保存]で常に1スロット目しかデータが保存されない。5個ほどのセーブ用スロットを用意して、保存先を選択させるべき。そして、[ゲームをロード]で選択してロード出来るようにするべきです。
-- [ ] [ダンジョン入口]では、ダンジョンの選択をボタンで表示するのではなく、DirectScrolledListを使うべきです
-https://raw.githubusercontent.com/panda3d/panda3d-docs/f645db193247d008e52ff76de6a173c3ec95c9ef/programming/gui/directgui/directscrolledlist.rst
+なし
 
 ## Changed Specifications
 
@@ -68,4 +66,19 @@ https://raw.githubusercontent.com/panda3d/panda3d-docs/f645db193247d008e52ff76de
   - 3×2のタイルレイアウトで「基本情報」「生命力・魔力」「基本能力値」「戦闘能力」「装備品」「所持品」を表示
   - 縦長テキストから視認性の良いタイル形式に変更
   - 各情報カテゴリが独立したタイルで表示され、全体的な把握が容易
+
+- [x] 設定-[ゲームを保存]で常に1スロット目しかデータが保存されない。5個ほどのセーブ用スロットを用意して、保存先を選択させるべき。そして、[ゲームをロード]で選択してロード出来るようにするべきです。
+  - 実装完了: `src/overworld/overworld_manager.py`でマルチスロットセーブ・ロード機能を実装
+  - 5つのセーブスロットを提供し、スロット選択ダイアログで保存・ロード先を選択可能
+  - 既存データがある場合の上書き確認ダイアログ機能
+  - セーブファイルのタイムスタンプ表示によりデータの識別が容易
+  - 従来の単一スロットシステムから拡張された柔軟なセーブ管理
+
+- [x] [ダンジョン入口]では、ダンジョンの選択をボタンで表示するのではなく、DirectScrolledListを使うべきです
+  - 実装完了: `src/ui/dungeon_selection_ui.py`でDirectScrolledListを使用したダンジョン選択UIを実装
+  - Panda3DのDirectScrolledListコンポーネントを使用してスケーラブルなダンジョン一覧表示
+  - 5つのアイテムを同時表示し、多数のダンジョンがある場合もスクロールで対応
+  - ダンジョン情報（難易度★、推奨レベル、属性、階数）を含む詳細表示
+  - 適切なUIクリーンアップ機能で資源管理を最適化
+  - https://raw.githubusercontent.com/panda3d/panda3d-docs/f645db193247d008e52ff76de6a173c3ec95c9ef/programming/gui/directgui/directscrolledlist.rst に基づく実装
 
