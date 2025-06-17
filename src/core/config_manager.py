@@ -65,7 +65,7 @@ class ConfigManager:
             logger.error(f"テキストファイルの読み込みに失敗: {language}, エラー: {e}")
             return {}
     
-    def get_text(self, key: str, language: str = None) -> str:
+    def get_text(self, key: str, default: str = None, language: str = None) -> str:
         """テキストの取得"""
         if language is None:
             language = self.current_language
@@ -82,18 +82,18 @@ class ConfigManager:
                     current_data = current_data[k]
                 else:
                     logger.warning(f"テキストキーが見つかりません: {key}")
-                    return f"[{key}]"
+                    return default if default is not None else f"[{key}]"
                     
             result = str(current_data)
             # テキストに不正な文字が含まれていないかチェック
             if '[' in result and ']' in result and result.startswith('['):
                 logger.error(f"不正なテキスト形式: {key} -> {result}")
-                return key.split('.')[-1]  # キーの最後の部分をフォールバックとして使用
+                return default if default is not None else key.split('.')[-1]
             
             return result
         except Exception as e:
             logger.error(f"テキスト取得エラー: {key}, エラー: {e}")
-            return key.split('.')[-1]
+            return default if default is not None else key.split('.')[-1]
     
     def set_language(self, language: str):
         """言語の設定"""
