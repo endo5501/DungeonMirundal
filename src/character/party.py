@@ -289,11 +289,6 @@ class Party:
             return 0.0
         return self.get_total_level() / len(self.characters)
     
-    def get_max_level(self) -> int:
-        """パーティの最高レベル"""
-        if not self.characters:
-            return 0
-        return max(char.experience.level for char in self.characters.values())
     
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式でシリアライズ"""
