@@ -150,9 +150,6 @@ class DungeonSelectionUI:
             itemFrame_frameSize=(-1.1, 1.1, -0.11, 0.11),
             itemFrame_pos=(0, 0, 0),
             
-            # スクロールバー設定
-            scrollBarWidth=0.08,
-            
             # デコレーション
             relief=1,  # RAISED
             borderWidth=(0.01, 0.01)
