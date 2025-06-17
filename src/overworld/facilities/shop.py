@@ -119,7 +119,7 @@ class Shop(BaseFacility):
         category_key = f"shop.purchase.categories.{item_type.value.lower()}"
         category_name = config_manager.get_text(category_key)
         category_menu = UIMenu(f"{item_type.value}_menu", 
-                              config_manager.get_text("shop.purchase.category_list_title", category=category_name))
+                              config_manager.get_text("shop.purchase.category_list_title").format(category=category_name))
         
         # 在庫から該当カテゴリのアイテムを取得
         available_items = []
@@ -131,7 +131,7 @@ class Shop(BaseFacility):
         if not available_items:
             category_key = f"shop.purchase.categories.{item_type.value.lower()}"
             category_name = config_manager.get_text(category_key)
-            self._show_error_message(config_manager.get_text("shop.purchase.no_stock", category=category_name))
+            self._show_error_message(config_manager.get_text("shop.purchase.no_stock").format(category=category_name))
             return
         
         for item in available_items:
@@ -244,7 +244,7 @@ class Shop(BaseFacility):
                 self._show_error_message(config_manager.get_text("shop.messages.inventory_full"))
                 return
         
-        success_message = config_manager.get_text("shop.purchase.purchase_success", 
+        success_message = config_manager.get_text("shop.purchase.purchase_success").format(
                                                   item_name=item.get_name(), 
                                                   gold=self.current_party.gold)
         self._show_success_message(success_message)
@@ -322,7 +322,7 @@ class Shop(BaseFacility):
         }
         
         for item_type, category_name in categories.items():
-            inventory_text += config_manager.get_text("shop.inventory.category_header", category=category_name) + "\n"
+            inventory_text += config_manager.get_text("shop.inventory.category_header").format(category=category_name) + "\n"
             
             category_items = []
             for item_id in self.inventory:
@@ -438,13 +438,13 @@ class Shop(BaseFacility):
             if item_instance.quantity >= 2:
                 half_quantity = item_instance.quantity // 2
                 quantity_menu.add_menu_item(
-                    config_manager.get_text("shop.sell.sell_half", count=half_quantity),
+                    config_manager.get_text("shop.sell.sell_half").format(count=half_quantity),
                     self._sell_item,
                     [slot, item_instance, item, sell_price, half_quantity]
                 )
             
             quantity_menu.add_menu_item(
-                config_manager.get_text("shop.sell.sell_all", count=item_instance.quantity),
+                config_manager.get_text("shop.sell.sell_all").format(count=item_instance.quantity),
                 self._sell_item,
                 [slot, item_instance, item, sell_price, item_instance.quantity]
             )
@@ -510,13 +510,13 @@ class Shop(BaseFacility):
         
         # 成功メッセージ
         if quantity > 1:
-            success_message = config_manager.get_text("shop.sell.sell_success_multiple", 
+            success_message = config_manager.get_text("shop.sell.sell_success_multiple").format(
                                                       item_name=item.get_name(), 
                                                       count=quantity,
                                                       price=total_price, 
                                                       gold=self.current_party.gold)
         else:
-            success_message = config_manager.get_text("shop.sell.sell_success", 
+            success_message = config_manager.get_text("shop.sell.sell_success").format(
                                                       item_name=item.get_name(), 
                                                       price=total_price, 
                                                       gold=self.current_party.gold)
