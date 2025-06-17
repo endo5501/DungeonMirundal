@@ -12,6 +12,22 @@ import os
 # プロジェクトルートをPythonパスに追加
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Panda3Dのモック
+mock_modules = {
+    'direct': Mock(),
+    'direct.showbase': Mock(),
+    'direct.showbase.ShowBase': Mock(),
+    'direct.actor': Mock(),
+    'direct.actor.Actor': Mock(),
+    'direct.gui': Mock(),
+    'direct.gui.DirectGui': Mock(),
+    'panda3d': Mock(),
+    'panda3d.core': Mock(),
+}
+
+for module_name, mock_module in mock_modules.items():
+    sys.modules[module_name] = mock_module
+
 from src.overworld.overworld_manager import OverworldManager  
 from src.ui.dungeon_selection_ui import DungeonSelectionUI
 from src.core.game_manager import GameManager

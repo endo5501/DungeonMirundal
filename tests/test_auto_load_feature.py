@@ -6,6 +6,23 @@ import tempfile
 import os
 import json
 from datetime import datetime
+import sys
+
+# Panda3Dのモック
+mock_modules = {
+    'direct': Mock(),
+    'direct.showbase': Mock(),
+    'direct.showbase.ShowBase': Mock(),
+    'direct.actor': Mock(),
+    'direct.actor.Actor': Mock(),
+    'direct.gui': Mock(),
+    'direct.gui.DirectGui': Mock(),
+    'panda3d': Mock(),
+    'panda3d.core': Mock(),
+}
+
+for module_name, mock_module in mock_modules.items():
+    sys.modules[module_name] = mock_module
 
 from src.core.game_manager import GameManager
 from src.core.save_manager import SaveManager
