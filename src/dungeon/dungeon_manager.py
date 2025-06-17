@@ -150,7 +150,7 @@ class DungeonManager:
         self.generator = DungeonGenerator(seed)
         
         # 最初のレベルを生成
-        first_level = self.generator.generate_level(1)
+        first_level = self.generator.generate_level(1, dungeon_id)
         dungeon_state.levels[1] = first_level
         
         # プレイヤー位置を設定
@@ -301,7 +301,7 @@ class DungeonManager:
             
             # 目標レベルが存在しない場合は生成
             if target_level not in self.current_dungeon.levels:
-                new_level = self.generator.generate_level(target_level)
+                new_level = self.generator.generate_level(target_level, self.current_dungeon.dungeon_id)
                 self.current_dungeon.levels[target_level] = new_level
             
             # プレイヤー位置を下階段に設定
@@ -318,7 +318,7 @@ class DungeonManager:
             
             # 目標レベルが存在しない場合は生成
             if target_level not in self.current_dungeon.levels:
-                new_level = self.generator.generate_level(target_level)
+                new_level = self.generator.generate_level(target_level, self.current_dungeon.dungeon_id)
                 self.current_dungeon.levels[target_level] = new_level
             
             # プレイヤー位置を上階段に設定

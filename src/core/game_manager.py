@@ -347,6 +347,12 @@ class GameManager(ShowBase):
         logger.info(f"ダンジョン '{dungeon_id}' への遷移開始")
         
         try:
+            # ダンジョンが存在しない場合は作成
+            if dungeon_id not in self.dungeon_manager.active_dungeons:
+                # ダンジョン設定に基づいてシードを生成
+                dungeon_seed = self._generate_dungeon_seed(dungeon_id)
+                self.dungeon_manager.create_dungeon(dungeon_id, dungeon_seed)
+            
             # ダンジョンに入場（地上部は保持したまま試行）
             success = self.dungeon_manager.enter_dungeon(dungeon_id, self.current_party)
             
@@ -356,12 +362,6 @@ class GameManager(ShowBase):
                 
                 self.current_location = "dungeon"
                 self.set_game_state("dungeon_exploration")
-                
-                # ダンジョンが存在しない場合は作成
-                if dungeon_id not in self.dungeon_manager.active_dungeons:
-                    # ダンジョン設定に基づいてシードを生成
-                    dungeon_seed = self._generate_dungeon_seed(dungeon_id)
-                    self.dungeon_manager.create_dungeon(dungeon_id, dungeon_seed)
                 
                 # ダンジョンレンダラーで描画開始
                 if self.dungeon_renderer and self.dungeon_renderer.enabled:

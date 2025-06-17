@@ -215,7 +215,7 @@ class DungeonGenerator:
         
         logger.info(f"DungeonGeneratorを初期化: seed={seed}")
     
-    def generate_level(self, level: int) -> DungeonLevel:
+    def generate_level(self, level: int, dungeon_id: str = "main_dungeon") -> DungeonLevel:
         """指定レベルのダンジョン階層を生成"""
         # レベル固有のシードを生成
         level_seed = hashlib.md5(f"{self.hash_seed}_{level}".encode()).hexdigest()
@@ -242,7 +242,7 @@ class DungeonGenerator:
         self._generate_structure(dungeon_level, rng)
         
         # 特殊要素配置
-        self._place_special_elements(dungeon_level, rng)
+        self._place_special_elements(dungeon_level, rng, dungeon_id)
         
         logger.info(f"ダンジョンレベル{level}を生成: {attribute.value}, {width}x{height}")
         return dungeon_level
@@ -456,7 +456,7 @@ class DungeonGenerator:
         }
         return direction_map[direction]
     
-    def _place_special_elements(self, dungeon_level: DungeonLevel, rng: random.Random):
+    def _place_special_elements(self, dungeon_level: DungeonLevel, rng: random.Random, dungeon_id: str):
         """特殊要素（階段、宝箱、トラップ）を配置"""
         floor_cells = [(pos, cell) for pos, cell in dungeon_level.cells.items() 
                       if cell.cell_type == CellType.FLOOR]
