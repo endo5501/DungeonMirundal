@@ -321,24 +321,26 @@ class ItemUsageManager:
     
     def _get_effect_description(self, effect_type: str, effect_value: int) -> str:
         """効果の説明文を生成"""
+        from src.core.config_manager import config_manager
+        
         descriptions = {
-            'heal_hp': f'HPを{effect_value}回復します',
-            'heal_mp': f'MPを{effect_value}回復します',
-            'restore_mp': f'MPを{effect_value}回復します',
-            'cure_poison': '毒状態を治療します',
-            'cure_paralysis': '麻痺状態を治療します',
-            'cure_sleep': '睡眠状態を治療します',
-            'cure_all_status': '全ての状態異常を治療します',
-            'revive': f'死亡したキャラクターを最大HPの{effect_value}%で蘇生します',
-            'resurrect': f'死亡したキャラクターを最大HPの{effect_value}%で蘇生します',
-            'teleport': '地上に帰還します',
-            'light': f'{effect_value}ターンの間、光で照らします',
-            'buff_attack': f'攻撃力を{effect_value}上昇させます',
-            'buff_defense': f'防御力を{effect_value}上昇させます',
-            'buff_all_stats': f'全能力値を{effect_value}上昇させます'
+            'heal_hp': config_manager.get_text('item_effects.hp_recovery_desc').format(value=effect_value),
+            'heal_mp': config_manager.get_text('item_effects.mp_recovery_desc').format(value=effect_value),
+            'restore_mp': config_manager.get_text('item_effects.mp_recovery_desc').format(value=effect_value),
+            'cure_poison': config_manager.get_text('item_effects.poison_cure_desc'),
+            'cure_paralysis': config_manager.get_text('item_effects.paralysis_cure_desc'),
+            'cure_sleep': config_manager.get_text('item_effects.sleep_cure_desc'),
+            'cure_all_status': config_manager.get_text('item_effects.all_status_cure_desc'),
+            'revive': config_manager.get_text('item_effects.revive_desc').format(value=effect_value),
+            'resurrect': config_manager.get_text('item_effects.revive_desc').format(value=effect_value),
+            'teleport': config_manager.get_text('item_effects.teleport_desc'),
+            'light': config_manager.get_text('item_effects.light_desc').format(value=effect_value),
+            'buff_attack': config_manager.get_text('item_effects.attack_buff_desc').format(value=effect_value),
+            'buff_defense': config_manager.get_text('item_effects.defense_buff_desc').format(value=effect_value),
+            'buff_all_stats': config_manager.get_text('item_effects.all_stats_buff_desc').format(value=effect_value)
         }
         
-        return descriptions.get(effect_type, '不明な効果')
+        return descriptions.get(effect_type, config_manager.get_text('item_effects.unknown_effect'))
     
     def get_usable_items_for_character(self, character: Character, inventory_items: List[Tuple[Any, ItemInstance]]) -> List[Tuple[Any, ItemInstance, Item]]:
         """キャラクターが使用可能なアイテム一覧を取得"""

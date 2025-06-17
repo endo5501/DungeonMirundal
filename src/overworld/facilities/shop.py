@@ -47,63 +47,56 @@ class Shop(BaseFacility):
     def _setup_menu_items(self, menu: UIMenu):
         """商店固有のメニュー項目を設定"""
         menu.add_menu_item(
-            "アイテム購入",
+            config_manager.get_text("shop.menu.buy_items"),
             self._show_buy_menu
         )
         
         menu.add_menu_item(
-            "アイテム売却",
+            config_manager.get_text("shop.menu.sell_items"),
             self._show_sell_menu
         )
         
         menu.add_menu_item(
-            "在庫確認",
+            config_manager.get_text("shop.menu.check_inventory"),
             self._show_inventory
         )
         
         menu.add_menu_item(
-            "商店の主人と話す",
+            config_manager.get_text("shop.menu.talk_shopkeeper"),
             self._talk_to_shopkeeper
         )
     
     def _on_enter(self):
         """商店入場時の処理"""
-        logger.info("商店に入りました")
+        logger.info(config_manager.get_text("shop.messages.entered_shop"))
         
         # 入場時のメッセージ
-        welcome_message = (
-            "「いらっしゃい！\n"
-            "当店では冒険に必要な\n"
-            "あらゆる装備を取り揃えています。\n\n"
-            "武器、防具、消耗品まで、\n"
-            "品質と価格に自信があります！\n\n"
-            "何かお探しの品はありますか？」"
-        )
+        welcome_message = config_manager.get_text("shop.welcome_message")
         
         self._show_dialog(
             "shop_welcome_dialog",
-            "商店の主人",
+            config_manager.get_text("shop.shopkeeper.title"),
             welcome_message
         )
     
     def _on_exit(self):
         """商店退場時の処理"""
-        logger.info("商店から出ました")
+        logger.info(config_manager.get_text("shop.messages.left_shop"))
     
     def _show_buy_menu(self):
         """購入メニューを表示"""
         if not self.current_party:
-            self._show_error_message("パーティが設定されていません")
+            self._show_error_message(config_manager.get_text("shop.messages.no_party_set"))
             return
         
-        buy_menu = UIMenu("buy_menu", "アイテム購入")
+        buy_menu = UIMenu("buy_menu", config_manager.get_text("shop.purchase.title"))
         
         # カテゴリ別に表示
         categories = [
-            (ItemType.WEAPON, "武器"),
-            (ItemType.ARMOR, "防具"),
-            (ItemType.CONSUMABLE, "消耗品"),
-            (ItemType.TOOL, "道具"),
+            (ItemType.WEAPON, config_manager.get_text("shop.purchase.categories.weapons")),
+            (ItemType.ARMOR, config_manager.get_text("shop.purchase.categories.armor")),
+            (ItemType.CONSUMABLE, config_manager.get_text("shop.purchase.categories.consumables")),
+            (ItemType.TOOL, config_manager.get_text("shop.purchase.categories.tools")),
         ]
         
         for item_type, category_name in categories:
@@ -123,7 +116,10 @@ class Shop(BaseFacility):
     
     def _show_category_items(self, item_type: ItemType):
         """カテゴリ別アイテム一覧を表示"""
-        category_menu = UIMenu(f"{item_type.value}_menu", f"{item_type.value}一覧")
+        category_key = f"shop.purchase.categories.{item_type.value.lower()}"
+        category_name = config_manager.get_text(category_key)
+        category_menu = UIMenu(f"{item_type.value}_menu", 
+                              config_manager.get_text("shop.purchase.category_list_title", category=category_name))
         
         # 在庫から該当カテゴリのアイテムを取得
         available_items = []
@@ -133,7 +129,9 @@ class Shop(BaseFacility):
                 available_items.append(item)
         
         if not available_items:
-            self._show_error_message(f"{item_type.value}の在庫がありません")
+            category_key = f"shop.purchase.categories.{item_type.value.lower()}"
+            category_name = config_manager.get_text(category_key)
+            self._show_error_message(config_manager.get_text("shop.purchase.no_stock", category=category_name))
             return
         
         for item in available_items:
@@ -158,55 +156,55 @@ class Shop(BaseFacility):
         
         # アイテム詳細情報を作成
         details = f"【{item.get_name()}】\n\n"
-        details += f"説明: {item.get_description()}\n"
-        details += f"価格: {item.price}G\n"
-        details += f"重量: {item.weight}\n"
-        details += f"希少度: {item.rarity.value}\n"
+        details += f"{config_manager.get_text('shop.purchase.description_label')}: {item.get_description()}\n"
+        details += f"{config_manager.get_text('shop.purchase.price_label')}: {item.price}G\n"
+        details += f"{config_manager.get_text('shop.purchase.weight_label')}: {item.weight}\n"
+        details += f"{config_manager.get_text('shop.purchase.rarity_label')}: {item.rarity.value}\n"
         
         if item.is_weapon():
-            details += f"攻撃力: {item.get_attack_power()}\n"
-            details += f"属性: {item.get_attribute()}\n"
+            details += f"{config_manager.get_text('shop.purchase.attack_power_label')}: {item.get_attack_power()}\n"
+            details += f"{config_manager.get_text('shop.purchase.attribute_label')}: {item.get_attribute()}\n"
         elif item.is_armor():
-            details += f"防御力: {item.get_defense()}\n"
+            details += f"{config_manager.get_text('shop.purchase.defense_label')}: {item.get_defense()}\n"
         elif item.is_consumable():
-            details += f"効果: {item.get_effect_type()}\n"
+            details += f"{config_manager.get_text('shop.purchase.effect_type_label')}: {item.get_effect_type()}\n"
             if item.get_effect_value() > 0:
-                details += f"効果値: {item.get_effect_value()}\n"
+                details += f"{config_manager.get_text('shop.purchase.effect_value_label')}: {item.get_effect_value()}\n"
         
         if item.usable_classes:
-            details += f"使用可能クラス: {', '.join(item.usable_classes)}\n"
+            details += f"{config_manager.get_text('shop.purchase.usable_classes_label')}: {', '.join(item.usable_classes)}\n"
         
-        details += f"\n現在のゴールド: {self.current_party.gold}G\n"
+        details += f"\n{config_manager.get_text('shop.purchase.current_gold_label')}: {self.current_party.gold}G\n"
         
         # 購入可能かチェック
         if self.current_party.gold >= item.price:
-            details += "\n購入しますか？"
+            details += f"\n{config_manager.get_text('shop.purchase.purchase_confirm')}"
             
             dialog = UIDialog(
                 "item_detail_dialog",
-                "アイテム詳細",
+                config_manager.get_text("shop.purchase.item_details_title"),
                 details,
                 buttons=[
                     {
-                        'text': "購入する",
+                        'text': config_manager.get_text("shop.purchase.purchase_button"),
                         'command': lambda: self._buy_item(item)
                     },
                     {
-                        'text': "戻る",
+                        'text': config_manager.get_text("menu.back"),
                         'command': self._close_dialog
                     }
                 ]
             )
         else:
-            details += "\n※ ゴールドが不足しています"
+            details += f"\n{config_manager.get_text('shop.purchase.gold_insufficient_note')}"
             
             dialog = UIDialog(
                 "item_detail_dialog",
-                "アイテム詳細",
+                config_manager.get_text("shop.purchase.item_details_title"),
                 details,
                 buttons=[
                     {
-                        'text': "戻る",
+                        'text': config_manager.get_text("menu.back"),
                         'command': self._close_dialog
                     }
                 ]
@@ -224,13 +222,13 @@ class Shop(BaseFacility):
         
         # ゴールドチェック
         if self.current_party.gold < item.price:
-            self._show_error_message("ゴールドが不足しています")
+            self._show_error_message(config_manager.get_text("shop.messages.insufficient_gold"))
             return
         
         # アイテムインスタンス作成
         instance = self.item_manager.create_item_instance(item.item_id)
         if not instance:
-            self._show_error_message("アイテムの作成に失敗しました")
+            self._show_error_message(config_manager.get_text("shop.messages.item_creation_failed"))
             return
         
         # 購入処理
@@ -243,10 +241,12 @@ class Shop(BaseFacility):
             if not success:
                 # インベントリが満杯の場合の処理
                 self.current_party.gold += item.price  # ゴールドを戻す
-                self._show_error_message("パーティインベントリが満杯です")
+                self._show_error_message(config_manager.get_text("shop.messages.inventory_full"))
                 return
         
-        success_message = f"{item.get_name()} を購入しました！\n残りゴールド: {self.current_party.gold}G"
+        success_message = config_manager.get_text("shop.purchase.purchase_success", 
+                                                  item_name=item.get_name(), 
+                                                  gold=self.current_party.gold)
         self._show_success_message(success_message)
         
         logger.info(f"アイテム購入: {item.item_id} ({item.price}G)")
@@ -254,13 +254,13 @@ class Shop(BaseFacility):
     def _show_sell_menu(self):
         """売却メニューを表示"""
         if not self.current_party:
-            self._show_error_message("パーティが設定されていません")
+            self._show_error_message(config_manager.get_text("shop.messages.no_party_set"))
             return
         
         # パーティインベントリを取得
         party_inventory = self.current_party.get_party_inventory()
         if not party_inventory:
-            self._show_error_message("パーティインベントリが見つかりません")
+            self._show_error_message(config_manager.get_text("shop.messages.no_party_inventory"))
             return
         
         # 売却可能なアイテムを取得
@@ -275,14 +275,13 @@ class Shop(BaseFacility):
         if not sellable_items:
             self._show_dialog(
                 "no_items_dialog",
-                "アイテム売却",
-                "売却可能なアイテムがありません。\n\n"
-                "※未鑑定のアイテムは売却できません。"
+                config_manager.get_text("shop.sell.title"),
+                config_manager.get_text("shop.messages.no_sellable_items")
             )
             return
         
         # 売却メニューを作成
-        sell_menu = UIMenu("sell_menu", "アイテム売却")
+        sell_menu = UIMenu("sell_menu", config_manager.get_text("shop.sell.title"))
         
         for slot, item_instance, item in sellable_items:
             # 売却価格を計算（購入価格の50%）
@@ -312,18 +311,18 @@ class Shop(BaseFacility):
     
     def _show_inventory(self):
         """在庫確認を表示"""
-        inventory_text = "【商店在庫一覧】\n\n"
+        inventory_text = config_manager.get_text("shop.inventory.list_title") + "\n\n"
         
         # カテゴリ別に在庫を表示
         categories = {
-            ItemType.WEAPON: "武器",
-            ItemType.ARMOR: "防具", 
-            ItemType.CONSUMABLE: "消耗品",
-            ItemType.TOOL: "道具"
+            ItemType.WEAPON: config_manager.get_text("shop.purchase.categories.weapons"),
+            ItemType.ARMOR: config_manager.get_text("shop.purchase.categories.armor"), 
+            ItemType.CONSUMABLE: config_manager.get_text("shop.purchase.categories.consumables"),
+            ItemType.TOOL: config_manager.get_text("shop.purchase.categories.tools")
         }
         
         for item_type, category_name in categories.items():
-            inventory_text += f"【{category_name}】\n"
+            inventory_text += config_manager.get_text("shop.inventory.category_header", category=category_name) + "\n"
             
             category_items = []
             for item_id in self.inventory:
@@ -335,13 +334,13 @@ class Shop(BaseFacility):
                 for item in category_items:
                     inventory_text += f"  {item.get_name()} - {item.price}G\n"
             else:
-                inventory_text += "  在庫なし\n"
+                inventory_text += f"  {config_manager.get_text('shop.inventory.no_stock')}\n"
             
             inventory_text += "\n"
         
         self._show_dialog(
             "inventory_dialog",
-            "在庫確認",
+            config_manager.get_text("shop.inventory.title"),
             inventory_text
         )
     
@@ -349,32 +348,20 @@ class Shop(BaseFacility):
         """商店主人との会話"""
         messages = [
             (
-                "商店について",
-                "「この店は代々続く老舗です。\n"
-                "品質には絶対の自信がありますよ！\n"
-                "どんな冒険にも対応できる\n"
-                "装備を取り揃えています。」"
+                config_manager.get_text("shop.shopkeeper.about_shop_title"),
+                config_manager.get_text("shop.shopkeeper.about_shop_message")
             ),
             (
-                "装備のアドバイス",
-                "「冒険の成功は装備で決まります。\n"
-                "武器は攻撃力、防具は守備力を\n"
-                "よく確認してください。\n"
-                "消耗品も忘れずに！」"
+                config_manager.get_text("shop.shopkeeper.equipment_advice_title"),
+                config_manager.get_text("shop.shopkeeper.equipment_advice_message")
             ),
             (
-                "特別な装備",
-                "「たまに珍しい装備も入荷します。\n"
-                "運が良ければ、レアなアイテムに\n"
-                "出会えるかもしれませんね。\n"
-                "こまめにチェックしてください！」"
+                config_manager.get_text("shop.shopkeeper.special_equipment_title"),
+                config_manager.get_text("shop.shopkeeper.special_equipment_message")
             ),
             (
-                "価格について",
-                "「当店の価格は適正価格です。\n"
-                "品質を考えれば、むしろお得ですよ。\n"
-                "冒険者の皆さんを応援したいので、\n"
-                "利益は最小限に抑えています。」"
+                config_manager.get_text("shop.shopkeeper.pricing_title"),
+                config_manager.get_text("shop.shopkeeper.pricing_message")
             )
         ]
         
@@ -384,7 +371,7 @@ class Shop(BaseFacility):
         
         self._show_dialog(
             "shopkeeper_dialog",
-            f"商店の主人 - {title}",
+            f"{config_manager.get_text('shop.shopkeeper.title')} - {title}",
             message
         )
     
@@ -424,26 +411,26 @@ class Shop(BaseFacility):
         
         # アイテム詳細情報を作成
         details = f"【{item.get_name()}】\n\n"
-        details += f"説明: {item.get_description()}\n"
-        details += f"購入価格: {item.price}G\n"
-        details += f"売却価格: {sell_price}G\n"
+        details += f"{config_manager.get_text('shop.purchase.description_label')}: {item.get_description()}\n"
+        details += f"{config_manager.get_text('shop.sell.purchase_price_label')}: {item.price}G\n"
+        details += f"{config_manager.get_text('shop.sell.sell_price_label')}: {sell_price}G\n"
         
         if item_instance.quantity > 1:
-            details += f"所持数: {item_instance.quantity}\n"
-            details += f"全て売却した場合: {sell_price * item_instance.quantity}G\n"
+            details += f"{config_manager.get_text('shop.sell.quantity_label')}: {item_instance.quantity}\n"
+            details += f"{config_manager.get_text('shop.sell.total_if_all_label')}: {sell_price * item_instance.quantity}G\n"
         
-        details += f"\n現在のゴールド: {self.current_party.gold}G\n"
-        details += f"売却後: {self.current_party.gold + (sell_price * item_instance.quantity)}G\n"
+        details += f"\n{config_manager.get_text('shop.sell.current_gold_label')}: {self.current_party.gold}G\n"
+        details += f"{config_manager.get_text('shop.sell.after_sell_label')}: {self.current_party.gold + (sell_price * item_instance.quantity)}G\n"
         
         if item_instance.quantity > 1:
-            details += "\n売却する数量を選択してください。"
+            details += f"\n{config_manager.get_text('shop.sell.quantity_select_prompt')}"
             
             # 数量選択メニューを表示
-            quantity_menu = UIMenu("sell_quantity_menu", "売却数量選択")
+            quantity_menu = UIMenu("sell_quantity_menu", config_manager.get_text("shop.sell.quantity_select_title"))
             
             # 1個ずつ、半分、全部のオプションを追加
             quantity_menu.add_menu_item(
-                "1個売却",
+                config_manager.get_text("shop.sell.sell_one"),
                 self._sell_item,
                 [slot, item_instance, item, sell_price, 1]
             )
@@ -451,37 +438,37 @@ class Shop(BaseFacility):
             if item_instance.quantity >= 2:
                 half_quantity = item_instance.quantity // 2
                 quantity_menu.add_menu_item(
-                    f"{half_quantity}個売却（半分）",
+                    config_manager.get_text("shop.sell.sell_half", count=half_quantity),
                     self._sell_item,
                     [slot, item_instance, item, sell_price, half_quantity]
                 )
             
             quantity_menu.add_menu_item(
-                f"{item_instance.quantity}個売却（全部）",
+                config_manager.get_text("shop.sell.sell_all", count=item_instance.quantity),
                 self._sell_item,
                 [slot, item_instance, item, sell_price, item_instance.quantity]
             )
             
             quantity_menu.add_menu_item(
-                "戻る",
+                config_manager.get_text("menu.back"),
                 self._show_sell_menu
             )
             
             self._show_submenu(quantity_menu)
         else:
-            details += "\n売却しますか？"
+            details += f"\n{config_manager.get_text('shop.sell.sell_confirm')}"
             
             dialog = UIDialog(
                 "sell_confirmation_dialog",
-                "売却確認",
+                config_manager.get_text("shop.sell.confirmation_title"),
                 details,
                 buttons=[
                     {
-                        'text': "売却する",
+                        'text': config_manager.get_text("shop.sell.sell_button"),
                         'command': lambda: self._sell_item(slot, item_instance, item, sell_price, 1)
                     },
                     {
-                        'text': "戻る",
+                        'text': config_manager.get_text("menu.back"),
                         'command': self._close_dialog
                     }
                 ]
@@ -499,13 +486,13 @@ class Shop(BaseFacility):
         
         # 数量チェック
         if quantity > item_instance.quantity:
-            self._show_error_message("指定された数量が所持数を超えています")
+            self._show_error_message(config_manager.get_text("shop.messages.invalid_quantity"))
             return
         
         # パーティインベントリを取得
         party_inventory = self.current_party.get_party_inventory()
         if not party_inventory:
-            self._show_error_message("パーティインベントリが見つかりません")
+            self._show_error_message(config_manager.get_text("shop.messages.no_party_inventory"))
             return
         
         # 売却処理
@@ -522,11 +509,17 @@ class Shop(BaseFacility):
         self.current_party.gold += total_price
         
         # 成功メッセージ
-        success_message = f"{item.get_name()}"
         if quantity > 1:
-            success_message += f" x{quantity}"
-        success_message += f" を {total_price}G で売却しました！\n"
-        success_message += f"現在のゴールド: {self.current_party.gold}G"
+            success_message = config_manager.get_text("shop.sell.sell_success_multiple", 
+                                                      item_name=item.get_name(), 
+                                                      count=quantity,
+                                                      price=total_price, 
+                                                      gold=self.current_party.gold)
+        else:
+            success_message = config_manager.get_text("shop.sell.sell_success", 
+                                                      item_name=item.get_name(), 
+                                                      price=total_price, 
+                                                      gold=self.current_party.gold)
         
         self._show_success_message(success_message)
         

@@ -85,9 +85,9 @@ class DungeonSelectionUI:
         if ui_manager.get_element("dungeon_selection_menu"):
             ui_manager.unregister_element("dungeon_selection_menu")
         
-        title = (f"ダンジョン選択\n\n"
-                f"挑戦するダンジョンを選択してください\n"
-                f"パーティ最高レベル: {self.current_party.get_max_level()}")
+        title = (f"{config_manager.get_text('dungeon.selection_title')}\n\n"
+                f"{config_manager.get_text('dungeon.selection_message')}\n"
+                f"{config_manager.get_text('dungeon.max_level_info').format(level=self.current_party.get_max_level())}")
         
         menu = UIMenu("dungeon_selection_menu", title)
         
@@ -100,7 +100,7 @@ class DungeonSelectionUI:
             )
         
         # 戻るオプション
-        menu.add_menu_item("戻る", self._cancel_selection)
+        menu.add_menu_item(config_manager.get_text("dungeon.back_option"), self._cancel_selection)
         
         ui_manager.register_element(menu)
         ui_manager.show_element(menu.element_id, modal=True)
@@ -134,19 +134,21 @@ class DungeonSelectionUI:
         message = (
             f"『{dungeon_info.get('name', dungeon_id)}』 ({difficulty_stars})\n\n"
             f"{dungeon_info.get('description', '')}\n\n"
-            f"推奨レベル: {dungeon_info.get('recommended_level', '1-20')}\n"
-            f"属性: {dungeon_info.get('attribute', '物理')}\n"
-            f"階層数: {dungeon_info.get('floors', 20)}階\n\n"
-            f"このダンジョンに入りますか？"
+            f"{config_manager.get_text('dungeon.level_info').format(
+                level=dungeon_info.get('recommended_level', '1-20'),
+                attribute=dungeon_info.get('attribute', '物理'),
+                floors=dungeon_info.get('floors', 20)
+            )}\n\n"
+            f"{config_manager.get_text('dungeon.confirm_enter_message')}"
         )
         
         dialog = UIDialog(
             "dungeon_confirmation_dialog",
-            "ダンジョン入場確認",
+            config_manager.get_text("dungeon.confirm_enter_title"),
             message,
             [
-                {"text": "はい", "command": lambda: self._confirm_dungeon_selection(dungeon_id)},
-                {"text": "いいえ", "command": self._back_to_dungeon_menu}
+                {"text": config_manager.get_text("common.yes"), "command": lambda: self._confirm_dungeon_selection(dungeon_id)},
+                {"text": config_manager.get_text("common.no"), "command": self._back_to_dungeon_menu}
             ]
         )
         
@@ -203,10 +205,9 @@ class DungeonSelectionUI:
         
         dialog = UIDialog(
             "no_dungeons_dialog",
-            "ダンジョン",
-            "現在利用可能なダンジョンがありません。\n\n"
-            "パーティのレベルを上げてから再度お試しください。",
-            [{"text": "戻る", "command": self._cancel_selection}]
+            config_manager.get_text("dungeon.selection_title"),
+            config_manager.get_text("dungeon.no_dungeons_available"),
+            [{"text": config_manager.get_text("dungeon.back_option"), "command": self._cancel_selection}]
         )
         
         ui_manager.register_element(dialog)

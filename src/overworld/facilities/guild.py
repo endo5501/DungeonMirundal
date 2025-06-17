@@ -26,22 +26,22 @@ class AdventurersGuild(BaseFacility):
     def _setup_menu_items(self, menu: UIMenu):
         """ギルド固有のメニュー項目を設定"""
         menu.add_menu_item(
-            "キャラクター作成",
+            config_manager.get_text("guild.menu.character_creation"),
             self._show_character_creation
         )
         
         menu.add_menu_item(
-            "パーティ編成",
+            config_manager.get_text("guild.menu.party_formation"),
             self._show_party_formation
         )
         
         menu.add_menu_item(
-            "キャラクター一覧",
+            config_manager.get_text("guild.menu.character_list"),
             self._show_character_list
         )
         
         menu.add_menu_item(
-            "クラスチェンジ",
+            config_manager.get_text("guild.menu.class_change"),
             self._show_class_change
         )
     
@@ -70,7 +70,7 @@ class AdventurersGuild(BaseFacility):
         self.created_characters.append(character)
         
         # 成功メッセージ
-        self._show_success_message(f"キャラクター '{character.name}' を作成しました！")
+        self._show_success_message(config_manager.get_text("guild.messages.character_created").format(name=character.name))
         
         # メインメニューを再表示
         if self.main_menu:
@@ -89,7 +89,7 @@ class AdventurersGuild(BaseFacility):
     def _show_party_formation(self):
         """パーティ編成画面を表示"""
         if not self.current_party:
-            self._show_error_message("パーティが設定されていません")
+            self._show_error_message(config_manager.get_text("guild.messages.no_party_set"))
             return
         
         # 利用可能なキャラクター（作成済み + 現在のパーティメンバー）
@@ -97,32 +97,32 @@ class AdventurersGuild(BaseFacility):
         party_chars = list(self.current_party.characters.values())
         
         # パーティ編成メニューを作成
-        formation_menu = UIMenu("party_formation_menu", "パーティ編成")
+        formation_menu = UIMenu("party_formation_menu", config_manager.get_text("guild.party_formation.title"))
         
         # 現在のパーティ状況を表示
         formation_menu.add_menu_item(
-            "現在の編成を確認",
+            config_manager.get_text("guild.party_formation.check_current"),
             self._show_current_formation
         )
         
         # キャラクター追加
         if len(self.current_party.characters) < 6:
             formation_menu.add_menu_item(
-                "キャラクターを追加",
+                config_manager.get_text("guild.party_formation.add_character"),
                 self._show_add_character_menu
             )
         
         # キャラクター削除
         if len(self.current_party.characters) > 0:
             formation_menu.add_menu_item(
-                "キャラクターを削除",
+                config_manager.get_text("guild.party_formation.remove_character"),
                 self._show_remove_character_menu
             )
         
         # 位置変更
         if len(self.current_party.characters) > 1:
             formation_menu.add_menu_item(
-                "位置を変更",
+                config_manager.get_text("guild.party_formation.change_position"),
                 self._show_position_menu
             )
         
@@ -148,42 +148,42 @@ class AdventurersGuild(BaseFacility):
         formation_text = self._format_party_formation()
         self._show_dialog(
             "current_formation_dialog",
-            "現在のパーティ編成",
+            config_manager.get_text("guild.party_formation.current_formation_title"),
             formation_text
         )
     
     def _format_party_formation(self) -> str:
         """パーティ編成をフォーマット"""
         if not self.current_party:
-            return "パーティが設定されていません"
+            return config_manager.get_text("guild.messages.no_party_set")
         
-        lines = [f"パーティ名: {self.current_party.name}"]
+        lines = [config_manager.get_text("guild.party_formation.party_name").format(name=self.current_party.name)]
         lines.append("")
         
         # 前衛
-        lines.append("【前衛】")
+        lines.append(config_manager.get_text("guild.party_formation.front_row"))
         front_chars = self.current_party.get_front_row_characters()
         for i, char in enumerate(front_chars):
             if char:
                 lines.append(f"  {i+1}. {char.name} Lv.{char.experience.level} ({char.get_class_name()})")
             else:
-                lines.append(f"  {i+1}. (空)")
+                lines.append(f"  {i+1}. {config_manager.get_text('guild.party_formation.empty_slot')}")
         
         # 後衛
         lines.append("")
-        lines.append("【後衛】")
+        lines.append(config_manager.get_text("guild.party_formation.back_row"))
         back_chars = self.current_party.get_back_row_characters()
         for i, char in enumerate(back_chars):
             if char:
                 lines.append(f"  {i+1}. {char.name} Lv.{char.experience.level} ({char.get_class_name()})")
             else:
-                lines.append(f"  {i+1}. (空)")
+                lines.append(f"  {i+1}. {config_manager.get_text('guild.party_formation.empty_slot')}")
         
         return "\n".join(lines)
     
     def _show_add_character_menu(self):
         """キャラクター追加メニュー"""
-        add_menu = UIMenu("add_character_menu", "キャラクター追加")
+        add_menu = UIMenu("add_character_menu", config_manager.get_text("guild.party_formation.character_add_title"))
         
         # 利用可能なキャラクター（パーティに参加していない）
         available_chars = [

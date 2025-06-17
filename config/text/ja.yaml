@@ -47,9 +47,15 @@ character:
   enter_name: "名前入力"
   select_race: "種族選択"
   select_class: "クラス選択"
+  creation_title: "キャラクター作成"
+  generated_stats: "能力値"
+  reroll: "振り直し"
+  confirm_creation: "作成確認"
+  create: "作成"
   
 # 種族
 race:
+  race: "種族"
   human: "人間"
   elf: "エルフ"
   dwarf: "ドワーフ"
@@ -61,6 +67,7 @@ race:
   
 # 職業
 class:
+  class: "職業"
   fighter: "戦士"
   mage: "魔術師"
   priest: "僧侶"
@@ -78,17 +85,7 @@ class:
   lord_desc: "指導力に優れた貴族"
   ninja_desc: "隠密と暗殺の達人"
 
-# キャラクター作成
-character:
-  creation_title: "キャラクター作成"
-  enter_name: "名前を入力してください"
-  enter_name_detail: "キャラクターの名前を入力してください:"
-  select_race: "種族を選択"
-  select_class: "職業を選択"
-  generated_stats: "能力値"
-  reroll: "振り直し"
-  confirm_creation: "作成確認"
-  create: "作成"
+# 追加のキャラクター作成関連
 
 # アイテム
 item:
@@ -238,7 +235,22 @@ magic:
 
 # ダンジョン
 dungeon:
+  entrance_error_title: "ダンジョン入場エラー"
+  entrance_error_prefix: "ダンジョンに入場できませんでした:"
+  selection_title: "ダンジョン選択"
+  selection_message: "挑戦するダンジョンを選択してください"
+  level_info: "推奨Lv.{level} | {attribute}属性 | {floors}階"
+  position_unknown: "位置: 不明"
+  position_info: "位置: {location_info}"
+  position_display: "位置: ({x}, {y}) レベル: {level}"
+  help_text: "WASD: 移動, QE: 回転, ESC: メニュー"
+  no_dungeons_available: "現在利用可能なダンジョンがありません。\n\nパーティのレベルを上げてから再度お試しください。"
+  confirm_enter_title: "ダンジョン入場確認"
+  confirm_enter_message: "このダンジョンに入りますか？"
+  max_level_info: "パーティ最高レベル: {level}"
+  back_option: "戻る"
   menu:
+    title: "ダンジョンメニュー"
     inventory: "インベントリ"
     magic: "魔法"
     equipment: "装備"
@@ -249,6 +261,22 @@ dungeon:
 
 # 設定
 settings:
+  title: "設定"
+  reset_confirm: "設定を初期化"
+  save_changes: "変更を保存"
+  discard_changes: "変更を破棄"
+  unsaved_changes: "未保存の変更"
+  save_and_close: "保存して閉じる"
+  close_without_saving: "保存せずに閉じる"
+  keybind_change: "キーバインド変更"
+  reset_keybinds: "デフォルトに戻す"
+  gameplay_settings: "ゲームプレイ設定"
+  controls_settings: "操作設定"
+  audio_settings: "音声設定"
+  graphics_settings: "表示設定"
+  accessibility_settings: "アクセシビリティ設定"
+  keybind_settings: "キーバインド設定"
+  back: "戻る"
   category:
     gameplay: "ゲームプレイ"
     controls: "操作設定"
@@ -278,7 +306,325 @@ system:
   shutdown: "ゲームを終了します"
   exit_confirm: "ゲームを終了しますか？"
 
-# ダンジョン関連
-dungeon:
-  entrance_error_title: "ダンジョン入場エラー"
-  entrance_error_prefix: "ダンジョンに入場できませんでした:"
+# 上記のダンジョン設定に統合しました
+
+# アプリケーションログ
+app_log:
+  startup: "=== Dungeon RPG 起動 ==="
+  shutdown: "=== Dungeon RPG 終了 ==="
+  user_interrupt: "ユーザーによってゲームが中断されました"
+  error_occurred: "ゲーム実行中にエラーが発生しました"
+
+# ゲーム管理
+game_manager:
+  test_character: "テスト冒険者"
+  test_party: "テストパーティ"
+  empty_party: "空のパーティ"
+  no_save_data: "セーブデータが存在しないため、新規ゲームを開始します"
+  auto_load: "最新のセーブデータを自動ロードします"
+
+# ギルド関連
+guild:
+  menu:
+    character_creation: "キャラクター作成"
+    party_formation: "パーティ編成"
+    character_list: "キャラクター一覧"
+    class_change: "クラスチェンジ"
+  messages:
+    character_created: "キャラクター '{name}' を作成しました！"
+    no_party_set: "パーティが設定されていません"
+    character_added: "{name} をパーティに追加しました"
+    character_removed: "{name} をパーティから削除しました"
+    character_moved: "{name} を移動しました"
+    add_failed: "キャラクターの追加に失敗しました"
+    remove_failed: "キャラクターの削除に失敗しました"
+    move_failed: "位置の変更に失敗しました"
+    no_characters: "キャラクターがいません"
+    no_available_characters: "追加可能なキャラクターがいません"
+    confirm_remove: "{name} をパーティから削除しますか？"
+  party_formation:
+    title: "パーティ編成"
+    check_current: "現在の編成を確認"
+    add_character: "キャラクターを追加"
+    remove_character: "キャラクターを削除"
+    change_position: "位置を変更"
+    current_formation_title: "現在のパーティ編成"
+    character_add_title: "キャラクター追加"
+    character_remove_title: "キャラクター削除"
+    position_change_title: "位置変更"
+    new_position_title: "{name} の新しい位置"
+    front_row: "【前衛】"
+    back_row: "【後衛】"
+    empty_slot: "(空)"
+    party_name: "パーティ名: {name}"
+    character_list_title: "【作成済みキャラクター一覧】"
+    in_party: " (パーティ中)"
+    waiting: " (待機中)"
+    position_front_1: "前衛1"
+    position_front_2: "前衛2"
+    position_front_3: "前衛3"
+    position_back_1: "後衛1"
+    position_back_2: "後衛2"
+    position_back_3: "後衛3"
+  class_change:
+    title: "クラスチェンジ"
+    not_implemented: "クラスチェンジ機能は未実装です。\n将来のアップデートで追加予定です。"
+
+# 宿屋関連
+inn:
+  menu:
+    talk_innkeeper: "宿屋の主人と話す"
+    travel_info: "旅の情報を聞く"
+    tavern_rumors: "酒場の噂話"
+    change_party_name: "パーティ名を変更"
+  welcome_message: |
+    「いらっしゃいませ！
+    最近は皆さん、地上に戻るだけで
+    すっかり元気になってしまうので、
+    宿泊客が少なくて困っています。
+
+    でも、旅の情報や噂話なら
+    いくらでもお聞かせしますよ！」
+  innkeeper:
+    title: "宿屋の主人"
+    conversation:
+      adventure_title: "冒険について"
+      adventure_message: |
+        「最近のダンジョンは昔と比べて
+        少し変わったようですね。
+        魔物も強くなっているという話ですが、
+        皆さんも以前より逞しくなっています。」
+      town_title: "町の様子"
+      town_message: |
+        「この町には優秀な商人や
+        信頼できる神官がいます。
+        冒険前の準備は怠らないことです。
+        装備と心の準備、両方が大切ですよ。」
+      history_title: "宿屋の歴史"
+      history_message: |
+        「この宿屋は私の祖父の代から
+        続いています。
+        多くの冒険者がここから旅立ち、
+        そして無事に帰ってきました。」
+  travel_info:
+    title: "旅の情報"
+    content: |
+      【旅の心得】
+
+      • 地上部に戻ると体力・魔力が自動回復します
+      • 状態異常も（死亡・灰化以外は）治癒されます
+      • 冒険前は装備と消耗品の準備を忘れずに
+      • パーティの編成バランスも重要です
+
+      【施設案内】
+      • 冒険者ギルド：キャラクター作成・パーティ編成
+      • 商店：武器・防具・消耗品の購入
+      • 教会：蘇生・治療・祝福
+      • 魔術師ギルド：魔法の習得・鑑定
+
+      安全な冒険を！
+  rumors:
+    title: "酒場の噂"
+    dungeon_title: "ダンジョンの話"
+    dungeon_message: |
+      「最近、ダンジョンの奥で
+      光る宝箱を見たという話があります。
+      でも、そこまで行くには
+      相当な実力が必要だとか...」
+    monster_title: "魔物の話"
+    monster_message: |
+      「昔より魔物が賢くなっているという
+      噂があります。
+      罠を仕掛けたり、集団で襲ってきたり。
+      油断は禁物ですね。」
+    legendary_title: "伝説の装備"
+    legendary_message: |
+      「昔の英雄が使っていたという
+      伝説の装備が、まだダンジョンの
+      どこかに眠っているらしいです。
+      見つけられたら一攫千金ですね！」
+    adventurer_title: "他の冒険者"
+    adventurer_message: |
+      「この間、新人の冒険者パーティが
+      見事にダンジョンを攻略したそうです。
+      準備と連携の大切さを
+      改めて感じますね。」
+    merchant_title: "町の商人"
+    merchant_message: |
+      「商店の主人は元冒険者だそうです。
+      だから冒険者の気持ちがよく分かって、
+      良い装備を適正価格で
+      売ってくれるんですよ。」
+  party_name:
+    title: "パーティ名変更"
+    no_party_error_title: "エラー"
+    no_party_error_message: |
+      現在パーティが存在しません。
+      まず冒険者ギルドでパーティを作成してください。
+    current_name_label: "現在のパーティ名: {name}"
+    input_prompt: "新しいパーティ名を入力してください:"
+    placeholder: "パーティ名"
+    invalid_name_title: "入力エラー"
+    invalid_name_message: |
+      有効なパーティ名を入力してください。
+      名前は1文字以上30文字以下で入力してください。
+    success_title: "パーティ名変更完了"
+    success_message: |
+      パーティ名を変更しました！
+
+      旧名: {old_name}
+      新名: {new_name}
+
+      素晴らしい名前ですね！
+      きっと伝説の冒険者になれますよ！
+    default_name: "勇者一行"
+    anonymous_party: "無名のパーティ"
+
+# 商店関連
+shop:
+  menu:
+    buy_items: "アイテム購入"
+    sell_items: "アイテム売却"
+    check_inventory: "在庫確認"
+    talk_shopkeeper: "商店の主人と話す"
+  welcome_message: |
+    「いらっしゃい！
+    当店では冒険に必要な
+    あらゆる装備を取り揃えています。
+
+    武器、防具、消耗品まで、
+    品質と価格に自信があります！
+
+    何かお探しの品はありますか？」
+  messages:
+    no_party_set: "パーティが設定されていません"
+    no_party_inventory: "パーティインベントリが見つかりません"
+    no_sellable_items: |
+      売却可能なアイテムがありません。
+
+      ※未鑑定のアイテムは売却できません。
+    insufficient_gold: "ゴールドが不足しています"
+    item_creation_failed: "アイテムの作成に失敗しました"
+    inventory_full: "パーティインベントリが満杯です"
+    invalid_quantity: "指定された数量が所持数を超えています"
+    entered_shop: "商店に入りました"
+    left_shop: "商店から出ました"
+  purchase:
+    title: "アイテム購入"
+    categories:
+      weapons: "武器"
+      armor: "防具"
+      consumables: "消耗品"
+      tools: "道具"
+    category_list_title: "{category}一覧"
+    no_stock: "{category}の在庫がありません"
+    item_details_title: "アイテム詳細"
+    description_label: "説明"
+    price_label: "価格"
+    weight_label: "重量"
+    rarity_label: "希少度"
+    attack_power_label: "攻撃力"
+    attribute_label: "属性"
+    defense_label: "防御力"
+    effect_type_label: "効果"
+    effect_value_label: "効果値"
+    usable_classes_label: "使用可能クラス"
+    current_gold_label: "現在のゴールド"
+    purchase_confirm: "購入しますか？"
+    purchase_button: "購入する"
+    gold_insufficient_note: "※ ゴールドが不足しています"
+    purchase_success: "{item_name} を購入しました！\n残りゴールド: {gold}G"
+  sell:
+    title: "アイテム売却"
+    confirmation_title: "売却確認"
+    quantity_select_title: "売却数量選択"
+    purchase_price_label: "購入価格"
+    sell_price_label: "売却価格"
+    quantity_label: "所持数"
+    total_if_all_label: "全て売却した場合"
+    current_gold_label: "現在のゴールド"
+    after_sell_label: "売却後"
+    quantity_select_prompt: "売却する数量を選択してください。"
+    sell_one: "1個売却"
+    sell_half: "{count}個売却（半分）"
+    sell_all: "{count}個売却（全部）"
+    sell_confirm: "売却しますか？"
+    sell_button: "売却する"
+    sell_success: "{item_name} を {price}G で売却しました！\n現在のゴールド: {gold}G"
+    sell_success_multiple: "{item_name} x{count} を {price}G で売却しました！\n現在のゴールド: {gold}G"
+  inventory:
+    title: "在庫確認"
+    list_title: "【商店在庫一覧】"
+    category_header: "【{category}】"
+    no_stock: "在庫なし"
+  shopkeeper:
+    title: "商店の主人"
+    about_shop_title: "商店について"
+    about_shop_message: |
+      「この店は代々続く老舗です。
+      品質には絶対の自信がありますよ！
+      どんな冒険にも対応できる
+      装備を取り揃えています。」
+    equipment_advice_title: "装備のアドバイス"
+    equipment_advice_message: |
+      「冒険の成功は装備で決まります。
+      武器は攻撃力、防具は守備力を
+      よく確認してください。
+      消耗品も忘れずに！」
+    special_equipment_title: "特別な装備"
+    special_equipment_message: |
+      「たまに珍しい装備も入荷します。
+      運が良ければ、レアなアイテムに
+      出会えるかもしれませんね。
+      こまめにチェックしてください！」
+    pricing_title: "価格について"
+    pricing_message: |
+      「当店の価格は適正価格です。
+      品質を考えれば、むしろお得ですよ。
+      冒険者の皆さんを応援したいので、
+      利益は最小限に抑えています。」
+
+# キャラクター作成
+character_creation:
+  default_name: "Hero"
+  enter_name_prompt: "名前を入力してください"
+  creation_failed: "キャラクター作成に失敗しました"
+
+# UI設定表示
+ui:
+  settings:
+    auto_save: "オートセーブ: {status}"
+    confirm_actions: "行動確認: {status}"
+    controller: "コントローラー: {status}"
+    mute_on_focus_loss: "非アクティブ時ミュート: {status}"
+    fullscreen: "フルスクリーン: {status}"
+    enabled: "有効"
+    disabled: "無効"
+
+# アイテム効果
+item_effects:
+  hp_recovery: "HPを回復"
+  hp_recovery_desc: "HPを{value}回復します"
+  mp_recovery: "MPを回復"
+  mp_recovery_desc: "MPを{value}回復します"
+  poison_cure: "毒状態を治療"
+  poison_cure_desc: "毒状態を治療します"
+  paralysis_cure: "麻痺状態を治療"
+  paralysis_cure_desc: "麻痺状態を治療します"
+  sleep_cure: "睡眠状態を治療"
+  sleep_cure_desc: "睡眠状態を治療します"
+  all_status_cure: "全状態異常を治療"
+  all_status_cure_desc: "全ての状態異常を治療します"
+  revive: "蘇生"
+  revive_desc: "死亡したキャラクターを最大HPの{value}%で蘇生します"
+  teleport: "地上帰還"
+  teleport_desc: "地上に帰還します"
+  light: "光源"
+  light_desc: "{value}ターンの間、光で照らします"
+  attack_buff: "攻撃力強化"
+  attack_buff_desc: "攻撃力を{value}上昇させます"
+  defense_buff: "防御力強化"
+  defense_buff_desc: "防御力を{value}上昇させます"
+  all_stats_buff: "全能力値強化"
+  all_stats_buff_desc: "全能力値を{value}上昇させます"
+  unknown_effect: "不明な効果"

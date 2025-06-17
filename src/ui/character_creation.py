@@ -99,13 +99,13 @@ class CharacterCreationWizard:
     def _show_name_input(self):
         """名前入力ステップ"""
         # 現在の名前があればそれを初期値とする、なければデフォルト名
-        current_name = self.character_data.get('name', 'Hero')
+        current_name = self.character_data.get('name', config_manager.get_text('character_creation.default_name'))
         
         # メッセージテキストを取得（シンプルなメッセージを使用してラベル重複を回避）
         try:
-            message = config_manager.get_text("character.enter_name")
+            message = config_manager.get_text("character_creation.enter_name_prompt")
         except:
-            message = "名前を入力してください"
+            message = config_manager.get_text("character_creation.enter_name_prompt")
         
         dialog = UIInputDialog(
             "name_input_dialog",
@@ -126,7 +126,7 @@ class CharacterCreationWizard:
         # 名前の検証
         if not name or not name.strip():
             # 名前が空の場合はデフォルト名を使用
-            name = "Hero"
+            name = config_manager.get_text('character_creation.default_name')
         
         # 名前の文字数制限チェック
         name = name.strip()[:20]  # 最大20文字
@@ -135,7 +135,7 @@ class CharacterCreationWizard:
         allowed_chars = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789ひらがなカタカナ漢字")
         # 簡易版：基本的な文字チェック
         if any(c in name for c in ['<', '>', '&', '"', "'"]):
-            name = "Hero"  # 危険な文字がある場合はデフォルト名
+            name = config_manager.get_text('character_creation.default_name')  # 危険な文字がある場合はデフォルト名
         
         self.character_data['name'] = name
         
@@ -369,7 +369,7 @@ class CharacterCreationWizard:
             error_dialog = UIDialog(
                 "creation_error_dialog",
                 ui_manager.get_text("common.error"),
-                f"キャラクター作成に失敗しました: {str(e)}",
+                f"{config_manager.get_text('character_creation.creation_failed')}: {str(e)}",
                 buttons=[
                     {
                         'text': ui_manager.get_text("common.ok"),
@@ -400,11 +400,11 @@ class CharacterCreationWizard:
     
     def _format_stats(self, stats: BaseStats) -> str:
         """統計値を整形して表示"""
-        return f"""力: {stats.strength}
-素早さ: {stats.agility}
-知恵: {stats.intelligence}
-信仰心: {stats.faith}
-運: {stats.luck}"""
+        return f"""{config_manager.get_text('character.strength')}: {stats.strength}
+{config_manager.get_text('character.agility')}: {stats.agility}
+{config_manager.get_text('character.intelligence')}: {stats.intelligence}
+{config_manager.get_text('character.faith')}: {stats.faith}
+{config_manager.get_text('character.luck')}: {stats.luck}"""
     
     def _format_character_info(self) -> str:
         """キャラクター情報を整形して表示"""
@@ -412,8 +412,8 @@ class CharacterCreationWizard:
         class_name = ui_manager.get_text(f"class.{self.character_data['character_class']}")
         stats_text = self._format_stats(self.character_data['base_stats'])
         
-        return f"""名前: {self.character_data['name']}
-種族: {race_name}
-職業: {class_name}
+        return f"""{config_manager.get_text('character.name')}: {self.character_data['name']}
+{config_manager.get_text('race.race')}: {race_name}
+{config_manager.get_text('class.class')}: {class_name}
 
 {stats_text}"""

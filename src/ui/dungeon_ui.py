@@ -172,7 +172,7 @@ class DungeonStatusBar(UIElement):
         
         # 位置情報表示
         self.location_text = OnscreenText(
-            text="位置: 不明",
+            text=config_manager.get_text("dungeon.position_unknown"),
             pos=(-0.9, 0.9),
             scale=0.04,
             fg=(1, 1, 1, 1),
@@ -217,7 +217,7 @@ class DungeonStatusBar(UIElement):
     def update_location(self, location_info: str):
         """位置情報を更新"""
         if self.location_text:
-            self.location_text.setText(f"位置: {location_info}")
+            self.location_text.setText(config_manager.get_text("dungeon.position_info").format(location_info=location_info))
     
     def update_status(self):
         """ステータス表示を更新"""

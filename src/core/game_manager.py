@@ -600,14 +600,14 @@ class GameManager(ShowBase):
             save_slots = self.save_manager.get_save_slots()
             
             if not save_slots:
-                logger.info("セーブデータが存在しないため、新規ゲームを開始します")
+                logger.info(config_manager.get_text("game_manager.no_save_data"))
                 return False
             
             # 最新のセーブデータを取得（リストの最初の要素）
             latest_save = save_slots[0]
             slot_id = latest_save['slot_id']
             
-            logger.info(f"最新のセーブデータを自動ロードします: スロット{slot_id} ({latest_save.get('party_name', '不明')})")
+            logger.info(f"{config_manager.get_text('game_manager.auto_load')}: スロット{slot_id} ({latest_save.get('party_name', '不明')})")
             
             # セーブデータをロード
             save_data = self.save_manager.load_game(slot_id)
@@ -663,7 +663,7 @@ class GameManager(ShowBase):
             
             # テスト用キャラクターを手動作成
             test_character = Character(
-                name="テスト冒険者",
+                name=config_manager.get_text("game_manager.test_character"),
                 race="human",
                 character_class="fighter"
             )
@@ -679,7 +679,7 @@ class GameManager(ShowBase):
             test_character.experience.level = 1
             
             # テスト用パーティを作成
-            test_party = Party("テストパーティ")
+            test_party = Party(config_manager.get_text("game_manager.test_party"))
             test_party.add_character(test_character)
             test_party.gold = 1000  # 初期ゴールド
             
@@ -690,7 +690,7 @@ class GameManager(ShowBase):
             logger.error(f"テストパーティ作成エラー: {e}")
             # エラーの場合でも空のパーティを作成
             from src.character.party import Party
-            empty_party = Party("空のパーティ")
+            empty_party = Party(config_manager.get_text("game_manager.empty_party"))
             empty_party.gold = 1000
             self.set_current_party(empty_party)
 

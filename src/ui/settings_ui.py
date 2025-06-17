@@ -105,18 +105,18 @@ class SettingsUI:
         
         # 設定の初期化
         settings_menu.add_menu_item(
-            "設定を初期化",
+            config_manager.get_text("settings.reset_confirm"),
             self._show_reset_confirmation
         )
         
         # 変更の保存
         if self.pending_changes:
             settings_menu.add_menu_item(
-                "変更を保存",
+                config_manager.get_text("settings.save_changes"),
                 self._save_settings
             )
             settings_menu.add_menu_item(
-                "変更を破棄",
+                config_manager.get_text("settings.discard_changes"),
                 self._discard_changes
             )
         
@@ -148,12 +148,13 @@ class SettingsUI:
     
     def _show_gameplay_settings(self):
         """ゲームプレイ設定を表示"""
-        gameplay_menu = UIMenu("gameplay_settings", "ゲームプレイ設定")
+        gameplay_menu = UIMenu("gameplay_settings", config_manager.get_text("settings.gameplay_settings"))
         
         # オートセーブ
         auto_save = self._get_setting_value("auto_save")
+        status = config_manager.get_text("ui.settings.enabled") if auto_save else config_manager.get_text("ui.settings.disabled")
         gameplay_menu.add_menu_item(
-            f"オートセーブ: {'有効' if auto_save else '無効'}",
+            config_manager.get_text("ui.settings.auto_save").format(status=status),
             self._toggle_setting,
             ["auto_save"]
         )
@@ -187,14 +188,15 @@ class SettingsUI:
         
         # 確認ダイアログ
         confirm_actions = self._get_setting_value("confirm_actions")
+        status = config_manager.get_text("ui.settings.enabled") if confirm_actions else config_manager.get_text("ui.settings.disabled")
         gameplay_menu.add_menu_item(
-            f"行動確認: {'有効' if confirm_actions else '無効'}",
+            config_manager.get_text("ui.settings.confirm_actions").format(status=status),
             self._toggle_setting,
             ["confirm_actions"]
         )
         
         gameplay_menu.add_menu_item(
-            "戻る",
+            config_manager.get_text("settings.back"),
             self._back_to_main_settings
         )
         
@@ -203,12 +205,13 @@ class SettingsUI:
     
     def _show_controls_settings(self):
         """操作設定を表示"""
-        controls_menu = UIMenu("controls_settings", "操作設定")
+        controls_menu = UIMenu("controls_settings", config_manager.get_text("settings.controls_settings"))
         
         # コントローラー有効
         controller_enabled = self._get_setting_value("controller_enabled")
+        status = config_manager.get_text("ui.settings.enabled") if controller_enabled else config_manager.get_text("ui.settings.disabled")
         controls_menu.add_menu_item(
-            f"コントローラー: {'有効' if controller_enabled else '無効'}",
+            config_manager.get_text("ui.settings.controller").format(status=status),
             self._toggle_setting,
             ["controller_enabled"]
         )
@@ -231,20 +234,21 @@ class SettingsUI:
         
         # 振動
         vibration = self._get_setting_value("vibration_enabled")
+        status = config_manager.get_text("ui.settings.enabled") if vibration else config_manager.get_text("ui.settings.disabled")
         controls_menu.add_menu_item(
-            f"振動: {'有効' if vibration else '無効'}",
+            f"振動: {status}",
             self._toggle_setting,
             ["vibration_enabled"]
         )
         
         # キーバインド設定
         controls_menu.add_menu_item(
-            "キーバインド設定",
+            config_manager.get_text("settings.keybind_settings"),
             self._show_keybind_settings
         )
         
         controls_menu.add_menu_item(
-            "戻る",
+            config_manager.get_text("settings.back"),
             self._back_to_main_settings
         )
         
@@ -253,7 +257,7 @@ class SettingsUI:
     
     def _show_audio_settings(self):
         """音声設定を表示"""
-        audio_menu = UIMenu("audio_settings", "音声設定")
+        audio_menu = UIMenu("audio_settings", config_manager.get_text("settings.audio_settings"))
         
         # マスター音量
         master_volume = self._get_setting_value("master_volume")
@@ -281,14 +285,15 @@ class SettingsUI:
         
         # フォーカス喪失時ミュート
         mute_on_focus_loss = self._get_setting_value("mute_on_focus_loss")
+        status = config_manager.get_text("ui.settings.enabled") if mute_on_focus_loss else config_manager.get_text("ui.settings.disabled")
         audio_menu.add_menu_item(
-            f"非アクティブ時ミュート: {'有効' if mute_on_focus_loss else '無効'}",
+            config_manager.get_text("ui.settings.mute_on_focus_loss").format(status=status),
             self._toggle_setting,
             ["mute_on_focus_loss"]
         )
         
         audio_menu.add_menu_item(
-            "戻る",
+            config_manager.get_text("settings.back"),
             self._back_to_main_settings
         )
         
@@ -297,12 +302,13 @@ class SettingsUI:
     
     def _show_graphics_settings(self):
         """表示設定を表示"""
-        graphics_menu = UIMenu("graphics_settings", "表示設定")
+        graphics_menu = UIMenu("graphics_settings", config_manager.get_text("settings.graphics_settings"))
         
         # フルスクリーン
         fullscreen = self._get_setting_value("fullscreen")
+        status = config_manager.get_text("ui.settings.enabled") if fullscreen else config_manager.get_text("ui.settings.disabled")
         graphics_menu.add_menu_item(
-            f"フルスクリーン: {'有効' if fullscreen else '無効'}",
+            config_manager.get_text("ui.settings.fullscreen").format(status=status),
             self._toggle_setting,
             ["fullscreen"]
         )
@@ -340,7 +346,7 @@ class SettingsUI:
         )
         
         graphics_menu.add_menu_item(
-            "戻る",
+            config_manager.get_text("settings.back"),
             self._back_to_main_settings
         )
         
@@ -349,7 +355,7 @@ class SettingsUI:
     
     def _show_accessibility_settings(self):
         """アクセシビリティ設定を表示"""
-        accessibility_menu = UIMenu("accessibility_settings", "アクセシビリティ設定")
+        accessibility_menu = UIMenu("accessibility_settings", config_manager.get_text("settings.accessibility_settings"))
         
         # フィードバックレベル
         feedback_level = self._get_setting_value("feedback_level")
@@ -396,7 +402,7 @@ class SettingsUI:
         )
         
         accessibility_menu.add_menu_item(
-            "戻る",
+            config_manager.get_text("settings.back"),
             self._back_to_main_settings
         )
         
@@ -405,7 +411,7 @@ class SettingsUI:
     
     def _show_keybind_settings(self):
         """キーバインド設定を表示"""
-        keybind_menu = UIMenu("keybind_settings", "キーバインド設定")
+        keybind_menu = UIMenu("keybind_settings", config_manager.get_text("settings.keybind_settings"))
         
         # 現在のキーバインドを表示
         current_bindings = [
@@ -430,12 +436,12 @@ class SettingsUI:
             )
         
         keybind_menu.add_menu_item(
-            "デフォルトに戻す",
+            config_manager.get_text("settings.reset_keybinds"),
             self._reset_keybinds
         )
         
         keybind_menu.add_menu_item(
-            "戻る",
+            config_manager.get_text("settings.back"),
             self._show_controls_settings
         )
         

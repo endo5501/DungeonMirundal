@@ -188,7 +188,7 @@ class DungeonRenderer:
         
         # 位置情報表示
         self.ui_elements['position'] = OnscreenText(
-            text='位置: (0, 0) レベル: 1',
+            text=config_manager.get_text("dungeon.position_display").format(x=0, y=0, level=1),
             pos=(-0.95, 0.85),
             scale=0.06,
             fg=(1, 1, 1, 1),
@@ -198,7 +198,7 @@ class DungeonRenderer:
         
         # ヘルプテキスト
         self.ui_elements['help'] = OnscreenText(
-            text='WASD: 移動, QE: 回転, ESC: メニュー',
+            text=config_manager.get_text("dungeon.help_text"),
             pos=(-0.95, -0.9),
             scale=0.05,
             fg=(0.7, 0.7, 0.7, 1),
@@ -535,7 +535,7 @@ class DungeonRenderer:
         self.ui_elements['compass'].setText(compass_text[pos.facing])
         
         # 位置情報更新
-        position_text = f'位置: ({pos.x}, {pos.y}) レベル: {pos.level}'
+        position_text = config_manager.get_text("dungeon.position_display").format(x=pos.x, y=pos.y, level=pos.level)
         self.ui_elements['position'].setText(position_text)
     
     # 移動・回転ハンドラー
@@ -662,7 +662,7 @@ class DungeonRenderer:
             
             # 既存のUI要素も更新
             if 'position' in self.ui_elements:
-                self.ui_elements['position'].setText(f'位置: {location_info}')
+                self.ui_elements['position'].setText(config_manager.get_text("dungeon.position_info").format(location_info=location_info))
         
         # パーティステータス更新
         self.ui_manager.update_party_status()

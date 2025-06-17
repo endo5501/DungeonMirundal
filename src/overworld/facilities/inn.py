@@ -73,25 +73,16 @@ class Inn(BaseFacility):
         """宿屋の主人との会話"""
         messages = [
             (
-                "冒険について",
-                "「最近のダンジョンは昔と比べて\n"
-                "少し変わったようですね。\n"
-                "魔物も強くなっているという話ですが、\n"
-                "皆さんも以前より逞しくなっています。」"
+                config_manager.get_text("inn.innkeeper.conversation.adventure_title"),
+                config_manager.get_text("inn.innkeeper.conversation.adventure_message")
             ),
             (
-                "町の様子",
-                "「この町には優秀な商人や\n"
-                "信頼できる神官がいます。\n"
-                "冒険前の準備は怠らないことです。\n"
-                "装備と心の準備、両方が大切ですよ。」"
+                config_manager.get_text("inn.innkeeper.conversation.town_title"),
+                config_manager.get_text("inn.innkeeper.conversation.town_message")
             ),
             (
-                "宿屋の歴史",
-                "「この宿屋は私の祖父の代から\n"
-                "続いています。\n"
-                "多くの冒険者がここから旅立ち、\n"
-                "そして無事に帰ってきました。」"
+                config_manager.get_text("inn.innkeeper.conversation.history_title"),
+                config_manager.get_text("inn.innkeeper.conversation.history_message")
             )
         ]
         
@@ -101,29 +92,17 @@ class Inn(BaseFacility):
         
         self._show_dialog(
             "innkeeper_dialog",
-            f"宿屋の主人 - {title}",
+            f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
             message
         )
     
     def _show_travel_info(self):
         """旅の情報を表示"""
-        travel_info = (
-            "【旅の心得】\n\n"
-            "• 地上部に戻ると体力・魔力が自動回復します\n"
-            "• 状態異常も（死亡・灰化以外は）治癒されます\n"
-            "• 冒険前は装備と消耗品の準備を忘れずに\n"
-            "• パーティの編成バランスも重要です\n\n"
-            "【施設案内】\n"
-            "• 冒険者ギルド：キャラクター作成・パーティ編成\n"
-            "• 商店：武器・防具・消耗品の購入\n"
-            "• 教会：蘇生・治療・祝福\n"
-            "• 魔術師ギルド：魔法の習得・鑑定\n\n"
-            "安全な冒険を！"
-        )
+        travel_info = config_manager.get_text("inn.travel_info.content")
         
         self._show_dialog(
             "travel_info_dialog",
-            "旅の情報",
+            config_manager.get_text("inn.travel_info.title"),
             travel_info
         )
     
@@ -131,39 +110,24 @@ class Inn(BaseFacility):
         """酒場の噂話を表示"""
         rumors = [
             (
-                "ダンジョンの話",
-                "「最近、ダンジョンの奥で\n"
-                "光る宝箱を見たという話があります。\n"
-                "でも、そこまで行くには\n"
-                "相当な実力が必要だとか...」"
+                config_manager.get_text("inn.rumors.dungeon_title"),
+                config_manager.get_text("inn.rumors.dungeon_message")
             ),
             (
-                "魔物の話",
-                "「昔より魔物が賢くなっているという\n"
-                "噂があります。\n"
-                "罠を仕掛けたり、集団で襲ってきたり。\n"
-                "油断は禁物ですね。」"
+                config_manager.get_text("inn.rumors.monster_title"),
+                config_manager.get_text("inn.rumors.monster_message")
             ),
             (
-                "伝説の装備",
-                "「昔の英雄が使っていたという\n"
-                "伝説の装備が、まだダンジョンの\n"
-                "どこかに眠っているらしいです。\n"
-                "見つけられたら一攫千金ですね！」"
+                config_manager.get_text("inn.rumors.legendary_title"),
+                config_manager.get_text("inn.rumors.legendary_message")
             ),
             (
-                "他の冒険者",
-                "「この間、新人の冒険者パーティが\n"
-                "見事にダンジョンを攻略したそうです。\n"
-                "準備と連携の大切さを\n"
-                "改めて感じますね。」"
+                config_manager.get_text("inn.rumors.adventurer_title"),
+                config_manager.get_text("inn.rumors.adventurer_message")
             ),
             (
-                "町の商人",
-                "「商店の主人は元冒険者だそうです。\n"
-                "だから冒険者の気持ちがよく分かって、\n"
-                "良い装備を適正価格で\n"
-                "売ってくれるんですよ。」"
+                config_manager.get_text("inn.rumors.merchant_title"),
+                config_manager.get_text("inn.rumors.merchant_message")
             )
         ]
         
@@ -173,7 +137,7 @@ class Inn(BaseFacility):
         
         self._show_dialog(
             "rumor_dialog",
-            f"酒場の噂 - {title}",
+            f"{config_manager.get_text('inn.rumors.title')} - {title}",
             rumor
         )
     
@@ -182,23 +146,22 @@ class Inn(BaseFacility):
         if not self.current_party:
             self._show_dialog(
                 "no_party_error_dialog",
-                "エラー",
-                "現在パーティが存在しません。\n"
-                "まず冒険者ギルドでパーティを作成してください。"
+                config_manager.get_text("inn.party_name.no_party_error_title"),
+                config_manager.get_text("inn.party_name.no_party_error_message")
             )
             return
         
         # 現在のパーティ名を取得
-        current_name = self.current_party.name if self.current_party.name else "無名のパーティ"
+        current_name = self.current_party.name if self.current_party.name else config_manager.get_text("inn.party_name.anonymous_party")
         
         # パーティ名変更ダイアログを表示
         name_input_dialog = UIInputDialog(
             "party_name_input_dialog",
-            "パーティ名変更",
-            f"現在のパーティ名: {current_name}\n\n"
-            "新しいパーティ名を入力してください:",
+            config_manager.get_text("inn.party_name.title"),
+            f"{config_manager.get_text('inn.party_name.current_name_label').format(name=current_name)}\n\n"
+            f"{config_manager.get_text('inn.party_name.input_prompt')}",
             initial_text=current_name,
-            placeholder="パーティ名",
+            placeholder=config_manager.get_text("inn.party_name.placeholder"),
             on_confirm=self._on_party_name_confirmed,
             on_cancel=self._on_party_name_cancelled
         )
@@ -214,9 +177,8 @@ class Inn(BaseFacility):
         if not validated_name:
             self._show_dialog(
                 "invalid_name_dialog",
-                "入力エラー",
-                "有効なパーティ名を入力してください。\n"
-                "名前は1文字以上30文字以下で入力してください。"
+                config_manager.get_text("inn.party_name.invalid_name_title"),
+                config_manager.get_text("inn.party_name.invalid_name_message")
             )
             return
         
@@ -229,17 +191,14 @@ class Inn(BaseFacility):
         ui_manager.unregister_element("party_name_input_dialog")
         
         # 成功メッセージを表示
-        success_message = (
-            f"パーティ名を変更しました！\n\n"
-            f"旧名: {old_name}\n"
-            f"新名: {validated_name}\n\n"
-            "素晴らしい名前ですね！\n"
-            "きっと伝説の冒険者になれますよ！"
+        success_message = config_manager.get_text("inn.party_name.success_message").format(
+            old_name=old_name,
+            new_name=validated_name
         )
         
         self._show_dialog(
             "name_change_success_dialog",
-            "パーティ名変更完了",
+            config_manager.get_text("inn.party_name.success_title"),
             success_message
         )
         
@@ -256,7 +215,7 @@ class Inn(BaseFacility):
     def _validate_party_name(self, name: str) -> str:
         """パーティ名のバリデーションと正規化"""
         if not name or not name.strip():
-            return "勇者一行"  # デフォルト名
+            return config_manager.get_text("inn.party_name.default_name")  # デフォルト名
         
         # 前後の空白を除去
         name = name.strip()
@@ -272,6 +231,6 @@ class Inn(BaseFacility):
         
         # 空になった場合はデフォルト名
         if not name:
-            return "勇者一行"
+            return config_manager.get_text("inn.party_name.default_name")
         
         return name
