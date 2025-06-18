@@ -3,6 +3,15 @@
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import time
+import sys
+import os
+
+# プロジェクトルートをPythonパスに追加
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Panda3Dのモック設定
+from tests.test_utils import setup_panda3d_mocks
+setup_panda3d_mocks()
 
 from src.ui.feedback_system import (
     FeedbackSystem, Notification, NotificationType, FeedbackLevel,
@@ -54,11 +63,8 @@ class TestFeedbackSystem:
     
     def setup_method(self):
         """各テストメソッドの前に実行"""
-        # モックを使用してPanda3D依存を回避
-        with patch('src.ui.feedback_system.DirectFrame'), \
-             patch('src.ui.feedback_system.DirectLabel'), \
-             patch('src.ui.feedback_system.base'):
-            self.feedback_system = FeedbackSystem()
+        # Panda3D依存は既にsetup_panda3d_mocksで設定済み
+        self.feedback_system = FeedbackSystem()
     
     def test_feedback_system_initialization(self):
         """フィードバックシステムの初期化テスト"""
@@ -152,6 +158,9 @@ class TestFeedbackSystem:
     
     def test_notification_queue_management(self):
         """通知キュー管理のテスト"""
+        # VERBOSEレベルで全ての通知が表示されるように設定
+        self.feedback_system.feedback_level = FeedbackLevel.VERBOSE
+        
         # 最大通知数を超えるとキューに追加される
         self.feedback_system.max_notifications = 2
         
@@ -348,10 +357,8 @@ class TestFeedbackSystemIntegration:
     
     def setup_method(self):
         """各テストメソッドの前に実行"""
-        with patch('src.ui.feedback_system.DirectFrame'), \
-             patch('src.ui.feedback_system.DirectLabel'), \
-             patch('src.ui.feedback_system.base'):
-            self.feedback_system = FeedbackSystem()
+        # Panda3D依存は既にsetup_panda3d_mocksで設定済み
+        self.feedback_system = FeedbackSystem()
     
     def test_feedback_system_full_workflow(self):
         """フィードバックシステム完全ワークフローのテスト"""
