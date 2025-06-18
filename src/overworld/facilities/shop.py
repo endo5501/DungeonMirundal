@@ -5,6 +5,8 @@ from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.party import Party
 from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
 from src.ui.base_ui import UIMenu, UIDialog, ui_manager
+from direct.gui.DirectGui import DirectScrolledList, DirectButton, DirectFrame, DirectLabel
+from panda3d.core import Vec3
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
@@ -84,35 +86,28 @@ class Shop(BaseFacility):
         logger.info(config_manager.get_text("shop.messages.left_shop"))
     
     def _show_buy_menu(self):
-        """購入メニューを表示"""
+        """購入メニューをDirectScrolledListで表示"""
         if not self.current_party:
             self._show_error_message(config_manager.get_text("shop.messages.no_party_set"))
             return
         
-        buy_menu = UIMenu("buy_menu", config_manager.get_text("shop.purchase.title"))
+        # 全アイテムを取得
+        available_items = []
+        for item_id in self.inventory:
+            item = self.item_manager.get_item(item_id)
+            if item:
+                available_items.append(item)
         
-        # カテゴリ別に表示
-        categories = [
-            (ItemType.WEAPON, config_manager.get_text("shop.purchase.categories.weapons")),
-            (ItemType.ARMOR, config_manager.get_text("shop.purchase.categories.armor")),
-            (ItemType.CONSUMABLE, config_manager.get_text("shop.purchase.categories.consumables")),
-            (ItemType.TOOL, config_manager.get_text("shop.purchase.categories.tools")),
-        ]
+        if not available_items:
+            self._show_error_message(config_manager.get_text("shop.purchase.no_stock").format(category="全アイテム"))
+            return
         
-        for item_type, category_name in categories:
-            buy_menu.add_menu_item(
-                category_name,
-                self._show_category_items,
-                [item_type]
-            )
-        
-        buy_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [buy_menu]
+        self._show_item_scrolled_list(
+            available_items,
+            config_manager.get_text("shop.purchase.title"),
+            self._show_item_details,
+            "shop_buy_list"
         )
-        
-        self._show_submenu(buy_menu)
     
     def _show_category_items(self, item_type: ItemType):
         """カテゴリ別アイテム一覧を表示"""
@@ -251,8 +246,123 @@ class Shop(BaseFacility):
         
         logger.info(f"アイテム購入: {item.item_id} ({item.price}G)")
     
+    def _show_item_scrolled_list(self, items: List[Item], title: str, 
+                                on_item_selected: callable, ui_id: str):
+        """DirectScrolledListでアイテム一覧を表示"""
+        # 既存のUIがあれば削除
+        if hasattr(self, 'shop_ui_elements'):
+            self._cleanup_shop_ui()
+        
+        # フォント取得
+        try:
+            from src.ui.font_manager import font_manager
+            font = font_manager.get_default_font()
+        except:
+            font = None
+        
+        # 背景フレーム
+        background = DirectFrame(
+            frameColor=(0, 0, 0, 0.8),
+            frameSize=(-1.5, 1.5, -1.2, 1.0),
+            pos=(0, 0, 0)
+        )
+        
+        # タイトル
+        title_label = DirectLabel(
+            text=title,
+            scale=0.08,
+            pos=(0, 0, 0.8),
+            text_fg=(1, 1, 0, 1),
+            frameColor=(0, 0, 0, 0),
+            text_font=font
+        )
+        
+        # アイテムリスト用のボタンを作成
+        item_buttons = []
+        for item in items:
+            display_name = self._format_item_display_name(item)
+            
+            item_button = DirectButton(
+                text=display_name,
+                scale=0.05,
+                text_scale=0.9,
+                text_align=0,  # 左寄せ
+                command=lambda selected_item=item: on_item_selected(selected_item),
+                frameColor=(0.3, 0.5, 0.3, 0.8),
+                text_fg=(1, 1, 1, 1),
+                text_font=font,
+                relief=1,  # RAISED
+                borderWidth=(0.01, 0.01)
+            )
+            item_buttons.append(item_button)
+        
+        # DirectScrolledListを作成
+        scrolled_list = DirectScrolledList(
+            frameSize=(-1.2, 1.2, -0.6, 0.6),
+            frameColor=(0.2, 0.2, 0.3, 0.9),
+            pos=(0, 0, 0.1),
+            numItemsVisible=8,  # 一度に表示するアイテム数
+            items=item_buttons,
+            itemFrame_frameSize=(-1.1, 1.1, -0.05, 0.05),
+            itemFrame_pos=(0, 0, 0),
+            decButton_pos=(-1.15, 0, -0.65),
+            incButton_pos=(1.15, 0, -0.65),
+            decButton_text="▲",
+            incButton_text="▼",
+            decButton_scale=0.05,
+            incButton_scale=0.05,
+            decButton_text_fg=(1, 1, 1, 1),
+            incButton_text_fg=(1, 1, 1, 1)
+        )
+        
+        # 戻るボタン
+        back_button = DirectButton(
+            text=config_manager.get_text("menu.back"),
+            scale=0.06,
+            pos=(0, 0, -0.9),
+            command=self._cleanup_and_return_to_main,
+            frameColor=(0.7, 0.2, 0.2, 0.8),
+            text_fg=(1, 1, 1, 1),
+            text_font=font,
+            relief=1,
+            borderWidth=(0.01, 0.01)
+        )
+        
+        # UI要素を保存
+        self.shop_ui_elements = {
+            'background': background,
+            'title': title_label,
+            'scrolled_list': scrolled_list,
+            'back_button': back_button,
+            'ui_id': ui_id
+        }
+    
+    def _format_item_display_name(self, item: Item) -> str:
+        """アイテム表示名をフォーマット"""
+        category_icon = {
+            ItemType.WEAPON: "⚔",
+            ItemType.ARMOR: "🛡",
+            ItemType.CONSUMABLE: "🧪",
+            ItemType.TOOL: "🔧"
+        }.get(item.item_type, "📦")
+        
+        return f"{category_icon} {item.get_name()} - {item.price}G"
+    
+    def _cleanup_shop_ui(self):
+        """商店UIのクリーンアップ"""
+        if hasattr(self, 'shop_ui_elements'):
+            for element in self.shop_ui_elements.values():
+                if hasattr(element, 'destroy'):
+                    element.destroy()
+            delattr(self, 'shop_ui_elements')
+    
+    def _cleanup_and_return_to_main(self):
+        """UIをクリーンアップしてメインメニューに戻る"""
+        self._cleanup_shop_ui()
+        self._show_main_menu()
+    
     def _show_sell_menu(self):
-        """売却メニューを表示"""
+        """売却メニューをDirectScrolledListで表示"""
         if not self.current_party:
             self._show_error_message(config_manager.get_text("shop.messages.no_party_set"))
             return
@@ -280,34 +390,123 @@ class Shop(BaseFacility):
             )
             return
         
-        # 売却メニューを作成
-        sell_menu = UIMenu("sell_menu", config_manager.get_text("shop.sell.title"))
+        self._show_sellable_items_scrolled_list(sellable_items)
+    
+    def _show_sellable_items_scrolled_list(self, sellable_items: List[tuple]):
+        """売却可能アイテムをDirectScrolledListで表示"""
+        # 既存のUIがあれば削除
+        if hasattr(self, 'shop_ui_elements'):
+            self._cleanup_shop_ui()
         
-        for slot, item_instance, item in sellable_items:
-            # 売却価格を計算（購入価格の50%）
-            sell_price = max(1, item.price // 2)
-            
-            # アイテム情報を表示
-            item_info = f"{item.get_name()}"
-            if item_instance.quantity > 1:
-                item_info += f" x{item_instance.quantity}"
-            item_info += f" - {sell_price}G"
-            if item_instance.quantity > 1:
-                item_info += f" (各{sell_price}G)"
-            
-            sell_menu.add_menu_item(
-                item_info,
-                self._show_sell_confirmation,
-                [slot, item_instance, item, sell_price]
-            )
+        # フォント取得
+        try:
+            from src.ui.font_manager import font_manager
+            font = font_manager.get_default_font()
+        except:
+            font = None
         
-        sell_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [sell_menu]
+        # 背景フレーム
+        background = DirectFrame(
+            frameColor=(0, 0, 0, 0.8),
+            frameSize=(-1.5, 1.5, -1.2, 1.0),
+            pos=(0, 0, 0)
         )
         
-        self._show_submenu(sell_menu)
+        # タイトル
+        title_label = DirectLabel(
+            text=config_manager.get_text("shop.sell.title"),
+            scale=0.08,
+            pos=(0, 0, 0.8),
+            text_fg=(1, 1, 0, 1),
+            frameColor=(0, 0, 0, 0),
+            text_font=font
+        )
+        
+        # アイテムリスト用のボタンを作成
+        item_buttons = []
+        for slot, item_instance, item in sellable_items:
+            display_name = self._format_sellable_item_display_name(item_instance, item)
+            
+            item_button = DirectButton(
+                text=display_name,
+                scale=0.05,
+                text_scale=0.9,
+                text_align=0,  # 左寄せ
+                command=lambda s=slot, ii=item_instance, i=item: self._show_sell_confirmation_from_list(s, ii, i),
+                frameColor=(0.5, 0.3, 0.3, 0.8),
+                text_fg=(1, 1, 1, 1),
+                text_font=font,
+                relief=1,  # RAISED
+                borderWidth=(0.01, 0.01)
+            )
+            item_buttons.append(item_button)
+        
+        # DirectScrolledListを作成
+        scrolled_list = DirectScrolledList(
+            frameSize=(-1.2, 1.2, -0.6, 0.6),
+            frameColor=(0.2, 0.2, 0.3, 0.9),
+            pos=(0, 0, 0.1),
+            numItemsVisible=8,  # 一度に表示するアイテム数
+            items=item_buttons,
+            itemFrame_frameSize=(-1.1, 1.1, -0.05, 0.05),
+            itemFrame_pos=(0, 0, 0),
+            decButton_pos=(-1.15, 0, -0.65),
+            incButton_pos=(1.15, 0, -0.65),
+            decButton_text="▲",
+            incButton_text="▼",
+            decButton_scale=0.05,
+            incButton_scale=0.05,
+            decButton_text_fg=(1, 1, 1, 1),
+            incButton_text_fg=(1, 1, 1, 1)
+        )
+        
+        # 戻るボタン
+        back_button = DirectButton(
+            text=config_manager.get_text("menu.back"),
+            scale=0.06,
+            pos=(0, 0, -0.9),
+            command=self._cleanup_and_return_to_main,
+            frameColor=(0.7, 0.2, 0.2, 0.8),
+            text_fg=(1, 1, 1, 1),
+            text_font=font,
+            relief=1,
+            borderWidth=(0.01, 0.01)
+        )
+        
+        # UI要素を保存
+        self.shop_ui_elements = {
+            'background': background,
+            'title': title_label,
+            'scrolled_list': scrolled_list,
+            'back_button': back_button,
+            'ui_id': 'shop_sell_list'
+        }
+    
+    def _format_sellable_item_display_name(self, item_instance, item: Item) -> str:
+        """売却アイテム表示名をフォーマット"""
+        category_icon = {
+            ItemType.WEAPON: "⚔",
+            ItemType.ARMOR: "🛡",
+            ItemType.CONSUMABLE: "🧪",
+            ItemType.TOOL: "🔧"
+        }.get(item.item_type, "📦")
+        
+        # 売却価格を計算（購入価格の50%）
+        sell_price = max(1, item.price // 2)
+        
+        item_info = f"{category_icon} {item.get_name()}"
+        if item_instance.quantity > 1:
+            item_info += f" x{item_instance.quantity}"
+        item_info += f" - {sell_price}G"
+        if item_instance.quantity > 1:
+            item_info += f" (各{sell_price}G)"
+        
+        return item_info
+    
+    def _show_sell_confirmation_from_list(self, slot, item_instance, item):
+        """売却確認ダイアログを表示（DirectScrolledListから呼び出し）"""
+        sell_price = max(1, item.price // 2)
+        self._show_sell_confirmation(slot, item_instance, item, sell_price)
     
     def _show_inventory(self):
         """在庫確認を表示"""

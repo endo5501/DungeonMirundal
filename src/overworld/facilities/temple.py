@@ -6,6 +6,8 @@ from src.character.party import Party
 from src.character.character import Character, CharacterStatus
 from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
 from src.ui.base_ui import UIMenu, UIDialog, ui_manager
+from direct.gui.DirectGui import DirectScrolledList, DirectButton, DirectFrame, DirectLabel
+from panda3d.core import Vec3
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
@@ -367,7 +369,7 @@ class Temple(BaseFacility):
         logger.info(f"教会寄付: {amount}G by {self.current_party.name}")
     
     def _show_prayerbook_shop(self):
-        """祈祷書購入ショップ"""
+        """祈祷書購入ショップをDirectScrolledListで表示"""
         # 祈祷書（SPELLBOOK）タイプのアイテムを取得
         prayerbook_items = item_manager.get_items_by_type(ItemType.SPELLBOOK)
         
@@ -375,23 +377,110 @@ class Temple(BaseFacility):
             self._show_error_message("現在、祈祷書の在庫がありません")
             return
         
-        prayerbook_menu = UIMenu("prayerbook_shop_menu", "祈祷書購入")
+        self._show_prayerbook_scrolled_list(prayerbook_items)
+    
+    def _show_prayerbook_scrolled_list(self, prayerbook_items: List[Item]):
+        """祈祷書一覧をDirectScrolledListで表示"""
+        # 既存のUIがあれば削除
+        if hasattr(self, 'temple_ui_elements'):
+            self._cleanup_temple_ui()
         
-        for item in prayerbook_items:
-            item_info = f"{item.get_name()} - {item.price}G"
-            prayerbook_menu.add_menu_item(
-                item_info,
-                self._show_prayerbook_details,
-                [item]
-            )
+        # フォント取得
+        try:
+            from src.ui.font_manager import font_manager
+            font = font_manager.get_default_font()
+        except:
+            font = None
         
-        prayerbook_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [prayerbook_menu]
+        # 背景フレーム
+        background = DirectFrame(
+            frameColor=(0, 0, 0, 0.8),
+            frameSize=(-1.5, 1.5, -1.2, 1.0),
+            pos=(0, 0, 0)
         )
         
-        self._show_submenu(prayerbook_menu)
+        # タイトル
+        title_label = DirectLabel(
+            text="祈祷書購入",
+            scale=0.08,
+            pos=(0, 0, 0.8),
+            text_fg=(1, 1, 0, 1),
+            frameColor=(0, 0, 0, 0),
+            text_font=font
+        )
+        
+        # 祈祷書リスト用のボタンを作成
+        prayerbook_buttons = []
+        for item in prayerbook_items:
+            display_name = f"📜 {item.get_name()} - {item.price}G"
+            
+            item_button = DirectButton(
+                text=display_name,
+                scale=0.05,
+                text_scale=0.9,
+                text_align=0,  # 左寄せ
+                command=lambda selected_item=item: self._show_prayerbook_details(selected_item),
+                frameColor=(0.5, 0.5, 0.3, 0.8),
+                text_fg=(1, 1, 1, 1),
+                text_font=font,
+                relief=1,  # RAISED
+                borderWidth=(0.01, 0.01)
+            )
+            prayerbook_buttons.append(item_button)
+        
+        # DirectScrolledListを作成
+        scrolled_list = DirectScrolledList(
+            frameSize=(-1.2, 1.2, -0.6, 0.6),
+            frameColor=(0.2, 0.3, 0.2, 0.9),
+            pos=(0, 0, 0.1),
+            numItemsVisible=8,  # 一度に表示するアイテム数
+            items=prayerbook_buttons,
+            itemFrame_frameSize=(-1.1, 1.1, -0.05, 0.05),
+            itemFrame_pos=(0, 0, 0),
+            decButton_pos=(-1.15, 0, -0.65),
+            incButton_pos=(1.15, 0, -0.65),
+            decButton_text="▲",
+            incButton_text="▼",
+            decButton_scale=0.05,
+            incButton_scale=0.05,
+            decButton_text_fg=(1, 1, 1, 1),
+            incButton_text_fg=(1, 1, 1, 1)
+        )
+        
+        # 戻るボタン
+        back_button = DirectButton(
+            text=config_manager.get_text("menu.back"),
+            scale=0.06,
+            pos=(0, 0, -0.9),
+            command=self._cleanup_and_return_to_main_temple,
+            frameColor=(0.7, 0.2, 0.2, 0.8),
+            text_fg=(1, 1, 1, 1),
+            text_font=font,
+            relief=1,
+            borderWidth=(0.01, 0.01)
+        )
+        
+        # UI要素を保存
+        self.temple_ui_elements = {
+            'background': background,
+            'title': title_label,
+            'scrolled_list': scrolled_list,
+            'back_button': back_button,
+            'ui_id': 'temple_prayerbook_list'
+        }
+    
+    def _cleanup_temple_ui(self):
+        """教会UIのクリーンアップ"""
+        if hasattr(self, 'temple_ui_elements'):
+            for element in self.temple_ui_elements.values():
+                if hasattr(element, 'destroy'):
+                    element.destroy()
+            delattr(self, 'temple_ui_elements')
+    
+    def _cleanup_and_return_to_main_temple(self):
+        """UIをクリーンアップしてメインメニューに戻る"""
+        self._cleanup_temple_ui()
+        self._show_main_menu()
     
     def _show_prayerbook_details(self, item: Item):
         """祈祷書詳細表示"""

@@ -6,6 +6,8 @@ from src.character.party import Party
 from src.character.character import Character
 from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
 from src.ui.base_ui import UIMenu, UIDialog, ui_manager
+from direct.gui.DirectGui import DirectScrolledList, DirectButton, DirectFrame, DirectLabel
+from panda3d.core import Vec3
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
@@ -91,41 +93,155 @@ class MagicGuild(BaseFacility):
         logger.info("魔術師ギルドから出ました")
     
     def _show_spellbook_shop_menu(self):
-        """魔術書購入メニューを表示"""
+        """魔術書購入メニューをDirectScrolledListで表示"""
         if not self.current_party:
             self._show_error_message("パーティが設定されていません")
             return
         
-        spellbook_menu = UIMenu("spellbook_shop_menu", "魔術書購入")
+        # 全ての魔術書を取得
+        all_spellbooks = []
+        categories = ['attack', 'healing', 'utility', 'advanced']
         
-        # 魔術書カテゴリごとにメニューを作成
-        spellbook_menu.add_menu_item(
-            "攻撃魔法の魔術書",
-            self._show_attack_spellbooks
+        for category in categories:
+            spellbooks = self._get_spellbooks_by_category(category)
+            all_spellbooks.extend(spellbooks)
+        
+        if not all_spellbooks:
+            self._show_error_message("現在、魔術書の在庫がありません")
+            return
+        
+        self._show_spellbook_scrolled_list(all_spellbooks)
+    
+    def _get_spellbooks_by_category(self, category: str) -> List[Dict[str, Any]]:
+        """カテゴリ別の魔術書を取得"""
+        if category == 'attack':
+            return [
+                {'name': 'ファイア魔術書', 'price': 300, 'description': '火の玉を敵に投げつける攻撃魔法'},
+                {'name': 'アイス魔術書', 'price': 350, 'description': '氷の刃で敵を切り裂く攻撃魔法'},
+                {'name': 'ライトニング魔術書', 'price': 400, 'description': '雷撃で敵を麻痺させる攻撃魔法'}
+            ]
+        elif category == 'healing':
+            return [
+                {'name': 'ヒール魔術書', 'price': 250, 'description': '軽傷を治療する回復魔法'},
+                {'name': 'キュア魔術書', 'price': 200, 'description': '毒や病気を治す治療魔法'},
+                {'name': 'リジェネ魔術書', 'price': 500, 'description': '継続的に体力を回復する魔法'}
+            ]
+        elif category == 'utility':
+            return [
+                {'name': 'ライト魔術書', 'price': 150, 'description': '周囲を明るく照らす魔法'},
+                {'name': 'テレポート魔術書', 'price': 800, 'description': '瞬間移動で脱出する魔法'},
+                {'name': 'ディテクト魔術書', 'price': 300, 'description': '隠された物や敵を発見する魔法'}
+            ]
+        elif category == 'advanced':
+            return [
+                {'name': 'メテオ魔術書', 'price': 2000, 'description': '隕石を降らせる強力な攻撃魔法'},
+                {'name': 'リザレクション魔術書', 'price': 1500, 'description': '死者を蘇生させる究極の回復魔法'},
+                {'name': 'タイムストップ魔術書', 'price': 2500, 'description': '時を止める禁断の魔法'}
+            ]
+        return []
+    
+    def _show_spellbook_scrolled_list(self, spellbooks: List[Dict[str, Any]]):
+        """魔術書一覧をDirectScrolledListで表示"""
+        # 既存のUIがあれば削除
+        if hasattr(self, 'magic_guild_ui_elements'):
+            self._cleanup_magic_guild_ui()
+        
+        # フォント取得
+        try:
+            from src.ui.font_manager import font_manager
+            font = font_manager.get_default_font()
+        except:
+            font = None
+        
+        # 背景フレーム
+        background = DirectFrame(
+            frameColor=(0, 0, 0, 0.8),
+            frameSize=(-1.5, 1.5, -1.2, 1.0),
+            pos=(0, 0, 0)
         )
         
-        spellbook_menu.add_menu_item(
-            "回復魔法の魔術書",
-            self._show_healing_spellbooks
+        # タイトル
+        title_label = DirectLabel(
+            text="魔術書購入",
+            scale=0.08,
+            pos=(0, 0, 0.8),
+            text_fg=(1, 1, 0, 1),
+            frameColor=(0, 0, 0, 0),
+            text_font=font
         )
         
-        spellbook_menu.add_menu_item(
-            "補助魔法の魔術書",
-            self._show_utility_spellbooks
+        # 魔術書リスト用のボタンを作成
+        spellbook_buttons = []
+        for spellbook in spellbooks:
+            display_name = f"🔮 {spellbook['name']} - {spellbook['price']}G"
+            
+            spellbook_button = DirectButton(
+                text=display_name,
+                scale=0.05,
+                text_scale=0.9,
+                text_align=0,  # 左寄せ
+                command=lambda selected_spellbook=spellbook: self._show_spellbook_details(selected_spellbook),
+                frameColor=(0.3, 0.3, 0.5, 0.8),
+                text_fg=(1, 1, 1, 1),
+                text_font=font,
+                relief=1,  # RAISED
+                borderWidth=(0.01, 0.01)
+            )
+            spellbook_buttons.append(spellbook_button)
+        
+        # DirectScrolledListを作成
+        scrolled_list = DirectScrolledList(
+            frameSize=(-1.2, 1.2, -0.6, 0.6),
+            frameColor=(0.2, 0.2, 0.4, 0.9),
+            pos=(0, 0, 0.1),
+            numItemsVisible=8,  # 一度に表示するアイテム数
+            items=spellbook_buttons,
+            itemFrame_frameSize=(-1.1, 1.1, -0.05, 0.05),
+            itemFrame_pos=(0, 0, 0),
+            decButton_pos=(-1.15, 0, -0.65),
+            incButton_pos=(1.15, 0, -0.65),
+            decButton_text="▲",
+            incButton_text="▼",
+            decButton_scale=0.05,
+            incButton_scale=0.05,
+            decButton_text_fg=(1, 1, 1, 1),
+            incButton_text_fg=(1, 1, 1, 1)
         )
         
-        spellbook_menu.add_menu_item(
-            "高位魔法の魔術書",
-            self._show_advanced_spellbooks
+        # 戻るボタン
+        back_button = DirectButton(
+            text=config_manager.get_text("menu.back"),
+            scale=0.06,
+            pos=(0, 0, -0.9),
+            command=self._cleanup_and_return_to_main_magic_guild,
+            frameColor=(0.7, 0.2, 0.2, 0.8),
+            text_fg=(1, 1, 1, 1),
+            text_font=font,
+            relief=1,
+            borderWidth=(0.01, 0.01)
         )
         
-        spellbook_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [spellbook_menu]
-        )
-        
-        self._show_submenu(spellbook_menu)
+        # UI要素を保存
+        self.magic_guild_ui_elements = {
+            'background': background,
+            'title': title_label,
+            'scrolled_list': scrolled_list,
+            'back_button': back_button,
+            'ui_id': 'magic_guild_spellbook_list'
+        }
+    
+    def _cleanup_magic_guild_ui(self):
+        """魔術協会UIのクリーンアップ"""
+        if hasattr(self, 'magic_guild_ui_elements'):
+            for element in self.magic_guild_ui_elements.values():
+                if hasattr(element, 'destroy'):
+                    element.destroy()
+            delattr(self, 'magic_guild_ui_elements')
+    
+    def _cleanup_and_return_to_main_magic_guild(self):
+        """UIをクリーンアップしてメインメニューに戻る"""
+        self._cleanup_magic_guild_ui()
+        self._show_main_menu()
     
     def _show_attack_spellbooks(self):
         """攻撃魔法の魔術書一覧を表示"""
