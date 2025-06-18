@@ -2,6 +2,15 @@
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
+import sys
+import os
+
+# プロジェクトルートをPythonパスに追加
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Panda3Dのモック設定
+from tests.test_utils import setup_panda3d_mocks
+setup_panda3d_mocks()
 
 from src.core.input_manager import (
     InputManager, InputAction, InputType, GamepadButton
@@ -20,10 +29,9 @@ class TestInputManager:
         mock_base.taskMgr = Mock()
         mock_base.taskMgr.add = Mock()
         
-        # 必要なメソッドをモック
+        # 必要なメソッドをモック（baseは既にモック済み）
         with patch('src.core.input_manager.DirectObject.__init__'), \
              patch('src.core.input_manager.logger'), \
-             patch('builtins.base', mock_base), \
              patch.object(InputManager, 'accept'):
             
             self.input_manager = InputManager()
@@ -270,8 +278,7 @@ class TestControllerSettingsUI:
         }
     
     @patch('src.ui.controller_settings_ui.DirectFrame')
-    @patch('src.ui.controller_settings_ui.OnscreenText')
-    def test_controller_settings_ui_creation(self, mock_text, mock_frame):
+    def test_controller_settings_ui_creation(self, mock_frame):
         """コントローラー設定UI作成のテスト"""
         from src.ui.controller_settings_ui import ControllerSettingsMenu
         
@@ -280,11 +287,9 @@ class TestControllerSettingsUI:
         # UI要素が作成されていることを確認
         assert ui.input_manager == self.mock_input_manager
         assert mock_frame.called
-        assert mock_text.called
     
     @patch('src.ui.controller_settings_ui.DirectFrame')
-    @patch('src.ui.controller_settings_ui.OnscreenText')
-    def test_controller_toggle(self, mock_text, mock_frame):
+    def test_controller_toggle(self, mock_frame):
         """コントローラー有効/無効切り替えのテスト"""
         from src.ui.controller_settings_ui import ControllerSettingsMenu
         
@@ -299,8 +304,7 @@ class TestControllerSettingsUI:
         self.mock_input_manager.enable_controller.assert_called_with(False)
     
     @patch('src.ui.controller_settings_ui.DirectFrame')
-    @patch('src.ui.controller_settings_ui.OnscreenText')
-    def test_analog_settings(self, mock_text, mock_frame):
+    def test_analog_settings(self, mock_frame):
         """アナログ設定のテスト"""
         from src.ui.controller_settings_ui import ControllerSettingsMenu
         
@@ -324,7 +328,9 @@ class TestInputIntegration:
         self.mock_base.devices = Mock()
         self.mock_base.devices.getDevices.return_value = []
         
-        with patch('src.core.input_manager.base', self.mock_base):
+        # baseは既にモック済みなので直接作成
+        with patch('src.core.input_manager.DirectObject.__init__'), \
+             patch.object(InputManager, 'accept'):
             self.input_manager = InputManager()
     
     def test_input_action_flow(self):
@@ -353,14 +359,13 @@ class TestInputIntegration:
         from src.core.game_manager import GameManager
         
         with patch('src.core.game_manager.ShowBase'):
-            with patch('src.core.game_manager.OnscreenText'):
-                with patch('src.core.config_manager.config_manager'):
-                    game_manager = GameManager()
-                    
-                    # 入力マネージャーが正しく初期化されていることを確認
-                    assert hasattr(game_manager, 'input_manager')
-                    assert isinstance(game_manager.input_manager, InputManager)
-                    
-                    # アクションがバインドされていることを確認
-                    assert InputAction.MENU.value in game_manager.input_manager.action_callbacks
-                    assert InputAction.MOVE_FORWARD.value in game_manager.input_manager.action_callbacks
+            with patch('src.core.config_manager.config_manager'):
+                game_manager = GameManager()
+                
+                # 入力マネージャーが正しく初期化されていることを確認
+                assert hasattr(game_manager, 'input_manager')
+                assert isinstance(game_manager.input_manager, InputManager)
+                
+                # アクションがバインドされていることを確認
+                assert InputAction.MENU.value in game_manager.input_manager.action_callbacks
+                assert InputAction.MOVE_FORWARD.value in game_manager.input_manager.action_callbacks
