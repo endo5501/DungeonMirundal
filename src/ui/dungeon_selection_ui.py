@@ -94,11 +94,12 @@ class DungeonSelectionUI:
         from direct.gui.DirectGui import DirectFrame, DirectLabel
         from panda3d.core import Vec3
         
-        # 背景フレーム
+        # 背景フレーム（クリックをブロック）
         background = DirectFrame(
             frameColor=(0, 0, 0, 0.8),
             frameSize=(-1.5, 1.5, -1.2, 1.0),
-            pos=(0, 0, 0)
+            pos=(0, 0, 0),
+            state='normal'  # クリックイベントを受け取る
         )
         
         # タイトル
@@ -140,20 +141,20 @@ class DungeonSelectionUI:
         # DirectScrolledListを作成
         self.scrolled_list = DirectScrolledList(
             # リスト表示領域
-            frameSize=(-1.2, 1.2, -0.6, 0.6),
+            frameSize=(-0.8, 0.8, -0.6, 0.6),  # 幅を縮小
             frameColor=(0.2, 0.2, 0.3, 0.9),
-            pos=(0, 0, 0.1),
+            pos=(0.3, 0, 0.1),  # 右寄せに移動
             
             # アイテム設定
             numItemsVisible=8,  # 一度に表示するアイテム数を増加
             items=dungeon_items,
             forceHeight=0.08,  # アイテム間隔を制御
-            itemFrame_frameSize=(-1.1, 1.1, -0.04, 0.04),
+            itemFrame_frameSize=(-0.7, 0.7, -0.04, 0.04),  # アイテム幅を調整
             itemFrame_pos=(0, 0, 0),
             
             # スクロールボタン位置調整
-            decButton_pos=(-1.15, 0, -0.65),
-            incButton_pos=(1.15, 0, -0.65),
+            decButton_pos=(0, 0, 0.65),  # 上に移動
+            incButton_pos=(0, 0, -0.65),  # 下に移動
             decButton_text="▲",
             incButton_text="▼",
             decButton_scale=0.05,

@@ -9,16 +9,24 @@
 
 ### 優先度:中
 
-- [ ] 商品の個別の購入画面に入った後、[戻る]が効かない。また、[購入する]を押しても戻らないので購入画面から移動できない
-- [ ] 商品の購入一覧画面で、その後ろにあるボタンに判定がある
-- [ ] 商品の購入、ダンジョンの一覧画面のレイアウトを以下のように変更すべき
-  - 上下のスクロールが画面下部の左右にあるのはおかしい。上下に配置すべき
-  - 一覧が画面の真ん中から表示されておかしい。もっと右上から表示すべき
-  - 一覧の中のボタンにもスクロールがあように見える
-
 ### 優先度:低
 
 ## Fixed bugs
+
+### 優先度:中 (2025-06-18修正完了) - 新規修正
+
+- [x] 商品の個別の購入画面に入った後、[戻る]が効かない。また、[購入する]を押しても戻らないので購入画面から移動できない
+    - 問題: 詳細ダイアログの戻るボタンが_close_dialog()のみで購入リストに戻らない、購入処理後も同様
+    - 修正: _close_dialog_and_return_to_buy_menu()メソッド追加、購入完了後に購入メニューに戻る処理追加
+    - ファイル: `src/overworld/facilities/shop.py`
+- [x] 商品の購入一覧画面で、その後ろにあるボタンに判定がある
+    - 問題: DirectScrolledListの背景フレームがクリックイベントを受け取らず、後ろのボタンがクリック可能
+    - 修正: 背景フレームにstate='normal'を追加してクリックをブロック
+    - ファイル: `src/overworld/facilities/shop.py`, `src/overworld/facilities/temple.py`, `src/overworld/facilities/magic_guild.py`, `src/ui/dungeon_selection_ui.py`
+- [x] 商品の購入、ダンジョンの一覧画面のレイアウト改善
+    - 問題: スクロールボタンが左右に配置、一覧が画面中央表示、表示幅が過度に広い
+    - 修正: スクロールボタンを上下配置、一覧を右寄せ表示、幅を縮小してレイアウト改善
+    - ファイル: `src/overworld/facilities/shop.py`, `src/overworld/facilities/temple.py`, `src/overworld/facilities/magic_guild.py`, `src/ui/dungeon_selection_ui.py`
 
 ### 優先度:高 (2025-06-18修正完了) - 新規修正
 

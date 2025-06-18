@@ -392,11 +392,12 @@ class Temple(BaseFacility):
         except:
             font = None
         
-        # 背景フレーム
+        # 背景フレーム（クリックをブロック）
         background = DirectFrame(
             frameColor=(0, 0, 0, 0.8),
             frameSize=(-1.5, 1.5, -1.2, 1.0),
-            pos=(0, 0, 0)
+            pos=(0, 0, 0),
+            state='normal'  # クリックイベントを受け取る
         )
         
         # タイトル
@@ -430,16 +431,16 @@ class Temple(BaseFacility):
         
         # DirectScrolledListを作成
         scrolled_list = DirectScrolledList(
-            frameSize=(-1.2, 1.2, -0.6, 0.6),
+            frameSize=(-0.8, 0.8, -0.6, 0.6),  # 幅を縮小
             frameColor=(0.2, 0.3, 0.2, 0.9),
-            pos=(0, 0, 0.1),
+            pos=(0.3, 0, 0.1),  # 右寄せに移動
             numItemsVisible=8,  # 一度に表示するアイテム数
             items=prayerbook_buttons,
             forceHeight=0.08,  # アイテム間隔を制御
-            itemFrame_frameSize=(-1.1, 1.1, -0.04, 0.04),
+            itemFrame_frameSize=(-0.7, 0.7, -0.04, 0.04),  # アイテム幅を調整
             itemFrame_pos=(0, 0, 0),
-            decButton_pos=(-1.15, 0, -0.65),
-            incButton_pos=(1.15, 0, -0.65),
+            decButton_pos=(0, 0, 0.65),  # 上に移動
+            incButton_pos=(0, 0, -0.65),  # 下に移動
             decButton_text="▲",
             incButton_text="▼",
             decButton_scale=0.05,
