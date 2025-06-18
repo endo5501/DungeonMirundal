@@ -145,10 +145,20 @@ class DungeonSelectionUI:
             pos=(0, 0, 0.1),
             
             # アイテム設定
-            numItemsVisible=5,  # 一度に表示するアイテム数
+            numItemsVisible=8,  # 一度に表示するアイテム数を増加
             items=dungeon_items,
-            itemFrame_frameSize=(-1.1, 1.1, -0.11, 0.11),
+            itemFrame_frameSize=(-1.1, 1.1, -0.04, 0.04),  # 高さを0.08に縮小
             itemFrame_pos=(0, 0, 0),
+            
+            # スクロールボタン位置調整
+            decButton_pos=(-1.15, 0, -0.65),
+            incButton_pos=(1.15, 0, -0.65),
+            decButton_text="▲",
+            incButton_text="▼",
+            decButton_scale=0.05,
+            incButton_scale=0.05,
+            decButton_text_fg=(1, 1, 1, 1),
+            incButton_text_fg=(1, 1, 1, 1),
             
             # デコレーション
             relief=1,  # RAISED
