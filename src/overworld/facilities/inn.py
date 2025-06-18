@@ -9,6 +9,7 @@ from src.utils.logger import logger
 from src.inventory.inventory import Inventory, InventoryManager
 from src.equipment.equipment import Equipment, EquipmentManager
 from src.magic.spells import SpellManager
+from src.items.item import item_manager
 
 
 class Inn(BaseFacility):
@@ -401,7 +402,7 @@ class Inn(BaseFacility):
         """キャラクターの魔法管理画面を表示"""
         spell_info = f"【{character.name} の魔法管理】\n\n"
         spell_info += f"職業: {character.character_class}\n"
-        spell_info += f"レベル: {character.level}\n\n"
+        spell_info += f"レベル: {character.experience.level}\n\n"
         
         # 習得済み魔法の表示
         if hasattr(character, 'learned_spells'):
@@ -508,7 +509,7 @@ class Inn(BaseFacility):
         """キャラクターの祈祷管理画面を表示"""
         prayer_info = f"【{character.name} の祈祷管理】\n\n"
         prayer_info += f"職業: {character.character_class}\n"
-        prayer_info += f"レベル: {character.level}\n\n"
+        prayer_info += f"レベル: {character.experience.level}\n\n"
         
         # 習得済み祈祷の表示
         if hasattr(character, 'learned_prayers'):
@@ -570,7 +571,7 @@ class Inn(BaseFacility):
                 
                 # 基本情報
                 equipment_info += f"  職業: {character.character_class}\n"
-                equipment_info += f"  レベル: {character.level}\n"
+                equipment_info += f"  レベル: {character.experience.level}\n"
                 
                 # 装備情報を取得
                 if hasattr(character, 'equipment'):

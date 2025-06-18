@@ -308,7 +308,7 @@ class Shop(BaseFacility):
             numItemsVisible=8,  # 一度に表示するアイテム数
             items=item_buttons,
             forceHeight=0.08,  # アイテム間隔を制御
-            itemFrame_frameSize=(-0.7, 0.7, -0.04, 0.04),  # アイテム幅を調整
+            itemFrame_frameSize=(-0.7, 0.7, -0.03, 0.03),  # アイテム幅を調整
             itemFrame_pos=(-0.7, 0, 0.5),  # アイテムを左上から開始
             decButton_pos=(0.85, 0, 0.35),  # リスト右端上部に配置
             incButton_pos=(0.85, 0, -0.35),  # リスト右端下部に配置
@@ -460,7 +460,7 @@ class Shop(BaseFacility):
             numItemsVisible=8,  # 一度に表示するアイテム数
             items=item_buttons,
             forceHeight=0.08,  # アイテム間隔を制御
-            itemFrame_frameSize=(-0.7, 0.7, -0.04, 0.04),  # アイテム幅を調整
+            itemFrame_frameSize=(-0.7, 0.7, -0.03, 0.03),  # アイテム幅を調整
             itemFrame_pos=(-0.7, 0, 0.5),  # アイテムを左上から開始
             decButton_pos=(0.85, 0, 0.35),  # リスト右端上部に配置
             incButton_pos=(0.85, 0, -0.35),  # リスト右端下部に配置
