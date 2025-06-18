@@ -61,8 +61,8 @@ class BaseFacility(ABC):
         # 施設固有の入場処理
         self._on_enter()
         
-        # 入場時にウェルカムメッセージを表示
-        self._show_welcome_message()
+        # 直接メインメニューを表示（ウェルカムメッセージをスキップ）
+        self._show_main_menu()
         
         logger.info(f"パーティが施設に入りました: {self.facility_id}")
         return True

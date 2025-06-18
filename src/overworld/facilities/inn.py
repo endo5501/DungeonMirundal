@@ -26,6 +26,11 @@ class Inn(BaseFacility):
     def _setup_menu_items(self, menu: UIMenu):
         """宿屋固有のメニュー項目を設定"""
         menu.add_menu_item(
+            "冒険の準備",
+            self._show_adventure_preparation
+        )
+        
+        menu.add_menu_item(
             "宿屋の主人と話す",
             self._talk_to_innkeeper
         )
@@ -234,3 +239,133 @@ class Inn(BaseFacility):
             return config_manager.get_text("inn.party_name.default_name")
         
         return name
+    
+    def _show_adventure_preparation(self):
+        """冒険の準備メニューを表示"""
+        if not self.current_party:
+            self._show_error_message("パーティが設定されていません")
+            return
+        
+        prep_menu = UIMenu("adventure_prep_menu", "冒険の準備")
+        
+        prep_menu.add_menu_item(
+            "アイテム整理",
+            self._show_item_organization
+        )
+        
+        prep_menu.add_menu_item(
+            "魔術スロット設定",
+            self._show_spell_slot_management
+        )
+        
+        prep_menu.add_menu_item(
+            "祈祷スロット設定",
+            self._show_prayer_slot_management
+        )
+        
+        prep_menu.add_menu_item(
+            "パーティ装備確認",
+            self._show_party_equipment_status
+        )
+        
+        prep_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_main_menu_from_submenu,
+            [prep_menu]
+        )
+        
+        self._show_submenu(prep_menu)
+    
+    def _show_item_organization(self):
+        """アイテム整理画面を表示"""
+        if not self.current_party:
+            return
+        
+        # TODO: Phase 4でアイテム整理システム実装
+        self._show_dialog(
+            "item_organization_dialog",
+            "アイテム整理",
+            "アイテム整理機能は開発中です。\n\n"
+            "現在のシステムでは、アイテムは\n"
+            "自動的にパーティインベントリに\n"
+            "格納されています。\n\n"
+            "Phase 4で詳細な整理機能を\n"
+            "実装予定です。"
+        )
+    
+    def _show_spell_slot_management(self):
+        """魔術スロット管理画面を表示"""
+        if not self.current_party:
+            return
+        
+        # TODO: Phase 4で魔術スロット管理システム実装
+        self._show_dialog(
+            "spell_slot_dialog",
+            "魔術スロット設定",
+            "魔術スロット設定機能は開発中です。\n\n"
+            "魔術師が習得した魔法を\n"
+            "戦闘で使用するためのスロットに\n"
+            "設定する機能です。\n\n"
+            "Phase 4で実装予定です。"
+        )
+    
+    def _show_prayer_slot_management(self):
+        """祈祷スロット管理画面を表示"""
+        if not self.current_party:
+            return
+        
+        # TODO: Phase 4で祈祷スロット管理システム実装
+        self._show_dialog(
+            "prayer_slot_dialog",
+            "祈祷スロット設定",
+            "祈祷スロット設定機能は開発中です。\n\n"
+            "僧侶が習得した祈祷を\n"
+            "戦闘で使用するためのスロットに\n"
+            "設定する機能です。\n\n"
+            "Phase 4で実装予定です。"
+        )
+    
+    def _show_party_equipment_status(self):
+        """パーティ装備状況確認画面を表示"""
+        if not self.current_party:
+            return
+        
+        equipment_info = "【パーティ装備状況】\n\n"
+        
+        for character in self.current_party.get_all_characters():
+            equipment_info += f"◆ {character.name}\n"
+            
+            # 基本情報
+            equipment_info += f"  職業: {character.character_class}\n"
+            equipment_info += f"  レベル: {character.level}\n"
+            
+            # 装備情報（TODO: Phase 4で詳細実装）
+            equipment_info += f"  武器: 未装備\n"
+            equipment_info += f"  防具: 未装備\n"
+            equipment_info += f"  アクセサリ: 未装備\n"
+            equipment_info += "\n"
+        
+        equipment_info += "※装備システムはPhase 4で実装予定です"
+        
+        self._show_dialog(
+            "equipment_status_dialog",
+            "パーティ装備状況",
+            equipment_info
+        )
+    
+    def _show_submenu(self, submenu: UIMenu):
+        """サブメニューを表示"""
+        # メインメニューを隠す
+        if self.main_menu:
+            ui_manager.hide_element(self.main_menu.element_id)
+        
+        ui_manager.register_element(submenu)
+        ui_manager.show_element(submenu.element_id, modal=True)
+    
+    def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
+        """サブメニューからメインメニューに戻る"""
+        ui_manager.hide_element(submenu.element_id)
+        ui_manager.unregister_element(submenu.element_id)
+        
+        if self.main_menu:
+            ui_manager.show_element(self.main_menu.element_id)
