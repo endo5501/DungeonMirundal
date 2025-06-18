@@ -57,22 +57,6 @@ class Inn(BaseFacility):
     def _on_enter(self):
         """宿屋入場時の処理"""
         logger.info("宿屋に入りました")
-        
-        # 入場時のメッセージを表示
-        welcome_message = (
-            "「いらっしゃいませ！\n"
-            "最近は皆さん、地上に戻るだけで\n"
-            "すっかり元気になってしまうので、\n"
-            "宿泊客が少なくて困っています。\n\n"
-            "でも、旅の情報や噂話なら\n"
-            "いくらでもお聞かせしますよ！」"
-        )
-        
-        self._show_dialog(
-            "inn_welcome_dialog",
-            "宿屋の主人",
-            welcome_message
-        )
     
     def _on_exit(self):
         """宿屋退場時の処理"""
@@ -281,26 +265,165 @@ class Inn(BaseFacility):
         self._show_submenu(prep_menu)
     
     def _show_item_organization(self):
-        """アイテム整理画面を表示"""
+        """アイテム整理画面を表示（新しい宿屋倉庫システム）"""
         if not self.current_party:
             return
         
         try:
-            # インベントリマネージャーを取得
-            inventory_manager = InventoryManager()
+            # 宿屋倉庫システムを使用
+            from src.overworld.inn_storage import inn_storage_manager
             
-            # パーティのインベントリを取得
+            # パーティインベントリから宿屋倉庫への移行（初回のみ）
             party_inventory = self.current_party.get_party_inventory()
-            if not party_inventory:
-                self._show_error_message("パーティインベントリが見つかりません")
-                return
+            if party_inventory:
+                # パーティインベントリにアイテムがある場合は移行
+                party_items_count = sum(1 for slot in party_inventory.slots if not slot.is_empty())
+                if party_items_count > 0:
+                    transferred = inn_storage_manager.transfer_from_party_inventory(self.current_party)
+                    if transferred > 0:
+                        self._show_dialog(
+                            "migration_info_dialog",
+                            "アイテム移行完了",
+                            f"パーティインベントリから宿屋倉庫に\\n{transferred}個のアイテムを移動しました。\\n\\n"
+                            "今後、購入したアイテムは直接\\n宿屋倉庫に搬入されます。"
+                        )
             
-            # インベントリUIを表示
-            self._show_inventory_ui(party_inventory)
+            # 新しいアイテム整理メニューを表示
+            self._show_new_item_organization_menu()
             
         except Exception as e:
             logger.error(f"アイテム整理画面表示エラー: {e}")
             self._show_error_message(f"アイテム整理画面の表示に失敗しました: {str(e)}")
+    
+    def _show_new_item_organization_menu(self):
+        """新しいアイテム整理メニューを表示"""
+        item_menu = UIMenu("item_organization_menu", "アイテム整理")
+        
+        item_menu.add_menu_item(
+            "宿屋倉庫の確認",
+            self._show_inn_storage_status
+        )
+        
+        item_menu.add_menu_item(
+            "キャラクター別アイテム管理",
+            self._show_character_item_management
+        )
+        
+        item_menu.add_menu_item(
+            "魔術・祈祷書の使用",
+            self._show_spell_item_usage
+        )
+        
+        item_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_main_menu_from_submenu,
+            [item_menu]
+        )
+        
+        self._show_submenu(item_menu)
+    
+    def _show_inn_storage_status(self):
+        """宿屋倉庫の状況を表示"""
+        from src.overworld.inn_storage import inn_storage_manager
+        
+        storage = inn_storage_manager.get_storage()
+        summary = inn_storage_manager.get_storage_summary()
+        
+        storage_info = "【宿屋倉庫の状況】\\n\\n"
+        storage_info += f"使用状況: {summary['used_slots']}/{summary['capacity']} スロット\\n"
+        storage_info += f"使用率: {summary['usage_percentage']:.1f}%\\n\\n"
+        
+        if summary['used_slots'] == 0:
+            storage_info += "倉庫は空です。\\n"
+        else:
+            storage_info += "保管中のアイテム:\\n"
+            items = storage.get_all_items()
+            for i, (slot_index, item_instance) in enumerate(items[:10]):  # 最初の10個まで表示
+                item = item_manager.get_item(item_instance.item_id)
+                if item:
+                    quantity_text = f" x{item_instance.quantity}" if item_instance.quantity > 1 else ""
+                    storage_info += f"  {item.get_name()}{quantity_text}\\n"
+            
+            if len(items) > 10:
+                storage_info += f"  ...他 {len(items) - 10} 個\\n"
+        
+        storage_info += "\\n※詳細な管理は「キャラクター別アイテム管理」で行えます"
+        
+        self._show_dialog(
+            "inn_storage_status_dialog",
+            "宿屋倉庫の状況",
+            storage_info
+        )
+    
+    def _show_character_item_management(self):
+        """キャラクター別アイテム管理を表示"""
+        if not self.current_party:
+            return
+        
+        char_menu = UIMenu("character_item_menu", "キャラクター選択")
+        
+        for character in self.current_party.get_all_characters():
+            char_info = f"{character.name} ({character.character_class})\\n"
+            # キャラクターインベントリの状況
+            char_inventory = character.get_inventory()
+            used_slots = sum(1 for slot in char_inventory.slots if not slot.is_empty())
+            char_info += f"所持: {used_slots}/{len(char_inventory.slots)} スロット"
+            
+            char_menu.add_menu_item(
+                char_info,
+                self._show_character_item_detail,
+                [character]
+            )
+        
+        char_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._show_new_item_organization_menu
+        )
+        
+        self._show_submenu(char_menu)
+    
+    def _show_character_item_detail(self, character):
+        """キャラクターのアイテム詳細管理"""
+        detail_info = f"【{character.name} のアイテム管理】\\n\\n"
+        
+        # キャラクターインベントリの表示
+        char_inventory = character.get_inventory()
+        used_slots = sum(1 for slot in char_inventory.slots if not slot.is_empty())
+        detail_info += f"個人インベントリ: {used_slots}/{len(char_inventory.slots)}\\n"
+        
+        if used_slots > 0:
+            detail_info += "所持アイテム:\\n"
+            for i, slot in enumerate(char_inventory.slots):
+                if not slot.is_empty():
+                    item_instance = slot.item_instance
+                    item = item_manager.get_item(item_instance.item_id)
+                    if item:
+                        quantity_text = f" x{item_instance.quantity}" if item_instance.quantity > 1 else ""
+                        detail_info += f"  [{i+1:2d}] {item.get_name()}{quantity_text}\\n"
+        else:
+            detail_info += "所持アイテムなし\\n"
+        
+        detail_info += "\\n※宿屋倉庫との間でアイテムを移動できます\\n"
+        detail_info += "※実装は次の段階で行います"
+        
+        self._show_dialog(
+            "character_item_detail_dialog",
+            f"{character.name} のアイテム管理",
+            detail_info
+        )
+    
+    def _show_spell_item_usage(self):
+        """魔術・祈祷書の使用メニュー"""
+        usage_info = "【魔術・祈祷書の使用】\\n\\n"
+        usage_info += "宿屋倉庫の魔術書・祈祷書を使用して\\n"
+        usage_info += "キャラクターに魔法を習得させることができます。\\n\\n"
+        usage_info += "※この機能は次の段階で実装予定です"
+        
+        self._show_dialog(
+            "spell_item_usage_dialog",
+            "魔術・祈祷書の使用",
+            usage_info
+        )
     
     def _show_inventory_ui(self, inventory):
         """インベントリUIを表示"""

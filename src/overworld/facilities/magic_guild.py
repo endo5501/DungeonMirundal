@@ -70,23 +70,6 @@ class MagicGuild(BaseFacility):
     def _on_enter(self):
         """魔術師ギルド入場時の処理"""
         logger.info("魔術師ギルドに入りました")
-        
-        # 入場時のメッセージ
-        welcome_message = (
-            "「ようこそ、魔術師ギルドへ。\n\n"
-            "ここでは魔術書の販売、アイテムの鑑定、\n"
-            "そして様々な魔術的サービスを\n"
-            "提供しております。\n\n"
-            "魔術書から魔法を習得し、\n"
-            "知識こそ力、魔法こそ真理です。\n"
-            "何かご用件はありますか？」"
-        )
-        
-        self._show_dialog(
-            "magic_guild_welcome_dialog",
-            "大魔術師",
-            welcome_message
-        )
     
     def _on_exit(self):
         """魔術師ギルド退場時の処理"""

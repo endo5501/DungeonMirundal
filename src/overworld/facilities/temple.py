@@ -60,22 +60,6 @@ class Temple(BaseFacility):
     def _on_enter(self):
         """教会入場時の処理"""
         logger.info("教会に入りました")
-        
-        # 入場時のメッセージ
-        welcome_message = (
-            "「神の加護がありますように。\n\n"
-            "ここは聖なる場所です。\n"
-            "疲れた魂を癒し、\n"
-            "失われた命を取り戻し、\n"
-            "神の祝福を授けることができます。\n\n"
-            "何かお困りのことはありませんか？」"
-        )
-        
-        self._show_dialog(
-            "temple_welcome_dialog",
-            "神父",
-            welcome_message
-        )
     
     def _on_exit(self):
         """教会退場時の処理"""

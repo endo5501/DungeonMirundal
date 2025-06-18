@@ -71,15 +71,6 @@ class Shop(BaseFacility):
     def _on_enter(self):
         """商店入場時の処理"""
         logger.info(config_manager.get_text("shop.messages.entered_shop"))
-        
-        # 入場時のメッセージ
-        welcome_message = config_manager.get_text("shop.welcome_message")
-        
-        self._show_dialog(
-            "shop_welcome_dialog",
-            config_manager.get_text("shop.shopkeeper.title"),
-            welcome_message
-        )
     
     def _on_exit(self):
         """商店退場時の処理"""
@@ -229,19 +220,17 @@ class Shop(BaseFacility):
         # 購入処理
         self.current_party.gold -= item.price
         
-        # パーティインベントリにアイテム追加
-        party_inventory = self.current_party.get_party_inventory()
-        if party_inventory:
-            success = party_inventory.add_item(instance)
-            if not success:
-                # インベントリが満杯の場合の処理
-                self.current_party.gold += item.price  # ゴールドを戻す
-                self._show_error_message(config_manager.get_text("shop.messages.inventory_full"))
-                return
+        # 宿屋倉庫にアイテムを直接搬入
+        from src.overworld.inn_storage import inn_storage_manager
+        storage = inn_storage_manager.get_storage()
+        success = storage.add_item(instance)
+        if not success:
+            # 宿屋倉庫が満杯の場合の処理
+            self.current_party.gold += item.price  # ゴールドを戻す
+            self._show_error_message("宿屋の倉庫が満杯です。倉庫を整理してください。")
+            return
         
-        success_message = config_manager.get_text("shop.purchase.purchase_success").format(
-                                                  item_name=item.get_name(), 
-                                                  gold=self.current_party.gold)
+        success_message = f"{item.get_name()}を購入し、宿屋の倉庫に搬入しました。\n残りゴールド: {self.current_party.gold}G"
         self._show_success_message(success_message)
         
         logger.info(f"アイテム購入: {item.item_id} ({item.price}G)")
