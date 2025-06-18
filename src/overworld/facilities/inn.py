@@ -384,33 +384,421 @@ class Inn(BaseFacility):
     
     def _show_character_item_detail(self, character):
         """キャラクターのアイテム詳細管理"""
-        detail_info = f"【{character.name} のアイテム管理】\\n\\n"
+        item_mgmt_menu = UIMenu("character_item_mgmt_menu", f"{character.name} のアイテム管理")
         
-        # キャラクターインベントリの表示
+        item_mgmt_menu.add_menu_item(
+            "倉庫→キャラクター",
+            self._show_storage_to_character_transfer,
+            [character]
+        )
+        
+        item_mgmt_menu.add_menu_item(
+            "キャラクター→倉庫",
+            self._show_character_to_storage_transfer,
+            [character]
+        )
+        
+        item_mgmt_menu.add_menu_item(
+            "アイテム使用",
+            self._show_character_item_usage,
+            [character]
+        )
+        
+        item_mgmt_menu.add_menu_item(
+            "所持状況確認",
+            self._show_character_inventory_status,
+            [character]
+        )
+        
+        item_mgmt_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._show_character_item_management
+        )
+        
+        self._show_submenu(item_mgmt_menu)
+    
+    def _show_storage_to_character_transfer(self, character):
+        """倉庫からキャラクターへのアイテム転送UI"""
+        from src.overworld.inn_storage import inn_storage_manager
+        
+        storage = inn_storage_manager.get_storage()
+        storage_items = storage.get_all_items()
+        
+        if not storage_items:
+            self._show_dialog(
+                "no_storage_items_dialog",
+                "倉庫→キャラクター",
+                "宿屋倉庫にアイテムがありません。"
+            )
+            return
+        
+        self._show_storage_item_list(character, storage_items, "transfer_to_character")
+    
+    def _show_character_to_storage_transfer(self, character):
+        """キャラクターから倉庫への転送UI"""
+        char_inventory = character.get_inventory()
+        char_items = []
+        
+        for i, slot in enumerate(char_inventory.slots):
+            if not slot.is_empty():
+                char_items.append((i, slot.item_instance))
+        
+        if not char_items:
+            self._show_dialog(
+                "no_char_items_dialog",
+                "キャラクター→倉庫",
+                f"{character.name}はアイテムを所持していません。"
+            )
+            return
+        
+        self._show_character_item_list(character, char_items, "transfer_to_storage")
+    
+    def _show_storage_item_list(self, character, items, action_type):
+        """倉庫アイテム一覧をDirectScrolledListで表示"""
+        # 既存のUIがあれば削除
+        if hasattr(self, 'inn_item_ui_elements'):
+            self._cleanup_inn_item_ui()
+        
+        # フォント取得
+        try:
+            from src.ui.font_manager import font_manager
+            font = font_manager.get_default_font()
+        except:
+            font = None
+        
+        # 背景フレーム
+        background = DirectFrame(
+            frameColor=(0, 0, 0, 0.8),
+            frameSize=(-1.5, 1.5, -1.2, 1.0),
+            pos=(0, 0, 0),
+            state='normal'
+        )
+        
+        # タイトル
+        title_text = f"宿屋倉庫 → {character.name}"
+        title_label = DirectLabel(
+            text=title_text,
+            scale=0.08,
+            pos=(0, 0, 0.8),
+            text_fg=(1, 1, 0, 1),
+            frameColor=(0, 0, 0, 0),
+            text_font=font
+        )
+        
+        # アイテムボタンを作成
+        item_buttons = []
+        for slot_index, item_instance in items:
+            item = item_manager.get_item(item_instance.item_id)
+            if item:
+                display_name = self._format_transfer_item_display(item_instance, item)
+                
+                item_button = DirectButton(
+                    text=display_name,
+                    scale=0.05,
+                    text_scale=0.9,
+                    text_align=0,
+                    command=lambda si=slot_index, ii=item_instance, i=item, c=character: 
+                            self._confirm_storage_to_character_transfer(c, si, ii, i),
+                    frameColor=(0.3, 0.5, 0.7, 0.8),
+                    text_fg=(1, 1, 1, 1),
+                    text_font=font,
+                    relief=1,
+                    borderWidth=(0.01, 0.01)
+                )
+                item_buttons.append(item_button)
+        
+        # DirectScrolledList作成
+        scrolled_list = DirectScrolledList(
+            frameSize=(-0.8, 0.8, -0.6, 0.6),
+            frameColor=(0.2, 0.3, 0.5, 0.9),
+            pos=(0.3, 0, 0.1),
+            numItemsVisible=8,
+            items=item_buttons,
+            forceHeight=0.08,
+            itemFrame_frameSize=(-0.7, 0.7, -0.03, 0.03),
+            itemFrame_pos=(-0.7, 0, 0.5),
+            decButton_pos=(0.85, 0, 0.35),
+            incButton_pos=(0.85, 0, -0.35),
+            decButton_text="▲",
+            incButton_text="▼",
+            decButton_scale=0.05,
+            incButton_scale=0.05,
+            decButton_text_fg=(1, 1, 1, 1),
+            incButton_text_fg=(1, 1, 1, 1)
+        )
+        
+        # 戻るボタン
+        back_button = DirectButton(
+            text=config_manager.get_text("menu.back"),
+            scale=0.06,
+            pos=(0, 0, -0.9),
+            command=lambda: self._cleanup_and_return_to_character_detail(character),
+            frameColor=(0.7, 0.2, 0.2, 0.8),
+            text_fg=(1, 1, 1, 1),
+            text_font=font,
+            relief=1,
+            borderWidth=(0.01, 0.01)
+        )
+        
+        # UI要素を保存
+        self.inn_item_ui_elements = {
+            'background': background,
+            'title': title_label,
+            'scrolled_list': scrolled_list,
+            'back_button': back_button,
+            'character': character
+        }
+    
+    def _show_character_item_list(self, character, items, action_type):
+        """キャラクターアイテム一覧をDirectScrolledListで表示"""
+        # 既存のUIがあれば削除
+        if hasattr(self, 'inn_item_ui_elements'):
+            self._cleanup_inn_item_ui()
+        
+        # フォント取得
+        try:
+            from src.ui.font_manager import font_manager
+            font = font_manager.get_default_font()
+        except:
+            font = None
+        
+        # 背景フレーム
+        background = DirectFrame(
+            frameColor=(0, 0, 0, 0.8),
+            frameSize=(-1.5, 1.5, -1.2, 1.0),
+            pos=(0, 0, 0),
+            state='normal'
+        )
+        
+        # タイトル
+        title_text = f"{character.name} → 宿屋倉庫"
+        title_label = DirectLabel(
+            text=title_text,
+            scale=0.08,
+            pos=(0, 0, 0.8),
+            text_fg=(1, 1, 0, 1),
+            frameColor=(0, 0, 0, 0),
+            text_font=font
+        )
+        
+        # アイテムボタンを作成
+        item_buttons = []
+        for slot_index, item_instance in items:
+            item = item_manager.get_item(item_instance.item_id)
+            if item:
+                display_name = self._format_transfer_item_display(item_instance, item)
+                
+                item_button = DirectButton(
+                    text=display_name,
+                    scale=0.05,
+                    text_scale=0.9,
+                    text_align=0,
+                    command=lambda si=slot_index, ii=item_instance, i=item, c=character: 
+                            self._confirm_character_to_storage_transfer(c, si, ii, i),
+                    frameColor=(0.5, 0.3, 0.3, 0.8),
+                    text_fg=(1, 1, 1, 1),
+                    text_font=font,
+                    relief=1,
+                    borderWidth=(0.01, 0.01)
+                )
+                item_buttons.append(item_button)
+        
+        # DirectScrolledList作成
+        scrolled_list = DirectScrolledList(
+            frameSize=(-0.8, 0.8, -0.6, 0.6),
+            frameColor=(0.5, 0.2, 0.2, 0.9),
+            pos=(0.3, 0, 0.1),
+            numItemsVisible=8,
+            items=item_buttons,
+            forceHeight=0.08,
+            itemFrame_frameSize=(-0.7, 0.7, -0.03, 0.03),
+            itemFrame_pos=(-0.7, 0, 0.5),
+            decButton_pos=(0.85, 0, 0.35),
+            incButton_pos=(0.85, 0, -0.35),
+            decButton_text="▲",
+            incButton_text="▼",
+            decButton_scale=0.05,
+            incButton_scale=0.05,
+            decButton_text_fg=(1, 1, 1, 1),
+            incButton_text_fg=(1, 1, 1, 1)
+        )
+        
+        # 戻るボタン
+        back_button = DirectButton(
+            text=config_manager.get_text("menu.back"),
+            scale=0.06,
+            pos=(0, 0, -0.9),
+            command=lambda: self._cleanup_and_return_to_character_detail(character),
+            frameColor=(0.7, 0.2, 0.2, 0.8),
+            text_fg=(1, 1, 1, 1),
+            text_font=font,
+            relief=1,
+            borderWidth=(0.01, 0.01)
+        )
+        
+        # UI要素を保存
+        self.inn_item_ui_elements = {
+            'background': background,
+            'title': title_label,
+            'scrolled_list': scrolled_list,
+            'back_button': back_button,
+            'character': character
+        }
+    
+    def _format_transfer_item_display(self, item_instance, item) -> str:
+        """転送用アイテム表示名をフォーマット"""
+        quantity_text = f" x{item_instance.quantity}" if item_instance.quantity > 1 else ""
+        return f"📦 {item.get_name()}{quantity_text}"
+    
+    def _confirm_storage_to_character_transfer(self, character, slot_index, item_instance, item):
+        """倉庫→キャラクター転送確認"""
+        self._cleanup_inn_item_ui()
+        
+        if item_instance.quantity > 1:
+            # 数量選択ダイアログ
+            self._show_quantity_selection_dialog(
+                character, slot_index, item_instance, item, "storage_to_character"
+            )
+        else:
+            # 直接転送
+            self._execute_storage_to_character_transfer(character, slot_index, 1)
+    
+    def _confirm_character_to_storage_transfer(self, character, slot_index, item_instance, item):
+        """キャラクター→倉庫転送確認"""
+        self._cleanup_inn_item_ui()
+        
+        if item_instance.quantity > 1:
+            # 数量選択ダイアログ
+            self._show_quantity_selection_dialog(
+                character, slot_index, item_instance, item, "character_to_storage"
+            )
+        else:
+            # 直接転送
+            self._execute_character_to_storage_transfer(character, slot_index, 1)
+    
+    def _show_quantity_selection_dialog(self, character, slot_index, item_instance, item, transfer_type):
+        """数量選択ダイアログを表示"""
+        quantity_menu = UIMenu("quantity_selection_menu", f"{item.get_name()} の数量選択")
+        
+        max_quantity = item_instance.quantity
+        
+        # 1個ずつのオプション
+        quantity_menu.add_menu_item(
+            "1個",
+            self._execute_transfer_with_quantity,
+            [character, slot_index, 1, transfer_type]
+        )
+        
+        # 半分のオプション（2個以上の場合）
+        if max_quantity >= 2:
+            half_quantity = max_quantity // 2
+            quantity_menu.add_menu_item(
+                f"{half_quantity}個（半分）",
+                self._execute_transfer_with_quantity,
+                [character, slot_index, half_quantity, transfer_type]
+            )
+        
+        # 全部のオプション
+        quantity_menu.add_menu_item(
+            f"{max_quantity}個（全部）",
+            self._execute_transfer_with_quantity,
+            [character, slot_index, max_quantity, transfer_type]
+        )
+        
+        quantity_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._show_character_item_detail,
+            [character]
+        )
+        
+        self._show_submenu(quantity_menu)
+    
+    def _execute_transfer_with_quantity(self, character, slot_index, quantity, transfer_type):
+        """指定数量でアイテム転送を実行"""
+        if transfer_type == "storage_to_character":
+            success = self._execute_storage_to_character_transfer(character, slot_index, quantity)
+        else:
+            success = self._execute_character_to_storage_transfer(character, slot_index, quantity)
+        
+        # 転送後、キャラクター詳細に戻る
+        self._show_character_item_detail(character)
+    
+    def _execute_storage_to_character_transfer(self, character, slot_index, quantity):
+        """倉庫→キャラクター転送を実行"""
+        from src.overworld.inn_storage import inn_storage_manager
+        
+        success = inn_storage_manager.transfer_to_character_inventory(character, slot_index, quantity)
+        
+        if success:
+            self._show_success_message(f"アイテムを{character.name}に渡しました。")
+        else:
+            self._show_error_message(f"{character.name}のインベントリが満杯です。")
+        
+        return success
+    
+    def _execute_character_to_storage_transfer(self, character, slot_index, quantity):
+        """キャラクター→倉庫転送を実行"""
+        from src.overworld.inn_storage import inn_storage_manager
+        
+        success = inn_storage_manager.transfer_from_character_inventory(character, slot_index, quantity)
+        
+        if success:
+            self._show_success_message(f"{character.name}のアイテムを倉庫に預けました。")
+        else:
+            self._show_error_message("宿屋倉庫が満杯です。")
+        
+        return success
+    
+    def _show_character_item_usage(self, character):
+        """キャラクターアイテム使用"""
+        usage_info = f"【{character.name} のアイテム使用】\\n\\n"
+        usage_info += "所持アイテムを使用できます。\\n"
+        usage_info += "※この機能は後の段階で実装予定です"
+        
+        self._show_dialog(
+            "character_item_usage_dialog",
+            f"{character.name} のアイテム使用",
+            usage_info
+        )
+    
+    def _show_character_inventory_status(self, character):
+        """キャラクター所持状況確認"""
         char_inventory = character.get_inventory()
         used_slots = sum(1 for slot in char_inventory.slots if not slot.is_empty())
-        detail_info += f"個人インベントリ: {used_slots}/{len(char_inventory.slots)}\\n"
+        
+        status_info = f"【{character.name} の所持状況】\\n\\n"
+        status_info += f"個人インベントリ: {used_slots}/{len(char_inventory.slots)} スロット\\n\\n"
         
         if used_slots > 0:
-            detail_info += "所持アイテム:\\n"
+            status_info += "所持アイテム:\\n"
             for i, slot in enumerate(char_inventory.slots):
                 if not slot.is_empty():
                     item_instance = slot.item_instance
                     item = item_manager.get_item(item_instance.item_id)
                     if item:
                         quantity_text = f" x{item_instance.quantity}" if item_instance.quantity > 1 else ""
-                        detail_info += f"  [{i+1:2d}] {item.get_name()}{quantity_text}\\n"
+                        status_info += f"  [{i+1:2d}] {item.get_name()}{quantity_text}\\n"
         else:
-            detail_info += "所持アイテムなし\\n"
-        
-        detail_info += "\\n※宿屋倉庫との間でアイテムを移動できます\\n"
-        detail_info += "※実装は次の段階で行います"
+            status_info += "所持アイテムなし"
         
         self._show_dialog(
-            "character_item_detail_dialog",
-            f"{character.name} のアイテム管理",
-            detail_info
+            "character_inventory_status_dialog",
+            f"{character.name} の所持状況",
+            status_info
         )
+    
+    def _cleanup_inn_item_ui(self):
+        """宿屋アイテムUIのクリーンアップ"""
+        if hasattr(self, 'inn_item_ui_elements'):
+            for element in self.inn_item_ui_elements.values():
+                if hasattr(element, 'destroy'):
+                    element.destroy()
+            delattr(self, 'inn_item_ui_elements')
+    
+    def _cleanup_and_return_to_character_detail(self, character):
+        """UIをクリーンアップしてキャラクター詳細に戻る"""
+        self._cleanup_inn_item_ui()
+        self._show_character_item_detail(character)
     
     def _show_spell_item_usage(self):
         """魔術・祈祷書の使用メニュー"""
@@ -457,7 +845,7 @@ class Inn(BaseFacility):
         )
     
     def _show_spell_slot_management(self):
-        """魔術スロット管理画面を表示"""
+        """魔術スロット管理画面を表示（新システム）"""
         if not self.current_party:
             return
         
@@ -465,7 +853,7 @@ class Inn(BaseFacility):
             # 魔法を使用できるキャラクターを検索
             spell_users = []
             for character in self.current_party.get_all_characters():
-                if hasattr(character, 'spell_slots') or character.character_class in ['mage', 'priest', 'bishop']:
+                if character.character_class in ['mage', 'priest', 'bishop']:
                     spell_users.append(character)
             
             if not spell_users:
@@ -479,12 +867,360 @@ class Inn(BaseFacility):
                 )
                 return
             
-            # 魔法使いキャラクター選択メニューを表示
-            self._show_spell_user_selection(spell_users)
+            # 新しい魔法使いキャラクター選択メニューを表示
+            self._show_new_spell_user_selection(spell_users)
             
         except Exception as e:
             logger.error(f"魔術スロット管理画面表示エラー: {e}")
             self._show_error_message(f"魔術スロット管理画面の表示に失敗しました: {str(e)}")
+    
+    def _show_new_spell_user_selection(self, spell_users):
+        """新しい魔法使いキャラクター選択画面"""
+        spell_user_menu = UIMenu("spell_user_selection", "魔術スロット設定 - キャラクター選択")
+        
+        for character in spell_users:
+            # キャラクターの魔法情報を取得
+            spell_info = self._get_character_spell_summary(character)
+            display_name = f"{character.name} ({character.character_class})\\n{spell_info}"
+            
+            spell_user_menu.add_menu_item(
+                display_name,
+                self._show_character_spell_slot_detail,
+                [character]
+            )
+        
+        spell_user_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_main_menu_from_submenu,
+            [spell_user_menu]
+        )
+        
+        self._show_submenu(spell_user_menu)
+    
+    def _get_character_spell_summary(self, character) -> str:
+        """キャラクターの魔法要約情報を取得"""
+        try:
+            # スペルブックを取得または初期化
+            spellbook = self._get_or_create_spellbook(character)
+            
+            learned_count = len(spellbook.learned_spells)
+            
+            # スロット使用状況を計算
+            total_slots = 0
+            equipped_slots = 0
+            
+            for level, slots in spellbook.spell_slots.items():
+                total_slots += len(slots)
+                equipped_slots += sum(1 for slot in slots if not slot.is_empty())
+            
+            return f"習得魔法: {learned_count}個\\nスロット: {equipped_slots}/{total_slots}"
+        except:
+            return "魔法情報取得不可"
+    
+    def _get_or_create_spellbook(self, character):
+        """キャラクターのスペルブックを取得または作成"""
+        from src.magic.spells import SpellBook
+        
+        # キャラクターにスペルブックがない場合は作成
+        if not hasattr(character, 'spellbook'):
+            character.spellbook = SpellBook(character.character_id)
+            
+            # 基本魔法を習得させる（テスト用）
+            if character.character_class == 'mage':
+                character.spellbook.learn_spell('fireball')
+                character.spellbook.learn_spell('ice_shard')
+                character.spellbook.learn_spell('lightning_bolt')
+            elif character.character_class == 'priest':
+                character.spellbook.learn_spell('heal')
+                character.spellbook.learn_spell('cure_poison')
+                character.spellbook.learn_spell('blessing')
+            elif character.character_class == 'bishop':
+                character.spellbook.learn_spell('fireball')
+                character.spellbook.learn_spell('heal')
+                character.spellbook.learn_spell('dispel_magic')
+        
+        return character.spellbook
+    
+    def _show_character_spell_slot_detail(self, character):
+        """キャラクターの魔術スロット詳細管理"""
+        spell_mgmt_menu = UIMenu("character_spell_mgmt_menu", f"{character.name} の魔術スロット管理")
+        
+        spell_mgmt_menu.add_menu_item(
+            "スロット状況確認",
+            self._show_spell_slot_status,
+            [character]
+        )
+        
+        spell_mgmt_menu.add_menu_item(
+            "魔法をスロットに装備",
+            self._show_spell_equip_menu,
+            [character]
+        )
+        
+        spell_mgmt_menu.add_menu_item(
+            "スロットから魔法を解除",
+            self._show_spell_unequip_menu,
+            [character]
+        )
+        
+        spell_mgmt_menu.add_menu_item(
+            "習得済み魔法一覧",
+            self._show_learned_spells_list,
+            [character]
+        )
+        
+        spell_mgmt_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._show_new_spell_user_selection,
+            [self._get_spell_users()]
+        )
+        
+        self._show_submenu(spell_mgmt_menu)
+    
+    def _get_spell_users(self):
+        """魔法使いキャラクターリストを取得"""
+        spell_users = []
+        for character in self.current_party.get_all_characters():
+            if character.character_class in ['mage', 'priest', 'bishop']:
+                spell_users.append(character)
+        return spell_users
+    
+    def _show_spell_slot_status(self, character):
+        """スロット状況を表示"""
+        spellbook = self._get_or_create_spellbook(character)
+        
+        status_info = f"【{character.name} のスロット状況】\\n\\n"
+        status_info += f"職業: {character.character_class}\\n"
+        status_info += f"レベル: {character.experience.level}\\n\\n"
+        
+        # レベル別スロット状況
+        for level in sorted(spellbook.spell_slots.keys()):
+            slots = spellbook.spell_slots[level]
+            status_info += f"Lv.{level} スロット ({len(slots)}個):\\n"
+            
+            for i, slot in enumerate(slots):
+                if slot.is_empty():
+                    status_info += f"  [{i+1}] 空\\n"
+                else:
+                    uses_text = f" ({slot.current_uses}/{slot.max_uses}回)"
+                    status_info += f"  [{i+1}] {slot.spell_id}{uses_text}\\n"
+            status_info += "\\n"
+        
+        status_info += "※スロットに装備した魔法は戦闘で使用できます"
+        
+        self._show_dialog(
+            "spell_slot_status_dialog",
+            f"{character.name} のスロット状況",
+            status_info
+        )
+    
+    def _show_spell_equip_menu(self, character):
+        """魔法装備メニューを表示"""
+        spellbook = self._get_or_create_spellbook(character)
+        
+        if not spellbook.learned_spells:
+            self._show_dialog(
+                "no_learned_spells_dialog",
+                "魔法装備",
+                f"{character.name}は魔法を習得していません。\\n\\n"
+                "魔術師ギルドで魔術書を購入するか、\\n"
+                "アイテムから魔法を習得してください。"
+            )
+            return
+        
+        # 装備可能な魔法のリストを表示
+        self._show_equippable_spells_list(character, spellbook)
+    
+    def _show_equippable_spells_list(self, character, spellbook):
+        """装備可能魔法リストをDirectScrolledListで表示"""
+        from src.magic.spells import spell_manager
+        
+        # 既存のUIがあれば削除
+        if hasattr(self, 'spell_mgmt_ui_elements'):
+            self._cleanup_spell_mgmt_ui()
+        
+        # フォント取得
+        try:
+            from src.ui.font_manager import font_manager
+            font = font_manager.get_default_font()
+        except:
+            font = None
+        
+        # 背景フレーム
+        background = DirectFrame(
+            frameColor=(0, 0, 0, 0.8),
+            frameSize=(-1.5, 1.5, -1.2, 1.0),
+            pos=(0, 0, 0),
+            state='normal'
+        )
+        
+        # タイトル
+        title_text = f"{character.name} - 魔法装備"
+        title_label = DirectLabel(
+            text=title_text,
+            scale=0.08,
+            pos=(0, 0, 0.8),
+            text_fg=(1, 1, 0, 1),
+            frameColor=(0, 0, 0, 0),
+            text_font=font
+        )
+        
+        # 魔法ボタンを作成
+        spell_buttons = []
+        for spell_id in spellbook.learned_spells:
+            spell = spell_manager.get_spell(spell_id)
+            if spell:
+                display_name = f"🔮 Lv.{spell.level} {spell.get_name()}"
+                
+                spell_button = DirectButton(
+                    text=display_name,
+                    scale=0.05,
+                    text_scale=0.9,
+                    text_align=0,
+                    command=lambda s=spell, c=character: self._show_slot_selection_for_equip(c, s),
+                    frameColor=(0.3, 0.3, 0.7, 0.8),
+                    text_fg=(1, 1, 1, 1),
+                    text_font=font,
+                    relief=1,
+                    borderWidth=(0.01, 0.01)
+                )
+                spell_buttons.append(spell_button)
+        
+        # DirectScrolledList作成
+        scrolled_list = DirectScrolledList(
+            frameSize=(-0.8, 0.8, -0.6, 0.6),
+            frameColor=(0.2, 0.2, 0.5, 0.9),
+            pos=(0.3, 0, 0.1),
+            numItemsVisible=8,
+            items=spell_buttons,
+            forceHeight=0.08,
+            itemFrame_frameSize=(-0.7, 0.7, -0.03, 0.03),
+            itemFrame_pos=(-0.7, 0, 0.5),
+            decButton_pos=(0.85, 0, 0.35),
+            incButton_pos=(0.85, 0, -0.35),
+            decButton_text="▲",
+            incButton_text="▼",
+            decButton_scale=0.05,
+            incButton_scale=0.05,
+            decButton_text_fg=(1, 1, 1, 1),
+            incButton_text_fg=(1, 1, 1, 1)
+        )
+        
+        # 戻るボタン
+        back_button = DirectButton(
+            text=config_manager.get_text("menu.back"),
+            scale=0.06,
+            pos=(0, 0, -0.9),
+            command=lambda: self._cleanup_and_return_to_spell_detail(character),
+            frameColor=(0.7, 0.2, 0.2, 0.8),
+            text_fg=(1, 1, 1, 1),
+            text_font=font,
+            relief=1,
+            borderWidth=(0.01, 0.01)
+        )
+        
+        # UI要素を保存
+        self.spell_mgmt_ui_elements = {
+            'background': background,
+            'title': title_label,
+            'scrolled_list': scrolled_list,
+            'back_button': back_button,
+            'character': character
+        }
+    
+    def _show_slot_selection_for_equip(self, character, spell):
+        """魔法装備用のスロット選択"""
+        self._cleanup_spell_mgmt_ui()
+        
+        spellbook = self._get_or_create_spellbook(character)
+        
+        slot_menu = UIMenu("slot_selection_menu", f"{spell.get_name()} の装備スロット選択")
+        
+        # 装備可能なスロットレベルのみ表示
+        for level in sorted(spellbook.spell_slots.keys()):
+            if spell.level <= level:  # 魔法レベル以上のスロットのみ
+                slots = spellbook.spell_slots[level]
+                for i, slot in enumerate(slots):
+                    slot_status = "空" if slot.is_empty() else f"装備中: {slot.spell_id}"
+                    slot_name = f"Lv.{level} スロット[{i+1}] - {slot_status}"
+                    
+                    slot_menu.add_menu_item(
+                        slot_name,
+                        self._equip_spell_to_slot,
+                        [character, spell.spell_id, level, i]
+                    )
+        
+        slot_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._show_spell_equip_menu,
+            [character]
+        )
+        
+        self._show_submenu(slot_menu)
+    
+    def _equip_spell_to_slot(self, character, spell_id, level, slot_index):
+        """魔法をスロットに装備"""
+        spellbook = self._get_or_create_spellbook(character)
+        
+        success = spellbook.equip_spell_to_slot(spell_id, level, slot_index)
+        
+        if success:
+            self._show_success_message(f"{spell_id}をLv.{level}スロット[{slot_index+1}]に装備しました。")
+        else:
+            self._show_error_message("魔法の装備に失敗しました。")
+        
+        # スロット詳細に戻る
+        self._show_character_spell_slot_detail(character)
+    
+    def _cleanup_spell_mgmt_ui(self):
+        """魔法管理UIのクリーンアップ"""
+        if hasattr(self, 'spell_mgmt_ui_elements'):
+            for element in self.spell_mgmt_ui_elements.values():
+                if hasattr(element, 'destroy'):
+                    element.destroy()
+            delattr(self, 'spell_mgmt_ui_elements')
+    
+    def _cleanup_and_return_to_spell_detail(self, character):
+        """UIをクリーンアップして魔法詳細に戻る"""
+        self._cleanup_spell_mgmt_ui()
+        self._show_character_spell_slot_detail(character)
+    
+    def _show_spell_unequip_menu(self, character):
+        """魔法解除メニュー"""
+        unequip_info = f"【{character.name} の魔法解除】\\n\\n"
+        unequip_info += "装備中の魔法をスロットから解除できます。\\n"
+        unequip_info += "※この機能は次の段階で実装予定です"
+        
+        self._show_dialog(
+            "spell_unequip_dialog",
+            f"{character.name} の魔法解除",
+            unequip_info
+        )
+    
+    def _show_learned_spells_list(self, character):
+        """習得済み魔法一覧"""
+        spellbook = self._get_or_create_spellbook(character)
+        
+        spells_info = f"【{character.name} の習得済み魔法】\\n\\n"
+        
+        if not spellbook.learned_spells:
+            spells_info += "習得済み魔法がありません。\\n\\n"
+            spells_info += "魔術師ギルドで魔術書を購入するか、\\n"
+            spells_info += "アイテムから魔法を習得してください。"
+        else:
+            from src.magic.spells import spell_manager
+            
+            for spell_id in spellbook.learned_spells:
+                spell = spell_manager.get_spell(spell_id)
+                if spell:
+                    spells_info += f"🔮 Lv.{spell.level} {spell.get_name()}\\n"
+                    spells_info += f"    {spell.get_description()}\\n\\n"
+        
+        self._show_dialog(
+            "learned_spells_dialog",
+            f"{character.name} の習得済み魔法",
+            spells_info
+        )
     
     def _show_spell_user_selection(self, spell_users):
         """魔法使いキャラクター選択画面を表示"""
@@ -682,54 +1418,176 @@ class Inn(BaseFacility):
         )
     
     def _show_party_equipment_status(self):
-        """パーティ装備状況確認画面を表示"""
+        """パーティ装備管理画面を表示（新システム）"""
         if not self.current_party:
             return
         
         try:
-            equipment_info = "【パーティ装備状況】\n\n"
+            # キャラクター選択メニューを表示
+            self._show_equipment_character_selection()
             
-            for character in self.current_party.get_all_characters():
-                equipment_info += f"◆ {character.name}\n"
-                
-                # 基本情報
-                equipment_info += f"  職業: {character.character_class}\n"
-                equipment_info += f"  レベル: {character.experience.level}\n"
-                
-                # 装備情報を取得
-                if hasattr(character, 'equipment'):
-                    equipment = character.equipment
-                    equipment_info += f"  武器: {self._get_equipment_name(equipment, 'weapon')}\n"
-                    equipment_info += f"  防具: {self._get_equipment_name(equipment, 'armor')}\n"
-                    equipment_info += f"  アクセサリ1: {self._get_equipment_name(equipment, 'accessory_1')}\n"
-                    equipment_info += f"  アクセサリ2: {self._get_equipment_name(equipment, 'accessory_2')}\n"
-                    
-                    # 装備ボーナス情報
-                    if hasattr(equipment, 'get_total_bonus'):
-                        bonus = equipment.get_total_bonus()
-                        if any(getattr(bonus, attr, 0) > 0 for attr in ['strength', 'agility', 'intelligence', 'faith', 'luck', 'attack_power', 'defense_power']):
-                            equipment_info += f"  装備ボーナス: "
-                            bonuses = []
-                            if bonus.strength > 0: bonuses.append(f"力+{bonus.strength}")
-                            if bonus.agility > 0: bonuses.append(f"敏+{bonus.agility}")
-                            if bonus.intelligence > 0: bonuses.append(f"知+{bonus.intelligence}")
-                            if bonus.faith > 0: bonuses.append(f"信+{bonus.faith}")
-                            if bonus.luck > 0: bonuses.append(f"運+{bonus.luck}")
-                            if bonus.attack_power > 0: bonuses.append(f"攻+{bonus.attack_power}")
-                            if bonus.defense_power > 0: bonuses.append(f"防+{bonus.defense_power}")
-                            equipment_info += ", ".join(bonuses) + "\n"
-                else:
-                    equipment_info += f"  装備: システム未実装\n"
-                
-                equipment_info += "\n"
+        except Exception as e:
+            logger.error(f"装備管理画面表示エラー: {e}")
+            self._show_error_message(f"装備管理画面の表示に失敗しました: {str(e)}")
+    
+    def _show_equipment_character_selection(self):
+        """装備管理キャラクター選択画面"""
+        equipment_char_menu = UIMenu("equipment_char_menu", "装備管理 - キャラクター選択")
+        
+        for character in self.current_party.get_all_characters():
+            # キャラクターの装備要約を取得
+            equipment_summary = self._get_character_equipment_summary(character)
+            display_name = f"{character.name} ({character.character_class})\\n{equipment_summary}"
             
-            equipment_info += "※詳細な装備管理は装備画面で行えます"
+            equipment_char_menu.add_menu_item(
+                display_name,
+                self._show_character_equipment_detail,
+                [character]
+            )
+        
+        equipment_char_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_main_menu_from_submenu,
+            [equipment_char_menu]
+        )
+        
+        self._show_submenu(equipment_char_menu)
+    
+    def _get_character_equipment_summary(self, character) -> str:
+        """キャラクターの装備要約を取得"""
+        try:
+            equipment = character.get_equipment()
+            equipped_count = 0
+            total_slots = 4  # 武器、防具、アクセサリ×2
+            
+            for slot_name in ['weapon', 'armor', 'accessory_1', 'accessory_2']:
+                if hasattr(equipment, 'slots') and equipment.slots.get(slot_name):
+                    equipped_count += 1
+            
+            return f"装備: {equipped_count}/{total_slots} スロット"
+        except:
+            return "装備情報取得不可"
+    
+    def _show_character_equipment_detail(self, character):
+        """キャラクターの装備詳細管理"""
+        equipment_mgmt_menu = UIMenu("character_equipment_mgmt_menu", f"{character.name} の装備管理")
+        
+        equipment_mgmt_menu.add_menu_item(
+            "装備状況確認",
+            self._show_equipment_status,
+            [character]
+        )
+        
+        equipment_mgmt_menu.add_menu_item(
+            "アイテムを装備",
+            self._show_equipment_equip_menu,
+            [character]
+        )
+        
+        equipment_mgmt_menu.add_menu_item(
+            "装備を解除",
+            self._show_equipment_unequip_menu,
+            [character]
+        )
+        
+        equipment_mgmt_menu.add_menu_item(
+            "装備比較",
+            self._show_equipment_comparison,
+            [character]
+        )
+        
+        equipment_mgmt_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._show_equipment_character_selection
+        )
+        
+        self._show_submenu(equipment_mgmt_menu)
+    
+    def _show_equipment_status(self, character):
+        """装備状況を表示"""
+        try:
+            equipment = character.get_equipment()
+            
+            status_info = f"【{character.name} の装備状況】\\n\\n"
+            status_info += f"職業: {character.character_class}\\n"
+            status_info += f"レベル: {character.experience.level}\\n\\n"
+            
+            # 装備情報
+            slot_names = {
+                'weapon': '武器',
+                'armor': '防具', 
+                'accessory_1': 'アクセサリ1',
+                'accessory_2': 'アクセサリ2'
+            }
+            
+            for slot_name, display_name in slot_names.items():
+                equipment_name = self._get_equipment_name(equipment, slot_name)
+                status_info += f"{display_name}: {equipment_name}\\n"
+            
+            # 装備ボーナス
+            if hasattr(equipment, 'get_total_bonus'):
+                bonus = equipment.get_total_bonus()
+                if any(getattr(bonus, attr, 0) > 0 for attr in ['strength', 'agility', 'intelligence', 'faith', 'luck', 'attack_power', 'defense_power']):
+                    status_info += "\\n装備ボーナス:\\n"
+                    if bonus.strength > 0: status_info += f"  力: +{bonus.strength}\\n"
+                    if bonus.agility > 0: status_info += f"  敏捷: +{bonus.agility}\\n"
+                    if bonus.intelligence > 0: status_info += f"  知恵: +{bonus.intelligence}\\n"
+                    if bonus.faith > 0: status_info += f"  信仰: +{bonus.faith}\\n"
+                    if bonus.luck > 0: status_info += f"  運: +{bonus.luck}\\n"
+                    if bonus.attack_power > 0: status_info += f"  攻撃力: +{bonus.attack_power}\\n"
+                    if bonus.defense_power > 0: status_info += f"  防御力: +{bonus.defense_power}\\n"
+            
+            status_info += "\\n※装備の変更は「アイテムを装備」で行えます"
             
             self._show_dialog(
-                "equipment_status_dialog",
-                "パーティ装備状況",
-                equipment_info
+                "character_equipment_status_dialog",
+                f"{character.name} の装備状況",
+                status_info
             )
+        except Exception as e:
+            logger.error(f"装備状況表示エラー: {e}")
+            self._show_error_message("装備状況の表示に失敗しました")
+    
+    def _show_equipment_equip_menu(self, character):
+        """装備可能アイテム選択メニュー"""
+        equip_info = f"【{character.name} の装備変更】\\n\\n"
+        equip_info += "キャラクターの所持アイテムまたは\\n"
+        equip_info += "宿屋倉庫から装備可能なアイテムを\\n"
+        equip_info += "選択して装備できます。\\n\\n"
+        equip_info += "※この機能は次の段階で実装予定です"
+        
+        self._show_dialog(
+            "equipment_equip_dialog",
+            f"{character.name} の装備変更",
+            equip_info
+        )
+    
+    def _show_equipment_unequip_menu(self, character):
+        """装備解除メニュー"""
+        unequip_info = f"【{character.name} の装備解除】\\n\\n"
+        unequip_info += "現在装備中のアイテムを解除して\\n"
+        unequip_info += "キャラクターインベントリに戻すことができます。\\n\\n"
+        unequip_info += "※この機能は次の段階で実装予定です"
+        
+        self._show_dialog(
+            "equipment_unequip_dialog",
+            f"{character.name} の装備解除",
+            unequip_info
+        )
+    
+    def _show_equipment_comparison(self, character):
+        """装備比較機能"""
+        comparison_info = f"【{character.name} の装備比較】\\n\\n"
+        comparison_info += "現在の装備と新しいアイテムの\\n"
+        comparison_info += "ステータスを比較して、\\n"
+        comparison_info += "最適な装備を選択できます。\\n\\n"
+        comparison_info += "※この機能は次の段階で実装予定です"
+        
+        self._show_dialog(
+            "equipment_comparison_dialog",
+            f"{character.name} の装備比較",
+            comparison_info
+        )
             
         except Exception as e:
             logger.error(f"装備状況表示エラー: {e}")
