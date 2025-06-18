@@ -6,7 +6,14 @@
 
 ## New Specifications
 
-(現在実装待ちの新仕様はありません)
+### 優先度:中
+
+- [ ] 宿屋にて、パーティのアイテム整理、魔術・祈祷のスロットへのセットをするメニュー[冒険の準備]がほしい
+
+### 優先度:低
+
+- [ ] ./config/items.yaml にアイテムの定義がなされているが、その表示文字は./config/text/*.yamlで定義されている。この場合、アイテムを追加する時にitems.yamlとja.yaml, en.yamlそれぞれに修正を入れる必要があるため、複雑である。./config/items.yamlに各言語の表示文字も定義すべき
+- [ ] モンスター定義がハードコーディングされている。./config/monster.yamlにて定義すべき。bosses.yamlで定義されているデータもmonster.yamlにマージし、bossかどうかはフラグで管理すべき
 
 ## Changed Specifications
 
