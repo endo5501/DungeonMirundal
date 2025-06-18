@@ -1,0 +1,308 @@
+# アイテム定義ファイル（多言語統合版）
+
+# 武器
+weapons:
+  dagger:
+    names:
+      ja: "ダガー"
+      en: "Dagger"
+    descriptions:
+      ja: "軽量で扱いやすい短剣"
+      en: "A lightweight and easy-to-handle dagger"
+    type: "weapon"
+    weapon_type: "dagger"
+    attack_power: 3
+    attribute: "physical"
+    range: "melee"
+    price: 50
+    weight: 1
+    usable_classes: ["fighter", "thief", "mage", "ninja"]
+    
+  short_sword:
+    names:
+      ja: "ショートソード"
+      en: "Short Sword"
+    descriptions:
+      ja: "バランスの取れた短剣"
+      en: "A well-balanced short sword"
+    type: "weapon"
+    weapon_type: "sword"
+    attack_power: 5
+    attribute: "physical"
+    range: "melee"
+    price: 100
+    weight: 2
+    usable_classes: ["fighter", "thief", "samurai", "lord"]
+    
+  long_sword:
+    names:
+      ja: "ロングソード"
+      en: "Long Sword"
+    descriptions:
+      ja: "威力の高い長剣"
+      en: "A powerful long sword"
+    type: "weapon"
+    weapon_type: "sword"
+    attack_power: 8
+    attribute: "physical"
+    range: "melee"
+    price: 300
+    weight: 3
+    usable_classes: ["fighter", "samurai", "lord"]
+    
+  mace:
+    names:
+      ja: "メイス"
+      en: "Mace"
+    descriptions:
+      ja: "重厚な打撃武器"
+      en: "A heavy blunt weapon"
+    type: "weapon"
+    weapon_type: "mace"
+    attack_power: 6
+    attribute: "physical"
+    range: "melee"
+    price: 150
+    weight: 3
+    usable_classes: ["fighter", "priest", "bishop", "lord"]
+    
+  staff:
+    names:
+      ja: "スタッフ"
+      en: "Staff"
+    descriptions:
+      ja: "魔法の威力を高める杖"
+      en: "A staff that enhances magical power"
+    type: "weapon"
+    weapon_type: "staff"
+    attack_power: 2
+    attribute: "physical"
+    range: "melee"
+    price: 80
+    weight: 2
+    usable_classes: ["mage", "priest", "bishop"]
+    magic_bonus: 2
+    
+  bow:
+    names:
+      ja: "ボウ"
+      en: "Bow"
+    descriptions:
+      ja: "遠距離攻撃が可能な弓"
+      en: "A bow capable of ranged attacks"
+    type: "weapon"
+    weapon_type: "bow"
+    attack_power: 4
+    attribute: "physical"
+    range: "ranged"
+    price: 120
+    weight: 2
+    usable_classes: ["fighter", "thief", "samurai"]
+
+# 防具
+armor:
+  cloth_robe:
+    names:
+      ja: "布のローブ"
+      en: "Cloth Robe"
+    descriptions:
+      ja: "魔法使いが着る軽装"
+      en: "Light clothing worn by mages"
+    type: "armor"
+    armor_type: "light"
+    defense: 1
+    price: 30
+    weight: 1
+    usable_classes: ["mage", "priest", "thief", "bishop"]
+    
+  leather_armor:
+    names:
+      ja: "レザーアーマー"
+      en: "Leather Armor"
+    descriptions:
+      ja: "軽量で動きやすい革鎧"
+      en: "Lightweight and flexible leather armor"
+    type: "armor"
+    armor_type: "light"
+    defense: 3
+    price: 80
+    weight: 2
+    usable_classes: ["fighter", "thief", "priest", "ninja"]
+    
+  chain_mail:
+    names:
+      ja: "チェインメイル"
+      en: "Chain Mail"
+    descriptions:
+      ja: "鎖でできた防具"
+      en: "Armor made of interlocking chains"
+    type: "armor"
+    armor_type: "medium"
+    defense: 5
+    price: 200
+    weight: 4
+    usable_classes: ["fighter", "priest", "samurai", "lord"]
+    
+  plate_armor:
+    names:
+      ja: "プレートアーマー"
+      en: "Plate Armor"
+    descriptions:
+      ja: "最高の防御力を誇る重装"
+      en: "Heavy armor with the highest defense"
+    type: "armor"
+    armor_type: "heavy"
+    defense: 8
+    price: 500
+    weight: 6
+    usable_classes: ["fighter", "samurai", "lord"]
+
+# 消費アイテム
+consumables:
+  healing_potion:
+    names:
+      ja: "回復ポーション"
+      en: "Healing Potion"
+    descriptions:
+      ja: "HPを回復する薬"
+      en: "A potion that restores HP"
+    type: "consumable"
+    effect_type: "heal_hp"
+    effect_value: 20
+    price: 50
+    weight: 1
+    usable_in_combat: true
+    
+  mana_potion:
+    names:
+      ja: "マナポーション"
+      en: "Mana Potion"
+    descriptions:
+      ja: "MPを回復する薬"
+      en: "A potion that restores MP"
+    type: "consumable"
+    effect_type: "restore_mp"
+    effect_value: 10
+    price: 80
+    weight: 1
+    usable_in_combat: false
+    
+  antidote:
+    names:
+      ja: "解毒剤"
+      en: "Antidote"
+    descriptions:
+      ja: "毒を治療する薬"
+      en: "A medicine that cures poison"
+    type: "consumable"
+    effect_type: "cure_poison"
+    price: 30
+    weight: 1
+    usable_in_combat: true
+    
+  return_scroll:
+    names:
+      ja: "帰還の巻物"
+      en: "Return Scroll"
+    descriptions:
+      ja: "町に帰還できる巻物"
+      en: "A scroll that can return you to town"
+    type: "consumable"
+    effect_type: "return_to_town"
+    price: 200
+    weight: 1
+    usable_in_combat: false
+    
+  resurrection_powder:
+    names:
+      ja: "蘇生の粉"
+      en: "Resurrection Powder"
+    descriptions:
+      ja: "死者を蘇らせる貴重な粉"
+      en: "Precious powder that can resurrect the dead"
+    type: "consumable"
+    effect_type: "resurrect"
+    effect_value: 50  # 最大HPの50%で蘇生
+    price: 1000
+    weight: 1
+    usable_in_combat: false
+
+# 魔法書・祈祷書
+spellbooks:
+  fire_spell_book:
+    names:
+      ja: "ファイアの魔法書"
+      en: "Fire Spell Book"
+    descriptions:
+      ja: "火炎魔法を習得できる"
+      en: "Allows learning fire magic"
+    type: "spellbook"
+    spell_type: "magic"
+    spell_id: "fireball"
+    price: 300
+    weight: 1
+    required_class: ["mage", "bishop"]
+    
+  heal_prayer_book:
+    names:
+      ja: "ヒールの祈祷書"
+      en: "Heal Prayer Book"
+    descriptions:
+      ja: "回復祈祷を習得できる"
+      en: "Allows learning healing prayer"
+    type: "spellbook"
+    spell_type: "prayer"
+    spell_id: "heal"
+    price: 250
+    weight: 1
+    required_class: ["priest", "bishop", "lord"]
+
+# 特殊アイテム
+special:
+  lockpick:
+    names:
+      ja: "鍵開け道具"
+      en: "Lockpick"
+    descriptions:
+      ja: "鍵のかかった扉や宝箱を開ける"
+      en: "Used to open locked doors and chests"
+    type: "tool"
+    tool_type: "lockpick"
+    price: 20
+    weight: 1
+    required_class: ["thief", "ninja"]
+    
+  torch:
+    names:
+      ja: "松明"
+      en: "Torch"
+    descriptions:
+      ja: "暗闇を照らす"
+      en: "Illuminates dark areas"
+    type: "tool"
+    tool_type: "light"
+    duration: 100  # ターン数
+    price: 10
+    weight: 1
+
+# アイテム分類設定
+item_categories:
+  weapon_types: ["dagger", "sword", "mace", "staff", "bow", "axe", "throwing"]
+  armor_types: ["light", "medium", "heavy"]
+  attributes: ["physical", "fire", "ice", "lightning"]
+  
+# 価格設定
+pricing:
+  base_sell_ratio: 0.5  # 売却時の基本価格比率
+  identification_cost: 100  # 鑑定費用
+  repair_cost_ratio: 0.3  # 修理費用比率
+  
+# 重量制限
+weight_limits:
+  max_individual_weight: 10  # 個別アイテムの最大重量
+  strength_weight_bonus: 2   # 筋力1につき追加できる重量
+
+# 多言語設定
+language_config:
+  supported_languages: ["ja", "en"]
+  default_language: "ja"

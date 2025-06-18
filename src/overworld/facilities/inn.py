@@ -802,16 +802,176 @@ class Inn(BaseFacility):
     
     def _show_spell_item_usage(self):
         """魔術・祈祷書の使用メニュー"""
-        usage_info = "【魔術・祈祷書の使用】\\n\\n"
-        usage_info += "宿屋倉庫の魔術書・祈祷書を使用して\\n"
-        usage_info += "キャラクターに魔法を習得させることができます。\\n\\n"
-        usage_info += "※この機能は次の段階で実装予定です"
+        if not self.current_party:
+            return
         
-        self._show_dialog(
-            "spell_item_usage_dialog",
-            "魔術・祈祷書の使用",
-            usage_info
+        # 宿屋倉庫から魔術書・祈祷書を検索
+        from src.overworld.inn_storage import inn_storage_manager
+        storage = inn_storage_manager.get_storage()
+        
+        spell_items = []
+        for slot_index, item_instance in storage.get_all_items():
+            item = item_manager.get_item(item_instance.item_id)
+            if item and item.item_type.value == "spellbook":
+                spell_items.append((slot_index, item_instance, item))
+        
+        if not spell_items:
+            self._show_dialog(
+                "no_spell_items_dialog",
+                "魔術・祈祷書の使用",
+                "宿屋倉庫に魔術書・祈祷書がありません。\\n\\n"
+                "魔術協会や教会で購入してください。"
+            )
+            return
+        
+        # 魔術書・祈祷書選択メニュー
+        usage_menu = UIMenu("spell_item_usage_menu", "魔術・祈祷書の使用")
+        
+        for slot_index, item_instance, item in spell_items:
+            item_info = f"{item.get_name()}"
+            if hasattr(item, 'spell_id'):
+                item_info += f" ({item.spell_id})"
+            if item_instance.quantity > 1:
+                item_info += f" x{item_instance.quantity}"
+            
+            usage_menu.add_menu_item(
+                item_info,
+                self._use_spell_item,
+                [slot_index, item_instance, item]
+            )
+        
+        usage_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_main_menu_from_submenu,
+            [usage_menu]
         )
+        
+        self._show_submenu(usage_menu)
+    
+    def _use_spell_item(self, slot_index: int, item_instance, item):
+        """魔術書・祈祷書を使用"""
+        if not self.current_party:
+            return
+        
+        # 使用可能なキャラクターを特定
+        eligible_characters = []
+        for character in self.current_party.get_all_characters():
+            if self._can_character_use_spell_item(character, item):
+                eligible_characters.append(character)
+        
+        if not eligible_characters:
+            self._show_dialog(
+                "no_eligible_characters_dialog",
+                "使用不可",
+                f"{item.get_name()}を使用できる\\n"
+                "キャラクターがいません。\\n\\n"
+                "必要な職業や能力値を確認してください。"
+            )
+            return
+        
+        # キャラクター選択メニュー
+        character_menu = UIMenu("spell_item_character_menu", f"{item.get_name()}の使用対象")
+        
+        for character in eligible_characters:
+            char_info = f"{character.name} ({character.character_class})"
+            character_menu.add_menu_item(
+                char_info,
+                self._confirm_spell_item_usage,
+                [character, slot_index, item_instance, item]
+            )
+        
+        character_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._show_spell_item_usage
+        )
+        
+        self._show_submenu(character_menu)
+    
+    def _can_character_use_spell_item(self, character, item) -> bool:
+        """キャラクターが魔術書・祈祷書を使用できるかチェック"""
+        # 職業制限チェック
+        if hasattr(item, 'required_class') and item.required_class:
+            if character.character_class not in item.required_class:
+                return False
+        
+        # 既に習得済みかチェック
+        if hasattr(item, 'spell_id'):
+            try:
+                from src.magic.spells import spell_manager
+                if hasattr(character, 'learned_spells'):
+                    if item.spell_id in character.learned_spells:
+                        return False
+            except:
+                pass
+        
+        return True
+    
+    def _confirm_spell_item_usage(self, character, slot_index: int, item_instance, item):
+        """魔術書・祈祷書使用の確認"""
+        confirm_info = f"【{item.get_name()}の使用確認】\\n\\n"
+        confirm_info += f"対象: {character.name} ({character.character_class})\\n"
+        confirm_info += f"効果: {item.get_description()}\\n\\n"
+        
+        if hasattr(item, 'spell_id'):
+            confirm_info += f"習得する魔法: {item.spell_id}\\n\\n"
+        
+        confirm_info += "このアイテムを使用しますか？\\n"
+        confirm_info += "※使用後、アイテムは消滅します"
+        
+        dialog = UIDialog(
+            "spell_item_usage_confirm_dialog",
+            "使用確認",
+            confirm_info,
+            buttons=[
+                {
+                    'text': "使用する",
+                    'command': lambda: self._execute_spell_item_usage(character, slot_index, item_instance, item)
+                },
+                {
+                    'text': "キャンセル",
+                    'command': self._close_dialog
+                }
+            ]
+        )
+        
+        ui_manager.register_element(dialog)
+        ui_manager.show_element(dialog.element_id, modal=True)
+    
+    def _execute_spell_item_usage(self, character, slot_index: int, item_instance, item):
+        """魔術書・祈祷書使用を実行"""
+        self._close_dialog()
+        
+        try:
+            # 魔法習得処理
+            if hasattr(item, 'spell_id'):
+                if not hasattr(character, 'learned_spells'):
+                    character.learned_spells = []
+                
+                if item.spell_id not in character.learned_spells:
+                    character.learned_spells.append(item.spell_id)
+                    logger.info(f"{character.name} が {item.spell_id} を習得しました")
+            
+            # アイテムを倉庫から削除
+            from src.overworld.inn_storage import inn_storage_manager
+            storage = inn_storage_manager.get_storage()
+            removed_item = storage.remove_item(slot_index, 1)
+            
+            if removed_item:
+                success_message = f"{character.name} が {item.get_name()} を使用しました。\\n\\n"
+                if hasattr(item, 'spell_id'):
+                    success_message += f"魔法「{item.spell_id}」を習得しました！"
+                
+                self._show_dialog(
+                    "spell_item_usage_success_dialog",
+                    "使用完了",
+                    success_message
+                )
+            else:
+                self._show_error_message("アイテムの削除に失敗しました")
+                
+        except Exception as e:
+            logger.error(f"魔術書・祈祷書使用エラー: {e}")
+            self._show_error_message(f"アイテム使用に失敗しました: {str(e)}")
     
     def _show_inventory_ui(self, inventory):
         """インベントリUIを表示"""
@@ -1550,30 +1710,310 @@ class Inn(BaseFacility):
     
     def _show_equipment_equip_menu(self, character):
         """装備可能アイテム選択メニュー"""
-        equip_info = f"【{character.name} の装備変更】\\n\\n"
-        equip_info += "キャラクターの所持アイテムまたは\\n"
-        equip_info += "宿屋倉庫から装備可能なアイテムを\\n"
-        equip_info += "選択して装備できます。\\n\\n"
-        equip_info += "※この機能は次の段階で実装予定です"
+        # キャラクターインベントリと宿屋倉庫から装備可能アイテムを検索
+        equippable_items = self._get_equippable_items_for_character(character)
         
-        self._show_dialog(
-            "equipment_equip_dialog",
-            f"{character.name} の装備変更",
-            equip_info
+        if not equippable_items:
+            self._show_dialog(
+                "no_equippable_items_dialog",
+                f"{character.name} の装備変更",
+                "装備可能なアイテムがありません。\\n\\n"
+                "商店で武器・防具を購入してください。"
+            )
+            return
+        
+        # 装備タイプ別メニュー
+        equip_type_menu = UIMenu("equipment_type_menu", f"{character.name} - 装備タイプ選択")
+        
+        # アイテムタイプでグループ化
+        weapons = [item for item in equippable_items if item[2].item_type.value == "weapon"]
+        armor = [item for item in equippable_items if item[2].item_type.value == "armor"]
+        
+        if weapons:
+            equip_type_menu.add_menu_item(
+                f"武器 ({len(weapons)}個)",
+                self._show_equipment_category_selection,
+                [character, weapons, "weapon"]
+            )
+        
+        if armor:
+            equip_type_menu.add_menu_item(
+                f"防具 ({len(armor)}個)",
+                self._show_equipment_category_selection,
+                [character, armor, "armor"]
+            )
+        
+        equip_type_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._show_character_equipment_detail,
+            [character]
         )
+        
+        self._show_submenu(equip_type_menu)
+    
+    def _get_equippable_items_for_character(self, character):
+        """キャラクターが装備可能なアイテムを取得"""
+        equippable_items = []
+        
+        # キャラクターインベントリから検索
+        char_inventory = character.get_inventory()
+        for i, slot in enumerate(char_inventory.slots):
+            if not slot.is_empty():
+                item = item_manager.get_item(slot.item_instance.item_id)
+                if item and self._can_character_equip(character, item):
+                    equippable_items.append(("character", i, item, slot.item_instance))
+        
+        # 宿屋倉庫から検索
+        from src.overworld.inn_storage import inn_storage_manager
+        storage = inn_storage_manager.get_storage()
+        for slot_index, item_instance in storage.get_all_items():
+            item = item_manager.get_item(item_instance.item_id)
+            if item and self._can_character_equip(character, item):
+                equippable_items.append(("storage", slot_index, item, item_instance))
+        
+        return equippable_items
+    
+    def _can_character_equip(self, character, item) -> bool:
+        """キャラクターがアイテムを装備できるかチェック"""
+        # アイテムタイプチェック
+        if item.item_type.value not in ["weapon", "armor"]:
+            return False
+        
+        # 職業制限チェック
+        if hasattr(item, 'usable_classes') and item.usable_classes:
+            if character.character_class not in item.usable_classes:
+                return False
+        
+        return True
+    
+    def _show_equipment_category_selection(self, character, items, category):
+        """装備カテゴリ選択表示"""
+        category_menu = UIMenu("equipment_category_menu", f"{character.name} - {category}選択")
+        
+        for source, index, item, item_instance in items:
+            source_text = "所持" if source == "character" else "倉庫"
+            item_name = f"[{source_text}] {item.get_name()}"
+            
+            # アイテム詳細情報追加
+            if item.item_type.value == "weapon" and hasattr(item, 'attack_power'):
+                item_name += f" (攻撃力{item.attack_power})"
+            elif item.item_type.value == "armor" and hasattr(item, 'defense'):
+                item_name += f" (防御力{item.defense})"
+            
+            category_menu.add_menu_item(
+                item_name,
+                self._confirm_equipment_change,
+                [character, source, index, item, item_instance]
+            )
+        
+        category_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._show_equipment_equip_menu,
+            [character]
+        )
+        
+        self._show_submenu(category_menu)
+    
+    def _confirm_equipment_change(self, character, source, index, item, item_instance):
+        """装備変更確認"""
+        equipment = character.get_equipment()
+        
+        # 装備スロット決定
+        if item.item_type.value == "weapon":
+            slot_name = "weapon"
+        elif item.item_type.value == "armor":
+            slot_name = "armor"
+        else:
+            self._show_error_message("装備できないアイテムです")
+            return
+        
+        confirm_info = f"【装備変更確認】\\n\\n"
+        confirm_info += f"キャラクター: {character.name}\\n"
+        confirm_info += f"新しい装備: {item.get_name()}\\n"
+        
+        # 現在の装備を確認
+        current_equipment_name = self._get_equipment_name(equipment, slot_name)
+        confirm_info += f"現在の装備: {current_equipment_name}\\n\\n"
+        
+        # ステータス比較
+        if item.item_type.value == "weapon" and hasattr(item, 'attack_power'):
+            confirm_info += f"攻撃力: {item.attack_power}\\n"
+        elif item.item_type.value == "armor" and hasattr(item, 'defense'):
+            confirm_info += f"防御力: {item.defense}\\n"
+        
+        confirm_info += "\\n装備を変更しますか？"
+        
+        dialog = UIDialog(
+            "equipment_change_confirm_dialog",
+            "装備変更確認",
+            confirm_info,
+            buttons=[
+                {
+                    'text': "装備する",
+                    'command': lambda: self._execute_equipment_change(character, source, index, item, item_instance, slot_name)
+                },
+                {
+                    'text': "キャンセル",
+                    'command': self._close_dialog
+                }
+            ]
+        )
+        
+        ui_manager.register_element(dialog)
+        ui_manager.show_element(dialog.element_id, modal=True)
+    
+    def _execute_equipment_change(self, character, source, index, item, item_instance, slot_name):
+        """装備変更を実行"""
+        self._close_dialog()
+        
+        try:
+            equipment = character.get_equipment()
+            
+            # 現在の装備を外す（キャラクターインベントリに戻す）
+            if hasattr(equipment, 'slots') and slot_name in equipment.slots and equipment.slots[slot_name]:
+                current_item = equipment.slots[slot_name]
+                char_inventory = character.get_inventory()
+                if not char_inventory.add_item(current_item):
+                    self._show_error_message("インベントリが満杯で装備を外せません")
+                    return
+            
+            # 新しいアイテムを装備
+            if source == "character":
+                # キャラクターインベントリから取得
+                char_inventory = character.get_inventory()
+                removed_item = char_inventory.remove_item(index, 1)
+            else:
+                # 宿屋倉庫から取得
+                from src.overworld.inn_storage import inn_storage_manager
+                storage = inn_storage_manager.get_storage()
+                removed_item = storage.remove_item(index, 1)
+            
+            if not removed_item:
+                self._show_error_message("アイテムの取得に失敗しました")
+                return
+            
+            # 装備セット
+            if not hasattr(equipment, 'slots'):
+                equipment.slots = {}
+            equipment.slots[slot_name] = removed_item
+            
+            success_message = f"{character.name} が {item.get_name()} を装備しました。"
+            self._show_dialog(
+                "equipment_change_success_dialog",
+                "装備変更完了",
+                success_message
+            )
+            
+            logger.info(f"{character.name} が {item.get_name()} を装備")
+            
+        except Exception as e:
+            logger.error(f"装備変更エラー: {e}")
+            self._show_error_message(f"装備変更に失敗しました: {str(e)}")
     
     def _show_equipment_unequip_menu(self, character):
         """装備解除メニュー"""
-        unequip_info = f"【{character.name} の装備解除】\\n\\n"
-        unequip_info += "現在装備中のアイテムを解除して\\n"
-        unequip_info += "キャラクターインベントリに戻すことができます。\\n\\n"
-        unequip_info += "※この機能は次の段階で実装予定です"
+        equipment = character.get_equipment()
         
-        self._show_dialog(
-            "equipment_unequip_dialog",
-            f"{character.name} の装備解除",
-            unequip_info
+        # 装備中のアイテムを取得
+        equipped_items = []
+        slot_names = {
+            'weapon': '武器',
+            'armor': '防具',
+            'accessory_1': 'アクセサリ1', 
+            'accessory_2': 'アクセサリ2'
+        }
+        
+        for slot_name, display_name in slot_names.items():
+            if hasattr(equipment, 'slots') and slot_name in equipment.slots and equipment.slots[slot_name]:
+                item_instance = equipment.slots[slot_name]
+                item = item_manager.get_item(item_instance.item_id)
+                if item:
+                    equipped_items.append((slot_name, display_name, item, item_instance))
+        
+        if not equipped_items:
+            self._show_dialog(
+                "no_equipped_items_dialog",
+                f"{character.name} の装備解除",
+                "装備中のアイテムがありません。"
+            )
+            return
+        
+        # 装備解除選択メニュー
+        unequip_menu = UIMenu("equipment_unequip_menu", f"{character.name} - 装備解除")
+        
+        for slot_name, display_name, item, item_instance in equipped_items:
+            item_info = f"{display_name}: {item.get_name()}"
+            unequip_menu.add_menu_item(
+                item_info,
+                self._confirm_equipment_unequip,
+                [character, slot_name, display_name, item, item_instance]
+            )
+        
+        unequip_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._show_character_equipment_detail,
+            [character]
         )
+        
+        self._show_submenu(unequip_menu)
+    
+    def _confirm_equipment_unequip(self, character, slot_name, display_name, item, item_instance):
+        """装備解除確認"""
+        confirm_info = f"【装備解除確認】\\n\\n"
+        confirm_info += f"キャラクター: {character.name}\\n"
+        confirm_info += f"解除する装備: {display_name} - {item.get_name()}\\n\\n"
+        confirm_info += "この装備を解除してインベントリに戻しますか？"
+        
+        dialog = UIDialog(
+            "equipment_unequip_confirm_dialog",
+            "装備解除確認",
+            confirm_info,
+            buttons=[
+                {
+                    'text': "解除する",
+                    'command': lambda: self._execute_equipment_unequip(character, slot_name, display_name, item, item_instance)
+                },
+                {
+                    'text': "キャンセル",
+                    'command': self._close_dialog
+                }
+            ]
+        )
+        
+        ui_manager.register_element(dialog)
+        ui_manager.show_element(dialog.element_id, modal=True)
+    
+    def _execute_equipment_unequip(self, character, slot_name, display_name, item, item_instance):
+        """装備解除を実行"""
+        self._close_dialog()
+        
+        try:
+            equipment = character.get_equipment()
+            char_inventory = character.get_inventory()
+            
+            # インベントリに空きがあるかチェック
+            if not char_inventory.add_item(item_instance):
+                self._show_error_message("インベントリが満杯で装備を外せません")
+                return
+            
+            # 装備スロットをクリア
+            if hasattr(equipment, 'slots') and slot_name in equipment.slots:
+                equipment.slots[slot_name] = None
+            
+            success_message = f"{character.name} の {display_name} ({item.get_name()}) を解除しました。\\n\\n"
+            success_message += "アイテムはインベントリに戻されました。"
+            
+            self._show_dialog(
+                "equipment_unequip_success_dialog",
+                "装備解除完了",
+                success_message
+            )
+            
+            logger.info(f"{character.name} が {item.get_name()} を解除")
+            
+        except Exception as e:
+            logger.error(f"装備解除エラー: {e}")
+            self._show_error_message(f"装備解除に失敗しました: {str(e)}")
     
     def _show_equipment_comparison(self, character):
         """装備比較機能"""

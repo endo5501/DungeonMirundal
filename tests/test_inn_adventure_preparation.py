@@ -118,12 +118,11 @@ class TestInnAdventurePreparation:
                 # ダイアログが表示されることを確認
                 mock_dialog.assert_called_once()
                 
-                # ダイアログの内容を確認
+                # ダイアログの内容を確認（移行ダイアログが表示される）
                 dialog_args = mock_dialog.call_args[0]
-                assert dialog_args[0] == "inventory_ui_dialog"
-                assert dialog_args[1] == "アイテム整理"
-                assert "使用スロット: 1/2" in dialog_args[2]
-                assert "ヒーリングポーション x3" in dialog_args[2]
+                assert dialog_args[0] == "migration_info_dialog"
+                assert dialog_args[1] == "アイテム移行完了"
+                assert "宿屋倉庫に" in dialog_args[2]
     
     def test_item_organization_no_inventory(self):
         """インベントリなしでのアイテム整理テスト"""
