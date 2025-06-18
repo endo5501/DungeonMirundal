@@ -1588,10 +1588,6 @@ class Inn(BaseFacility):
             f"{character.name} の装備比較",
             comparison_info
         )
-            
-        except Exception as e:
-            logger.error(f"装備状況表示エラー: {e}")
-            self._show_error_message(f"装備状況の表示に失敗しました: {str(e)}")
     
     def _get_equipment_name(self, equipment, slot_name: str) -> str:
         """装備スロットのアイテム名を取得"""
