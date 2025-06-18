@@ -14,6 +14,7 @@
 
 - [ ] ./config/items.yaml にアイテムの定義がなされているが、その表示文字は./config/text/*.yamlで定義されている。この場合、アイテムを追加する時にitems.yamlとja.yaml, en.yamlそれぞれに修正を入れる必要があるため、複雑である。./config/items.yamlに各言語の表示文字も定義すべき
 - [ ] モンスター定義がハードコーディングされている。./config/monster.yamlにて定義すべき。bosses.yamlで定義されているデータもmonster.yamlにマージし、bossかどうかはフラグで管理すべき
+- [ ] 各施設のウェルカムメッセージは不要で、いきなり施設メニューを表示すべき
 
 ## Changed Specifications
 
