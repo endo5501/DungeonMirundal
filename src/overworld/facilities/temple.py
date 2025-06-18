@@ -435,7 +435,8 @@ class Temple(BaseFacility):
             pos=(0, 0, 0.1),
             numItemsVisible=8,  # 一度に表示するアイテム数
             items=prayerbook_buttons,
-            itemFrame_frameSize=(-1.1, 1.1, -0.01, 0.01),
+            forceHeight=0.08,  # アイテム間隔を制御
+            itemFrame_frameSize=(-1.1, 1.1, -0.04, 0.04),
             itemFrame_pos=(0, 0, 0),
             decButton_pos=(-1.15, 0, -0.65),
             incButton_pos=(1.15, 0, -0.65),
