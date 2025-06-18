@@ -102,10 +102,7 @@ class CharacterCreationWizard:
         current_name = self.character_data.get('name', config_manager.get_text('character_creation.default_name'))
         
         # メッセージテキストを取得（シンプルなメッセージを使用してラベル重複を回避）
-        try:
-            message = config_manager.get_text("character_creation.enter_name_prompt")
-        except:
-            message = config_manager.get_text("character_creation.enter_name_prompt")
+        message = config_manager.get_text("character_creation.enter_name_prompt")
         
         dialog = UIInputDialog(
             "name_input_dialog",
