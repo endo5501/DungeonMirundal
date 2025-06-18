@@ -147,7 +147,7 @@ class DungeonSelectionUI:
             # アイテム設定
             numItemsVisible=8,  # 一度に表示するアイテム数を増加
             items=dungeon_items,
-            itemFrame_frameSize=(-1.1, 1.1, -0.04, 0.04),  # 高さを0.08に縮小
+            itemFrame_frameSize=(-1.1, 1.1, -0.01, 0.01),  # 高さを0.02に大幅縮小
             itemFrame_pos=(0, 0, 0),
             
             # スクロールボタン位置調整
