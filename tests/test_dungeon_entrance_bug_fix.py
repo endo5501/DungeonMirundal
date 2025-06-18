@@ -4,21 +4,9 @@ import unittest
 from unittest.mock import Mock, patch, MagicMock
 import sys
 
-# Panda3Dのモック
-mock_modules = {
-    'direct': Mock(),
-    'direct.showbase': Mock(),
-    'direct.showbase.ShowBase': Mock(),
-    'direct.actor': Mock(),
-    'direct.actor.Actor': Mock(),
-    'direct.gui': Mock(),
-    'direct.gui.DirectGui': Mock(),
-    'panda3d': Mock(),
-    'panda3d.core': Mock(),
-}
-
-for module_name, mock_module in mock_modules.items():
-    sys.modules[module_name] = mock_module
+# Panda3Dのモック設定
+from tests.test_utils import setup_panda3d_mocks
+setup_panda3d_mocks()
 
 from src.character.character import Character, CharacterStatus
 from src.character.party import Party
