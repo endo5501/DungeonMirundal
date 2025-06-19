@@ -340,6 +340,1399 @@ monsters:
     encounter_weight: 10
     floors: [12, 13, 14]
 
+  # 追加レベル1-3: 初心者エリアのバリエーション
+  giant_spider:
+    names:
+      ja: "ジャイアントスパイダー"
+      en: "Giant Spider"
+    descriptions:
+      ja: "巨大化した毒蜘蛛"
+      en: "A poisonous spider of enormous size"
+    is_boss: false
+    level: 2
+    hp: 12
+    mp: 0
+    attack: 4
+    defense: 2
+    agility: 7
+    intelligence: 3
+    faith: 0
+    luck: 4
+    resistances:
+      physical: 0
+      fire: -30
+      ice: 10
+      lightning: 0
+      dark: 20
+      light: -20
+    special_abilities:
+      - name: "毒針"
+        description: "毒を含んだ攻撃"
+        damage_multiplier: 1.0
+        accuracy: 85
+        effect: "poison"
+        duration: 3
+        mp_cost: 0
+    drops:
+      - item_id: "antidote"
+        probability: 0.3
+        quantity: 1
+      - item_id: "dagger"
+        probability: 0.15
+        quantity: 1
+    exp_reward: 8
+    gold_reward: 5
+    encounter_weight: 70
+    floors: [2, 3]
+
+  bat_swarm:
+    names:
+      ja: "コウモリの群れ"
+      en: "Bat Swarm"
+    descriptions:
+      ja: "暗闇から襲いかかる小さなコウモリたち"
+      en: "Small bats attacking from the darkness"
+    is_boss: false
+    level: 1
+    hp: 6
+    mp: 0
+    attack: 2
+    defense: 0
+    agility: 9
+    intelligence: 2
+    faith: 0
+    luck: 6
+    resistances:
+      physical: -10
+      fire: -20
+      ice: 0
+      lightning: -30
+      dark: 30
+      light: -40
+    special_abilities:
+      - name: "乱舞"
+        description: "素早い連続攻撃"
+        damage_multiplier: 0.7
+        accuracy: 90
+        hit_count: 3
+        mp_cost: 0
+    drops:
+      - item_id: "healing_potion"
+        probability: 0.2
+        quantity: 1
+    exp_reward: 4
+    gold_reward: 2
+    encounter_weight: 90
+    floors: [1, 2]
+
+  cave_worm:
+    names:
+      ja: "洞窟ワーム"
+      en: "Cave Worm"
+    descriptions:
+      ja: "地面を這い回る巨大な芋虫"
+      en: "A giant worm crawling through the ground"
+    is_boss: false
+    level: 3
+    hp: 20
+    mp: 0
+    attack: 7
+    defense: 4
+    agility: 3
+    intelligence: 1
+    faith: 0
+    luck: 2
+    resistances:
+      physical: 15
+      fire: -20
+      ice: 0
+      lightning: -10
+      dark: 10
+      light: -10
+    special_abilities:
+      - name: "潜行"
+        description: "地中に潜って奇襲攻撃"
+        damage_multiplier: 1.3
+        accuracy: 80
+        mp_cost: 0
+    drops:
+      - item_id: "leather_armor"
+        probability: 0.2
+        quantity: 1
+      - item_id: "healing_potion"
+        probability: 0.25
+        quantity: 1
+    exp_reward: 12
+    gold_reward: 7
+    encounter_weight: 60
+    floors: [3, 4]
+
+  # 追加レベル4-6: 中級エリアのバリエーション
+  hobgoblin:
+    names:
+      ja: "ホブゴブリン"
+      en: "Hobgoblin"
+    descriptions:
+      ja: "ゴブリンよりも大柄で凶暴な亜種"
+      en: "A larger and more vicious goblin variant"
+    is_boss: false
+    level: 5
+    hp: 25
+    mp: 0
+    attack: 8
+    defense: 5
+    agility: 6
+    intelligence: 5
+    faith: 0
+    luck: 4
+    resistances:
+      physical: 5
+      fire: 0
+      ice: 0
+      lightning: 0
+      dark: 25
+      light: -25
+    special_abilities:
+      - name: "戦吼"
+        description: "仲間の攻撃力を上げる"
+        effect: "attack_up"
+        target: "all_allies"
+        duration: 3
+        mp_cost: 0
+      - name: "連続攻撃"
+        description: "2回連続で攻撃"
+        damage_multiplier: 0.9
+        accuracy: 85
+        hit_count: 2
+        mp_cost: 0
+    drops:
+      - item_id: "short_sword"
+        probability: 0.3
+        quantity: 1
+      - item_id: "chain_mail"
+        probability: 0.15
+        quantity: 1
+    exp_reward: 20
+    gold_reward: 12
+    encounter_weight: 50
+    floors: [4, 5, 6]
+
+  dire_wolf:
+    names:
+      ja: "ダイアウルフ"
+      en: "Dire Wolf"
+    descriptions:
+      ja: "巨大化した凶暴な狼"
+      en: "A ferocious giant wolf"
+    is_boss: false
+    level: 4
+    hp: 22
+    mp: 0
+    attack: 9
+    defense: 3
+    agility: 10
+    intelligence: 4
+    faith: 0
+    luck: 7
+    resistances:
+      physical: 0
+      fire: -10
+      ice: 20
+      lightning: 0
+      dark: 15
+      light: -15
+    special_abilities:
+      - name: "咬み付き"
+        description: "強力な顎で咬み付く"
+        damage_multiplier: 1.4
+        accuracy: 90
+        mp_cost: 0
+      - name: "遠吠え"
+        description: "敵を恐怖状態にする"
+        effect: "fear"
+        target: "single_enemy"
+        duration: 2
+        mp_cost: 0
+    drops:
+      - item_id: "leather_armor"
+        probability: 0.25
+        quantity: 1
+      - item_id: "mana_potion"
+        probability: 0.2
+        quantity: 1
+    exp_reward: 18
+    gold_reward: 10
+    encounter_weight: 55
+    floors: [4, 5]
+
+  lizardman:
+    names:
+      ja: "リザードマン"
+      en: "Lizardman"
+    descriptions:
+      ja: "二足歩行する知能の高いトカゲ人"
+      en: "An intelligent bipedal lizard"
+    is_boss: false
+    level: 6
+    hp: 32
+    mp: 5
+    attack: 11
+    defense: 7
+    agility: 5
+    intelligence: 6
+    faith: 0
+    luck: 5
+    resistances:
+      physical: 10
+      fire: 10
+      ice: -20
+      lightning: 0
+      dark: 5
+      light: -5
+    special_abilities:
+      - name: "鱗の守り"
+        description: "自分の防御力を上げる"
+        effect: "defense_up"
+        target: "self"
+        duration: 4
+        mp_cost: 3
+      - name: "槍突き"
+        description: "槍での正確な突き攻撃"
+        damage_multiplier: 1.2
+        accuracy: 95
+        mp_cost: 0
+    drops:
+      - item_id: "long_sword"
+        probability: 0.2
+        quantity: 1
+      - item_id: "chain_mail"
+        probability: 0.25
+        quantity: 1
+    exp_reward: 35
+    gold_reward: 20
+    encounter_weight: 45
+    floors: [5, 6, 7]
+
+  # 追加レベル7-9: 上級エリアのバリエーション
+  wraith:
+    names:
+      ja: "レイス"
+      en: "Wraith"
+    descriptions:
+      ja: "恨みを持つ死者の霊魂"
+      en: "A vengeful spirit of the dead"
+    is_boss: false
+    level: 7
+    hp: 28
+    mp: 15
+    attack: 13
+    defense: 5
+    agility: 8
+    intelligence: 12
+    faith: 0
+    luck: 3
+    resistances:
+      physical: 40
+      fire: 0
+      ice: 20
+      lightning: -10
+      dark: 60
+      light: -70
+    special_abilities:
+      - name: "生命吸収"
+        description: "敵のHPを吸収して回復"
+        damage_multiplier: 1.0
+        accuracy: 85
+        drain_hp: true
+        mp_cost: 5
+      - name: "呪いの視線"
+        description: "敵を呪い状態にする"
+        effect: "curse"
+        target: "single_enemy"
+        duration: 5
+        mp_cost: 8
+    drops:
+      - item_id: "mana_potion"
+        probability: 0.4
+        quantity: 1
+      - item_id: "fire_spell_book"
+        probability: 0.1
+        quantity: 1
+    exp_reward: 50
+    gold_reward: 30
+    encounter_weight: 35
+    floors: [7, 8]
+
+  minotaur:
+    names:
+      ja: "ミノタウロス"
+      en: "Minotaur"
+    descriptions:
+      ja: "牛頭人身の巨大な戦士"
+      en: "A massive bull-headed warrior"
+    is_boss: false
+    level: 8
+    hp: 50
+    mp: 0
+    attack: 16
+    defense: 10
+    agility: 4
+    intelligence: 4
+    faith: 0
+    luck: 6
+    resistances:
+      physical: 20
+      fire: 5
+      ice: 5
+      lightning: 0
+      dark: 10
+      light: -10
+    special_abilities:
+      - name: "突進"
+        description: "勢いをつけた突進攻撃"
+        damage_multiplier: 1.6
+        accuracy: 75
+        mp_cost: 0
+      - name: "踏みつけ"
+        description: "強力な踏みつけ攻撃"
+        damage_multiplier: 1.3
+        accuracy: 80
+        effect: "stun"
+        duration: 1
+        mp_cost: 0
+    drops:
+      - item_id: "mace"
+        probability: 0.35
+        quantity: 1
+      - item_id: "plate_armor"
+        probability: 0.15
+        quantity: 1
+    exp_reward: 70
+    gold_reward: 45
+    encounter_weight: 25
+    floors: [8, 9]
+
+  gargoyle:
+    names:
+      ja: "ガーゴイル"
+      en: "Gargoyle"
+    descriptions:
+      ja: "石でできた翼を持つ怪物"
+      en: "A winged stone monster"
+    is_boss: false
+    level: 9
+    hp: 42
+    mp: 10
+    attack: 14
+    defense: 12
+    agility: 7
+    intelligence: 8
+    faith: 0
+    luck: 5
+    resistances:
+      physical: 30
+      fire: 15
+      ice: 15
+      lightning: -20
+      dark: 20
+      light: -20
+    special_abilities:
+      - name: "石化の視線"
+        description: "敵を石化状態にする"
+        effect: "petrify"
+        target: "single_enemy"
+        duration: 2
+        mp_cost: 8
+      - name: "急降下攻撃"
+        description: "空中からの急降下攻撃"
+        damage_multiplier: 1.5
+        accuracy: 90
+        mp_cost: 0
+    drops:
+      - item_id: "staff"
+        probability: 0.25
+        quantity: 1
+      - item_id: "heal_prayer_book"
+        probability: 0.15
+        quantity: 1
+    exp_reward: 65
+    gold_reward: 40
+    encounter_weight: 30
+    floors: [8, 9, 10]
+
+  # 追加レベル10-14: 最上級エリアのバリエーション
+  shadow_assassin:
+    names:
+      ja: "シャドウアサシン"
+      en: "Shadow Assassin"
+    descriptions:
+      ja: "影から現れる暗殺者"
+      en: "An assassin emerging from shadows"
+    is_boss: false
+    level: 11
+    hp: 75
+    mp: 20
+    attack: 20
+    defense: 8
+    agility: 18
+    intelligence: 14
+    faith: 0
+    luck: 12
+    resistances:
+      physical: 15
+      fire: -10
+      ice: 10
+      lightning: 5
+      dark: 70
+      light: -60
+    special_abilities:
+      - name: "影隠れ"
+        description: "次のターン攻撃を回避"
+        effect: "evasion_up"
+        target: "self"
+        duration: 1
+        mp_cost: 5
+      - name: "致命の一撃"
+        description: "クリティカル率の高い攻撃"
+        damage_multiplier: 2.0
+        accuracy: 80
+        critical_rate: 0.6
+        mp_cost: 10
+    drops:
+      - item_id: "dagger"
+        probability: 0.4
+        quantity: 1
+      - item_id: "lockpick"
+        probability: 0.3
+        quantity: 1
+    exp_reward: 120
+    gold_reward: 80
+    encounter_weight: 20
+    floors: [10, 11, 12]
+
+  flame_elemental:
+    names:
+      ja: "フレイムエレメンタル"
+      en: "Flame Elemental"
+    descriptions:
+      ja: "炎でできた精霊"
+      en: "A spirit made of fire"
+    is_boss: false
+    level: 10
+    hp: 80
+    mp: 30
+    attack: 18
+    defense: 6
+    agility: 10
+    intelligence: 16
+    faith: 5
+    luck: 8
+    resistances:
+      physical: 20
+      fire: 90
+      ice: -60
+      lightning: 10
+      dark: 0
+      light: 30
+    special_abilities:
+      - name: "ファイアボール"
+        description: "炎の球を放つ"
+        damage_multiplier: 1.8
+        accuracy: 90
+        attribute: "fire"
+        mp_cost: 12
+      - name: "炎の壁"
+        description: "炎の壁で防御力を上げる"
+        effect: "defense_up"
+        target: "self"
+        duration: 3
+        mp_cost: 8
+    drops:
+      - item_id: "fire_spell_book"
+        probability: 0.25
+        quantity: 1
+      - item_id: "mana_potion"
+        probability: 0.4
+        quantity: 2
+    exp_reward: 140
+    gold_reward: 90
+    encounter_weight: 25
+    floors: [10, 11]
+
+  frost_giant:
+    names:
+      ja: "フロストジャイアント"
+      en: "Frost Giant"
+    descriptions:
+      ja: "氷に包まれた巨人"
+      en: "A giant wrapped in ice"
+    is_boss: false
+    level: 13
+    hp: 110
+    mp: 15
+    attack: 22
+    defense: 16
+    agility: 6
+    intelligence: 8
+    faith: 0
+    luck: 7
+    resistances:
+      physical: 25
+      fire: -50
+      ice: 90
+      lightning: 0
+      dark: 10
+      light: 10
+    special_abilities:
+      - name: "アイスハンマー"
+        description: "氷の塊での強烈な一撃"
+        damage_multiplier: 2.2
+        accuracy: 70
+        attribute: "ice"
+        mp_cost: 10
+      - name: "氷結"
+        description: "敵を氷結状態にする"
+        effect: "freeze"
+        target: "single_enemy"
+        duration: 2
+        mp_cost: 8
+    drops:
+      - item_id: "mace"
+        probability: 0.4
+        quantity: 1
+      - item_id: "plate_armor"
+        probability: 0.3
+        quantity: 1
+    exp_reward: 180
+    gold_reward: 120
+    encounter_weight: 15
+    floors: [12, 13, 14]
+
+  void_stalker:
+    names:
+      ja: "ヴォイドストーカー"
+      en: "Void Stalker"
+    descriptions:
+      ja: "虚無から現れる謎の生物"
+      en: "A mysterious creature from the void"
+    is_boss: false
+    level: 14
+    hp: 95
+    mp: 40
+    attack: 24
+    defense: 12
+    agility: 16
+    intelligence: 20
+    faith: 0
+    luck: 10
+    resistances:
+      physical: 30
+      fire: 20
+      ice: 20
+      lightning: 20
+      dark: 80
+      light: -80
+    special_abilities:
+      - name: "虚無の刃"
+        description: "虚無属性の攻撃"
+        damage_multiplier: 2.0
+        accuracy: 95
+        attribute: "dark"
+        mp_cost: 15
+      - name: "次元歪曲"
+        description: "全体攻撃を行う"
+        damage_multiplier: 1.3
+        accuracy: 85
+        target: "all_enemies"
+        mp_cost: 20
+      - name: "エネルギー吸収"
+        description: "敵のMPを吸収"
+        drain_mp: true
+        mp_cost: 10
+    drops:
+      - item_id: "staff"
+        probability: 0.5
+        quantity: 1
+      - item_id: "fire_spell_book"
+        probability: 0.2
+        quantity: 1
+    exp_reward: 220
+    gold_reward: 150
+    encounter_weight: 10
+    floors: [13, 14, 15]
+
+  # レア・特殊モンスター
+  crystal_golem:
+    names:
+      ja: "クリスタルゴーレム"
+      en: "Crystal Golem"
+    descriptions:
+      ja: "美しい水晶でできた構造体"
+      en: "A construct made of beautiful crystal"
+    is_boss: false
+    level: 11
+    hp: 90
+    mp: 0
+    attack: 19
+    defense: 20
+    agility: 3
+    intelligence: 2
+    faith: 0
+    luck: 5
+    resistances:
+      physical: 40
+      fire: 30
+      ice: 30
+      lightning: -40
+      dark: 50
+      light: 50
+    special_abilities:
+      - name: "水晶の輝き"
+        description: "全体を眩惑する"
+        effect: "blind"
+        target: "all_enemies"
+        duration: 2
+        mp_cost: 0
+      - name: "共鳴"
+        description: "反射ダメージを与える"
+        reflect_damage: 0.5
+        mp_cost: 0
+    drops:
+      - item_id: "mana_potion"
+        probability: 0.8
+        quantity: 3
+      - item_id: "heal_prayer_book"
+        probability: 0.3
+        quantity: 1
+    exp_reward: 300
+    gold_reward: 200
+    encounter_weight: 5
+    floors: [9, 10, 11, 12]
+
+  phoenix_chick:
+    names:
+      ja: "フェニックスの雛"
+      en: "Phoenix Chick"
+    descriptions:
+      ja: "伝説の不死鳥の幼鳥"
+      en: "A young legendary phoenix"
+    is_boss: false
+    level: 15
+    hp: 85
+    mp: 50
+    attack: 26
+    defense: 14
+    agility: 20
+    intelligence: 18
+    faith: 15
+    luck: 15
+    resistances:
+      physical: 20
+      fire: 95
+      ice: -70
+      lightning: 10
+      dark: -30
+      light: 70
+    special_abilities:
+      - name: "復活の炎"
+        description: "HPが0になった時に一度だけ復活"
+        revive_once: true
+        mp_cost: 0
+      - name: "聖なる炎"
+        description: "光属性の全体攻撃"
+        damage_multiplier: 1.6
+        accuracy: 90
+        attribute: "light"
+        target: "all_enemies"
+        mp_cost: 20
+    drops:
+      - item_id: "resurrection_powder"
+        probability: 0.6
+        quantity: 1
+      - item_id: "heal_prayer_book"
+        probability: 0.4
+        quantity: 1
+    exp_reward: 400
+    gold_reward: 300
+    encounter_weight: 3
+    floors: [14, 15]
+
+  # レベル3-5 中級追加モンスター
+  rust_eater:
+    names:
+      ja: "ラストイーター"
+      en: "Rust Eater"
+    descriptions:
+      ja: "金属を腐食させる奇怪な生物"
+      en: "A strange creature that corrodes metal"
+    is_boss: false
+    level: 4
+    hp: 18
+    mp: 0
+    attack: 6
+    defense: 3
+    agility: 4
+    intelligence: 2
+    faith: 0
+    luck: 3
+    resistances:
+      physical: 20
+      fire: 0
+      ice: 0
+      lightning: -30
+      dark: 15
+      light: -15
+    special_abilities:
+      - name: "腐食"
+        description: "装備の耐久度を下げる"
+        effect: "equipment_damage"
+        target: "single_enemy"
+        mp_cost: 0
+      - name: "酸吐き"
+        description: "酸性の攻撃"
+        damage_multiplier: 1.2
+        accuracy: 85
+        effect: "poison"
+        duration: 2
+        mp_cost: 0
+    drops:
+      - item_id: "antidote"
+        probability: 0.4
+        quantity: 1
+      - item_id: "healing_potion"
+        probability: 0.3
+        quantity: 1
+    exp_reward: 16
+    gold_reward: 9
+    encounter_weight: 40
+    floors: [4, 5]
+
+  fungoid:
+    names:
+      ja: "ファンゴイド"
+      en: "Fungoid"
+    descriptions:
+      ja: "巨大なキノコの怪物"
+      en: "A giant mushroom monster"
+    is_boss: false
+    level: 5
+    hp: 28
+    mp: 10
+    attack: 7
+    defense: 6
+    agility: 2
+    intelligence: 4
+    faith: 0
+    luck: 4
+    resistances:
+      physical: 10
+      fire: -40
+      ice: 20
+      lightning: 0
+      dark: 30
+      light: -30
+    special_abilities:
+      - name: "胞子雲"
+        description: "毒の胞子で全体攻撃"
+        damage_multiplier: 0.8
+        accuracy: 90
+        target: "all_enemies"
+        effect: "poison"
+        duration: 3
+        mp_cost: 5
+      - name: "菌糸"
+        description: "敵の動きを封じる"
+        effect: "paralysis"
+        target: "single_enemy"
+        duration: 2
+        mp_cost: 3
+    drops:
+      - item_id: "mana_potion"
+        probability: 0.35
+        quantity: 1
+      - item_id: "antidote"
+        probability: 0.5
+        quantity: 1
+    exp_reward: 22
+    gold_reward: 14
+    encounter_weight: 45
+    floors: [5, 6]
+
+  # レベル6-8 上級追加モンスター
+  ice_spider:
+    names:
+      ja: "アイススパイダー"
+      en: "Ice Spider"
+    descriptions:
+      ja: "氷の鎧に覆われた巨大蜘蛛"
+      en: "A giant spider covered in icy armor"
+    is_boss: false
+    level: 7
+    hp: 35
+    mp: 8
+    attack: 12
+    defense: 9
+    agility: 8
+    intelligence: 5
+    faith: 0
+    luck: 6
+    resistances:
+      physical: 15
+      fire: -40
+      ice: 80
+      lightning: -10
+      dark: 20
+      light: -20
+    special_abilities:
+      - name: "氷の糸"
+        description: "氷の糸で敵を拘束"
+        effect: "freeze"
+        target: "single_enemy"
+        duration: 2
+        mp_cost: 5
+      - name: "冷気の毒"
+        description: "氷属性の毒攻撃"
+        damage_multiplier: 1.1
+        accuracy: 90
+        attribute: "ice"
+        effect: "poison"
+        duration: 3
+        mp_cost: 0
+    drops:
+      - item_id: "antidote"
+        probability: 0.4
+        quantity: 1
+      - item_id: "mana_potion"
+        probability: 0.3
+        quantity: 1
+    exp_reward: 45
+    gold_reward: 28
+    encounter_weight: 35
+    floors: [7, 8]
+
+  earth_elemental:
+    names:
+      ja: "アースエレメンタル"
+      en: "Earth Elemental"
+    descriptions:
+      ja: "岩石でできた精霊"
+      en: "A spirit made of rock and earth"
+    is_boss: false
+    level: 8
+    hp: 65
+    mp: 5
+    attack: 15
+    defense: 18
+    agility: 2
+    intelligence: 6
+    faith: 0
+    luck: 4
+    resistances:
+      physical: 35
+      fire: 20
+      ice: 20
+      lightning: -30
+      dark: 10
+      light: 10
+    special_abilities:
+      - name: "岩石投げ"
+        description: "岩を投げつける遠距離攻撃"
+        damage_multiplier: 1.4
+        accuracy: 85
+        mp_cost: 0
+      - name: "地震"
+        description: "全体に振動ダメージ"
+        damage_multiplier: 1.0
+        accuracy: 95
+        target: "all_enemies"
+        mp_cost: 3
+    drops:
+      - item_id: "chain_mail"
+        probability: 0.3
+        quantity: 1
+      - item_id: "mace"
+        probability: 0.25
+        quantity: 1
+    exp_reward: 60
+    gold_reward: 35
+    encounter_weight: 30
+    floors: [7, 8, 9]
+
+  banshee:
+    names:
+      ja: "バンシー"
+      en: "Banshee"
+    descriptions:
+      ja: "死を告げる女性の亡霊"
+      en: "A female ghost that heralds death"
+    is_boss: false
+    level: 9
+    hp: 40
+    mp: 25
+    attack: 11
+    defense: 4
+    agility: 12
+    intelligence: 15
+    faith: 0
+    luck: 8
+    resistances:
+      physical: 50
+      fire: 10
+      ice: 30
+      lightning: 0
+      dark: 70
+      light: -80
+    special_abilities:
+      - name: "死の叫び"
+        description: "全体に恐怖と混乱を与える"
+        effect: "fear_confusion"
+        target: "all_enemies"
+        duration: 3
+        mp_cost: 15
+      - name: "霊魂吸収"
+        description: "MPを吸収して回復"
+        drain_mp: true
+        heal_self: true
+        mp_cost: 8
+    drops:
+      - item_id: "heal_prayer_book"
+        probability: 0.2
+        quantity: 1
+      - item_id: "mana_potion"
+        probability: 0.5
+        quantity: 1
+    exp_reward: 75
+    gold_reward: 50
+    encounter_weight: 25
+    floors: [8, 9, 10]
+
+  # レベル9-12 高級追加モンスター
+  storm_bird:
+    names:
+      ja: "ストームバード"
+      en: "Storm Bird"
+    descriptions:
+      ja: "雷を操る巨大な鳥"
+      en: "A giant bird that commands lightning"
+    is_boss: false
+    level: 10
+    hp: 70
+    mp: 35
+    attack: 17
+    defense: 8
+    agility: 16
+    intelligence: 12
+    faith: 0
+    luck: 10
+    resistances:
+      physical: 5
+      fire: -20
+      ice: 10
+      lightning: 85
+      dark: 0
+      light: 20
+    special_abilities:
+      - name: "雷撃"
+        description: "雷属性の強力な攻撃"
+        damage_multiplier: 1.7
+        accuracy: 90
+        attribute: "lightning"
+        mp_cost: 12
+      - name: "嵐の翼"
+        description: "全体に雷攻撃"
+        damage_multiplier: 1.2
+        accuracy: 85
+        attribute: "lightning"
+        target: "all_enemies"
+        mp_cost: 20
+    drops:
+      - item_id: "staff"
+        probability: 0.3
+        quantity: 1
+      - item_id: "mana_potion"
+        probability: 0.4
+        quantity: 2
+    exp_reward: 130
+    gold_reward: 85
+    encounter_weight: 20
+    floors: [10, 11]
+
+  necromancer:
+    names:
+      ja: "ネクロマンサー"
+      en: "Necromancer"
+    descriptions:
+      ja: "死霊術を操る邪悪な魔術師"
+      en: "An evil mage who commands the undead"
+    is_boss: false
+    level: 11
+    hp: 65
+    mp: 45
+    attack: 13
+    defense: 7
+    agility: 9
+    intelligence: 22
+    faith: 0
+    luck: 8
+    resistances:
+      physical: 10
+      fire: 15
+      ice: 25
+      lightning: 5
+      dark: 60
+      light: -70
+    special_abilities:
+      - name: "死霊召喚"
+        description: "スケルトンを召喚する"
+        summon: "skeleton"
+        mp_cost: 25
+      - name: "死の魔法"
+        description: "即死効果のある攻撃"
+        damage_multiplier: 1.5
+        accuracy: 75
+        attribute: "dark"
+        instant_death_chance: 0.15
+        mp_cost: 20
+      - name: "生命吸収"
+        description: "HPを吸収して回復"
+        drain_hp: true
+        heal_self: true
+        mp_cost: 15
+    drops:
+      - item_id: "fire_spell_book"
+        probability: 0.4
+        quantity: 1
+      - item_id: "staff"
+        probability: 0.3
+        quantity: 1
+    exp_reward: 160
+    gold_reward: 110
+    encounter_weight: 15
+    floors: [11, 12]
+
+  iron_golem:
+    names:
+      ja: "アイアンゴーレム"
+      en: "Iron Golem"
+    descriptions:
+      ja: "鉄でできた巨大な構造体"
+      en: "A massive construct made of iron"
+    is_boss: false
+    level: 12
+    hp: 130
+    mp: 0
+    attack: 21
+    defense: 22
+    agility: 3
+    intelligence: 2
+    faith: 0
+    luck: 5
+    resistances:
+      physical: 45
+      fire: 25
+      ice: 25
+      lightning: -50
+      dark: 30
+      light: 30
+    special_abilities:
+      - name: "鉄拳"
+        description: "重い鉄の拳での攻撃"
+        damage_multiplier: 1.8
+        accuracy: 80
+        mp_cost: 0
+      - name: "修復"
+        description: "自分のHPを回復"
+        heal_amount: 30
+        target: "self"
+        mp_cost: 0
+      - name: "電撃放電"
+        description: "全体に雷ダメージ"
+        damage_multiplier: 1.1
+        accuracy: 90
+        attribute: "lightning"
+        target: "all_enemies"
+        mp_cost: 0
+    drops:
+      - item_id: "plate_armor"
+        probability: 0.4
+        quantity: 1
+      - item_id: "long_sword"
+        probability: 0.3
+        quantity: 1
+    exp_reward: 190
+    gold_reward: 130
+    encounter_weight: 12
+    floors: [11, 12, 13]
+
+  # レベル13-15 最高級追加モンスター
+  arch_demon:
+    names:
+      ja: "アークデーモン"
+      en: "Arch Demon"
+    descriptions:
+      ja: "地獄の上級悪魔"
+      en: "A high-ranking demon from hell"
+    is_boss: false
+    level: 13
+    hp: 140
+    mp: 60
+    attack: 28
+    defense: 18
+    agility: 14
+    intelligence: 25
+    faith: 0
+    luck: 12
+    resistances:
+      physical: 30
+      fire: 70
+      ice: -30
+      lightning: 20
+      dark: 85
+      light: -70
+    special_abilities:
+      - name: "地獄の炎"
+        description: "強力な炎の魔法"
+        damage_multiplier: 2.3
+        accuracy: 90
+        attribute: "fire"
+        mp_cost: 20
+      - name: "魔界の呪い"
+        description: "全体に呪いをかける"
+        effect: "curse_major"
+        target: "all_enemies"
+        duration: 5
+        mp_cost: 25
+      - name: "悪魔の契約"
+        description: "敵の能力値を下げる"
+        effect: "all_stats_down"
+        target: "all_enemies"
+        duration: 4
+        mp_cost: 30
+    drops:
+      - item_id: "fire_spell_book"
+        probability: 0.5
+        quantity: 1
+      - item_id: "staff"
+        probability: 0.4
+        quantity: 1
+    exp_reward: 250
+    gold_reward: 180
+    encounter_weight: 8
+    floors: [13, 14]
+
+  celestial_guardian:
+    names:
+      ja: "セレスティアルガーディアン"
+      en: "Celestial Guardian"
+    descriptions:
+      ja: "天界から遣わされた守護者"
+      en: "A guardian sent from the heavens"
+    is_boss: false
+    level: 14
+    hp: 120
+    mp: 80
+    attack: 24
+    defense: 20
+    agility: 12
+    intelligence: 20
+    faith: 30
+    luck: 18
+    resistances:
+      physical: 25
+      fire: 40
+      ice: 40
+      lightning: 50
+      dark: -60
+      light: 90
+    special_abilities:
+      - name: "聖なる光"
+        description: "光属性の強力な攻撃"
+        damage_multiplier: 2.1
+        accuracy: 95
+        attribute: "light"
+        mp_cost: 25
+      - name: "天の裁き"
+        description: "邪悪な敵に特効攻撃"
+        damage_multiplier: 3.0
+        accuracy: 85
+        attribute: "light"
+        vs_evil_bonus: true
+        mp_cost: 35
+      - name: "聖癒"
+        description: "自分のHPを大回復"
+        heal_amount: 50
+        target: "self"
+        mp_cost: 20
+    drops:
+      - item_id: "heal_prayer_book"
+        probability: 0.6
+        quantity: 1
+      - item_id: "resurrection_powder"
+        probability: 0.3
+        quantity: 1
+    exp_reward: 280
+    gold_reward: 200
+    encounter_weight: 6
+    floors: [14, 15]
+
+  ancient_lich:
+    names:
+      ja: "エンシェントリッチ"
+      en: "Ancient Lich"
+    descriptions:
+      ja: "不死身の古代魔術師"
+      en: "An immortal ancient sorcerer"
+    is_boss: false
+    level: 15
+    hp: 100
+    mp: 100
+    attack: 20
+    defense: 15
+    agility: 10
+    intelligence: 30
+    faith: 0
+    luck: 10
+    resistances:
+      physical: 40
+      fire: 30
+      ice: 50
+      lightning: 20
+      dark: 80
+      light: -90
+    special_abilities:
+      - name: "死者の軍団"
+        description: "複数のアンデッドを召喚"
+        summon_multiple: ["skeleton", "wraith"]
+        mp_cost: 40
+      - name: "死の宣告"
+        description: "即死効果の高い攻撃"
+        damage_multiplier: 1.8
+        accuracy: 80
+        attribute: "dark"
+        instant_death_chance: 0.3
+        mp_cost: 35
+      - name: "時の停止"
+        description: "全体の行動を封じる"
+        effect: "time_stop"
+        target: "all_enemies"
+        duration: 1
+        mp_cost: 50
+      - name: "魂の盾"
+        description: "ダメージを大幅軽減"
+        damage_reduction: 0.7
+        duration: 3
+        mp_cost: 25
+    drops:
+      - item_id: "fire_spell_book"
+        probability: 0.8
+        quantity: 1
+      - item_id: "staff"
+        probability: 0.6
+        quantity: 1
+      - item_id: "resurrection_powder"
+        probability: 0.4
+        quantity: 1
+    exp_reward: 350
+    gold_reward: 250
+    encounter_weight: 4
+    floors: [15]
+
+  # 超レアモンスター（全フロア低確率）
+  mimic:
+    names:
+      ja: "ミミック"
+      en: "Mimic"
+    descriptions:
+      ja: "宝箱に化けた怪物"
+      en: "A monster disguised as a treasure chest"
+    is_boss: false
+    level: 8
+    hp: 45
+    mp: 0
+    attack: 12
+    defense: 15
+    agility: 6
+    intelligence: 8
+    faith: 0
+    luck: 20
+    resistances:
+      physical: 25
+      fire: 10
+      ice: 10
+      lightning: 10
+      dark: 20
+      light: 20
+    special_abilities:
+      - name: "偽装"
+        description: "宝箱に化けて不意打ち"
+        damage_multiplier: 2.0
+        accuracy: 95
+        surprise_attack: true
+        mp_cost: 0
+      - name: "宝物吐き出し"
+        description: "ランダムアイテムをドロップ"
+        random_drop: true
+        mp_cost: 0
+    drops:
+      - item_id: "healing_potion"
+        probability: 0.8
+        quantity: 2
+      - item_id: "mana_potion"
+        probability: 0.6
+        quantity: 2
+      - item_id: "long_sword"
+        probability: 0.3
+        quantity: 1
+      - item_id: "chain_mail"
+        probability: 0.3
+        quantity: 1
+    exp_reward: 100
+    gold_reward: 200
+    encounter_weight: 2
+    floors: [5, 6, 7, 8, 9, 10, 11, 12]
+
+  metal_slime:
+    names:
+      ja: "メタルスライム"
+      en: "Metal Slime"
+    descriptions:
+      ja: "金属でできた非常に素早いスライム"
+      en: "A very fast slime made of metal"
+    is_boss: false
+    level: 6
+    hp: 8
+    mp: 0
+    attack: 5
+    defense: 50
+    agility: 30
+    intelligence: 5
+    faith: 0
+    luck: 25
+    resistances:
+      physical: 80
+      fire: 60
+      ice: 60
+      lightning: -20
+      dark: 70
+      light: 70
+    special_abilities:
+      - name: "高速逃走"
+        description: "高確率で戦闘から逃走"
+        escape_chance: 0.7
+        mp_cost: 0
+      - name: "反射"
+        description: "物理攻撃を反射"
+        reflect_physical: 0.8
+        mp_cost: 0
+    drops:
+      - item_id: "mana_potion"
+        probability: 1.0
+        quantity: 5
+    exp_reward: 500
+    gold_reward: 100
+    encounter_weight: 1
+    floors: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
   # ボス定義（bosses.yamlから統合）
   cave_boss:
     names:
