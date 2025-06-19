@@ -1,0 +1,673 @@
+# モンスター定義ファイル（統合版）
+
+# 一般モンスター
+monsters:
+  # レベル1-2: 初心者モンスター
+  rat:
+    names:
+      ja: "ラット"
+      en: "Rat"
+    descriptions:
+      ja: "地下に住む小さなネズミ"
+      en: "A small rat living underground"
+    is_boss: false
+    level: 1
+    hp: 8
+    mp: 0
+    attack: 3
+    defense: 1
+    agility: 5
+    intelligence: 2
+    faith: 0
+    luck: 3
+    resistances:
+      physical: 0
+      fire: -20
+      ice: 0
+      lightning: 0
+      dark: 10
+      light: -10
+    special_abilities: []
+    drops:
+      - item_id: "healing_potion"
+        probability: 0.1
+        quantity: 1
+    exp_reward: 5
+    gold_reward: 3
+    encounter_weight: 100
+    floors: [1, 2]
+    
+  slime:
+    names:
+      ja: "スライム"
+      en: "Slime"
+    descriptions:
+      ja: "ぷるぷると震える粘液生物"
+      en: "A gelatinous creature that trembles"
+    is_boss: false
+    level: 1
+    hp: 10
+    mp: 0
+    attack: 2
+    defense: 0
+    agility: 2
+    intelligence: 1
+    faith: 0
+    luck: 5
+    resistances:
+      physical: -10
+      fire: -30
+      ice: 20
+      lightning: 0
+      dark: 0
+      light: 0
+    special_abilities: []
+    drops:
+      - item_id: "mana_potion"
+        probability: 0.15
+        quantity: 1
+    exp_reward: 6
+    gold_reward: 2
+    encounter_weight: 80
+    floors: [1, 2, 3]
+    
+  # レベル3-5: 中級モンスター
+  goblin:
+    names:
+      ja: "ゴブリン"
+      en: "Goblin"
+    descriptions:
+      ja: "悪戯好きな小さな悪魔"
+      en: "A mischievous small demon"
+    is_boss: false
+    level: 3
+    hp: 18
+    mp: 0
+    attack: 6
+    defense: 3
+    agility: 8
+    intelligence: 4
+    faith: 0
+    luck: 6
+    resistances:
+      physical: 0
+      fire: 0
+      ice: 0
+      lightning: 0
+      dark: 20
+      light: -20
+    special_abilities:
+      - name: "素早い攻撃"
+        description: "俊敏性を活かした連続攻撃"
+        damage_multiplier: 0.8
+        accuracy: 95
+        hit_count: 2
+        mp_cost: 0
+    drops:
+      - item_id: "dagger"
+        probability: 0.2
+        quantity: 1
+      - item_id: "healing_potion"
+        probability: 0.3
+        quantity: 1
+    exp_reward: 15
+    gold_reward: 8
+    encounter_weight: 70
+    floors: [3, 4, 5]
+    
+  orc:
+    names:
+      ja: "オーク"
+      en: "Orc"
+    descriptions:
+      ja: "筋骨隆々とした戦士"
+      en: "A muscular warrior"
+    is_boss: false
+    level: 4
+    hp: 30
+    mp: 0
+    attack: 10
+    defense: 6
+    agility: 4
+    intelligence: 3
+    faith: 0
+    luck: 4
+    resistances:
+      physical: 10
+      fire: 0
+      ice: 0
+      lightning: 0
+      dark: 10
+      light: -10
+    special_abilities:
+      - name: "強撃"
+        description: "力を込めた一撃"
+        damage_multiplier: 1.3
+        accuracy: 85
+        mp_cost: 0
+    drops:
+      - item_id: "short_sword"
+        probability: 0.25
+        quantity: 1
+      - item_id: "leather_armor"
+        probability: 0.2
+        quantity: 1
+    exp_reward: 25
+    gold_reward: 15
+    encounter_weight: 60
+    floors: [4, 5, 6]
+    
+  # レベル6-8: 上級モンスター
+  skeleton:
+    names:
+      ja: "スケルトン"
+      en: "Skeleton"
+    descriptions:
+      ja: "蘇った骨の戦士"
+      en: "A reanimated bone warrior"
+    is_boss: false
+    level: 6
+    hp: 35
+    mp: 5
+    attack: 12
+    defense: 8
+    agility: 6
+    intelligence: 5
+    faith: 0
+    luck: 2
+    resistances:
+      physical: 20
+      fire: -20
+      ice: 30
+      lightning: 0
+      dark: 50
+      light: -50
+    special_abilities:
+      - name: "骨の矢"
+        description: "骨を飛ばして攻撃"
+        damage_multiplier: 1.1
+        accuracy: 90
+        mp_cost: 2
+    drops:
+      - item_id: "long_sword"
+        probability: 0.15
+        quantity: 1
+      - item_id: "antidote"
+        probability: 0.4
+        quantity: 1
+    exp_reward: 40
+    gold_reward: 25
+    encounter_weight: 50
+    floors: [6, 7, 8]
+    
+  troll:
+    names:
+      ja: "トロル"
+      en: "Troll"
+    descriptions:
+      ja: "巨大で強力な怪物"
+      en: "A huge and powerful monster"
+    is_boss: false
+    level: 8
+    hp: 60
+    mp: 0
+    attack: 18
+    defense: 12
+    agility: 3
+    intelligence: 2
+    faith: 0
+    luck: 5
+    resistances:
+      physical: 25
+      fire: -30
+      ice: 10
+      lightning: 0
+      dark: 20
+      light: -20
+    special_abilities:
+      - name: "大振り"
+        description: "全力での攻撃"
+        damage_multiplier: 1.8
+        accuracy: 70
+        mp_cost: 0
+      - name: "再生"
+        description: "自分のHPを回復"
+        heal_amount: 15
+        target: "self"
+        mp_cost: 0
+    drops:
+      - item_id: "mace"
+        probability: 0.3
+        quantity: 1
+      - item_id: "chain_mail"
+        probability: 0.2
+        quantity: 1
+    exp_reward: 80
+    gold_reward: 50
+    encounter_weight: 30
+    floors: [8, 9, 10]
+    
+  # レベル10+: 最上級モンスター
+  demon:
+    names:
+      ja: "デーモン"
+      en: "Demon"
+    descriptions:
+      ja: "地獄からやってきた悪魔"
+      en: "A devil from hell"
+    is_boss: false
+    level: 10
+    hp: 100
+    mp: 40
+    attack: 22
+    defense: 15
+    agility: 12
+    intelligence: 18
+    faith: 0
+    luck: 8
+    resistances:
+      physical: 20
+      fire: 60
+      ice: -20
+      lightning: 10
+      dark: 70
+      light: -60
+    special_abilities:
+      - name: "ダークボルト"
+        description: "闇属性の魔法攻撃"
+        damage_multiplier: 1.5
+        accuracy: 95
+        attribute: "dark"
+        mp_cost: 10
+      - name: "恐怖"
+        description: "敵を恐怖状態にする"
+        effect: "fear"
+        target: "single_enemy"
+        duration: 3
+        mp_cost: 8
+    drops:
+      - item_id: "fire_spell_book"
+        probability: 0.1
+        quantity: 1
+      - item_id: "plate_armor"
+        probability: 0.15
+        quantity: 1
+    exp_reward: 150
+    gold_reward: 100
+    encounter_weight: 20
+    floors: [10, 11, 12]
+    
+  dragon_whelp:
+    names:
+      ja: "ドラゴンの子"
+      en: "Dragon Whelp"
+    descriptions:
+      ja: "まだ幼い小竜"
+      en: "A young small dragon"
+    is_boss: false
+    level: 12
+    hp: 120
+    mp: 30
+    attack: 25
+    defense: 20
+    agility: 15
+    intelligence: 12
+    faith: 5
+    luck: 10
+    resistances:
+      physical: 30
+      fire: 80
+      ice: -40
+      lightning: 20
+      dark: 30
+      light: 10
+    special_abilities:
+      - name: "小さな炎のブレス"
+        description: "炎のブレス攻撃"
+        damage_multiplier: 1.4
+        accuracy: 90
+        attribute: "fire"
+        mp_cost: 12
+    drops:
+      - item_id: "staff"
+        probability: 0.2
+        quantity: 1
+      - item_id: "heal_prayer_book"
+        probability: 0.1
+        quantity: 1
+    exp_reward: 200
+    gold_reward: 150
+    encounter_weight: 10
+    floors: [12, 13, 14]
+
+  # ボス定義（bosses.yamlから統合）
+  cave_boss:
+    names:
+      ja: "洞窟の支配者"
+      en: "Cave Ruler"
+    descriptions:
+      ja: "洞窟の最深部に住む巨大な熊。鋭い爪と強力な腕力を持つ。"
+      en: "A giant bear living in the deepest part of the cave. Has sharp claws and powerful strength."
+    is_boss: true
+    dungeon_id: "beginners_cave"
+    floor: 5
+    level: 5
+    hp: 150
+    mp: 0
+    attack: 20
+    defense: 15
+    agility: 8
+    intelligence: 5
+    faith: 0
+    luck: 10
+    resistances:
+      physical: 20
+      fire: -30
+      ice: 10
+      lightning: 0
+      dark: 0
+      light: 0
+    special_abilities:
+      - name: "強撃"
+        description: "強力な爪攻撃"
+        damage_multiplier: 1.5
+        accuracy: 90
+        mp_cost: 0
+      - name: "咆哮"
+        description: "敵全体を威嚇し、攻撃力を下げる"
+        effect: "attack_down"
+        target: "all_enemies"
+        duration: 3
+        mp_cost: 0
+    drops:
+      - item_id: "iron_sword"
+        probability: 0.8
+        quantity: 1
+      - item_id: "leather_armor"
+        probability: 0.6
+        quantity: 1
+      - item_id: "healing_potion"
+        probability: 1.0
+        quantity: 3
+    exp_reward: 100
+    gold_reward: 200
+    
+  ruins_boss:
+    names:
+      ja: "古代の守護者"
+      en: "Ancient Guardian"
+    descriptions:
+      ja: "古代遺跡を守る魔法構造物。強力な魔法攻撃を得意とする。"
+      en: "A magical construct guarding ancient ruins. Specializes in powerful magical attacks."
+    is_boss: true
+    dungeon_id: "ancient_ruins"
+    floor: 8
+    level: 10
+    hp: 300
+    mp: 100
+    attack: 15
+    defense: 25
+    agility: 12
+    intelligence: 25
+    faith: 20
+    luck: 15
+    resistances:
+      physical: 30
+      fire: 0
+      ice: 0
+      lightning: 20
+      dark: -20
+      light: 50
+    special_abilities:
+      - name: "魔力弾"
+        description: "強力な魔法攻撃"
+        damage_multiplier: 2.0
+        accuracy: 95
+        mp_cost: 15
+      - name: "古代の呪い"
+        description: "敵全体に状態異常を与える"
+        effect: "curse"
+        target: "all_enemies"
+        duration: 5
+        mp_cost: 25
+    drops:
+      - item_id: "magic_staff"
+        probability: 0.9
+        quantity: 1
+      - item_id: "mage_robe"
+        probability: 0.7
+        quantity: 1
+      - item_id: "mana_potion"
+        probability: 1.0
+        quantity: 2
+    exp_reward: 250
+    gold_reward: 500
+    
+  labyrinth_boss:
+    names:
+      ja: "迷宮の魔王"
+      en: "Labyrinth Demon Lord"
+    descriptions:
+      ja: "迷宮の奥に潜む強大な魔王。闇の力を操り、恐るべき魔法を使う。"
+      en: "A mighty demon lord lurking in the labyrinth depths. Manipulates dark power and uses terrible magic."
+    is_boss: true
+    dungeon_id: "demon_labyrinth"
+    floor: 12
+    level: 15
+    hp: 500
+    mp: 150
+    attack: 30
+    defense: 30
+    agility: 18
+    intelligence: 30
+    faith: 5
+    luck: 20
+    resistances:
+      physical: 20
+      fire: 30
+      ice: -10
+      lightning: 10
+      dark: 80
+      light: -50
+    special_abilities:
+      - name: "闇の一撃"
+        description: "闇属性の強力な攻撃"
+        damage_multiplier: 2.5
+        accuracy: 90
+        mp_cost: 20
+      - name: "魔王の呪縛"
+        description: "敵全体を麻痺させる"
+        effect: "paralysis"
+        target: "all_enemies"
+        duration: 2
+        mp_cost: 30
+      - name: "暗黒治癒"
+        description: "自分のHPを回復"
+        heal_amount: 100
+        target: "self"
+        mp_cost: 25
+    drops:
+      - item_id: "demon_blade"
+        probability: 1.0
+        quantity: 1
+      - item_id: "shadow_cloak"
+        probability: 0.8
+        quantity: 1
+      - item_id: "elixir"
+        probability: 0.5
+        quantity: 1
+    exp_reward: 500
+    gold_reward: 1000
+    
+  dragon_boss:
+    names:
+      ja: "古竜ドラゴナード"
+      en: "Ancient Dragon Dragonard"
+    descriptions:
+      ja: "伝説の古竜。炎のブレスと強靭な鱗を持つ最強の敵。"
+      en: "A legendary ancient dragon. The strongest enemy with fire breath and tough scales."
+    is_boss: true
+    dungeon_id: "dragon_lair"
+    floor: 20
+    level: 20
+    hp: 800
+    mp: 200
+    attack: 40
+    defense: 40
+    agility: 25
+    intelligence: 35
+    faith: 10
+    luck: 30
+    resistances:
+      physical: 40
+      fire: 90
+      ice: -30
+      lightning: 20
+      dark: 30
+      light: 10
+    special_abilities:
+      - name: "炎のブレス"
+        description: "全体攻撃の炎ブレス"
+        damage_multiplier: 1.8
+        accuracy: 95
+        target: "all_enemies"
+        mp_cost: 30
+      - name: "竜の怒り"
+        description: "自分の攻撃力を大幅に上昇"
+        effect: "attack_up_major"
+        target: "self"
+        duration: 5
+        mp_cost: 20
+      - name: "古竜の威光"
+        description: "敵全体に恐怖を与える"
+        effect: "fear"
+        target: "all_enemies"
+        duration: 3
+        mp_cost: 25
+    drops:
+      - item_id: "dragon_sword"
+        probability: 1.0
+        quantity: 1
+      - item_id: "dragon_scale_armor"
+        probability: 1.0
+        quantity: 1
+      - item_id: "phoenix_feather"
+        probability: 0.7
+        quantity: 1
+    exp_reward: 1000
+    gold_reward: 2000
+    
+  practice_boss:
+    names:
+      ja: "練習用ボス"
+      en: "Practice Boss"
+    descriptions:
+      ja: "開発テスト用のボス敵。"
+      en: "A boss enemy for development testing."
+    is_boss: true
+    dungeon_id: "main_dungeon"
+    floor: 20
+    level: 10
+    hp: 200
+    mp: 50
+    attack: 20
+    defense: 20
+    agility: 15
+    intelligence: 15
+    faith: 10
+    luck: 15
+    resistances:
+      physical: 0
+      fire: 0
+      ice: 0
+      lightning: 0
+      dark: 0
+      light: 0
+    special_abilities:
+      - name: "テスト攻撃"
+        description: "テスト用の攻撃"
+        damage_multiplier: 1.5
+        accuracy: 90
+        mp_cost: 10
+    drops:
+      - item_id: "iron_sword"
+        probability: 1.0
+        quantity: 1
+    exp_reward: 200
+    gold_reward: 300
+
+# モンスター遭遇設定
+encounter_settings:
+  # フロア別基本遭遇率
+  base_encounter_rates:
+    1: 0.3
+    2: 0.35
+    3: 0.4
+    4: 0.45
+    5: 0.5
+    6: 0.55
+    7: 0.6
+    8: 0.65
+    9: 0.7
+    10: 0.75
+    11: 0.8
+    12: 0.85
+    13: 0.9
+    14: 0.95
+    15: 1.0
+  
+  # グループ遭遇設定
+  group_encounters:
+    enabled: true
+    max_group_size: 4
+    group_probability: 0.3  # 30%の確率でグループ遭遇
+    
+  # レアモンスター設定
+  rare_monsters:
+    enabled: true
+    base_probability: 0.05  # 5%の確率でレアモンスター
+    exp_multiplier: 2.0
+    gold_multiplier: 3.0
+
+# ボス戦設定（bosses.yamlから統合）
+boss_battle_settings:
+  intro_messages:
+    cave_boss: "洞窟の奥から巨大な影が現れた！\\n洞窟の支配者が立ちはだかる！"
+    ruins_boss: "古代の魔法陣が光り、守護者が姿を現した！\\n古代の守護者との戦いが始まる！"
+    labyrinth_boss: "迷宮の最奥で禍々しい気配が立ち込める...\\n魔王が復活した！"
+    dragon_boss: "洞窟の最深部で巨大な竜が目を覚ました！\\n伝説の古竜ドラゴナードとの最終決戦！"
+    practice_boss: "練習用ボスが現れた！"
+  
+  victory_messages:
+    cave_boss: "洞窟の支配者を倒した！\\n洞窟に平和が戻った。"
+    ruins_boss: "古代の守護者が崩れ去った！\\n遺跡の謎が解けた。"
+    labyrinth_boss: "魔王を封印した！\\n迷宮の呪いが解かれた。"
+    dragon_boss: "古竜ドラゴナードを倒した！\\nあなたは真の勇者となった！"
+    practice_boss: "練習用ボスを倒した！"
+  
+  portal_messages:
+    cave_boss: "洞窟の出口への魔法のポータルが現れた！"
+    ruins_boss: "古代の転送魔法陣が起動した！"
+    labyrinth_boss: "迷宮から脱出するポータルが開いた！"
+    dragon_boss: "伝説の帰還ポータルが現れた！"
+    practice_boss: "帰還ポータルが現れた！"
+
+# モンスターAI設定
+ai_settings:
+  # 基本AI行動パターン
+  behavior_patterns:
+    aggressive: 0.8    # 積極的攻撃
+    defensive: 0.6     # 防御重視
+    balanced: 0.7      # バランス型
+    magic_user: 0.75   # 魔法使用重視
+  
+  # 特殊能力使用率
+  special_ability_rates:
+    low_hp_threshold: 0.3     # HP30%以下で特殊能力使用率上昇
+    desperate_rate: 0.9       # 絶望的状況での使用率
+    normal_rate: 0.4          # 通常時の使用率
+
+# 多言語設定
+language_config:
+  supported_languages: ["ja", "en"]
+  default_language: "ja"

@@ -362,106 +362,10 @@ class MonsterManager:
             
             logger.info(f"モンスターテンプレート{len(self.monster_templates)}種類を読み込みました")
             
-            # モンスターテンプレートが空の場合はデフォルトを作成
-            if not self.monster_templates:
-                self._create_default_monsters()
-            
         except Exception as e:
-            logger.warning(f"モンスターデータの読み込みに失敗: {e}")
-            # デフォルトモンスターを設定
-            self._create_default_monsters()
+            logger.error(f"モンスターデータの読み込みに失敗: {e}")
+            self.monster_templates = {}
     
-    def _create_default_monsters(self):
-        """デフォルトモンスター作成"""
-        self.monster_templates = {
-            "goblin": {
-                "name": "ゴブリン",
-                "description": "小さな緑色の人型モンスター",
-                "monster_type": "humanoid",
-                "size": "small",
-                "stats": {
-                    "level": 1,
-                    "hit_points": 8,
-                    "armor_class": 12,
-                    "attack_bonus": 2,
-                    "damage_dice": "1d6",
-                    "strength": 8,
-                    "agility": 14,
-                    "intelligence": 10,
-                    "faith": 8,
-                    "luck": 10
-                },
-                "resistances": {},
-                "abilities": [],
-                "loot_table": [
-                    {"item_id": "copper_coin", "quantity": 5, "chance": 0.8},
-                    {"item_id": "dagger", "quantity": 1, "chance": 0.1}
-                ],
-                "experience_value": 25
-            },
-            "orc": {
-                "name": "オーク",
-                "description": "大柄で凶暴な戦士",
-                "monster_type": "humanoid",
-                "size": "medium",
-                "stats": {
-                    "level": 3,
-                    "hit_points": 24,
-                    "armor_class": 14,
-                    "attack_bonus": 4,
-                    "damage_dice": "1d8+2",
-                    "strength": 16,
-                    "agility": 10,
-                    "intelligence": 8,
-                    "faith": 8,
-                    "luck": 8
-                },
-                "resistances": {},
-                "abilities": [
-                    {
-                        "ability_id": "rage",
-                        "name": "激怒",
-                        "description": "攻撃力が上昇する",
-                        "ability_type": "active",
-                        "cooldown": 3
-                    }
-                ],
-                "loot_table": [
-                    {"item_id": "silver_coin", "quantity": 10, "chance": 0.7},
-                    {"item_id": "battle_axe", "quantity": 1, "chance": 0.15}
-                ],
-                "experience_value": 75
-            },
-            "skeleton": {
-                "name": "スケルトン",
-                "description": "動く骸骨の戦士",
-                "monster_type": "undead",
-                "size": "medium",
-                "stats": {
-                    "level": 2,
-                    "hit_points": 16,
-                    "armor_class": 13,
-                    "attack_bonus": 3,
-                    "damage_dice": "1d6+1",
-                    "strength": 12,
-                    "agility": 12,
-                    "intelligence": 6,
-                    "faith": 6,
-                    "luck": 8
-                },
-                "resistances": {
-                    "physical": "resistant"
-                },
-                "abilities": [],
-                "loot_table": [
-                    {"item_id": "bone", "quantity": 1, "chance": 0.5},
-                    {"item_id": "rusty_sword", "quantity": 1, "chance": 0.2}
-                ],
-                "experience_value": 50
-            }
-        }
-        
-        logger.info("デフォルトモンスターテンプレートを作成しました")
     
     def create_monster(self, monster_id: str, level_modifier: int = 0) -> Optional[Monster]:
         """モンスター作成"""
@@ -471,8 +375,47 @@ class MonsterManager:
         
         template = self.monster_templates[monster_id]
         
-        # 統計値作成
-        stats_data = template['stats'].copy()
+        # 多言語対応の名前と説明を取得
+        current_language = getattr(config_manager, 'current_language', 'ja')
+        
+        # 名前取得
+        if 'names' in template:
+            names = template['names']
+            if current_language in names:
+                name = names[current_language]
+            elif 'ja' in names:
+                name = names['ja']
+            else:
+                name = list(names.values())[0]
+        else:
+            name = template.get('name', monster_id)
+        
+        # 説明取得
+        if 'descriptions' in template:
+            descriptions = template['descriptions']
+            if current_language in descriptions:
+                description = descriptions[current_language]
+            elif 'ja' in descriptions:
+                description = descriptions['ja']
+            else:
+                description = list(descriptions.values())[0]
+        else:
+            description = template.get('description', '')
+        
+        # 統計値作成（新しいYAML形式に対応）
+        stats_data = {
+            'level': template.get('level', 1),
+            'hit_points': template.get('hp', 10),
+            'armor_class': 10 + template.get('defense', 0),  # 防御力をACに変換
+            'attack_bonus': template.get('attack', 0),
+            'damage_dice': "1d6",  # デフォルト
+            'strength': template.get('attack', 10),  # 攻撃力を筋力として使用
+            'agility': template.get('agility', 10),
+            'intelligence': template.get('intelligence', 10),
+            'faith': template.get('faith', 10),
+            'luck': template.get('luck', 10)
+        }
+        
         if level_modifier != 0:
             # レベル修正を適用
             stats_data['level'] += level_modifier
@@ -484,32 +427,98 @@ class MonsterManager:
         # モンスター作成
         monster = Monster(
             monster_id=monster_id,
-            name=template['name'],
-            description=template['description'],
-            monster_type=MonsterType(template['monster_type']),
-            size=MonsterSize(template['size']),
+            name=name,
+            description=description,
+            monster_type=MonsterType.HUMANOID,  # デフォルト（必要に応じて拡張）
+            size=MonsterSize.MEDIUM,  # デフォルト
             stats=stats,
-            loot_table=template.get('loot_table', []),
-            experience_value=template.get('experience_value', 0)
+            loot_table=self._convert_drops_to_loot_table(template.get('drops', [])),
+            experience_value=template.get('exp_reward', 0)
         )
         
-        # 耐性設定
-        for attr_str, res_str in template.get('resistances', {}).items():
-            attr = DungeonAttribute(attr_str)
-            res = MonsterResistance(res_str)
-            monster.resistances[attr] = res
+        # 耐性設定（新しい形式に対応）
+        resistances = template.get('resistances', {})
+        for attr_name, resistance_value in resistances.items():
+            try:
+                # 属性名をDungeonAttributeに変換
+                if attr_name == 'physical':
+                    attr = DungeonAttribute.PHYSICAL
+                elif attr_name == 'fire':
+                    attr = DungeonAttribute.FIRE
+                elif attr_name == 'ice':
+                    attr = DungeonAttribute.ICE
+                elif attr_name == 'lightning':
+                    attr = DungeonAttribute.LIGHTNING
+                elif attr_name == 'dark':
+                    attr = DungeonAttribute.DARK
+                elif attr_name == 'light':
+                    attr = DungeonAttribute.LIGHT
+                else:
+                    continue
+                
+                # 耐性値を判定
+                if resistance_value >= 50:
+                    res = MonsterResistance.RESISTANT
+                elif resistance_value <= -30:
+                    res = MonsterResistance.VULNERABLE
+                else:
+                    res = MonsterResistance.NORMAL
+                
+                monster.resistances[attr] = res
+            except Exception as e:
+                logger.warning(f"耐性設定エラー: {attr_name}={resistance_value}, {e}")
         
         # 特殊能力設定
-        for ability_data in template.get('abilities', []):
-            ability = MonsterAbility.from_dict(ability_data)
-            monster.abilities.append(ability)
+        for ability_data in template.get('special_abilities', []):
+            try:
+                ability = MonsterAbility(
+                    ability_id=ability_data.get('name', '').lower().replace(' ', '_'),
+                    name=ability_data.get('name', ''),
+                    description=ability_data.get('description', ''),
+                    ability_type='active',
+                    cooldown=0,
+                    usage_count=-1,
+                    target_type='enemy'
+                )
+                monster.abilities.append(ability)
+            except Exception as e:
+                logger.warning(f"特殊能力設定エラー: {ability_data}, {e}")
         
         logger.debug(f"モンスター作成: {monster.name} (Lv.{monster.stats.level})")
         return monster
     
+    def _convert_drops_to_loot_table(self, drops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """ドロップ情報をルートテーブルに変換"""
+        loot_table = []
+        for drop in drops:
+            loot_table.append({
+                'item_id': drop.get('item_id', ''),
+                'quantity': drop.get('quantity', 1),
+                'chance': drop.get('probability', 0.1),
+                'identified': True
+            })
+        return loot_table
+    
     def get_monster_template(self, monster_id: str) -> Optional[Dict[str, Any]]:
         """モンスターテンプレート取得"""
         return self.monster_templates.get(monster_id)
+    
+    def is_boss_monster(self, monster_id: str) -> bool:
+        """ボスモンスターかどうか判定"""
+        template = self.get_monster_template(monster_id)
+        if template:
+            return template.get('is_boss', False)
+        return False
+    
+    def get_boss_monsters(self) -> List[str]:
+        """ボスモンスター一覧を取得"""
+        return [monster_id for monster_id, template in self.monster_templates.items() 
+                if template.get('is_boss', False)]
+    
+    def get_regular_monsters(self) -> List[str]:
+        """通常モンスター一覧を取得"""
+        return [monster_id for monster_id, template in self.monster_templates.items() 
+                if not template.get('is_boss', False)]
     
     def get_available_monsters(self) -> List[str]:
         """利用可能モンスターID一覧"""

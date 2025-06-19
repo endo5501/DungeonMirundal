@@ -8,8 +8,21 @@
 
 ### 優先度:低
 
-- [ ] ./config/items.yaml にアイテムの定義がなされているが、その表示文字は./config/text/*.yamlで定義されている。この場合、アイテムを追加する時にitems.yamlとja.yaml, en.yamlそれぞれに修正を入れる必要があるため、複雑である。./config/items.yamlに各言語の表示文字も定義すべき
-- [ ] モンスター定義がハードコーディングされている。./config/monster.yamlにて定義すべき。bosses.yamlで定義されているデータもmonster.yamlにマージし、bossかどうかはフラグで管理すべき
+- [x] ./config/items.yaml にアイテムの定義がなされているが、その表示文字は./config/text/*.yamlで定義されている。この場合、アイテムを追加する時にitems.yamlとja.yaml, en.yamlそれぞれに修正を入れる必要があるため、複雑である。./config/items.yamlに各言語の表示文字も定義すべき
+  - 実装完了: `config/items.yaml`を多言語統合形式に変更
+  - 各アイテムに`names`と`descriptions`セクションを追加し、言語別データを統合
+  - `src/items/item.py`でget_name()、get_description()メソッドを多言語対応に更新
+  - 従来のname_key、description_key形式との後方互換性を維持
+  - アイテム追加時に単一ファイルでの編集で完結する効率的なシステム
+
+- [x] モンスター定義がハードコーディングされている。./config/monster.yamlにて定義すべき。bosses.yamlで定義されているデータもmonster.yamlにマージし、bossかどうかはフラグで管理すべき
+  - 実装完了: `config/monsters.yaml`に統合モンスター定義システムを構築
+  - 一般モンスター8種類（rat, slime, goblin, orc, skeleton, troll, demon, dragon_whelp）をYAML化
+  - bosses.yamlの全ボスデータ（cave_boss, ruins_boss, labyrinth_boss, dragon_boss, practice_boss）を統合
+  - `is_boss: true/false`フラグによるボス・通常モンスターの管理
+  - `src/monsters/monster.py`のハードコーディングを完全削除
+  - 多言語対応（names/descriptions）、遭遇設定、AI設定を含む包括的なシステム
+  - MonsterManagerに`is_boss_monster()`, `get_boss_monsters()`, `get_regular_monsters()`メソッドを追加
 
 ## Changed Specifications
 

@@ -91,10 +91,34 @@ class Item:
     
     def get_name(self) -> str:
         """アイテム名を取得"""
+        # 新しい多言語対応形式をチェック
+        if 'names' in self.item_data:
+            current_language = getattr(config_manager, 'current_language', 'ja')
+            names = self.item_data['names']
+            if current_language in names:
+                return names[current_language]
+            elif 'ja' in names:  # フォールバック
+                return names['ja']
+            elif names:  # 何らかの言語があれば使用
+                return list(names.values())[0]
+        
+        # 従来の形式にフォールバック
         return config_manager.get_text(self.name_key)
     
     def get_description(self) -> str:
         """アイテム説明を取得"""
+        # 新しい多言語対応形式をチェック
+        if 'descriptions' in self.item_data:
+            current_language = getattr(config_manager, 'current_language', 'ja')
+            descriptions = self.item_data['descriptions']
+            if current_language in descriptions:
+                return descriptions[current_language]
+            elif 'ja' in descriptions:  # フォールバック
+                return descriptions['ja']
+            elif descriptions:  # 何らかの言語があれば使用
+                return list(descriptions.values())[0]
+        
+        # 従来の形式にフォールバック
         return config_manager.get_text(self.description_key)
     
     def can_use(self, character_class: str) -> bool:

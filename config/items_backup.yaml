@@ -1,14 +1,10 @@
-# アイテム定義ファイル（多言語統合版）
+# アイテム定義ファイル
 
 # 武器
 weapons:
   dagger:
-    names:
-      ja: "ダガー"
-      en: "Dagger"
-    descriptions:
-      ja: "軽量で扱いやすい短剣"
-      en: "A lightweight and easy-to-handle dagger"
+    name_key: "item.dagger"
+    description_key: "item.dagger_desc"
     type: "weapon"
     weapon_type: "dagger"
     attack_power: 3
@@ -19,12 +15,8 @@ weapons:
     usable_classes: ["fighter", "thief", "mage", "ninja"]
     
   short_sword:
-    names:
-      ja: "ショートソード"
-      en: "Short Sword"
-    descriptions:
-      ja: "バランスの取れた短剣"
-      en: "A well-balanced short sword"
+    name_key: "item.short_sword"
+    description_key: "item.short_sword_desc"
     type: "weapon"
     weapon_type: "sword"
     attack_power: 5
@@ -35,12 +27,8 @@ weapons:
     usable_classes: ["fighter", "thief", "samurai", "lord"]
     
   long_sword:
-    names:
-      ja: "ロングソード"
-      en: "Long Sword"
-    descriptions:
-      ja: "威力の高い長剣"
-      en: "A powerful long sword"
+    name_key: "item.long_sword"
+    description_key: "item.long_sword_desc"
     type: "weapon"
     weapon_type: "sword"
     attack_power: 8
@@ -51,12 +39,8 @@ weapons:
     usable_classes: ["fighter", "samurai", "lord"]
     
   mace:
-    names:
-      ja: "メイス"
-      en: "Mace"
-    descriptions:
-      ja: "重厚な打撃武器"
-      en: "A heavy blunt weapon"
+    name_key: "item.mace"
+    description_key: "item.mace_desc"
     type: "weapon"
     weapon_type: "mace"
     attack_power: 6
@@ -67,12 +51,8 @@ weapons:
     usable_classes: ["fighter", "priest", "bishop", "lord"]
     
   staff:
-    names:
-      ja: "スタッフ"
-      en: "Staff"
-    descriptions:
-      ja: "魔法の威力を高める杖"
-      en: "A staff that enhances magical power"
+    name_key: "item.staff"
+    description_key: "item.staff_desc"
     type: "weapon"
     weapon_type: "staff"
     attack_power: 2
@@ -84,12 +64,8 @@ weapons:
     magic_bonus: 2
     
   bow:
-    names:
-      ja: "ボウ"
-      en: "Bow"
-    descriptions:
-      ja: "遠距離攻撃が可能な弓"
-      en: "A bow capable of ranged attacks"
+    name_key: "item.bow"
+    description_key: "item.bow_desc"
     type: "weapon"
     weapon_type: "bow"
     attack_power: 4
@@ -102,12 +78,8 @@ weapons:
 # 防具
 armor:
   cloth_robe:
-    names:
-      ja: "布のローブ"
-      en: "Cloth Robe"
-    descriptions:
-      ja: "魔法使いが着る軽装"
-      en: "Light clothing worn by mages"
+    name_key: "item.cloth_robe"
+    description_key: "item.cloth_robe_desc"
     type: "armor"
     armor_type: "light"
     defense: 1
@@ -116,12 +88,8 @@ armor:
     usable_classes: ["mage", "priest", "thief", "bishop"]
     
   leather_armor:
-    names:
-      ja: "レザーアーマー"
-      en: "Leather Armor"
-    descriptions:
-      ja: "軽量で動きやすい革鎧"
-      en: "Lightweight and flexible leather armor"
+    name_key: "item.leather_armor"
+    description_key: "item.leather_armor_desc"
     type: "armor"
     armor_type: "light"
     defense: 3
@@ -130,12 +98,8 @@ armor:
     usable_classes: ["fighter", "thief", "priest", "ninja"]
     
   chain_mail:
-    names:
-      ja: "チェインメイル"
-      en: "Chain Mail"
-    descriptions:
-      ja: "鎖でできた防具"
-      en: "Armor made of interlocking chains"
+    name_key: "item.chain_mail"
+    description_key: "item.chain_mail_desc"
     type: "armor"
     armor_type: "medium"
     defense: 5
@@ -144,12 +108,8 @@ armor:
     usable_classes: ["fighter", "priest", "samurai", "lord"]
     
   plate_armor:
-    names:
-      ja: "プレートアーマー"
-      en: "Plate Armor"
-    descriptions:
-      ja: "最高の防御力を誇る重装"
-      en: "Heavy armor with the highest defense"
+    name_key: "item.plate_armor"
+    description_key: "item.plate_armor_desc"
     type: "armor"
     armor_type: "heavy"
     defense: 8
@@ -160,12 +120,8 @@ armor:
 # 消費アイテム
 consumables:
   healing_potion:
-    names:
-      ja: "回復ポーション"
-      en: "Healing Potion"
-    descriptions:
-      ja: "HPを回復する薬"
-      en: "A potion that restores HP"
+    name_key: "item.healing_potion"
+    description_key: "item.healing_potion_desc"
     type: "consumable"
     effect_type: "heal_hp"
     effect_value: 20
@@ -174,12 +130,8 @@ consumables:
     usable_in_combat: true
     
   mana_potion:
-    names:
-      ja: "マナポーション"
-      en: "Mana Potion"
-    descriptions:
-      ja: "MPを回復する薬"
-      en: "A potion that restores MP"
+    name_key: "item.mana_potion"
+    description_key: "item.mana_potion_desc"
     type: "consumable"
     effect_type: "restore_mp"
     effect_value: 10
@@ -188,12 +140,8 @@ consumables:
     usable_in_combat: false
     
   antidote:
-    names:
-      ja: "解毒剤"
-      en: "Antidote"
-    descriptions:
-      ja: "毒を治療する薬"
-      en: "A medicine that cures poison"
+    name_key: "item.antidote"
+    description_key: "item.antidote_desc"
     type: "consumable"
     effect_type: "cure_poison"
     price: 30
@@ -201,12 +149,8 @@ consumables:
     usable_in_combat: true
     
   return_scroll:
-    names:
-      ja: "帰還の巻物"
-      en: "Return Scroll"
-    descriptions:
-      ja: "町に帰還できる巻物"
-      en: "A scroll that can return you to town"
+    name_key: "item.return_scroll"
+    description_key: "item.return_scroll_desc"
     type: "consumable"
     effect_type: "return_to_town"
     price: 200
@@ -214,12 +158,8 @@ consumables:
     usable_in_combat: false
     
   resurrection_powder:
-    names:
-      ja: "蘇生の粉"
-      en: "Resurrection Powder"
-    descriptions:
-      ja: "死者を蘇らせる貴重な粉"
-      en: "Precious powder that can resurrect the dead"
+    name_key: "item.resurrection_powder"
+    description_key: "item.resurrection_powder_desc"
     type: "consumable"
     effect_type: "resurrect"
     effect_value: 50  # 最大HPの50%で蘇生
@@ -230,12 +170,8 @@ consumables:
 # 魔法書・祈祷書
 spellbooks:
   fire_spell_book:
-    names:
-      ja: "ファイアの魔法書"
-      en: "Fire Spell Book"
-    descriptions:
-      ja: "火炎魔法を習得できる"
-      en: "Allows learning fire magic"
+    name_key: "item.fire_spell_book"
+    description_key: "item.fire_spell_book_desc"
     type: "spellbook"
     spell_type: "magic"
     spell_id: "fireball"
@@ -244,12 +180,8 @@ spellbooks:
     required_class: ["mage", "bishop"]
     
   heal_prayer_book:
-    names:
-      ja: "ヒールの祈祷書"
-      en: "Heal Prayer Book"
-    descriptions:
-      ja: "回復祈祷を習得できる"
-      en: "Allows learning healing prayer"
+    name_key: "item.heal_prayer_book"
+    description_key: "item.heal_prayer_book_desc"
     type: "spellbook"
     spell_type: "prayer"
     spell_id: "heal"
@@ -260,12 +192,8 @@ spellbooks:
 # 特殊アイテム
 special:
   lockpick:
-    names:
-      ja: "鍵開け道具"
-      en: "Lockpick"
-    descriptions:
-      ja: "鍵のかかった扉や宝箱を開ける"
-      en: "Used to open locked doors and chests"
+    name_key: "item.lockpick"
+    description_key: "item.lockpick_desc"
     type: "tool"
     tool_type: "lockpick"
     price: 20
@@ -273,12 +201,8 @@ special:
     required_class: ["thief", "ninja"]
     
   torch:
-    names:
-      ja: "松明"
-      en: "Torch"
-    descriptions:
-      ja: "暗闇を照らす"
-      en: "Illuminates dark areas"
+    name_key: "item.torch"
+    description_key: "item.torch_desc"
     type: "tool"
     tool_type: "light"
     duration: 100  # ターン数
@@ -301,8 +225,3 @@ pricing:
 weight_limits:
   max_individual_weight: 10  # 個別アイテムの最大重量
   strength_weight_bonus: 2   # 筋力1につき追加できる重量
-
-# 多言語設定
-language_config:
-  supported_languages: ["ja", "en"]
-  default_language: "ja"
