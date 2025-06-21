@@ -47,9 +47,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 開発計画
 - **総開発期間**: 14週間（6フェーズ）
 - **Phase 1**: 基盤構築（Pygame環境）
-- **Phase 2**: コア機能（キャラクター・UI）✅ 完了
-- **Phase 3**: 地上部（施設システム）✅ 完了
-- **Phase 4**: 装備・魔法システム ✅ 完了
+- **Phase 2**: コア機能（キャラクター・UI）
+- **Phase 3**: 地上部（施設システム）
+- **Phase 4**: 装備・魔法システム
 - **Phase 5**: ダンジョン（Wizardry風1人称探索・戦闘）
 - **Phase 6**: 統合・最適化
 
