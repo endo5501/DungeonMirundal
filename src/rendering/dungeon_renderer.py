@@ -1,27 +1,9 @@
-"""ダンジョン3D描画システム（Panda3D）"""
+"""ダンジョン疑似3D描画システム（Pygame）"""
 
 from typing import Dict, List, Tuple, Optional, Any
 from enum import Enum
 import math
-
-try:
-    from direct.showbase.ShowBase import ShowBase
-    from direct.actor.Actor import Actor
-    from panda3d.core import (
-        Point3, Vec3, Vec4, 
-        DirectionalLight, AmbientLight,
-        CardMaker, TextNode,
-        WindowProperties,
-        CollisionTraverser, CollisionNode, CollisionSphere, CollisionHandlerQueue,
-        BitMask32
-    )
-    from direct.gui.OnscreenText import OnscreenText
-    from direct.task import Task
-    PANDA3D_AVAILABLE = True
-except ImportError:
-    # Panda3Dが利用できない場合のダミークラス
-    PANDA3D_AVAILABLE = False
-    ShowBase = object
+import pygame
 
 from src.dungeon.dungeon_manager import DungeonManager, DungeonState, PlayerPosition
 from src.dungeon.dungeon_generator import DungeonLevel, DungeonCell, CellType, Direction, DungeonAttribute

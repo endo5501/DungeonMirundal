@@ -1,25 +1,29 @@
 """ゲーム管理システム"""
 
-from direct.showbase.ShowBase import ShowBase
-from direct.gui.OnscreenText import OnscreenText
-from panda3d.core import TextNode, PandaSystem
+import pygame
+import sys
 from src.core.config_manager import config_manager
 from src.core.input_manager import InputManager
 from src.core.save_manager import SaveManager
-from src.overworld.overworld_manager import OverworldManager
+from src.overworld.overworld_manager_pygame import OverworldManager
 from src.dungeon.dungeon_manager import DungeonManager
 from src.character.party import Party
-from src.rendering.dungeon_renderer import DungeonRenderer
+from src.rendering import DungeonRenderer
 from src.utils.logger import logger
 from src.utils.constants import *
 
 
-class GameManager(ShowBase):
+class GameManager:
     """メインゲーム管理クラス"""
     
     def __init__(self):
-        # Panda3D基盤の初期化
-        super().__init__()
+        # Pygame初期化
+        pygame.init()
+        
+        # ディスプレイ設定
+        self.screen = None
+        self.clock = pygame.time.Clock()
+        self.running = False
         
         # ゲーム状態
         self.game_state = "startup"
@@ -91,19 +95,18 @@ class GameManager(ShowBase):
         
         # ウィンドウタイトル
         title = window_config.get("title", GAME_TITLE)
-        self.win.requestProperties(self.win.getProperties())
+        pygame.display.set_caption(title)
         
-        # ウィンドウサイズ（設定は起動後のリサイズで適用）
+        # ウィンドウサイズ
         width = window_config.get("width", WINDOW_WIDTH)
         height = window_config.get("height", WINDOW_HEIGHT)
+        self.screen = pygame.display.set_mode((width, height))
         
         # FPS制限
         graphics_config = game_config.get("graphics", {})
-        fps = graphics_config.get("fps", FPS)
-        globalClock.setMode(globalClock.MLimited)
-        globalClock.setFrameRate(fps)
+        self.target_fps = graphics_config.get("fps", FPS)
         
-        logger.info(f"ウィンドウを設定しました: {width}x{height}, FPS: {fps}")
+        logger.info(f"ウィンドウを設定しました: {width}x{height}, FPS: {self.target_fps}")
     
     def _setup_input(self):
         """入力システムの設定"""
@@ -151,7 +154,7 @@ class GameManager(ShowBase):
     def _setup_fonts(self):
         """フォントシステムの初期化"""
         try:
-            from src.ui.font_manager import font_manager
+            from src.ui.font_manager_pygame import font_manager
             if font_manager.default_font:
                 logger.info("日本語フォントシステムを初期化しました")
             else:
@@ -164,19 +167,14 @@ class GameManager(ShowBase):
         game_config = self.game_config.load_config("game_config")
         debug_config = game_config.get("debug", {})
         self.debug_enabled = debug_config.get("enabled", False)
+        self.show_fps = debug_config.get("show_fps", False)
         
+        # Pygameでのデバッグ情報表示用フォント
         if self.debug_enabled:
-            self.debug_text = OnscreenText(
-                text="Debug Mode",
-                pos=(-0.95, 0.9),
-                scale=0.05,
-                fg=(1, 1, 0, 1),
-                align=TextNode.ALeft
-            )
-            
-            # FPS表示
-            if debug_config.get("show_fps", False):
-                self.setFrameRateMeter(True)
+            try:
+                self.debug_font = pygame.font.Font(None, 24)
+            except:
+                self.debug_font = None
                 
         logger.info(f"デバッグ設定: {'有効' if self.debug_enabled else '無効'}")
     
@@ -362,11 +360,22 @@ class GameManager(ShowBase):
     
     def _setup_transition_system(self):
         """遷移システムの初期化"""
+        # UIマネージャーの初期化
+        from src.ui.base_ui_pygame import initialize_ui_manager
+        self.ui_manager = initialize_ui_manager(self.screen)
+        
         # 地上部マネージャーの初期化
-        self.overworld_manager = OverworldManager()
-        self.overworld_manager.set_enter_dungeon_callback(self.transition_to_dungeon)
-        self.overworld_manager.set_exit_game_callback(self.exit_game)
-        self.overworld_manager.set_input_manager(self.input_manager)
+        try:
+            self.overworld_manager = OverworldManager()
+            self.overworld_manager.set_ui_manager(self.ui_manager)
+            self.overworld_manager.set_enter_dungeon_callback(self.transition_to_dungeon)
+            self.overworld_manager.set_exit_game_callback(self.exit_game)
+            self.overworld_manager.set_input_manager(self.input_manager)
+            logger.info("地上部マネージャーを初期化しました")
+        except Exception as e:
+            logger.error(f"地上部マネージャー初期化エラー: {e}")
+            # エラーの場合は None に設定
+            self.overworld_manager = None
         
         # ダンジョンマネージャーの初期化
         self.dungeon_manager = DungeonManager()
@@ -374,10 +383,9 @@ class GameManager(ShowBase):
         
         # ダンジョンレンダラーの初期化
         try:
-            self.dungeon_renderer = DungeonRenderer(show_base_instance=self)
-            # 無効化されていてもダンジョンマネージャーとゲームマネージャーは設定
+            self.dungeon_renderer = DungeonRenderer(screen=self.screen)
+            # ダンジョンマネージャーを設定
             self.dungeon_renderer.set_dungeon_manager(self.dungeon_manager)
-            self.dungeon_renderer.set_game_manager(self)
             
             if self.dungeon_renderer.enabled:
                 logger.info("ダンジョンレンダラーを初期化しました")
@@ -642,7 +650,7 @@ class GameManager(ShowBase):
         if hasattr(self, 'input_manager'):
             self.input_manager.cleanup()
             
-        self.destroy()
+        pygame.quit()
         
     def run_game(self):
         """ゲームの実行"""
@@ -652,28 +660,87 @@ class GameManager(ShowBase):
         self._initialize_game_flow()
         
         # メインループの開始
-        self.run()
+        self.running = True
+        self._main_loop()
+    
+    def _main_loop(self):
+        """Pygameメインループ"""
+        while self.running:
+            # イベント処理
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                else:
+                    # UIマネージャーでイベント処理
+                    ui_handled = False
+                    if hasattr(self, 'ui_manager') and self.ui_manager:
+                        ui_handled = self.ui_manager.handle_event(event)
+                    
+                    # オーバーワールドマネージャーでイベント処理
+                    if not ui_handled and self.current_location == "overworld" and self.overworld_manager:
+                        ui_handled = self.overworld_manager.handle_event(event)
+                    
+                    # UIで処理されなかった場合のみ入力マネージャーに送信
+                    if not ui_handled and hasattr(self, 'input_manager'):
+                        self.input_manager.handle_event(event)
+            
+            # 入力マネージャーの更新
+            if hasattr(self, 'input_manager'):
+                self.input_manager.update()
+            
+            # 画面をクリア
+            self.screen.fill((0, 0, 0))
+            
+            # 現在の状態に応じて描画
+            self._render_current_state()
+            
+            # UIの描画
+            if hasattr(self, 'ui_manager') and self.ui_manager:
+                self.ui_manager.render()
+            
+            # デバッグ情報の描画
+            if self.debug_enabled:
+                self._render_debug_info()
+            
+            # 画面更新
+            pygame.display.flip()
+            
+            # FPS制限
+            self.clock.tick(self.target_fps)
+    
+    def _render_current_state(self):
+        """現在の状態に応じた描画"""
+        if self.current_location == "overworld" and self.overworld_manager:
+            # 地上部の描画
+            self.overworld_manager.render(self.screen)
+        elif self.current_location == "dungeon" and self.dungeon_renderer and self.dungeon_manager:
+            # ダンジョンの描画
+            current_dungeon = self.dungeon_manager.current_dungeon
+            if current_dungeon:
+                self.dungeon_renderer.render_dungeon_view(
+                    current_dungeon.player_position,
+                    current_dungeon.level
+                )
+        else:
+            # スタートアップ画面
+            self._render_startup_screen()
+    
+    def _render_startup_screen(self):
+        """スタートアップ画面の描画"""
+        if hasattr(self, 'debug_font') and self.debug_font:
+            text = self.debug_font.render(self.get_text("system.startup"), True, (255, 255, 255))
+            text_rect = text.get_rect(center=(self.screen.get_width()//2, self.screen.get_height()//2))
+            self.screen.blit(text, text_rect)
+    
+    def _render_debug_info(self):
+        """デバッグ情報の描画"""
+        if self.debug_font and self.show_fps:
+            fps_text = f"FPS: {int(self.clock.get_fps())}"
+            fps_surface = self.debug_font.render(fps_text, True, (255, 255, 0))
+            self.screen.blit(fps_surface, (10, 10))
     
     def _initialize_game_flow(self):
         """ゲーム開始時の初期化フロー"""
-        # フォントを取得
-        font = None
-        try:
-            from src.ui.font_manager import font_manager
-            font = font_manager.get_default_font()
-        except:
-            pass
-        
-        # スタートアップメッセージを短時間表示
-        startup_text = OnscreenText(
-            text=self.get_text("system.startup"),
-            pos=(0, 0),
-            scale=0.1,
-            fg=(1, 1, 1, 1),
-            align=TextNode.ACenter,
-            font=font
-        )
-        
         # 自動セーブデータロードを試行
         auto_load_success = self._try_auto_load()
         
@@ -681,13 +748,8 @@ class GameManager(ShowBase):
         if not auto_load_success and not self.current_party:
             self._create_test_party()
         
-        # 少し待ってから地上部に遷移
-        def transition_to_town():
-            startup_text.destroy()
-            self.transition_to_overworld()
-        
-        # 2秒後に地上部に遷移
-        self.taskMgr.doMethodLater(2.0, lambda task: transition_to_town(), "startup_transition")
+        # 地上部に遷移
+        self.transition_to_overworld()
         
         self.set_game_state("startup")
     
