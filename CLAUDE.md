@@ -19,8 +19,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### アーキテクチャ概要
 - Python製のクラシックなダンジョン探索RPG
-- **Pygame**を使用した2Dダンジョン探索
-- トップダウン/サイドビューによる2D視覚表現
+- **Pygame**を使用したWizardry風1人称ダンジョン探索
+- 2D技術による疑似3D描画でWizardry風視覚表現を実現
 - 外部ファイル（JSON/YAML）による設定管理でハードコーディングを回避
 - 地上パートとダンジョン探索パートの二つの主要セクション
 - WASD + コントローラー対応
@@ -33,7 +33,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### 主要機能領域
 - **地上部**: 冒険者ギルド、宿屋、商店、教会等の施設管理
-- **ダンジョン**: ランダム生成による2D探索、戦闘システム
+- **ダンジョン**: ランダム生成によるWizardry風1人称探索、戦闘システム
 - **キャラクター**: 種族・職業・パーティ編成システム
 - **アイテム**: 武器・防具・消費アイテムの管理
 - **魔術・祈祷**: スロット装備による魔法システム
@@ -50,7 +50,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Phase 2**: コア機能（キャラクター・UI）✅ 完了
 - **Phase 3**: 地上部（施設システム）✅ 完了
 - **Phase 4**: 装備・魔法システム ✅ 完了
-- **Phase 5**: ダンジョン（2D探索・戦闘）
+- **Phase 5**: ダンジョン（Wizardry風1人称探索・戦闘）
 - **Phase 6**: 統合・最適化
 
 各フェーズの詳細TODO: `docs/phase*_todos.md`
