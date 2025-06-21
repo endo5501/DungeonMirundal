@@ -463,196 +463,54 @@ class Inn(BaseFacility):
         self._show_character_item_list(character, char_items, "transfer_to_storage")
     
     def _show_storage_item_list(self, character, items, action_type):
-        """倉庫アイテム一覧をDirectScrolledListで表示"""
-        # 既存のUIがあれば削除
-        if hasattr(self, 'inn_item_ui_elements'):
-            self._cleanup_inn_item_ui()
-        
-        # フォント取得
-        try:
-            from src.ui.font_manager import font_manager
-            font = font_manager.get_default_font()
-        except:
-            font = None
-        
-        # 背景フレーム
-        background = DirectFrame(
-            frameColor=(0, 0, 0, 0.8),
-            frameSize=(-1.5, 1.5, -1.2, 1.0),
-            pos=(0, 0, 0),
-            state='normal'
-        )
-        
-        # タイトル
+        """倉庫アイテム一覧をpygame UIメニューで表示"""
         title_text = f"宿屋倉庫 → {character.name}"
-        title_label = DirectLabel(
-            text=title_text,
-            scale=0.08,
-            pos=(0, 0, 0.8),
-            text_fg=(1, 1, 0, 1),
-            frameColor=(0, 0, 0, 0),
-            text_font=font
-        )
+        storage_menu = UIMenu("storage_item_list", title_text)
         
-        # アイテムボタンを作成
-        item_buttons = []
+        # アイテムリストを追加
         for slot_index, item_instance in items:
             item = item_manager.get_item(item_instance.item_id)
             if item:
                 display_name = self._format_transfer_item_display(item_instance, item)
-                
-                item_button = DirectButton(
-                    text=display_name,
-                    scale=0.05,
-                    text_scale=0.9,
-                    text_align=0,
-                    command=lambda si=slot_index, ii=item_instance, i=item, c=character: 
-                            self._confirm_storage_to_character_transfer(c, si, ii, i),
-                    frameColor=(0.3, 0.5, 0.7, 0.8),
-                    text_fg=(1, 1, 1, 1),
-                    text_font=font,
-                    relief=1,
-                    borderWidth=(0.01, 0.01)
+                storage_menu.add_menu_item(
+                    display_name,
+                    self._confirm_storage_to_character_transfer,
+                    [character, slot_index, item_instance, item]
                 )
-                item_buttons.append(item_button)
-        
-        # DirectScrolledList作成
-        scrolled_list = DirectScrolledList(
-            frameSize=(-0.8, 0.8, -0.6, 0.6),
-            frameColor=(0.2, 0.3, 0.5, 0.9),
-            pos=(0.3, 0, 0.1),
-            numItemsVisible=8,
-            items=item_buttons,
-            forceHeight=0.08,
-            itemFrame_frameSize=(-0.7, 0.7, -0.03, 0.03),
-            itemFrame_pos=(-0.7, 0, 0.5),
-            decButton_pos=(0.85, 0, 0.35),
-            incButton_pos=(0.85, 0, -0.35),
-            decButton_text="▲",
-            incButton_text="▼",
-            decButton_scale=0.05,
-            incButton_scale=0.05,
-            decButton_text_fg=(1, 1, 1, 1),
-            incButton_text_fg=(1, 1, 1, 1)
-        )
         
         # 戻るボタン
-        back_button = DirectButton(
-            text=config_manager.get_text("menu.back"),
-            scale=0.06,
-            pos=(0, 0, -0.9),
-            command=lambda: self._cleanup_and_return_to_character_detail(character),
-            frameColor=(0.7, 0.2, 0.2, 0.8),
-            text_fg=(1, 1, 1, 1),
-            text_font=font,
-            relief=1,
-            borderWidth=(0.01, 0.01)
+        storage_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_character_detail,
+            [character]
         )
         
-        # UI要素を保存
-        self.inn_item_ui_elements = {
-            'background': background,
-            'title': title_label,
-            'scrolled_list': scrolled_list,
-            'back_button': back_button,
-            'character': character
-        }
+        self._show_submenu(storage_menu)
     
     def _show_character_item_list(self, character, items, action_type):
-        """キャラクターアイテム一覧をDirectScrolledListで表示"""
-        # 既存のUIがあれば削除
-        if hasattr(self, 'inn_item_ui_elements'):
-            self._cleanup_inn_item_ui()
-        
-        # フォント取得
-        try:
-            from src.ui.font_manager import font_manager
-            font = font_manager.get_default_font()
-        except:
-            font = None
-        
-        # 背景フレーム
-        background = DirectFrame(
-            frameColor=(0, 0, 0, 0.8),
-            frameSize=(-1.5, 1.5, -1.2, 1.0),
-            pos=(0, 0, 0),
-            state='normal'
-        )
-        
-        # タイトル
+        """キャラクターアイテム一覧をpygame UIメニューで表示"""
         title_text = f"{character.name} → 宿屋倉庫"
-        title_label = DirectLabel(
-            text=title_text,
-            scale=0.08,
-            pos=(0, 0, 0.8),
-            text_fg=(1, 1, 0, 1),
-            frameColor=(0, 0, 0, 0),
-            text_font=font
-        )
+        character_menu = UIMenu("character_item_list", title_text)
         
-        # アイテムボタンを作成
-        item_buttons = []
+        # アイテムリストを追加
         for slot_index, item_instance in items:
             item = item_manager.get_item(item_instance.item_id)
             if item:
                 display_name = self._format_transfer_item_display(item_instance, item)
-                
-                item_button = DirectButton(
-                    text=display_name,
-                    scale=0.05,
-                    text_scale=0.9,
-                    text_align=0,
-                    command=lambda si=slot_index, ii=item_instance, i=item, c=character: 
-                            self._confirm_character_to_storage_transfer(c, si, ii, i),
-                    frameColor=(0.5, 0.3, 0.3, 0.8),
-                    text_fg=(1, 1, 1, 1),
-                    text_font=font,
-                    relief=1,
-                    borderWidth=(0.01, 0.01)
+                character_menu.add_menu_item(
+                    display_name,
+                    self._confirm_character_to_storage_transfer,
+                    [character, slot_index, item_instance, item]
                 )
-                item_buttons.append(item_button)
-        
-        # DirectScrolledList作成
-        scrolled_list = DirectScrolledList(
-            frameSize=(-0.8, 0.8, -0.6, 0.6),
-            frameColor=(0.5, 0.2, 0.2, 0.9),
-            pos=(0.3, 0, 0.1),
-            numItemsVisible=8,
-            items=item_buttons,
-            forceHeight=0.08,
-            itemFrame_frameSize=(-0.7, 0.7, -0.03, 0.03),
-            itemFrame_pos=(-0.7, 0, 0.5),
-            decButton_pos=(0.85, 0, 0.35),
-            incButton_pos=(0.85, 0, -0.35),
-            decButton_text="▲",
-            incButton_text="▼",
-            decButton_scale=0.05,
-            incButton_scale=0.05,
-            decButton_text_fg=(1, 1, 1, 1),
-            incButton_text_fg=(1, 1, 1, 1)
-        )
         
         # 戻るボタン
-        back_button = DirectButton(
-            text=config_manager.get_text("menu.back"),
-            scale=0.06,
-            pos=(0, 0, -0.9),
-            command=lambda: self._cleanup_and_return_to_character_detail(character),
-            frameColor=(0.7, 0.2, 0.2, 0.8),
-            text_fg=(1, 1, 1, 1),
-            text_font=font,
-            relief=1,
-            borderWidth=(0.01, 0.01)
+        character_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_character_detail,
+            [character]
         )
         
-        # UI要素を保存
-        self.inn_item_ui_elements = {
-            'background': background,
-            'title': title_label,
-            'scrolled_list': scrolled_list,
-            'back_button': back_button,
-            'character': character
-        }
+        self._show_submenu(character_menu)
     
     def _format_transfer_item_display(self, item_instance, item) -> str:
         """転送用アイテム表示名をフォーマット"""
@@ -797,16 +655,17 @@ class Inn(BaseFacility):
         )
     
     def _cleanup_inn_item_ui(self):
-        """宿屋アイテムUIのクリーンアップ"""
-        if hasattr(self, 'inn_item_ui_elements'):
-            for element in self.inn_item_ui_elements.values():
-                if hasattr(element, 'destroy'):
-                    element.destroy()
-            delattr(self, 'inn_item_ui_elements')
+        """宿屋UIのクリーンアップ（pygame版では不要）"""
+        # pygame版ではUIMenuが自動的に管理されるため、クリーンアップは不要
+        pass
     
     def _cleanup_and_return_to_character_detail(self, character):
         """UIをクリーンアップしてキャラクター詳細に戻る"""
-        self._cleanup_inn_item_ui()
+        # pygame版では単純にキャラクター詳細に戻る
+        self._show_character_item_detail(character)
+    
+    def _back_to_character_detail(self, character):
+        """pygame版用：キャラクター詳細に戻る"""
         self._show_character_item_detail(character)
     
     def _show_spell_item_usage(self):
@@ -1201,101 +1060,31 @@ class Inn(BaseFacility):
         self._show_equippable_spells_list(character, spellbook)
     
     def _show_equippable_spells_list(self, character, spellbook):
-        """装備可能魔法リストをDirectScrolledListで表示"""
+        """装備可能魔法リストをpygame UIメニューで表示"""
         from src.magic.spells import spell_manager
         
-        # 既存のUIがあれば削除
-        if hasattr(self, 'spell_mgmt_ui_elements'):
-            self._cleanup_spell_mgmt_ui()
-        
-        # フォント取得
-        try:
-            from src.ui.font_manager import font_manager
-            font = font_manager.get_default_font()
-        except:
-            font = None
-        
-        # 背景フレーム
-        background = DirectFrame(
-            frameColor=(0, 0, 0, 0.8),
-            frameSize=(-1.5, 1.5, -1.2, 1.0),
-            pos=(0, 0, 0),
-            state='normal'
-        )
-        
-        # タイトル
         title_text = f"{character.name} - 魔法装備"
-        title_label = DirectLabel(
-            text=title_text,
-            scale=0.08,
-            pos=(0, 0, 0.8),
-            text_fg=(1, 1, 0, 1),
-            frameColor=(0, 0, 0, 0),
-            text_font=font
-        )
+        spell_menu = UIMenu("equippable_spells_list", title_text)
         
-        # 魔法ボタンを作成
-        spell_buttons = []
+        # 魔法リストを追加
         for spell_id in spellbook.learned_spells:
             spell = spell_manager.get_spell(spell_id)
             if spell:
                 display_name = f"🔮 Lv.{spell.level} {spell.get_name()}"
-                
-                spell_button = DirectButton(
-                    text=display_name,
-                    scale=0.05,
-                    text_scale=0.9,
-                    text_align=0,
-                    command=lambda s=spell, c=character: self._show_slot_selection_for_equip(c, s),
-                    frameColor=(0.3, 0.3, 0.7, 0.8),
-                    text_fg=(1, 1, 1, 1),
-                    text_font=font,
-                    relief=1,
-                    borderWidth=(0.01, 0.01)
+                spell_menu.add_menu_item(
+                    display_name,
+                    self._show_slot_selection_for_equip,
+                    [character, spell]
                 )
-                spell_buttons.append(spell_button)
-        
-        # DirectScrolledList作成
-        scrolled_list = DirectScrolledList(
-            frameSize=(-0.8, 0.8, -0.6, 0.6),
-            frameColor=(0.2, 0.2, 0.5, 0.9),
-            pos=(0.3, 0, 0.1),
-            numItemsVisible=8,
-            items=spell_buttons,
-            forceHeight=0.08,
-            itemFrame_frameSize=(-0.7, 0.7, -0.03, 0.03),
-            itemFrame_pos=(-0.7, 0, 0.5),
-            decButton_pos=(0.85, 0, 0.35),
-            incButton_pos=(0.85, 0, -0.35),
-            decButton_text="▲",
-            incButton_text="▼",
-            decButton_scale=0.05,
-            incButton_scale=0.05,
-            decButton_text_fg=(1, 1, 1, 1),
-            incButton_text_fg=(1, 1, 1, 1)
-        )
         
         # 戻るボタン
-        back_button = DirectButton(
-            text=config_manager.get_text("menu.back"),
-            scale=0.06,
-            pos=(0, 0, -0.9),
-            command=lambda: self._cleanup_and_return_to_spell_detail(character),
-            frameColor=(0.7, 0.2, 0.2, 0.8),
-            text_fg=(1, 1, 1, 1),
-            text_font=font,
-            relief=1,
-            borderWidth=(0.01, 0.01)
+        spell_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_spell_detail,
+            [character]
         )
         
-        # UI要素を保存
-        self.spell_mgmt_ui_elements = {
-            'background': background,
-            'title': title_label,
-            'scrolled_list': scrolled_list,
-            'back_button': back_button,
-            'character': character
-        }
+        self._show_submenu(spell_menu)
     
     def _show_slot_selection_for_equip(self, character, spell):
         """魔法装備用のスロット選択"""
@@ -1342,16 +1131,17 @@ class Inn(BaseFacility):
         self._show_character_spell_slot_detail(character)
     
     def _cleanup_spell_mgmt_ui(self):
-        """魔法管理UIのクリーンアップ"""
-        if hasattr(self, 'spell_mgmt_ui_elements'):
-            for element in self.spell_mgmt_ui_elements.values():
-                if hasattr(element, 'destroy'):
-                    element.destroy()
-            delattr(self, 'spell_mgmt_ui_elements')
+        """魔法管理UIのクリーンアップ（pygame版では不要）"""
+        # pygame版ではUIMenuが自動的に管理されるため、クリーンアップは不要
+        pass
     
     def _cleanup_and_return_to_spell_detail(self, character):
         """UIをクリーンアップして魔法詳細に戻る"""
-        self._cleanup_spell_mgmt_ui()
+        # pygame版では単純に魔法詳細に戻る
+        self._show_character_spell_slot_detail(character)
+    
+    def _back_to_spell_detail(self, character):
+        """pygame版用：魔法詳細に戻る"""
         self._show_character_spell_slot_detail(character)
     
     def _show_spell_unequip_menu(self, character):
