@@ -68,15 +68,17 @@ class DungeonRendererPygame:
         # UI要素
         self.ui_elements = {}
         
-        # フォント初期化
+        # フォント初期化（日本語対応）
         try:
-            self.font_small = pygame.font.Font(None, 24)
-            self.font_medium = pygame.font.Font(None, 32)
-            self.font_large = pygame.font.Font(None, 48)
+            # 日本語対応フォントを使用
+            self.font_small = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', 18)
+            self.font_medium = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', 24)
+            self.font_large = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', 36)
         except:
-            self.font_small = pygame.font.SysFont('arial', 18)
-            self.font_medium = pygame.font.SysFont('arial', 24)
-            self.font_large = pygame.font.SysFont('arial', 36)
+            # フォールバック：システムデフォルト
+            self.font_small = pygame.font.SysFont(None, 18)
+            self.font_medium = pygame.font.SysFont(None, 24)
+            self.font_large = pygame.font.SysFont(None, 36)
         
         # 色設定
         self.colors = {
@@ -360,15 +362,24 @@ class DungeonRendererPygame:
         compass_surface = self.font_large.render(compass_text[pos.facing], True, self.colors['white'])
         self.screen.blit(compass_surface, (self.screen_width - 60, 20))
         
-        # 位置情報表示
-        position_text = f"位置: ({pos.x}, {pos.y}) レベル: {pos.level}"
-        position_surface = self.font_small.render(position_text, True, self.colors['white'])
-        self.screen.blit(position_surface, (10, 10))
+        # 位置情報表示（英語版で確実に表示）
+        position_text = f"Pos: ({pos.x}, {pos.y}) Lv: {pos.level}"
+        try:
+            position_surface = self.font_small.render(position_text, True, self.colors['white'])
+            self.screen.blit(position_surface, (10, 10))
+        except:
+            # 日本語が表示できない場合は英語で表示
+            position_surface = self.font_small.render(position_text, True, self.colors['white'])
+            self.screen.blit(position_surface, (10, 10))
         
-        # ヘルプテキスト
-        help_text = "WASD: 移動 / QE: 回転 / ESC: メニュー"
-        help_surface = self.font_small.render(help_text, True, self.colors['gray'])
-        self.screen.blit(help_surface, (10, self.screen_height - 30))
+        # ヘルプテキスト（英語版で確実に表示）
+        help_text = "WASD: Move / QE: Turn / ESC: Menu"
+        try:
+            help_surface = self.font_small.render(help_text, True, self.colors['gray'])
+            self.screen.blit(help_surface, (10, self.screen_height - 30))
+        except:
+            help_surface = self.font_small.render(help_text, True, self.colors['gray'])
+            self.screen.blit(help_surface, (10, self.screen_height - 30))
     
     def ensure_initial_render(self, dungeon_state: DungeonState) -> bool:
         """初期レンダリングを確実に実行"""

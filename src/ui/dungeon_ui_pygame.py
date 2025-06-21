@@ -49,15 +49,17 @@ class DungeonUIManagerPygame:
         # コールバック
         self.callbacks: Dict[str, Callable] = {}
         
-        # フォント初期化
+        # フォント初期化（日本語対応）
         try:
-            self.font_small = pygame.font.Font(None, 24)
-            self.font_medium = pygame.font.Font(None, 32)
-            self.font_large = pygame.font.Font(None, 48)
+            # 日本語対応フォントを使用
+            self.font_small = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', 18)
+            self.font_medium = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', 24)
+            self.font_large = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', 36)
         except:
-            self.font_small = pygame.font.SysFont('arial', 18)
-            self.font_medium = pygame.font.SysFont('arial', 24)
-            self.font_large = pygame.font.SysFont('arial', 36)
+            # フォールバック：システムデフォルト
+            self.font_small = pygame.font.SysFont(None, 18)
+            self.font_medium = pygame.font.SysFont(None, 24)
+            self.font_large = pygame.font.SysFont(None, 36)
         
         # 色設定
         self.colors = {
@@ -79,16 +81,16 @@ class DungeonUIManagerPygame:
         self.menu_x = (self.screen_width - self.menu_width) // 2
         self.menu_y = (self.screen_height - self.menu_height) // 2
         
-        # メニュー項目
+        # メニュー項目（英語版で確実に表示）
         self.menu_items = [
-            {"text": "インベントリ", "action": "inventory"},
-            {"text": "魔法", "action": "magic"},
-            {"text": "装備", "action": "equipment"},
-            {"text": "キャンプ", "action": "camp"},
-            {"text": "ステータス", "action": "status"},
-            {"text": "状態効果", "action": "status_effects"},
-            {"text": "地上に帰還", "action": "return_overworld"},
-            {"text": "閉じる", "action": "close"}
+            {"text": "Inventory", "action": "inventory"},
+            {"text": "Magic", "action": "magic"},
+            {"text": "Equipment", "action": "equipment"},
+            {"text": "Camp", "action": "camp"},
+            {"text": "Status", "action": "status"},
+            {"text": "Effects", "action": "status_effects"},
+            {"text": "Return to Surface", "action": "return_overworld"},
+            {"text": "Close", "action": "close"}
         ]
         
         self.selected_menu_index = 0
@@ -176,8 +178,8 @@ class DungeonUIManagerPygame:
         pygame.draw.rect(self.screen, self.colors['dark_gray'], menu_rect)
         pygame.draw.rect(self.screen, self.colors['white'], menu_rect, 2)
         
-        # タイトルを描画
-        title_surface = self.font_large.render("ダンジョンメニュー", True, self.colors['white'])
+        # タイトルを描画（英語版で確実に表示）
+        title_surface = self.font_large.render("Dungeon Menu", True, self.colors['white'])
         title_rect = title_surface.get_rect(centerx=self.menu_x + self.menu_width // 2, y=self.menu_y + 20)
         self.screen.blit(title_surface, title_rect)
         
@@ -198,12 +200,12 @@ class DungeonUIManagerPygame:
             text_surface = self.font_medium.render(item["text"], True, text_color)
             self.screen.blit(text_surface, (self.menu_x + 20, y))
         
-        # 操作説明を描画
+        # 操作説明を描画（英語版で確実に表示）
         help_y = self.menu_y + self.menu_height - 60
         help_texts = [
-            "↑↓: 選択",
-            "Enter/Space: 決定",
-            "ESC: 閉じる"
+            "Up/Down: Select",
+            "Enter/Space: Confirm",
+            "ESC: Close"
         ]
         
         for i, help_text in enumerate(help_texts):
