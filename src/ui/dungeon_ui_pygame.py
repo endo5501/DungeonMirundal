@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Callable, Any
 from enum import Enum
 import pygame
 
-from src.ui.base_ui import UIElement, UIButton, UIText, UIMenu, UIState, ui_manager
+from src.ui.base_ui_pygame import UIElement, UIButton, UIText, UIMenu, UIState, ui_manager
 from src.character.party import Party
 from src.core.config_manager import config_manager
 from src.utils.logger import logger

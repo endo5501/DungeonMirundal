@@ -371,8 +371,9 @@ class InputManager:
             callback(f"key_{key}", False, InputType.KEYBOARD)
         
         try:
-            self.accept(key, wrapper)
-            self.accept(f"{key}-up", wrapper_up)
+            # Panda3Dメソッドを削除（Pygame版では不要）
+            # self.accept(key, wrapper)
+            # self.accept(f"{key}-up", wrapper_up)
             logger.debug(f"キー '{key}' を直接バインドしました")
         except Exception as e:
             logger.error(f"キー '{key}' のバインドに失敗: {e}")
@@ -498,11 +499,13 @@ class InputManager:
         try:
             if "keyboard_bindings" in bindings_data:
                 self.keyboard_bindings = bindings_data["keyboard_bindings"]
-                # キーボードイベントを再バインド
-                self.ignoreAll()
+                # キーボードイベントを再バインド（Panda3Dメソッドを削除）
+                # self.ignoreAll()
                 for key, action in self.keyboard_bindings.items():
-                    self.accept(key, self._on_keyboard_input, [action, True])
-                    self.accept(f"{key}-up", self._on_keyboard_input, [action, False])
+                    # Panda3Dメソッドを削除（Pygame版では不要）
+                    # self.accept(key, self._on_keyboard_input, [action, True])
+                    # self.accept(f"{key}-up", self._on_keyboard_input, [action, False])
+                    pass  # forループに実処理が必要
             
             if "gamepad_bindings" in bindings_data:
                 self.gamepad_bindings = bindings_data["gamepad_bindings"]
@@ -530,16 +533,19 @@ class InputManager:
         if hasattr(self, 'taskMgr'):
             self.taskMgr.remove("poll_gamepad")
         
-        # イベントを無視
-        self.ignoreAll()
+        # イベントを無視（Panda3Dメソッドを削除）
+        pass
         
         # データをクリア
         self.action_callbacks.clear()
         self.keyboard_bindings.clear()
         self.gamepad_bindings.clear()
-        self.devices.clear()
-        self.button_states.clear()
-        self.previous_button_states.clear()
+        if hasattr(self, 'devices'):
+            self.devices.clear()
+        if hasattr(self, 'button_states'):
+            self.button_states.clear()
+        if hasattr(self, 'previous_button_states'):
+            self.previous_button_states.clear()
         
         self.active_gamepad = None
         

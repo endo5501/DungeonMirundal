@@ -48,26 +48,26 @@ class OverworldManager:
         if not self.ui_manager:
             return
         
-        # メインメニュー作成
-        self.main_menu = UIMenu("overworld_main", "冒険者ギルド")
+        # メインメニュー作成（英語版で確実に表示）
+        self.main_menu = UIMenu("overworld_main", "Adventurer's Guild")
         
         # ダンジョンボタン
-        dungeon_button = UIButton("enter_dungeon", "ダンジョンに入る", 250, 200, 300, 50)
+        dungeon_button = UIButton("enter_dungeon", "Enter Dungeon", 250, 200, 300, 50)
         dungeon_button.on_click = self._on_enter_dungeon
         self.main_menu.add_element(dungeon_button)
         
         # パーティ情報ボタン
-        party_button = UIButton("party_info", "パーティ情報", 250, 270, 300, 50)
+        party_button = UIButton("party_info", "Party Info", 250, 270, 300, 50)
         party_button.on_click = self._on_party_info
         self.main_menu.add_element(party_button)
         
         # 宿屋ボタン
-        inn_button = UIButton("inn", "宿屋", 250, 340, 300, 50)
+        inn_button = UIButton("inn", "Inn", 250, 340, 300, 50)
         inn_button.on_click = self._on_inn
         self.main_menu.add_element(inn_button)
         
         # ゲーム終了ボタン
-        exit_button = UIButton("exit_game", "ゲーム終了", 250, 410, 300, 50)
+        exit_button = UIButton("exit_game", "Exit Game", 250, 410, 300, 50)
         exit_button.on_click = self._on_exit_game
         self.main_menu.add_element(exit_button)
         

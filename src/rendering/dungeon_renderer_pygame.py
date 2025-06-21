@@ -103,6 +103,65 @@ class DungeonRendererPygame:
         self.current_party = party
         logger.info(f"パーティ{party.name}を設定しました")
     
+    def update_ui(self):
+        """UI更新（互換性メソッド）"""
+        pass
+    
+    def render_dungeon_view(self, player_position: PlayerPosition, level: DungeonLevel) -> bool:
+        """ダンジョンビューを描画（GameManagerからの呼び出し用）"""
+        try:
+            # 直接描画処理を実行
+            return self._render_direct(player_position, level)
+        except Exception as e:
+            logger.error(f"ダンジョンビュー描画エラー: {e}")
+            return False
+    
+    def _render_direct(self, player_position: PlayerPosition, level: DungeonLevel) -> bool:
+        """直接描画処理"""
+        if not self.screen:
+            return False
+        
+        # 画面クリア
+        self.screen.fill((0, 0, 0))
+        
+        # 疑似3D描画
+        try:
+            self._render_walls_raycast(level, player_position)
+            
+            # UI描画（簡易版）
+            self._render_basic_ui(player_position, level)
+            
+            # 画面更新
+            pygame.display.flip()
+            return True
+            
+        except Exception as e:
+            logger.error(f"直接描画エラー: {e}")
+            return False
+    
+    def _render_basic_ui(self, player_position: PlayerPosition, level: DungeonLevel):
+        """基本UI描画"""
+        try:
+            # フォントを取得
+            font = pygame.font.Font(None, 24)
+        except:
+            return
+            
+        # 位置情報表示
+        pos_text = f"Position: ({player_position.x}, {player_position.y}) Level: {player_position.level}"
+        text_surface = font.render(pos_text, True, (255, 255, 255))
+        self.screen.blit(text_surface, (10, 10))
+        
+        # 向いている方向
+        direction_text = f"Facing: {player_position.facing.value}"
+        dir_surface = font.render(direction_text, True, (255, 255, 255))
+        self.screen.blit(dir_surface, (10, 40))
+        
+        # 操作説明
+        help_text = "WASD: Move, Space: Menu, ESC: Return"
+        help_surface = font.render(help_text, True, (200, 200, 200))
+        self.screen.blit(help_surface, (10, self.screen_height - 30))
+    
     def render_dungeon(self, dungeon_state: DungeonState, force_render: bool = False) -> bool:
         """ダンジョンを描画（Pygame版）"""
         if not dungeon_state.player_position:

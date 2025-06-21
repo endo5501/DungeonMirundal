@@ -134,17 +134,36 @@ class UIText(UIElement):
             self.rect.height = text_surface.get_height()
     
     def render(self, screen: pygame.Surface, font: Optional[pygame.font.Font] = None):
-        """テキスト描画"""
+        """テキスト描画（安全なフォントレンダリング）"""
         if self.state != UIState.VISIBLE or not self.text:
             return
         
         # フォントを決定
         use_font = self.font or font
+        
+        # フォントマネージャーを使用してフォントを取得
         if not use_font:
-            return
+            try:
+                from src.ui.font_manager_pygame import font_manager
+                use_font = font_manager.get_default_font()
+            except Exception as e:
+                logger.warning(f"フォントマネージャーの取得に失敗: {e}")
+                try:
+                    use_font = pygame.font.Font(None, 24)
+                except:
+                    return  # フォントが取得できない場合は描画しない
         
         # テキストをレンダリング
-        text_surface = use_font.render(self.text, True, self.text_color)
+        try:
+            text_surface = use_font.render(self.text, True, self.text_color)
+        except Exception as e:
+            logger.warning(f"テキストレンダリングエラー: {e}")
+            # フォールバック：システムフォント使用
+            try:
+                fallback_font = pygame.font.Font(None, 24)
+                text_surface = fallback_font.render(self.text, True, self.text_color)
+            except:
+                return  # 最終的にも失敗した場合は描画しない
         
         # 配置を計算
         text_rect = text_surface.get_rect()
@@ -173,7 +192,7 @@ class UIButton(UIElement):
         self.border_color = (150, 150, 150)
         
     def render(self, screen: pygame.Surface, font: Optional[pygame.font.Font] = None):
-        """ボタン描画"""
+        """ボタン描画（安全なフォントレンダリング）"""
         if self.state != UIState.VISIBLE:
             return
         
@@ -181,10 +200,35 @@ class UIButton(UIElement):
         super().render(screen, font)
         
         # テキスト描画
-        if font and self.text:
-            text_surface = font.render(self.text, True, self.text_color)
-            text_rect = text_surface.get_rect(center=self.rect.center)
-            screen.blit(text_surface, text_rect)
+        if self.text:
+            # フォントを決定
+            use_font = font
+            if not use_font:
+                try:
+                    from src.ui.font_manager_pygame import font_manager
+                    use_font = font_manager.get_default_font()
+                except Exception as e:
+                    logger.warning(f"フォントマネージャーの取得に失敗: {e}")
+                    try:
+                        use_font = pygame.font.Font(None, 24)
+                    except:
+                        return  # フォントが取得できない場合は描画しない
+            
+            # テキストをレンダリング
+            try:
+                text_surface = use_font.render(self.text, True, self.text_color)
+                text_rect = text_surface.get_rect(center=self.rect.center)
+                screen.blit(text_surface, text_rect)
+            except Exception as e:
+                logger.warning(f"ボタンテキストレンダリングエラー: {e}")
+                # フォールバック：システムフォント使用
+                try:
+                    fallback_font = pygame.font.Font(None, 24)
+                    text_surface = fallback_font.render(self.text, True, self.text_color)
+                    text_rect = text_surface.get_rect(center=self.rect.center)
+                    screen.blit(text_surface, text_rect)
+                except:
+                    pass  # 最終的にも失敗した場合は背景のみ描画
 
 
 class UIMenu:
