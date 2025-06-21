@@ -28,6 +28,10 @@ class Temple(BaseFacility):
             'ash_restoration': 1000,  # 灰化回復
             'blessing': 100,  # 祝福
             'curse_removal': 200,  # 呪い解除
+            'poison_cure': 50,   # 毒治療
+            'paralysis_cure': 80,  # 麻痺治療
+            'sleep_cure': 30,    # 睡眠治療
+            'all_status_cure': 150,  # 全状態異常治療
         }
     
     def _setup_menu_items(self, menu: UIMenu):
@@ -36,6 +40,7 @@ class Temple(BaseFacility):
             "蘇生サービス",
             self._show_resurrection_menu
         )
+        
         
         menu.add_menu_item(
             "祝福サービス",
@@ -602,3 +607,242 @@ class Temple(BaseFacility):
         
         if self.main_menu:
             ui_manager.show_element(self.main_menu.element_id)
+    
+    def _show_status_cure_menu(self):
+        """状態異常治療メニューを表示"""
+        if not self.current_party:
+            self._show_error_message("パーティが設定されていません")
+            return
+        
+        # 状態異常にかかっているキャラクターを探す
+        affected_characters = []
+        
+        for character in self.current_party.get_all_characters():
+            if character.status in [CharacterStatus.GOOD, CharacterStatus.INJURED]:
+                status_effects = character.get_status_effects()
+                active_effects = status_effects.get_active_effects_summary()
+                if active_effects:
+                    affected_characters.append((character, active_effects))
+        
+        if not affected_characters:
+            self._show_dialog(
+                "no_status_cure_dialog",
+                "状態異常治療",
+                "治療が必要な状態異常はありません。\n\n"
+                "皆さん健康で何よりです！"
+            )
+            return
+        
+        status_cure_menu = UIMenu("status_cure_menu", "状態異常治療")
+        
+        # 個別治療メニュー
+        for character, effects in affected_characters:
+            char_info = f"{character.name} - {', '.join(effects[:2])}"  # 最初の2つの効果のみ表示
+            if len(effects) > 2:
+                char_info += "..."
+            
+            status_cure_menu.add_menu_item(
+                char_info,
+                self._show_character_status_cure,
+                [character]
+            )
+        
+        # 全体治療
+        if len(affected_characters) > 1:
+            all_cure_cost = self.service_costs['all_status_cure'] * len(affected_characters)
+            status_cure_menu.add_menu_item(
+                f"全員の状態異常治療 - {all_cure_cost}G",
+                self._cure_all_party_status
+            )
+        
+        status_cure_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_main_menu_from_submenu,
+            [status_cure_menu]
+        )
+        
+        self._show_submenu(status_cure_menu)
+    
+    def _show_character_status_cure(self, character: Character):
+        """キャラクター個別の状態異常治療メニュー"""
+        status_effects = character.get_status_effects()
+        active_effects = status_effects.active_effects
+        
+        if not active_effects:
+            self._show_error_message(f"{character.name}には治療すべき状態異常がありません")
+            return
+        
+        char_cure_menu = UIMenu("char_status_cure", f"{character.name}の状態異常治療")
+        
+        # 個別効果治療
+        from src.effects.status_effects import StatusEffectType
+        for effect_type, effect in active_effects.items():
+            effect_name = self._get_status_effect_name(effect_type)
+            cost = self._get_status_cure_cost(effect_type)
+            
+            char_cure_menu.add_menu_item(
+                f"{effect_name}を治療 - {cost}G",
+                self._cure_specific_status,
+                [character, effect_type, cost]
+            )
+        
+        # 全ての状態異常治療
+        if len(active_effects) > 1:
+            all_cost = self.service_costs['all_status_cure']
+            char_cure_menu.add_menu_item(
+                f"全ての状態異常を治療 - {all_cost}G",
+                self._cure_all_character_status,
+                [character, all_cost]
+            )
+        
+        char_cure_menu.add_menu_item(
+            "戻る",
+            self._show_status_cure_menu
+        )
+        
+        ui_manager.register_element(char_cure_menu)
+        ui_manager.show_element(char_cure_menu.element_id, modal=True)
+    
+    def _cure_specific_status(self, character: Character, effect_type, cost: int):
+        """特定の状態異常を治療"""
+        if not self.current_party:
+            return
+        
+        if self.current_party.gold < cost:
+            self._show_error_message("ゴールドが不足しています")
+            return
+        
+        # 治療処理
+        status_effects = character.get_status_effects()
+        success, result = status_effects.remove_effect(effect_type, character)
+        
+        if success:
+            self.current_party.gold -= cost
+            
+            effect_name = self._get_status_effect_name(effect_type)
+            message = (
+                f"{character.name}の{effect_name}を治療しました！\n\n"
+                f"神の力により、{character.name}は\n"
+                f"{effect_name}から解放されました。\n\n"
+                f"治療費: {cost}G\n"
+                f"残りゴールド: {self.current_party.gold}G"
+            )
+            
+            self._show_success_message(message)
+            logger.info(f"状態異常治療: {character.name} - {effect_type.value}")
+        else:
+            self._show_error_message("治療に失敗しました")
+    
+    def _cure_all_character_status(self, character: Character, cost: int):
+        """キャラクターの全状態異常を治療"""
+        if not self.current_party:
+            return
+        
+        if self.current_party.gold < cost:
+            self._show_error_message("ゴールドが不足しています")
+            return
+        
+        # 全状態異常治療
+        status_effects = character.get_status_effects()
+        cured_effects = status_effects.cure_negative_effects(character)
+        
+        if cured_effects:
+            self.current_party.gold -= cost
+            
+            message = (
+                f"{character.name}の全ての状態異常を治療しました！\n\n"
+                f"神の力により、{character.name}は\n"
+                f"全ての苦痛から解放されました。\n\n"
+                f"治療費: {cost}G\n"
+                f"残りゴールド: {self.current_party.gold}G"
+            )
+            
+            self._show_success_message(message)
+            logger.info(f"全状態異常治療: {character.name}")
+        else:
+            self._show_error_message("治療できる状態異常がありませんでした")
+    
+    def _cure_all_party_status(self):
+        """パーティ全体の状態異常治療"""
+        if not self.current_party:
+            return
+        
+        # 治療対象キャラクターを取得
+        affected_characters = []
+        for character in self.current_party.get_all_characters():
+            if character.status in [CharacterStatus.GOOD, CharacterStatus.INJURED]:
+                status_effects = character.get_status_effects()
+                if status_effects.active_effects:
+                    affected_characters.append(character)
+        
+        if not affected_characters:
+            self._show_error_message("治療が必要なキャラクターがいません")
+            return
+        
+        total_cost = self.service_costs['all_status_cure'] * len(affected_characters)
+        
+        if self.current_party.gold < total_cost:
+            self._show_error_message("ゴールドが不足しています")
+            return
+        
+        # 全体治療処理
+        cured_count = 0
+        for character in affected_characters:
+            status_effects = character.get_status_effects()
+            cured_effects = status_effects.cure_negative_effects(character)
+            if cured_effects:
+                cured_count += 1
+        
+        if cured_count > 0:
+            self.current_party.gold -= total_cost
+            
+            message = (
+                f"パーティ全体の状態異常を治療しました！\n\n"
+                f"{cured_count}人のキャラクターが\n"
+                f"神の力により癒されました。\n\n"
+                f"治療費: {total_cost}G\n"
+                f"残りゴールド: {self.current_party.gold}G"
+            )
+            
+            self._show_success_message(message)
+            logger.info(f"パーティ全体状態異常治療: {cured_count}人")
+        else:
+            self._show_error_message("治療できる状態異常がありませんでした")
+    
+    def _get_status_effect_name(self, effect_type) -> str:
+        """状態異常の日本語名を取得"""
+        from src.effects.status_effects import StatusEffectType
+        
+        names = {
+            StatusEffectType.POISON: "毒",
+            StatusEffectType.PARALYSIS: "麻痺", 
+            StatusEffectType.SLEEP: "睡眠",
+            StatusEffectType.CONFUSION: "混乱",
+            StatusEffectType.CHARM: "魅了",
+            StatusEffectType.FEAR: "恐怖",
+            StatusEffectType.BLIND: "盲目",
+            StatusEffectType.SILENCE: "沈黙",
+            StatusEffectType.STONE: "石化",
+            StatusEffectType.SLOW: "減速"
+        }
+        
+        return names.get(effect_type, effect_type.value)
+    
+    def _get_status_cure_cost(self, effect_type) -> int:
+        """状態異常治療の費用を取得"""
+        from src.effects.status_effects import StatusEffectType
+        
+        cost_map = {
+            StatusEffectType.POISON: self.service_costs['poison_cure'],
+            StatusEffectType.PARALYSIS: self.service_costs['paralysis_cure'],
+            StatusEffectType.SLEEP: self.service_costs['sleep_cure'],
+            StatusEffectType.CONFUSION: 100,
+            StatusEffectType.CHARM: 120,
+            StatusEffectType.FEAR: 60,
+            StatusEffectType.BLIND: 80,
+            StatusEffectType.SILENCE: 90,
+            StatusEffectType.STONE: 200,
+            StatusEffectType.SLOW: 40
+        }
+        
+        return cost_map.get(effect_type, 100)

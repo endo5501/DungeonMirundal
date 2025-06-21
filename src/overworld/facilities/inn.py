@@ -26,12 +26,21 @@ class Inn(BaseFacility):
             facility_type=FacilityType.INN,
             name_key="facility.inn"
         )
+        
+        # 宿屋のアイテム預かりシステム（永続的）
+        self.storage_inventory: Optional[Inventory] = None
+        self._storage_initialized = False
     
     def _setup_menu_items(self, menu: UIMenu):
         """宿屋固有のメニュー項目を設定"""
         menu.add_menu_item(
             "冒険の準備",
             self._show_adventure_preparation
+        )
+        
+        menu.add_menu_item(
+            "アイテム預かり",
+            self._show_item_storage
         )
         
         menu.add_menu_item(
