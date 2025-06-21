@@ -6,8 +6,7 @@ from src.character.party import Party
 from src.character.character import Character
 from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
 from src.ui.base_ui import UIMenu, UIDialog, ui_manager
-from direct.gui.DirectGui import DirectScrolledList, DirectButton, DirectFrame, DirectLabel
-from panda3d.core import Vec3
+# NOTE: panda3D UI components removed - using pygame-based UI now
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
@@ -76,7 +75,7 @@ class MagicGuild(BaseFacility):
         logger.info("魔術師ギルドから出ました")
     
     def _show_spellbook_shop_menu(self):
-        """魔術書購入メニューをDirectScrolledListで表示"""
+        """魔術書購入メニューをpygame UIで表示"""
         if not self.current_party:
             self._show_error_message("パーティが設定されていません")
             return
@@ -93,7 +92,26 @@ class MagicGuild(BaseFacility):
             self._show_error_message("現在、魔術書の在庫がありません")
             return
         
-        self._show_spellbook_scrolled_list(all_spellbooks)
+        # pygame版では通常のUIMenuを使用
+        spellbook_menu = UIMenu("spellbook_shop_menu", "魔術書購入")
+        
+        # 魔術書リストを追加
+        for spellbook in all_spellbooks:
+            display_name = f"🔮 {spellbook['name']} - {spellbook['price']}G"
+            spellbook_menu.add_menu_item(
+                display_name,
+                self._show_spellbook_details,
+                [spellbook]
+            )
+        
+        # 戻るボタン
+        spellbook_menu.add_menu_item(
+            config_manager.get_text("menu.back"),
+            self._back_to_main_menu_from_submenu,
+            [spellbook_menu]
+        )
+        
+        self._show_submenu(spellbook_menu)
     
     def _get_spellbooks_by_category(self, category: str) -> List[Dict[str, Any]]:
         """カテゴリ別の魔術書を取得"""
@@ -124,108 +142,19 @@ class MagicGuild(BaseFacility):
         return []
     
     def _show_spellbook_scrolled_list(self, spellbooks: List[Dict[str, Any]]):
-        """魔術書一覧をDirectScrolledListで表示"""
-        # 既存のUIがあれば削除
-        if hasattr(self, 'magic_guild_ui_elements'):
-            self._cleanup_magic_guild_ui()
-        
-        # フォント取得
-        try:
-            from src.ui.font_manager import font_manager
-            font = font_manager.get_default_font()
-        except:
-            font = None
-        
-        # 背景フレーム（クリックをブロック）
-        background = DirectFrame(
-            frameColor=(0, 0, 0, 0.8),
-            frameSize=(-1.5, 1.5, -1.2, 1.0),
-            pos=(0, 0, 0),
-            state='normal'  # クリックイベントを受け取る
-        )
-        
-        # タイトル
-        title_label = DirectLabel(
-            text="魔術書購入",
-            scale=0.08,
-            pos=(0, 0, 0.8),
-            text_fg=(1, 1, 0, 1),
-            frameColor=(0, 0, 0, 0),
-            text_font=font
-        )
-        
-        # 魔術書リスト用のボタンを作成
-        spellbook_buttons = []
-        for spellbook in spellbooks:
-            display_name = f"🔮 {spellbook['name']} - {spellbook['price']}G"
-            
-            spellbook_button = DirectButton(
-                text=display_name,
-                scale=0.05,
-                text_scale=0.9,
-                text_align=0,  # 左寄せ
-                command=lambda selected_spellbook=spellbook: self._show_spellbook_details(selected_spellbook),
-                frameColor=(0.3, 0.3, 0.5, 0.8),
-                text_fg=(1, 1, 1, 1),
-                text_font=font,
-                relief=1,  # RAISED
-                borderWidth=(0.01, 0.01)
-            )
-            spellbook_buttons.append(spellbook_button)
-        
-        # DirectScrolledListを作成
-        scrolled_list = DirectScrolledList(
-            frameSize=(-0.8, 0.8, -0.6, 0.6),  # 幅を縮小
-            frameColor=(0.2, 0.2, 0.4, 0.9),
-            pos=(0.3, 0, 0.1),  # 右寄せに移動
-            numItemsVisible=8,  # 一度に表示するアイテム数
-            items=spellbook_buttons,
-            forceHeight=0.08,  # アイテム間隔を制御
-            itemFrame_frameSize=(-0.7, 0.7, -0.03, 0.03),  # アイテム幅を調整
-            itemFrame_pos=(-0.7, 0, 0.5),  # アイテムを左上から開始
-            decButton_pos=(0.85, 0, 0.35),  # リスト右端上部に配置
-            incButton_pos=(0.85, 0, -0.35),  # リスト右端下部に配置
-            decButton_text="▲",
-            incButton_text="▼",
-            decButton_scale=0.05,
-            incButton_scale=0.05,
-            decButton_text_fg=(1, 1, 1, 1),
-            incButton_text_fg=(1, 1, 1, 1)
-        )
-        
-        # 戻るボタン
-        back_button = DirectButton(
-            text=config_manager.get_text("menu.back"),
-            scale=0.06,
-            pos=(0, 0, -0.9),
-            command=self._cleanup_and_return_to_main_magic_guild,
-            frameColor=(0.7, 0.2, 0.2, 0.8),
-            text_fg=(1, 1, 1, 1),
-            text_font=font,
-            relief=1,
-            borderWidth=(0.01, 0.01)
-        )
-        
-        # UI要素を保存
-        self.magic_guild_ui_elements = {
-            'background': background,
-            'title': title_label,
-            'scrolled_list': scrolled_list,
-            'back_button': back_button,
-            'ui_id': 'magic_guild_spellbook_list'
-        }
+        """魔術書一覧をpygame UIメニューで表示"""
+        # この関数は上記の_show_spellbook_shop_menuで置き換えられるため、
+        # 互換性のために残しているが実際には使用されない
+        pass
     
     def _cleanup_magic_guild_ui(self):
-        """魔術協会UIのクリーンアップ"""
-        if hasattr(self, 'magic_guild_ui_elements'):
-            for element in self.magic_guild_ui_elements.values():
-                if hasattr(element, 'destroy'):
-                    element.destroy()
-            delattr(self, 'magic_guild_ui_elements')
+        """魔術協会UIのクリーンアップ（pygame版では不要）"""
+        # pygame版ではUIMenuが自動的に管理されるため、特別なクリーンアップは不要
+        pass
     
     def _cleanup_and_return_to_main_magic_guild(self):
         """UIをクリーンアップしてメインメニューに戻る"""
-        self._cleanup_magic_guild_ui()
+        # pygame版では単純にメインメニューに戻る
         self._show_main_menu()
     
     def _show_attack_spellbooks(self):
