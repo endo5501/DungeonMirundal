@@ -314,6 +314,22 @@ class InputManager(DirectObject):
             del self.action_callbacks[action]
             logger.debug(f"アクション '{action}' のバインドを解除しました")
     
+    def bind_key_direct(self, key: str, callback: Callable):
+        """キーを直接コールバックにバインド（デバッグ用）"""
+        def wrapper():
+            callback(f"key_{key}", True, InputType.KEYBOARD)
+        
+        def wrapper_up():
+            callback(f"key_{key}", False, InputType.KEYBOARD)
+        
+        try:
+            self.accept(key, wrapper)
+            self.accept(f"{key}-up", wrapper_up)
+            logger.debug(f"キー '{key}' を直接バインドしました")
+        except Exception as e:
+            logger.error(f"キー '{key}' のバインドに失敗: {e}")
+            raise
+    
     def setup_controllers(self):
         """コントローラーの設定"""
         if not self.controller_enabled:

@@ -118,6 +118,16 @@ class GameManager(ShowBase):
         self.input_manager.bind_action(InputAction.PAUSE.value, self._on_pause_action)
         self.input_manager.bind_action(InputAction.HELP.value, self._on_help_action)
         
+        # 3D描画段階テスト用デバッグキー（Numpadキーを使用）
+        try:
+            # Numpad +: 3D描画段階進行
+            self.input_manager.bind_key_direct("equal", self._on_3d_stage_advance)  # +キー
+            # Numpad -: 3D描画緊急リセット  
+            self.input_manager.bind_key_direct("minus", self._on_3d_stage_reset)   # -キー
+            logger.info("3D描画段階テスト用デバッグキーを設定しました (+/- キー)")
+        except Exception as e:
+            logger.warning(f"デバッグキー設定に失敗: {e}")
+        
         # ゲーム機能のバインド
         self.input_manager.bind_action(InputAction.INVENTORY.value, self._on_inventory_action)
         self.input_manager.bind_action(InputAction.MAGIC.value, self._on_magic_action)
@@ -200,12 +210,75 @@ class GameManager(ShowBase):
         """アクションボタンの処理"""
         if pressed:
             logger.info(f"アクションボタン ({input_type.value})")
+            
+            # ダンジョン内でのスペースキー: 3D描画復旧を試行
+            if self.current_location == "dungeon" and self.dungeon_renderer:
+                logger.info("スペースキーによる3D描画手動復旧を試行します")
+                
+                try:
+                    if hasattr(self.dungeon_renderer, 'manual_recovery_attempt'):
+                        recovery_success = self.dungeon_renderer.manual_recovery_attempt()
+                        
+                        if recovery_success:
+                            logger.info("手動復旧が成功しました")
+                            # UI更新
+                            try:
+                                self.dungeon_renderer.update_ui()
+                            except Exception as ui_error:
+                                logger.warning(f"UI更新中にエラー: {ui_error}")
+                        else:
+                            logger.warning("手動復旧に失敗しました")
+                    else:
+                        # フォールバック: 旧システムとの互換性
+                        logger.info("旧システム互換モード: インベントリを開きます")
+                        if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
+                            self.dungeon_renderer.ui_manager._open_inventory()
+                            
+                except Exception as e:
+                    logger.error(f"手動復旧中にエラー: {e}")
+            
+            # 地上部では既存の処理
+            elif self.current_location == "overworld":
+                logger.info("地上部でのアクションボタン")
     
     def _on_debug_toggle(self, action: str, pressed: bool, input_type):
         """デバッグ切り替えの処理"""
         if pressed:
             self.debug_enabled = not self.debug_enabled
             logger.info(f"デバッグモード切り替え: {'有効' if self.debug_enabled else '無効'}")
+    
+    def _on_3d_stage_advance(self, action: str, pressed: bool, input_type):
+        """3D描画段階進行デバッグ"""
+        if pressed and self.current_location == "dungeon" and self.dungeon_renderer:
+            logger.info("=== 3D描画段階進行デバッグキーが押されました ===")
+            
+            # 現在の状態を表示
+            self.dungeon_renderer.log_current_status()
+            
+            # 次の段階に進行
+            success = self.dungeon_renderer.manual_advance_next_stage()
+            
+            if success:
+                logger.info("段階進行が成功しました")
+                # 進行後の状態も表示
+                self.dungeon_renderer.log_current_status()
+                
+                # UIを更新
+                try:
+                    self.dungeon_renderer.update_ui()
+                except Exception as e:
+                    logger.warning(f"UI更新中にエラー: {e}")
+            else:
+                logger.info("段階進行が失敗、または既に最終段階です")
+    
+    def _on_3d_stage_reset(self, action: str, pressed: bool, input_type):
+        """3D描画緊急リセットデバッグ"""
+        if pressed and self.current_location == "dungeon" and self.dungeon_renderer:
+            logger.info("=== 3D描画緊急リセットキーが押されました ===")
+            
+            # 緊急無効化を実行
+            self.dungeon_renderer.emergency_disable()
+            logger.info("3D描画システムを緊急リセットしました")
     
     def _on_pause_action(self, action: str, pressed: bool, input_type):
         """ポーズアクションの処理"""
@@ -302,12 +375,14 @@ class GameManager(ShowBase):
         # ダンジョンレンダラーの初期化
         try:
             self.dungeon_renderer = DungeonRenderer(show_base_instance=self)
+            # 無効化されていてもダンジョンマネージャーとゲームマネージャーは設定
+            self.dungeon_renderer.set_dungeon_manager(self.dungeon_manager)
+            self.dungeon_renderer.set_game_manager(self)
+            
             if self.dungeon_renderer.enabled:
-                self.dungeon_renderer.set_dungeon_manager(self.dungeon_manager)
-                self.dungeon_renderer.set_game_manager(self)
                 logger.info("ダンジョンレンダラーを初期化しました")
             else:
-                logger.warning("ダンジョンレンダラーが無効化されています")
+                logger.info("ダンジョンレンダラーを初期化しました（無効化状態）")
         except Exception as e:
             logger.error(f"ダンジョンレンダラー初期化エラー: {e}")
             self.dungeon_renderer = None
@@ -324,8 +399,8 @@ class GameManager(ShowBase):
         """現在のパーティを設定"""
         self.current_party = party
         
-        # ダンジョンレンダラーにもパーティを設定
-        if self.dungeon_renderer and self.dungeon_renderer.enabled:
+        # ダンジョンレンダラーにもパーティを設定（無効化されていても設定）
+        if self.dungeon_renderer:
             self.dungeon_renderer.set_party(party)
         
         logger.info(f"パーティを設定: {party.name} ({len(party.get_living_characters())}人)")
@@ -363,12 +438,35 @@ class GameManager(ShowBase):
                 self.current_location = "dungeon"
                 self.set_game_state("dungeon_exploration")
                 
-                # ダンジョンレンダラーで描画開始
-                if self.dungeon_renderer and self.dungeon_renderer.enabled:
+                # ダンジョンレンダラーで自動復旧試行
+                if self.dungeon_renderer:
                     current_dungeon = self.dungeon_manager.current_dungeon
                     if current_dungeon:
-                        self.dungeon_renderer.render_dungeon(current_dungeon)
-                        self.dungeon_renderer.update_ui()
+                        try:
+                            logger.info("3D描画の自動復旧を試行します")
+                            
+                            # 自動復旧を試行
+                            if hasattr(self.dungeon_renderer, 'auto_recover'):
+                                recovery_success = self.dungeon_renderer.auto_recover()
+                            else:
+                                # フォールバック: 旧システムとの互換性
+                                recovery_success = self.dungeon_renderer.enabled
+                            
+                            if recovery_success:
+                                logger.info("3D描画の自動復旧が成功しました")
+                                # UI更新も安全に実行
+                                try:
+                                    self.dungeon_renderer.update_ui()
+                                except Exception as ui_error:
+                                    logger.warning(f"UI更新中にエラー: {ui_error}")
+                            else:
+                                logger.warning("3D描画の自動復旧に失敗しました - 手動復旧が必要です")
+                                logger.info("ダンジョン内でスペースキーを押すか、+/-キーで手動復旧を試行してください")
+                                
+                        except Exception as render_error:
+                            logger.error(f"3D描画復旧中にエラーが発生しました: {render_error}")
+                            logger.info("手動復旧が必要です - ダンジョン内でスペースキーを押してください")
+                            # エラーが発生してもゲーム継続
                 
                 logger.info("ダンジョンへの遷移が完了しました")
                 return True
