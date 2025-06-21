@@ -1,4 +1,4 @@
-"""ダンジョン疑似3D描画システム（Pygame）"""
+"""ダンジョン疑似3D描画システム（Pygame完全移行版）"""
 
 from typing import Dict, List, Tuple, Optional, Any
 from enum import Enum
@@ -8,7 +8,6 @@ import pygame
 from src.dungeon.dungeon_manager import DungeonManager, DungeonState, PlayerPosition
 from src.dungeon.dungeon_generator import DungeonLevel, DungeonCell, CellType, Direction, DungeonAttribute
 from src.character.party import Party
-from src.ui.dungeon_ui import DungeonUIManager
 from src.utils.logger import logger
 from src.core.config_manager import config_manager
 
@@ -28,287 +27,70 @@ class RenderQuality(Enum):
 
 
 class DungeonRenderer:
-    """ダンジョン3D描画システム"""
+    """ダンジョン疑似3D描画システム（Pygame完全実装）"""
     
-    def __init__(self, show_base_instance=None):
-        # 3段階システム初期化
-        logger.info("DungeonRenderer 3段階システムで初期化開始")
+    def __init__(self, screen=None):
+        logger.info("DungeonRenderer Pygame版で初期化開始")
         
-        # シンプルな段階管理システム
-        self.current_stage = "disabled"  # disabled, basic, full
-        self.enabled = False
-        self.initialization_errors = []
+        # Pygame初期化
+        if not pygame.get_init():
+            pygame.init()
         
-        # 基本属性を初期化
-        self.dungeon_manager = None
-        self.current_party = None
-        self.ui_manager = None
-        self.base_instance = show_base_instance
+        # 画面設定
+        self.screen = screen
+        if not self.screen:
+            self.screen = pygame.display.set_mode((1024, 768))
+            pygame.display.set_caption("ダンジョンエクスプローラー")
         
-        # UI要素とノードの空の辞書を初期化
-        self.ui_elements = {}
-        self.wall_nodes = {}
-        self.floor_nodes = {}
-        self.ceiling_nodes = {}
-        self.prop_nodes = {}
+        self.screen_width = self.screen.get_width()
+        self.screen_height = self.screen.get_height()
         
         # 基本属性
-        self.camera_height = 1.7
+        self.enabled = True
+        self.dungeon_manager = None
+        self.current_party = None
+        
+        # 疑似3D描画設定
+        self.view_mode = ViewMode.FIRST_PERSON
+        self.render_quality = RenderQuality.MEDIUM
         self.fov = 75
         self.view_distance = 10
         
-        # ShowBaseの参照を安全に設定
-        self._safe_initialize_showbase_references()
+        # カメラ設定（1人称視点）
+        self.camera_x = 0
+        self.camera_y = 0
+        self.camera_angle = 0  # ラジアン
         
-        # 基本UIは常に初期化を試行
-        try:
-            self._initialize_basic_ui()
-            logger.info("基本UI初期化が完了しました")
-        except Exception as e:
-            logger.warning(f"基本UI初期化に失敗: {e}")
-            self.initialization_errors.append(f"基本UI: {e}")
-        
-        logger.info(f"DungeonRenderer初期化完了（段階: {self.current_stage}）")
-        return
-        
-        # ShowBaseメソッドの参照を設定
-        self.render = self.base_instance.render
-        self.camera = self.base_instance.camera
-        self.cam = self.base_instance.cam
-        self.win = self.base_instance.win
-        self.taskMgr = self.base_instance.taskMgr
-        self.loader = self.base_instance.loader
-        self.setBackgroundColor = self.base_instance.setBackgroundColor
-        
-        # 基本設定
-        self.view_mode = ViewMode.FIRST_PERSON
-        self.render_quality = RenderQuality.MEDIUM
-        
-        # ダンジョン管理
-        self.dungeon_manager: Optional[DungeonManager] = None
-        self.current_party: Optional[Party] = None
-        
-        # レンダリング要素
-        self.wall_nodes: Dict[str, Any] = {}
-        self.floor_nodes: Dict[str, Any] = {}
-        self.ceiling_nodes: Dict[str, Any] = {}
-        self.prop_nodes: Dict[str, Any] = {}
-        
-        # カメラ設定
-        self.camera_height = 1.7  # プレイヤーの目線の高さ
-        self.fov = 75             # 視野角
-        self.view_distance = 10   # 描画距離
+        # 描画設定
+        self.wall_height = 64
+        self.wall_distance_scale = 50
         
         # UI要素
-        self.ui_elements: Dict[str, Any] = {}
-        self.ui_manager: Optional[DungeonUIManager] = None
+        self.ui_elements = {}
         
-        # 初期化
-        self._initialize_window()
-        self._initialize_camera()
-        self._initialize_lighting()
-        self._initialize_ui()
-        self._setup_controls()
-        
-        logger.info("DungeonRenderer初期化完了")
-    
-    def _initialize_window(self):
-        """ウィンドウ初期化"""
-        if not self.enabled:
-            return
-        
-        props = WindowProperties()
-        # 国際化対応：ウィンドウタイトルを取得
+        # フォント初期化
         try:
-            title = config_manager.get_text("app.title")
+            self.font_small = pygame.font.Font(None, 24)
+            self.font_medium = pygame.font.Font(None, 32)
+            self.font_large = pygame.font.Font(None, 48)
         except:
-            title = "ダンジョンエクスプローラー"  # フォールバック
-        props.setTitle(title)
-        props.setSize(1024, 768)
-        self.win.requestProperties(props)
+            self.font_small = pygame.font.SysFont('arial', 18)
+            self.font_medium = pygame.font.SysFont('arial', 24)
+            self.font_large = pygame.font.SysFont('arial', 36)
         
-        # 背景色設定（ダンジョンらしい暗い色）
-        self.setBackgroundColor(0.1, 0.1, 0.15, 1)
-    
-    def _initialize_camera(self):
-        """カメラ初期化"""
-        if not self.enabled:
-            return
+        # 色設定
+        self.colors = {
+            'black': (0, 0, 0),
+            'white': (255, 255, 255),
+            'gray': (128, 128, 128),
+            'dark_gray': (64, 64, 64),
+            'floor': (101, 67, 33),
+            'ceiling': (51, 51, 51),
+            'wall': (102, 102, 102)
+        }
         
-        # カメラの基本設定
-        self.camera.setPos(0, 0, self.camera_height)
-        self.camera.setHpr(0, 0, 0)
+        logger.info("DungeonRenderer Pygame版初期化完了")
         
-        # 視野角設定（より適切な設定）
-        lens = self.cam.node().getLens()
-        lens.setFov(self.fov)
-        lens.setNear(0.1)  # 近くのオブジェクトを見えるように
-        lens.setFar(self.view_distance * 2)  # 描画距離を拡大
-        
-        # カメラの品質設定
-        self.cam.node().setCameraMask(BitMask32.allOn())
-        
-        logger.debug(f"カメラを初期化: FOV={self.fov}°, Near={lens.getNear()}, Far={lens.getFar()}")
-    
-    def _validate_camera_position(self, player_pos: PlayerPosition, current_level) -> bool:
-        """カメラ位置が有効かどうかを検証"""
-        if not self.enabled:
-            return True
-        
-        # プレイヤーが有効なセルにいるかチェック
-        if not current_level.is_walkable(player_pos.x, player_pos.y):
-            logger.warning(f"プレイヤーが歩行不可能なセルにいます: ({player_pos.x}, {player_pos.y})")
-            return False
-        
-        # カメラ位置を計算
-        world_x = player_pos.x * 2.0
-        world_y = -player_pos.y * 2.0
-        camera_z = self.camera_height + 0.2
-        
-        # カメラ位置をログ出力
-        logger.debug(f"カメラ位置検証: ({world_x:.2f}, {world_y:.2f}, {camera_z:.2f})")
-        
-        return True
-    
-    def _initialize_lighting(self):
-        """照明初期化"""
-        if not self.enabled:
-            return
-        
-        # 環境光（基本的な明るさを少し上げる）
-        ambient_light = AmbientLight('ambient')
-        ambient_light.setColor(Vec4(0.4, 0.4, 0.5, 1))  # より明るく
-        ambient_light_np = self.render.attachNewNode(ambient_light)
-        self.render.setLight(ambient_light_np)
-        
-        # 方向光（松明の光をシミュレート）
-        directional_light = DirectionalLight('directional')
-        directional_light.setColor(Vec4(1.0, 0.9, 0.7, 1))  # より明るく
-        directional_light.setDirection(Vec3(-1, -1, -1))
-        directional_light_np = self.render.attachNewNode(directional_light)
-        self.render.setLight(directional_light_np)
-        
-        logger.debug("ダンジョンライティングを初期化しました")
-    
-    def _initialize_ui(self):
-        """UI初期化（安全版）"""
-        if not self.enabled:
-            return
-        
-        try:
-            # フォントを取得
-            font = None
-            try:
-                from src.ui.font_manager import font_manager
-                font = font_manager.get_default_font()
-            except:
-                pass
-            
-            # コンパス表示
-            self.ui_elements['compass'] = OnscreenText(
-                text='N',
-                pos=(0.85, 0.85),
-                scale=0.1,
-                fg=(1, 1, 1, 1),
-                font=font
-            )
-            
-            # 位置情報表示
-            self.ui_elements['position'] = OnscreenText(
-                text=config_manager.get_text("dungeon.position_display").format(x=0, y=0, level=1),
-                pos=(-0.95, 0.85),
-                scale=0.06,
-                fg=(1, 1, 1, 1),
-                align=TextNode.ALeft,
-                font=font
-            )
-            
-            # ヘルプテキスト
-            self.ui_elements['help'] = OnscreenText(
-                text=config_manager.get_text("dungeon.help_text"),
-                pos=(-0.95, -0.9),
-                scale=0.05,
-                fg=(0.7, 0.7, 0.7, 1),
-                align=TextNode.ALeft,
-                font=font
-            )
-            
-            logger.debug("基本UI要素の初期化が完了しました")
-            
-            # ダンジョンUIマネージャーの初期化（エラーハンドリング付き）
-            try:
-                self.ui_manager = DungeonUIManager()
-                self.ui_manager.set_callback("return_overworld", self._return_to_overworld)
-                logger.debug("DungeonUIManagerの初期化が完了しました")
-            except Exception as e:
-                logger.warning(f"DungeonUIManagerの初期化に失敗しました: {e}")
-                self.ui_manager = None
-            
-        except Exception as e:
-            logger.error(f"UI初期化中にエラーが発生しました: {e}")
-            # エラーが発生してもレンダリングを続行
-    
-    def _initialize_basic_ui(self):
-        """基本UI初期化（無効化状態でも動作）"""
-        if not self.base_instance:
-            logger.warning("ShowBaseインスタンスが設定されていません")
-            return
-        
-        try:
-            # フォントを取得
-            font = None
-            try:
-                from src.ui.font_manager import font_manager
-                font = font_manager.get_default_font()
-            except:
-                pass
-            
-            # Panda3Dの基本的なOnscreenTextを使用してUIを作成
-            if PANDA3D_AVAILABLE:
-                # コンパス表示
-                self.ui_elements['compass'] = OnscreenText(
-                    text='N',
-                    pos=(0.85, 0.85),
-                    scale=0.1,
-                    fg=(1, 1, 1, 1),
-                    font=font
-                )
-                
-                # 位置情報表示
-                self.ui_elements['position'] = OnscreenText(
-                    text="位置: (0, 0) レベル: 1",
-                    pos=(-0.95, 0.85),
-                    scale=0.06,
-                    fg=(1, 1, 1, 1),
-                    align=TextNode.ALeft,
-                    font=font
-                )
-                
-                # ヘルプテキスト
-                self.ui_elements['help'] = OnscreenText(
-                    text="WASD: 移動 / QE: 回転 / ESC: メニュー",
-                    pos=(-0.95, -0.9),
-                    scale=0.05,
-                    fg=(0.7, 0.7, 0.7, 1),
-                    align=TextNode.ALeft,
-                    font=font
-                )
-                
-                logger.info("基本UI要素を作成しました（無効化状態）")
-            else:
-                logger.warning("Panda3Dが利用できないため、UI要素を作成できません")
-            
-        except Exception as e:
-            logger.error(f"基本UI初期化中にエラーが発生しました: {e}")
-    
-    def _setup_controls(self):
-        """コントロール設定"""
-        if not self.enabled:
-            return
-        
-        # 新しい入力システムを使用する場合、直接キーバインドは不要
-        # GameManagerが入力を処理し、このクラスの移動メソッドを呼び出す
-        logger.info("ダンジョンレンダラーのコントロールを設定しました（入力はGameManagerで処理）")
     
     def set_dungeon_manager(self, dungeon_manager: DungeonManager):
         """ダンジョンマネージャー設定"""
@@ -318,31 +100,36 @@ class DungeonRenderer:
     def set_party(self, party: Party):
         """パーティ設定"""
         self.current_party = party
-        if hasattr(self, 'ui_manager') and self.ui_manager:
-            self.ui_manager.set_party(party)
-            self.ui_manager.show_status_bar()
         logger.info(f"パーティ{party.name}を設定しました")
     
-    def render_dungeon(self, dungeon_state: DungeonState, force_render: bool = False) -> bool:
-        """ダンジョンを描画（安全版）"""
-        if not self.enabled:
-            logger.debug("3D描画が無効化されています")
-            # 無効化状態でもUIは更新
-            try:
-                self._update_ui(dungeon_state)
-            except Exception as e:
-                logger.warning(f"UI更新エラー（無効化状態）: {e}")
-            return True  # 無効化状態でも成功とする
+    def _draw_treasure(self, screen_x: int, distance: float):
+        """宝箱を描画"""
+        if distance > self.view_distance:
+            return
         
+        # 距離に応じてサイズを調整
+        size = max(4, int(15 / max(distance, 0.5)))
+        
+        # 金色で宝箱を描画
+        color = (255, 215, 0)
+        treasure_rect = pygame.Rect(screen_x - size // 2, self.screen_height // 2 - size // 2, size, size)
+        pygame.draw.rect(self.screen, color, treasure_rect)
+        
+        # 宝箱の詳細を描画
+        pygame.draw.rect(self.screen, (200, 180, 0), treasure_rect, 1)
+    
+    def render_dungeon(self, dungeon_state: DungeonState, force_render: bool = False) -> bool:
+        """ダンジョンを描画（Pygame版）"""
         if not dungeon_state.player_position:
             logger.error("プレイヤー位置が設定されていません")
             return False
         
         try:
-            logger.debug(f"ダンジョン描画開始: 位置({dungeon_state.player_position.x}, {dungeon_state.player_position.y}) レベル{dungeon_state.player_position.level}")
+            # 画面をクリア
+            self.screen.fill(self.colors['black'])
             
-            # 既存の描画要素をクリア
-            self._clear_scene()
+            # カメラ位置更新
+            self.update_camera_position(dungeon_state.player_position)
             
             # 現在レベルを取得
             current_level = dungeon_state.levels.get(dungeon_state.player_position.level)
@@ -350,203 +137,127 @@ class DungeonRenderer:
                 logger.error(f"レベル{dungeon_state.player_position.level}が見つかりません")
                 return False
             
-            # カメラ位置の検証
-            if not self._validate_camera_position(dungeon_state.player_position, current_level):
-                logger.error("カメラ位置が無効です")
-                return False
+            # 疑似3D描画を実行
+            self._render_pseudo_3d(current_level, dungeon_state.player_position)
             
-            # カメラ位置更新（詳細ログ付き）
-            self._update_camera_position(dungeon_state.player_position)
+            # UI要素を描画
+            self._render_ui(dungeon_state)
             
-            # ダンジョン構造を描画
-            self._render_level_geometry(current_level, dungeon_state.player_position)
+            # 画面更新
+            pygame.display.flip()
             
-            # プロップ（宝箱、階段など）を描画
-            self._render_props(current_level, dungeon_state.player_position)
-            
-            # 強制レンダリングの場合、明示的にフレーム更新
-            if force_render:
-                self._force_frame_render()
-            
-            # UI更新
-            self._update_ui(dungeon_state)
-            
-            logger.info(f"ダンジョンレベル{current_level.level}を描画しました（ノード数: 壁={len(self.wall_nodes)}, 床={len(self.floor_nodes)}, 天井={len(self.ceiling_nodes)}）")
+            logger.debug(f"ダンジョンレベル{current_level.level}を描画しました")
             return True
             
         except Exception as e:
-            self.handle_rendering_error(e, "render_dungeon")
+            logger.error(f"ダンジョン描画エラー: {e}")
             return False
     
-    def _clear_scene(self):
-        """シーンをクリア"""
-        if not self.enabled:
-            return
+    def _render_pseudo_3d(self, level: DungeonLevel, player_pos: PlayerPosition):
+        """疑似3D描画（レイキャスティング風）"""
+        # 床と天井を描画
+        self._render_floor_and_ceiling()
         
-        # 既存のノードを削除
-        for node_dict in [self.wall_nodes, self.floor_nodes, self.ceiling_nodes, self.prop_nodes]:
-            for node in node_dict.values():
-                if hasattr(node, 'removeNode'):
-                    node.removeNode()
-            node_dict.clear()
+        # 壁面をレイキャスティングで描画
+        self._render_walls_raycast(level, player_pos)
+        
+        # プロップ（階段、宝箱など）を描画
+        self._render_props_3d(level, player_pos)
     
-    def _update_camera_position(self, player_pos: PlayerPosition):
-        """カメラ位置更新"""
-        if not self.enabled:
-            return
+    def _render_floor_and_ceiling(self):
+        """床と天井を描画"""
+        # 床（下半分）
+        floor_rect = pygame.Rect(0, self.screen_height // 2, self.screen_width, self.screen_height // 2)
+        pygame.draw.rect(self.screen, self.colors['floor'], floor_rect)
         
-        # プレイヤー位置をワールド座標に変換
-        world_x = player_pos.x * 2.0  # セル1つ = 2.0ユニット
-        world_y = -player_pos.y * 2.0  # Panda3Dは-Y方向が奥
-        
-        # カメラ位置設定（セルの中心、少し高めで壁に埋まらないように）
-        camera_x = world_x
-        camera_y = world_y 
-        camera_z = self.camera_height + 0.2  # 少し高めにして床に埋まらないように
-        
-        self.camera.setPos(camera_x, camera_y, camera_z)
-        
-        # 向き設定
-        heading = self._direction_to_heading(player_pos.facing)
-        self.camera.setHpr(heading, 0, 0)
-        
-        logger.debug(f"カメラ位置更新: ({camera_x:.2f}, {camera_y:.2f}, {camera_z:.2f}) 向き: {heading}°")
+        # 天井（上半分）
+        ceiling_rect = pygame.Rect(0, 0, self.screen_width, self.screen_height // 2)
+        pygame.draw.rect(self.screen, self.colors['ceiling'], ceiling_rect)
     
-    def _render_level_geometry(self, level: DungeonLevel, player_pos: PlayerPosition):
-        """レベルジオメトリ描画"""
-        if not self.enabled:
-            return
+    def _render_walls_raycast(self, level: DungeonLevel, player_pos: PlayerPosition):
+        """レイキャスティングによる壁面描画"""
+        # レイキャスティングの準備
+        ray_count = self.screen_width // 2  # 解像度調整
         
-        # 描画範囲を制限（パフォーマンス向上）
-        render_range = 5
-        
-        for x in range(max(0, player_pos.x - render_range), 
-                      min(level.width, player_pos.x + render_range + 1)):
-            for y in range(max(0, player_pos.y - render_range),
-                          min(level.height, player_pos.y + render_range + 1)):
+        for ray_index in range(ray_count):
+            # レイの角度を計算
+            ray_angle = self.camera_angle + (ray_index - ray_count // 2) * (self.fov * math.pi / 180) / ray_count
+            
+            # レイキャストを実行
+            distance, hit_wall = self._cast_ray(level, player_pos, ray_angle)
+            
+            if hit_wall:
+                # 壁の高さを距離に応じて計算
+                wall_height = int(self.wall_height * self.wall_distance_scale / max(distance, 1))
+                wall_height = min(wall_height, self.screen_height)
                 
-                cell = level.get_cell(x, y)
-                if not cell:
-                    continue
+                # 壁の描画位置を計算
+                wall_top = (self.screen_height - wall_height) // 2
+                wall_bottom = wall_top + wall_height
                 
-                self._render_cell(cell, level.attribute)
+                # 壁の明度を距離に応じて調整
+                brightness = max(0.3, 1.0 - distance / self.view_distance)
+                wall_color = tuple(int(c * brightness) for c in self.colors['wall'])
+                
+                # 壁を描画
+                x = ray_index * 2  # レイ幅を2ピクセルに
+                wall_rect = pygame.Rect(x, wall_top, 2, wall_height)
+                pygame.draw.rect(self.screen, wall_color, wall_rect)
     
-    def _render_cell(self, cell: DungeonCell, attribute: DungeonAttribute):
-        """セル描画"""
-        if not self.enabled:
-            return
+    def _cast_ray(self, level: DungeonLevel, player_pos: PlayerPosition, angle: float) -> Tuple[float, bool]:
+        """レイキャスティング実行"""
+        # レイの方向ベクトル
+        dx = math.cos(angle)
+        dy = math.sin(angle)
         
-        world_x = cell.x * 2.0
-        world_y = -cell.y * 2.0
+        # レイの開始位置
+        ray_x = float(player_pos.x)
+        ray_y = float(player_pos.y)
         
-        if cell.cell_type == CellType.WALL:
-            self._render_wall_cell(cell, world_x, world_y, attribute)
-        else:
-            # 床を描画
-            self._render_floor(cell, world_x, world_y, attribute)
+        # レイを進める
+        step_size = 0.1
+        distance = 0
+        
+        while distance < self.view_distance:
+            ray_x += dx * step_size
+            ray_y += dy * step_size
+            distance += step_size
             
-            # 天井を描画
-            self._render_ceiling(cell, world_x, world_y, attribute)
+            # グリッド座標に変換
+            grid_x = int(ray_x)
+            grid_y = int(ray_y)
             
-            # 各方向の壁をチェック
-            for direction, has_wall in cell.walls.items():
-                if has_wall:
-                    self._render_wall(cell, world_x, world_y, direction, attribute)
-    
-    def _render_wall_cell(self, cell: DungeonCell, world_x: float, world_y: float, attribute: DungeonAttribute):
-        """壁セル描画"""
-        if not self.enabled:
-            return
-        
-        # 壁の色を属性に基づいて決定
-        wall_color = self._get_attribute_color(attribute, 0.6)
-        
-        # 立方体で壁を作成（簡易実装）
-        from panda3d.core import CardMaker
-        
-        # 6面を個別に作成
-        for i, (offset, hpr) in enumerate([
-            ((0, -1, 0), (0, 0, 0)),    # 前面
-            ((0, 1, 0), (180, 0, 0)),   # 背面
-            ((-1, 0, 0), (90, 0, 0)),   # 左面
-            ((1, 0, 0), (-90, 0, 0)),   # 右面
-            ((0, 0, 1), (0, 90, 0)),    # 上面
-            ((0, 0, -1), (0, -90, 0))   # 下面
-        ]):
-            cm = CardMaker(f"wall_{cell.x}_{cell.y}_{i}")
-            cm.setFrame(-1, 1, -1, 1)
+            # 範囲外チェック
+            if grid_x < 0 or grid_x >= level.width or grid_y < 0 or grid_y >= level.height:
+                return distance, True
             
-            wall_card = self.render.attachNewNode(cm.generate())
-            wall_card.setPos(world_x + offset[0], world_y + offset[1], 1 + offset[2])
-            wall_card.setHpr(*hpr)
-            wall_card.setColor(wall_color)
+            # セルをチェック
+            cell = level.get_cell(grid_x, grid_y)
+            if not cell or cell.cell_type == CellType.WALL:
+                return distance, True
             
-            self.wall_nodes[f"{cell.x}_{cell.y}_{i}"] = wall_card
+            # 壁の存在をチェック
+            if self._check_wall_collision(cell, ray_x - grid_x, ray_y - grid_y):
+                return distance, True
+        
+        return self.view_distance, False
     
-    def _render_floor(self, cell: DungeonCell, world_x: float, world_y: float, attribute: DungeonAttribute):
-        """床描画（改善版）"""
-        if not self.enabled:
-            return
+    def _check_wall_collision(self, cell: DungeonCell, local_x: float, local_y: float) -> bool:
+        """セル内での壁との衝突をチェック"""
+        # セルの境界での壁チェック
+        if local_x <= 0.1 and cell.walls.get(Direction.WEST, False):
+            return True
+        if local_x >= 0.9 and cell.walls.get(Direction.EAST, False):
+            return True
+        if local_y <= 0.1 and cell.walls.get(Direction.NORTH, False):
+            return True
+        if local_y >= 0.9 and cell.walls.get(Direction.SOUTH, False):
+            return True
         
-        floor_color = self._get_attribute_color(attribute, 0.4)  # 少し明るく
-        
-        cm = CardMaker(f"floor_{cell.x}_{cell.y}")
-        cm.setFrame(-1, 1, -1, 1)
-        
-        floor_card = self.render.attachNewNode(cm.generate())
-        floor_card.setPos(world_x, world_y, 0)
-        floor_card.setHpr(0, -90, 0)  # 水平に配置
-        floor_card.setColor(floor_color)
-        floor_card.setTwoSided(True)  # 両面描画
-        
-        self.floor_nodes[f"{cell.x}_{cell.y}"] = floor_card
+        return False
     
-    def _render_ceiling(self, cell: DungeonCell, world_x: float, world_y: float, attribute: DungeonAttribute):
-        """天井描画（改善版）"""
-        if not self.enabled:
-            return
-        
-        ceiling_color = self._get_attribute_color(attribute, 0.3)  # 少し明るく
-        
-        cm = CardMaker(f"ceiling_{cell.x}_{cell.y}")
-        cm.setFrame(-1, 1, -1, 1)
-        
-        ceiling_card = self.render.attachNewNode(cm.generate())
-        ceiling_card.setPos(world_x, world_y, 2.5)  # 高い天井
-        ceiling_card.setHpr(0, 90, 0)  # 水平に配置（上向き）
-        ceiling_card.setColor(ceiling_color)
-        ceiling_card.setTwoSided(True)  # 両面描画
-        
-        self.ceiling_nodes[f"{cell.x}_{cell.y}"] = ceiling_card
-    
-    def _render_wall(self, cell: DungeonCell, world_x: float, world_y: float, direction: Direction, attribute: DungeonAttribute):
-        """壁描画"""
-        if not self.enabled:
-            return
-        
-        wall_color = self._get_attribute_color(attribute, 0.5)
-        
-        # 方向に基づいて壁の位置と向きを決定
-        offset, hpr = self._get_wall_transform(direction)
-        
-        cm = CardMaker(f"wall_{cell.x}_{cell.y}_{direction.value}")
-        cm.setFrame(-1, 1, 0, 2.5)  # 高さ2.5ユニットの壁（より高く）
-        
-        wall_card = self.render.attachNewNode(cm.generate())
-        wall_card.setPos(world_x + offset[0], world_y + offset[1], offset[2])
-        wall_card.setHpr(*hpr)
-        wall_card.setColor(wall_color)
-        
-        # 壁の可視性を向上（両面描画）
-        wall_card.setTwoSided(True)
-        
-        self.wall_nodes[f"{cell.x}_{cell.y}_{direction.value}"] = wall_card
-    
-    def _render_props(self, level: DungeonLevel, player_pos: PlayerPosition):
-        """プロップ（階段、宝箱など）描画"""
-        if not self.enabled:
-            return
-        
+    def _render_props_3d(self, level: DungeonLevel, player_pos: PlayerPosition):
+        """3Dプロップ（階段、宝箱など）を描画"""
         render_range = 5
         
         for x in range(max(0, player_pos.x - render_range),
@@ -558,87 +269,223 @@ class DungeonRenderer:
                 if not cell:
                     continue
                 
-                world_x = cell.x * 2.0
-                world_y = -cell.y * 2.0
+                # プレイヤーからの距離と角度を計算
+                dx = x - player_pos.x
+                dy = y - player_pos.y
+                distance = math.sqrt(dx * dx + dy * dy)
                 
-                # 階段描画
+                if distance > render_range:
+                    continue
+                
+                # 角度計算
+                angle_to_prop = math.atan2(dy, dx)
+                relative_angle = angle_to_prop - self.camera_angle
+                
+                # 視野内かチェック
+                fov_rad = self.fov * math.pi / 180
+                if abs(relative_angle) > fov_rad / 2:
+                    continue
+                
+                # 画面上の位置を計算
+                screen_x = int(self.screen_width / 2 + 
+                              (relative_angle / (fov_rad / 2)) * (self.screen_width / 2))
+                
+                # プロップを描画
                 if cell.cell_type == CellType.STAIRS_UP:
-                    self._render_stairs(cell, world_x, world_y, True)
+                    self._draw_stairs(screen_x, distance, True)
                 elif cell.cell_type == CellType.STAIRS_DOWN:
-                    self._render_stairs(cell, world_x, world_y, False)
+                    self._draw_stairs(screen_x, distance, False)
                 
-                # 宝箱描画
                 if cell.has_treasure:
-                    self._render_treasure(cell, world_x, world_y)
+                    self._draw_treasure(screen_x, distance)
     
-    def _render_stairs(self, cell: DungeonCell, world_x: float, world_y: float, is_up: bool):
-        """階段描画"""
-        if not self.enabled:
+    def _draw_stairs(self, screen_x: int, distance: float, is_up: bool):
+        """階段を描画"""
+        if distance > self.view_distance:
             return
         
-        color = Vec4(0.8, 0.8, 0.6, 1) if is_up else Vec4(0.6, 0.6, 0.8, 1)
+        # 距離に応じてサイズを調整
+        size = max(5, int(20 / max(distance, 0.5)))
         
-        cm = CardMaker(f"stairs_{cell.x}_{cell.y}")
-        cm.setFrame(-0.5, 0.5, -0.5, 0.5)
+        # 色を設定
+        color = (200, 200, 150) if is_up else (150, 150, 200)
         
-        stairs_card = self.render.attachNewNode(cm.generate())
-        stairs_card.setPos(world_x, world_y, 0.1)
-        stairs_card.setHpr(0, -90, 0)
-        stairs_card.setColor(color)
+        # 階段を描画
+        stairs_rect = pygame.Rect(screen_x - size // 2, self.screen_height // 2 - size // 2, size, size)
+        pygame.draw.rect(self.screen, color, stairs_rect)
         
-        self.prop_nodes[f"stairs_{cell.x}_{cell.y}"] = stairs_card
+        # 階段の印を描画
+        if is_up:
+            pygame.draw.polygon(self.screen, (255, 255, 255), [
+                (screen_x, stairs_rect.top),
+                (screen_x - size // 4, stairs_rect.bottom - 2),
+                (screen_x + size // 4, stairs_rect.bottom - 2)
+            ])
+        else:
+            pygame.draw.polygon(self.screen, (255, 255, 255), [
+                (screen_x, stairs_rect.bottom),
+                (screen_x - size // 4, stairs_rect.top + 2),
+                (screen_x + size // 4, stairs_rect.top + 2)
+            ])
     
-    def _render_treasure(self, cell: DungeonCell, world_x: float, world_y: float):
-        """宝箱描画"""
-        if not self.enabled:
-            return
+    def update_camera_position(self, player_pos: PlayerPosition):
+        """カメラ位置更新（Pygame版）"""
+        # プレイヤー位置をワールド座標に変換
+        self.camera_x = player_pos.x
+        self.camera_y = player_pos.y
         
-        color = Vec4(0.8, 0.6, 0.2, 1)  # 金色
-        
-        cm = CardMaker(f"treasure_{cell.x}_{cell.y}")
-        cm.setFrame(-0.3, 0.3, 0, 0.3)
-        
-        treasure_card = self.render.attachNewNode(cm.generate())
-        treasure_card.setPos(world_x, world_y, 0.1)
-        treasure_card.setColor(color)
-        
-        self.prop_nodes[f"treasure_{cell.x}_{cell.y}"] = treasure_card
-    
-    def _get_attribute_color(self, attribute: DungeonAttribute, brightness: float) -> Vec4:
-        """属性に基づいた色を取得"""
-        color_map = {
-            DungeonAttribute.PHYSICAL: Vec4(0.7, 0.7, 0.7, 1),      # グレー
-            DungeonAttribute.FIRE: Vec4(1.0, 0.4, 0.2, 1),          # 赤
-            DungeonAttribute.ICE: Vec4(0.6, 0.8, 1.0, 1),           # 青
-            DungeonAttribute.LIGHTNING: Vec4(1.0, 1.0, 0.4, 1),     # 黄
-            DungeonAttribute.DARK: Vec4(0.4, 0.2, 0.4, 1),          # 紫
-            DungeonAttribute.LIGHT: Vec4(1.0, 1.0, 0.8, 1)          # 白
-        }
-        
-        base_color = color_map.get(attribute, Vec4(0.5, 0.5, 0.5, 1))
-        return Vec4(base_color.x * brightness, base_color.y * brightness, 
-                   base_color.z * brightness, base_color.w)
-    
-    def _get_wall_transform(self, direction: Direction) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
-        """壁の変換情報を取得（改善版）"""
-        # 壁の位置をセルの端に置く（より正確な位置）
-        transforms = {
-            Direction.NORTH: ((0, -0.98, 1.25), (0, 0, 0)),    # 北壁
-            Direction.SOUTH: ((0, 0.98, 1.25), (180, 0, 0)),   # 南壁  
-            Direction.EAST: ((0.98, 0, 1.25), (-90, 0, 0)),    # 東壁
-            Direction.WEST: ((-0.98, 0, 1.25), (90, 0, 0))     # 西壁
-        }
-        return transforms[direction]
-    
-    def _direction_to_heading(self, direction: Direction) -> float:
-        """方向をヘディング角に変換"""
-        headings = {
+        # 向きを角度に変換
+        direction_angles = {
             Direction.NORTH: 0,
-            Direction.EAST: -90,
-            Direction.SOUTH: 180,
-            Direction.WEST: 90
+            Direction.EAST: math.pi/2,
+            Direction.SOUTH: math.pi,
+            Direction.WEST: 3*math.pi/2
         }
-        return headings[direction]
+        self.camera_angle = direction_angles.get(player_pos.facing, 0)
+        
+        logger.debug(f"カメラ位置更新: ({self.camera_x}, {self.camera_y}) 角度: {math.degrees(self.camera_angle)}°")
+    
+    def _render_ui(self, dungeon_state: DungeonState):
+        """UI要素を描画"""
+        pos = dungeon_state.player_position
+        if not pos:
+            return
+        
+        # コンパス表示
+        compass_text = {
+            Direction.NORTH: 'N',
+            Direction.EAST: 'E',
+            Direction.SOUTH: 'S',
+            Direction.WEST: 'W'
+        }
+        compass_surface = self.font_large.render(compass_text[pos.facing], True, self.colors['white'])
+        self.screen.blit(compass_surface, (self.screen_width - 60, 20))
+        
+        # 位置情報表示
+        position_text = f"位置: ({pos.x}, {pos.y}) レベル: {pos.level}"
+        position_surface = self.font_small.render(position_text, True, self.colors['white'])
+        self.screen.blit(position_surface, (10, 10))
+        
+        # ヘルプテキスト
+        help_text = "WASD: 移動 / QE: 回転 / ESC: メニュー"
+        help_surface = self.font_small.render(help_text, True, self.colors['gray'])
+        self.screen.blit(help_surface, (10, self.screen_height - 30))
+    
+    def ensure_initial_render(self, dungeon_state: DungeonState) -> bool:
+        """初期レンダリングを確実に実行"""
+        logger.info("初期ダンジョンレンダリングを開始します")
+        
+        try:
+            success = self.render_dungeon(dungeon_state)
+            
+            if success:
+                logger.info("初期レンダリングが完了しました")
+            else:
+                logger.warning("初期レンダリングに失敗しました")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"初期レンダリング中にエラーが発生しました: {e}")
+            return False
+    
+    def get_debug_info(self) -> dict:
+        """デバッグ情報を取得"""
+        debug_info = {
+            "status": "enabled" if self.enabled else "disabled",
+            "render_quality": self.render_quality.value,
+            "view_mode": self.view_mode.value,
+            "fov": self.fov,
+            "view_distance": self.view_distance,
+            "screen_size": (self.screen_width, self.screen_height),
+            "camera_position": (self.camera_x, self.camera_y),
+            "camera_angle_degrees": math.degrees(self.camera_angle),
+            "dungeon_manager_set": self.dungeon_manager is not None,
+            "current_party_set": self.current_party is not None
+        }
+        
+        if self.dungeon_manager and self.dungeon_manager.current_dungeon:
+            pos = self.dungeon_manager.current_dungeon.player_position
+            if pos:
+                debug_info["player_position"] = {
+                    "x": pos.x,
+                    "y": pos.y,
+                    "level": pos.level,
+                    "facing": pos.facing.value
+                }
+        
+        return debug_info
+    
+    def handle_input(self, action: str) -> bool:
+        """入力処理"""
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
+            return False
+        
+        try:
+            if action == "move_forward":
+                facing = self.dungeon_manager.current_dungeon.player_position.facing
+                success, message = self.dungeon_manager.move_player(facing)
+                if success:
+                    self.render_dungeon(self.dungeon_manager.current_dungeon)
+                return success
+                
+            elif action == "move_backward":
+                facing = self.dungeon_manager.current_dungeon.player_position.facing
+                opposite = {
+                    Direction.NORTH: Direction.SOUTH,
+                    Direction.SOUTH: Direction.NORTH,
+                    Direction.EAST: Direction.WEST,
+                    Direction.WEST: Direction.EAST
+                }
+                success, message = self.dungeon_manager.move_player(opposite[facing])
+                if success:
+                    self.render_dungeon(self.dungeon_manager.current_dungeon)
+                return success
+                
+            elif action == "turn_left":
+                facing = self.dungeon_manager.current_dungeon.player_position.facing
+                left = {
+                    Direction.NORTH: Direction.WEST,
+                    Direction.WEST: Direction.SOUTH,
+                    Direction.SOUTH: Direction.EAST,
+                    Direction.EAST: Direction.NORTH
+                }
+                self.dungeon_manager.turn_player(left[facing])
+                self.render_dungeon(self.dungeon_manager.current_dungeon)
+                return True
+                
+            elif action == "turn_right":
+                facing = self.dungeon_manager.current_dungeon.player_position.facing
+                right = {
+                    Direction.NORTH: Direction.EAST,
+                    Direction.EAST: Direction.SOUTH,
+                    Direction.SOUTH: Direction.WEST,
+                    Direction.WEST: Direction.NORTH
+                }
+                self.dungeon_manager.turn_player(right[facing])
+                self.render_dungeon(self.dungeon_manager.current_dungeon)
+                return True
+                
+        except Exception as e:
+            logger.error(f"入力処理中にエラー: {e}")
+        
+        return False
+    
+    def cleanup(self):
+        """リソースのクリーンアップ"""
+        try:
+            # 特にクリーンアップが必要なリソースはないが、
+            # 将来的にテクスチャやサウンドを使用する場合はここで解放
+            logger.info("DungeonRenderer リソースをクリーンアップしました")
+        except Exception as e:
+            logger.error(f"クリーンアップ中にエラー: {e}")
+    
+    
+    
+    
+    
+    
+    
     
     def _force_frame_render(self):
         """強制的にフレームレンダリングを実行"""
