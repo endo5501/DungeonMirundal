@@ -29,6 +29,11 @@
 :text(warning): No definition in  for character U+30d9
 :text(warning): No definition in  for character U+30eb
 ```
+  - 以下の点も問題ないか検討して
+    - ライトが無い/シェーダ無効になっていないか
+    - VRAM へのアップロードが初フレームに間に合ってないということはないか
+    - カメラが迷宮内部に埋まっていないか
+    - RenderPipeline / simplepbr はモデルを読む前に初期化してるか？
 
 ### 優先度:中
 
