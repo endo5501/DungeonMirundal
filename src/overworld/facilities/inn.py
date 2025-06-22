@@ -189,8 +189,8 @@ class Inn(BaseFacility):
         self.current_party.name = validated_name
         
         # 入力ダイアログを閉じる
-        ui_manager.hide_element("party_name_input_dialog")
-        ui_manager.unregister_element("party_name_input_dialog")
+        ui_manager.hide_menu("party_name_input_dialog")
+        
         
         # 成功メッセージを表示
         success_message = config_manager.get_text("inn.party_name.success_message").format(
@@ -209,8 +209,8 @@ class Inn(BaseFacility):
     def _on_party_name_cancelled(self):
         """パーティ名変更キャンセル時の処理"""
         # 入力ダイアログを閉じる
-        ui_manager.hide_element("party_name_input_dialog")
-        ui_manager.unregister_element("party_name_input_dialog")
+        ui_manager.hide_menu("party_name_input_dialog")
+        
         
         logger.info("パーティ名変更がキャンセルされました")
     
@@ -1845,15 +1845,15 @@ class Inn(BaseFacility):
         """サブメニューを表示"""
         # メインメニューを隠す
         if self.main_menu:
-            ui_manager.hide_element(self.main_menu.menu_id)
+            ui_manager.hide_menu(self.main_menu.menu_id)
         
-        ui_manager.register_element(submenu)
-        ui_manager.show_element(submenu.menu_id, modal=True)
+        ui_manager.add_menu(submenu)
+        ui_manager.show_menu(submenu.menu_id, modal=True)
     
     def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
         """サブメニューからメインメニューに戻る"""
-        ui_manager.hide_element(submenu.menu_id)
-        ui_manager.unregister_element(submenu.menu_id)
+        ui_manager.hide_menu(submenu.menu_id)
+        
         
         if self.main_menu:
-            ui_manager.show_element(self.main_menu.menu_id)
+            ui_manager.show_menu(self.main_menu.menu_id)

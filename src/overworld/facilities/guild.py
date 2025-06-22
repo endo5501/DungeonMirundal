@@ -140,10 +140,10 @@ class AdventurersGuild(BaseFacility):
         
         # メインメニューを隠して編成メニューを表示
         if self.main_menu:
-            ui_manager.hide_element(self.main_menu.menu_id)
+            ui_manager.hide_menu(self.main_menu.menu_id)
         
-        ui_manager.register_element(formation_menu)
-        ui_manager.show_element(formation_menu.menu_id, modal=True)
+        ui_manager.add_menu(formation_menu)
+        ui_manager.show_menu(formation_menu.menu_id, modal=True)
     
     def _show_current_formation(self):
         """現在の編成を表示"""
@@ -407,30 +407,26 @@ class AdventurersGuild(BaseFacility):
     def _show_submenu(self, submenu: UIMenu):
         """サブメニューを表示"""
         # 現在のメニューを隠す
-        current_menu = ui_manager.get_element("party_formation_menu")
-        if current_menu:
-            ui_manager.hide_element("party_formation_menu")
+        ui_manager.hide_menu("party_formation_menu")
         
-        ui_manager.register_element(submenu)
-        ui_manager.show_element(submenu.menu_id, modal=True)
+        ui_manager.add_menu(submenu)
+        ui_manager.show_menu(submenu.menu_id, modal=True)
     
     def _back_to_formation_menu(self, submenu: UIMenu):
         """編成メニューに戻る"""
-        ui_manager.hide_element(submenu.menu_id)
-        ui_manager.unregister_element(submenu.menu_id)
+        ui_manager.hide_menu(submenu.menu_id)
+        
         
         # 編成メニューを再表示
-        formation_menu = ui_manager.get_element("party_formation_menu")
-        if formation_menu:
-            ui_manager.show_element("party_formation_menu")
+        ui_manager.show_menu("party_formation_menu")
     
     def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
         """サブメニューからメインメニューに戻る"""
-        ui_manager.hide_element(submenu.menu_id)
-        ui_manager.unregister_element(submenu.menu_id)
+        ui_manager.hide_menu(submenu.menu_id)
+        
         
         if self.main_menu:
-            ui_manager.show_element(self.main_menu.menu_id)
+            ui_manager.show_menu(self.main_menu.menu_id)
     
     def _back_to_main_menu_fallback(self):
         """フォールバック: 直接メインメニューに戻る"""
@@ -444,25 +440,19 @@ class AdventurersGuild(BaseFacility):
         ]
         
         for menu_id in possible_menus:
-            if ui_manager.get_element(menu_id):
-                ui_manager.hide_element(menu_id)
-                ui_manager.unregister_element(menu_id)
+            ui_manager.hide_menu(menu_id)
+                
         
         # メインメニューを表示
         if self.main_menu:
-            ui_manager.show_element(self.main_menu.menu_id)
+            ui_manager.show_menu(self.main_menu.menu_id)
     
     def _close_all_submenus_and_return_to_main(self):
         """すべてのサブメニューを閉じてメインメニューに戻る"""
         try:
             # 既存の_back_to_main_menu_from_submenuの動作をエミュレート
-            # 実際のUI要素を見つけて適切に閉じる
-            add_menu = ui_manager.get_element("add_character_menu")
-            if add_menu:
-                self._back_to_main_menu_from_submenu(add_menu)
-            else:
-                # フォールバック処理
-                self._back_to_main_menu_fallback()
+            # フォールバック処理を実行
+            self._back_to_main_menu_fallback()
         except Exception as e:
             logger.warning(f"メニュー遷移でエラーが発生しました: {e}")
             # エラーが発生した場合は強制的にフォールバック処理を実行
@@ -473,6 +463,6 @@ class AdventurersGuild(BaseFacility):
                 # 最後の手段：基本的なメインメニュー表示
                 if self.main_menu:
                     try:
-                        ui_manager.show_element(self.main_menu.menu_id)
+                        ui_manager.show_menu(self.main_menu.menu_id)
                     except Exception:
                         pass  # 最後の手段が失敗しても続行

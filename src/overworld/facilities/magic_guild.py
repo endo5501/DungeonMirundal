@@ -801,18 +801,18 @@ class MagicGuild(BaseFacility):
         """サブメニューを表示"""
         # メインメニューを隠す
         if self.main_menu:
-            ui_manager.hide_element(self.main_menu.menu_id)
+            ui_manager.hide_menu(self.main_menu.menu_id)
         
-        ui_manager.register_element(submenu)
-        ui_manager.show_element(submenu.menu_id, modal=True)
+        ui_manager.add_menu(submenu)
+        ui_manager.show_menu(submenu.menu_id, modal=True)
     
     def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
         """サブメニューからメインメニューに戻る"""
-        ui_manager.hide_element(submenu.menu_id)
-        ui_manager.unregister_element(submenu.menu_id)
+        ui_manager.hide_menu(submenu.menu_id)
+        
         
         if self.main_menu:
-            ui_manager.show_element(self.main_menu.menu_id)
+            ui_manager.show_menu(self.main_menu.menu_id)
     
     def _show_identification_confirmation(self, slot, item_instance: ItemInstance, item: Item):
         """鑑定確認ダイアログを表示"""
@@ -870,8 +870,8 @@ class MagicGuild(BaseFacility):
                 ]
             )
         
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.menu_id, modal=True)
+        ui_manager.add_menu(dialog)
+        ui_manager.show_menu(dialog.menu_id, modal=True)
     
     def _identify_item(self, slot, item_instance: ItemInstance, item: Item, cost: int):
         """アイテム鑑定処理"""
