@@ -40,7 +40,7 @@ class Inn(BaseFacility):
         
         menu.add_menu_item(
             "アイテム預かり",
-            self._show_item_storage
+            self._show_item_organization
         )
         
         menu.add_menu_item(

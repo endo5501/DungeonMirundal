@@ -284,31 +284,23 @@ class Shop(BaseFacility):
         self._show_buy_menu()
     
     def _show_sell_menu(self):
-        """売却メニューをDirectScrolledListで表示"""
+        """売却メニューを表示（新しいアイテム管理システム対応）"""
         if not self.current_party:
             self._show_error_message(config_manager.get_text("shop.messages.no_party_set"))
             return
         
-        # パーティインベントリを取得
-        party_inventory = self.current_party.get_party_inventory()
-        if not party_inventory:
-            self._show_error_message(config_manager.get_text("shop.messages.no_party_inventory"))
-            return
-        
-        # 売却可能なアイテムを取得
-        sellable_items = []
-        for slot in party_inventory.slots:
-            if not slot.is_empty():
-                item_instance = slot.item_instance
-                item = self.item_manager.get_item(item_instance.item_id)
-                if item and item.price > 0 and item_instance.identified:  # 鑑定済みかつ価格設定アイテムのみ売却可能
-                    sellable_items.append((slot, item_instance, item))
+        # 売却可能なアイテムを全体から取得
+        sellable_items = self._get_all_sellable_items()
         
         if not sellable_items:
             self._show_dialog(
                 "no_items_dialog",
                 config_manager.get_text("shop.sell.title"),
-                config_manager.get_text("shop.messages.no_sellable_items"),
+                "売却可能なアイテムがありません。\\n\\n"
+                "キャラクターが所持しているアイテムまたは\\n"
+                "宿屋倉庫のアイテムを売却できます。\\n\\n"
+                "※アイテムは鑑定済みで価格が設定されている\\n"
+                "必要があります。",
                 buttons=[
                     {
                         'text': config_manager.get_text("menu.back"),
@@ -318,26 +310,259 @@ class Shop(BaseFacility):
             )
             return
         
-        # pygame版では通常のUIMenuを使用
-        sell_menu = UIMenu("shop_sell_menu", config_manager.get_text("shop.sell.title"))
+        # 売却元選択メニューを表示
+        self._show_sell_source_selection(sellable_items)
+    
+    def _get_all_sellable_items(self):
+        """全ての売却可能アイテムを取得（キャラクター個人 + 宿屋倉庫）"""
+        sellable_items = []
         
-        # 売却可能アイテムリストを追加
-        for slot, item_instance, item in sellable_items:
-            display_name = self._format_sellable_item_display_name(item_instance, item)
-            sell_menu.add_menu_item(
-                display_name,
-                self._show_sell_confirmation_from_list,
-                [slot, item_instance, item]
+        # キャラクター個人のインベントリから取得
+        for character in self.current_party.get_all_characters():
+            char_inventory = character.get_inventory()
+            for i, slot in enumerate(char_inventory.slots):
+                if not slot.is_empty():
+                    item_instance = slot.item_instance
+                    item = self.item_manager.get_item(item_instance.item_id)
+                    if item and item.price > 0 and item_instance.identified:
+                        sellable_items.append(("character", character, i, item_instance, item))
+        
+        # 宿屋倉庫から取得
+        try:
+            from src.overworld.inn_storage import inn_storage_manager
+            storage = inn_storage_manager.get_storage()
+            for slot_index, item_instance in storage.get_all_items():
+                item = self.item_manager.get_item(item_instance.item_id)
+                if item and item.price > 0 and item_instance.identified:
+                    sellable_items.append(("storage", None, slot_index, item_instance, item))
+        except Exception as e:
+            logger.warning(f"宿屋倉庫からのアイテム取得に失敗: {e}")
+        
+        return sellable_items
+    
+    def _show_sell_source_selection(self, sellable_items):
+        """売却元選択メニューを表示"""
+        # アイテムを売却元でグループ化
+        character_items = {}
+        storage_items = []
+        
+        for source, character, index, item_instance, item in sellable_items:
+            if source == "character":
+                if character.name not in character_items:
+                    character_items[character.name] = []
+                character_items[character.name].append((character, index, item_instance, item))
+            else:
+                storage_items.append((index, item_instance, item))
+        
+        # 売却元選択メニュー
+        source_menu = UIMenu("sell_source_menu", "売却元選択")
+        
+        # キャラクター別売却
+        for char_name, items in character_items.items():
+            source_menu.add_menu_item(
+                f"{char_name} の所持品 ({len(items)}個)",
+                self._show_character_sellable_items,
+                [items, char_name]
             )
         
-        # 戻るボタン（画面下部固定）
-        sell_menu.add_back_button(
+        # 宿屋倉庫売却
+        if storage_items:
+            source_menu.add_menu_item(
+                f"宿屋倉庫 ({len(storage_items)}個)",
+                self._show_storage_sellable_items,
+                [storage_items]
+            )
+        
+        source_menu.add_back_button(
             config_manager.get_text("menu.back"),
             self._back_to_main_menu_from_submenu,
-            [sell_menu]
+            [source_menu]
         )
         
-        self._show_submenu(sell_menu)
+        self._show_submenu(source_menu)
+    
+    def _show_character_sellable_items(self, items, char_name):
+        """キャラクター所持アイテム売却メニュー"""
+        char_sell_menu = UIMenu("character_sell_menu", f"{char_name} のアイテム売却")
+        
+        for character, index, item_instance, item in items:
+            display_name = self._format_sellable_item_display_name(item_instance, item)
+            char_sell_menu.add_menu_item(
+                display_name,
+                self._show_character_item_sell_confirmation,
+                [character, index, item_instance, item]
+            )
+        
+        char_sell_menu.add_back_button(
+            config_manager.get_text("menu.back"),
+            self._show_sell_menu
+        )
+        
+        self._show_submenu(char_sell_menu)
+    
+    def _show_storage_sellable_items(self, items):
+        """宿屋倉庫アイテム売却メニュー"""
+        storage_sell_menu = UIMenu("storage_sell_menu", "宿屋倉庫アイテム売却")
+        
+        for index, item_instance, item in items:
+            display_name = self._format_sellable_item_display_name(item_instance, item)
+            storage_sell_menu.add_menu_item(
+                display_name,
+                self._show_storage_item_sell_confirmation,
+                [index, item_instance, item]
+            )
+        
+        storage_sell_menu.add_back_button(
+            config_manager.get_text("menu.back"),
+            self._show_sell_menu
+        )
+        
+        self._show_submenu(storage_sell_menu)
+    
+    def _show_character_item_sell_confirmation(self, character, slot_index, item_instance, item):
+        """キャラクター所持アイテム売却確認"""
+        sell_price = max(1, item.price // 2)
+        self._show_sell_confirmation_for_character_item(character, slot_index, item_instance, item, sell_price)
+    
+    def _show_storage_item_sell_confirmation(self, slot_index, item_instance, item):
+        """宿屋倉庫アイテム売却確認"""
+        sell_price = max(1, item.price // 2)
+        self._show_sell_confirmation_for_storage_item(slot_index, item_instance, item, sell_price)
+    
+    def _show_sell_confirmation_for_character_item(self, character, slot_index, item_instance, item, sell_price):
+        """キャラクターアイテム売却確認ダイアログ"""
+        details = f"【{item.get_name()}の売却】\\n\\n"
+        details += f"所持者: {character.name}\\n"
+        details += f"{config_manager.get_text('shop.purchase.description_label')}: {item.get_description()}\\n"
+        details += f"{config_manager.get_text('shop.sell.purchase_price_label')}: {item.price}G\\n"
+        details += f"{config_manager.get_text('shop.sell.sell_price_label')}: {sell_price}G\\n"
+        
+        if item_instance.quantity > 1:
+            details += f"{config_manager.get_text('shop.sell.quantity_label')}: {item_instance.quantity}\\n"
+            details += f"{config_manager.get_text('shop.sell.total_if_all_label')}: {sell_price * item_instance.quantity}G\\n"
+        
+        details += f"\\n{config_manager.get_text('shop.sell.current_gold_label')}: {self.current_party.gold}G\\n"
+        details += f"{config_manager.get_text('shop.sell.after_sell_label')}: {self.current_party.gold + (sell_price * item_instance.quantity)}G\\n"
+        details += f"\\n売却しますか？"
+        
+        self._show_dialog(
+            "character_item_sell_confirm_dialog",
+            f"{item.get_name()}の売却確認",
+            details,
+            buttons=[
+                {
+                    'text': config_manager.get_text("shop.sell.sell_button"),
+                    'command': lambda: self._sell_character_item(character, slot_index, item_instance, item, sell_price, item_instance.quantity)
+                },
+                {
+                    'text': config_manager.get_text("menu.back"),
+                    'command': self._close_dialog
+                }
+            ]
+        )
+    
+    def _show_sell_confirmation_for_storage_item(self, slot_index, item_instance, item, sell_price):
+        """宿屋倉庫アイテム売却確認ダイアログ"""
+        details = f"【{item.get_name()}の売却】\\n\\n"
+        details += f"所持場所: 宿屋倉庫\\n"
+        details += f"{config_manager.get_text('shop.purchase.description_label')}: {item.get_description()}\\n"
+        details += f"{config_manager.get_text('shop.sell.purchase_price_label')}: {item.price}G\\n"
+        details += f"{config_manager.get_text('shop.sell.sell_price_label')}: {sell_price}G\\n"
+        
+        if item_instance.quantity > 1:
+            details += f"{config_manager.get_text('shop.sell.quantity_label')}: {item_instance.quantity}\\n"
+            details += f"{config_manager.get_text('shop.sell.total_if_all_label')}: {sell_price * item_instance.quantity}G\\n"
+        
+        details += f"\\n{config_manager.get_text('shop.sell.current_gold_label')}: {self.current_party.gold}G\\n"
+        details += f"{config_manager.get_text('shop.sell.after_sell_label')}: {self.current_party.gold + (sell_price * item_instance.quantity)}G\\n"
+        details += f"\\n売却しますか？"
+        
+        self._show_dialog(
+            "storage_item_sell_confirm_dialog",
+            f"{item.get_name()}の売却確認",
+            details,
+            buttons=[
+                {
+                    'text': config_manager.get_text("shop.sell.sell_button"),
+                    'command': lambda: self._sell_storage_item(slot_index, item_instance, item, sell_price, item_instance.quantity)
+                },
+                {
+                    'text': config_manager.get_text("menu.back"),
+                    'command': self._close_dialog
+                }
+            ]
+        )
+    
+    def _sell_character_item(self, character, slot_index, item_instance, item, sell_price, quantity):
+        """キャラクターのアイテムを売却"""
+        if not self.current_party:
+            return
+        
+        self._close_dialog()
+        
+        try:
+            char_inventory = character.get_inventory()
+            
+            # アイテムを削除
+            if quantity == item_instance.quantity:
+                # 全数売却
+                removed_item = char_inventory.remove_item(slot_index, quantity)
+            else:
+                # 一部売却
+                item_instance.quantity -= quantity
+                removed_item = True
+            
+            if removed_item:
+                # ゴールドを追加
+                total_price = sell_price * quantity
+                self.current_party.gold += total_price
+                
+                # 成功メッセージ
+                success_message = f"{character.name}が{item.get_name()}x{quantity}を売却しました。\\n\\n"
+                success_message += f"売却金額: {total_price}G\\n"
+                success_message += f"残りゴールド: {self.current_party.gold}G"
+                
+                self._show_success_message(success_message)
+                logger.info(f"キャラクターアイテム売却: {character.name} - {item.item_id} x{quantity} ({total_price}G)")
+            else:
+                self._show_error_message("アイテムの売却に失敗しました")
+                
+        except Exception as e:
+            logger.error(f"キャラクターアイテム売却エラー: {e}")
+            self._show_error_message(f"売却処理に失敗しました: {str(e)}")
+    
+    def _sell_storage_item(self, slot_index, item_instance, item, sell_price, quantity):
+        """宿屋倉庫のアイテムを売却"""
+        if not self.current_party:
+            return
+        
+        self._close_dialog()
+        
+        try:
+            from src.overworld.inn_storage import inn_storage_manager
+            storage = inn_storage_manager.get_storage()
+            
+            # アイテムを削除
+            removed_item = storage.remove_item(slot_index, quantity)
+            
+            if removed_item:
+                # ゴールドを追加
+                total_price = sell_price * quantity
+                self.current_party.gold += total_price
+                
+                # 成功メッセージ
+                success_message = f"宿屋倉庫から{item.get_name()}x{quantity}を売却しました。\\n\\n"
+                success_message += f"売却金額: {total_price}G\\n"
+                success_message += f"残りゴールド: {self.current_party.gold}G"
+                
+                self._show_success_message(success_message)
+                logger.info(f"宿屋倉庫アイテム売却: {item.item_id} x{quantity} ({total_price}G)")
+            else:
+                self._show_error_message("アイテムの売却に失敗しました")
+                
+        except Exception as e:
+            logger.error(f"宿屋倉庫アイテム売却エラー: {e}")
+            self._show_error_message(f"売却処理に失敗しました: {str(e)}")
     
     def _show_sellable_items_scrolled_list(self, sellable_items: List[tuple]):
         """pygame UIメニューで売却可能アイテムを表示（互換性のために残している）"""
