@@ -147,8 +147,23 @@ class AdventurersGuild(BaseFacility):
         self._show_dialog(
             "current_formation_dialog",
             config_manager.get_text("guild.party_formation.current_formation_title"),
-            formation_text
+            formation_text,
+            buttons=[
+                {
+                    'text': config_manager.get_text("menu.back"),
+                    'command': self._close_current_formation_dialog
+                }
+            ]
         )
+    
+    def _close_current_formation_dialog(self):
+        """現在の編成ダイアログを閉じてパーティ編成メニューに戻る"""
+        if self.current_dialog:
+            ui_manager.hide_dialog(self.current_dialog.dialog_id)
+            self.current_dialog = None
+            
+            # パーティ編成メニューを再表示（モーダルとして）
+            ui_manager.show_menu("party_formation_menu", modal=True)
     
     def _format_party_formation(self) -> str:
         """パーティ編成をフォーマット"""
@@ -456,7 +471,7 @@ class AdventurersGuild(BaseFacility):
         
         
         if self.main_menu:
-            ui_manager.show_menu(self.main_menu.menu_id)
+            ui_manager.show_menu(self.main_menu.menu_id, modal=True)
     
     def _back_to_main_menu_fallback(self):
         """フォールバック: 直接メインメニューに戻る"""
@@ -475,7 +490,7 @@ class AdventurersGuild(BaseFacility):
         
         # メインメニューを表示
         if self.main_menu:
-            ui_manager.show_menu(self.main_menu.menu_id)
+            ui_manager.show_menu(self.main_menu.menu_id, modal=True)
     
     def _close_all_submenus_and_return_to_main(self):
         """すべてのサブメニューを閉じてメインメニューに戻る"""
@@ -493,6 +508,6 @@ class AdventurersGuild(BaseFacility):
                 # 最後の手段：基本的なメインメニュー表示
                 if self.main_menu:
                     try:
-                        ui_manager.show_menu(self.main_menu.menu_id)
+                        ui_manager.show_menu(self.main_menu.menu_id, modal=True)
                     except Exception:
                         pass  # 最後の手段が失敗しても続行
