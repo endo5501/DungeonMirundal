@@ -3,7 +3,7 @@
 from typing import Dict, List, Optional, Any
 from enum import Enum
 
-from src.ui.base_ui import UIElement, UIText, UIButton, UIMenu, UIDialog, UIInputDialog, ui_manager
+from src.ui.base_ui_pygame import UIElement, UIText, UIButton, UIMenu, UIDialog, ui_manager
 from src.character.character import Character
 from src.character.stats import BaseStats, StatGenerator, StatValidator
 from src.core.config_manager import config_manager

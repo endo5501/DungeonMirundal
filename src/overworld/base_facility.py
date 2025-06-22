@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
 
 from src.character.party import Party
-from src.ui.base_ui import UIElement, UIMenu, UIDialog, ui_manager
+from src.ui.base_ui_pygame import UIElement, UIMenu, UIDialog, ui_manager
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
