@@ -92,21 +92,49 @@ class Inn(BaseFacility):
         import random
         title, message = random.choice(messages)
         
-        self._show_dialog(
-            "innkeeper_dialog",
-            f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
-            message
-        )
+        # 新システムを使用（戻るボタン付き）
+        if self.use_new_menu_system:
+            self.show_information_dialog(
+                f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
+                message
+            )
+        else:
+            # 旧システム（戻るボタンを追加）
+            self._show_dialog(
+                "innkeeper_dialog",
+                f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
+                message,
+                buttons=[
+                    {
+                        'text': config_manager.get_text("common.back"),
+                        'command': self._close_dialog
+                    }
+                ]
+            )
     
     def _show_travel_info(self):
         """旅の情報を表示"""
         travel_info = config_manager.get_text("inn.travel_info.content")
         
-        self._show_dialog(
-            "travel_info_dialog",
-            config_manager.get_text("inn.travel_info.title"),
-            travel_info
-        )
+        # 新システムを使用（戻るボタン付き）
+        if self.use_new_menu_system:
+            self.show_information_dialog(
+                config_manager.get_text("inn.travel_info.title"),
+                travel_info
+            )
+        else:
+            # 旧システム（戻るボタンを追加）
+            self._show_dialog(
+                "travel_info_dialog",
+                config_manager.get_text("inn.travel_info.title"),
+                travel_info,
+                buttons=[
+                    {
+                        'text': config_manager.get_text("common.back"),
+                        'command': self._close_dialog
+                    }
+                ]
+            )
     
     def _show_tavern_rumors(self):
         """酒場の噂話を表示"""
@@ -137,11 +165,25 @@ class Inn(BaseFacility):
         import random
         title, rumor = random.choice(rumors)
         
-        self._show_dialog(
-            "rumor_dialog",
-            f"{config_manager.get_text('inn.rumors.title')} - {title}",
-            rumor
-        )
+        # 新システムを使用（戻るボタン付き）
+        if self.use_new_menu_system:
+            self.show_information_dialog(
+                f"{config_manager.get_text('inn.rumors.title')} - {title}",
+                rumor
+            )
+        else:
+            # 旧システム（戻るボタンを追加）
+            self._show_dialog(
+                "rumor_dialog",
+                f"{config_manager.get_text('inn.rumors.title')} - {title}",
+                rumor,
+                buttons=[
+                    {
+                        'text': config_manager.get_text("common.back"),
+                        'command': self._close_dialog
+                    }
+                ]
+            )
     
     def _change_party_name(self):
         """パーティ名変更機能"""
@@ -240,7 +282,10 @@ class Inn(BaseFacility):
     def _show_adventure_preparation(self):
         """冒険の準備メニューを表示"""
         if not self.current_party:
-            self._show_error_message("パーティが設定されていません")
+            if self.use_new_menu_system:
+                self.show_error_dialog("エラー", "パーティが設定されていません")
+            else:
+                self._show_error_message("パーティが設定されていません")
             return
         
         prep_menu = UIMenu("adventure_prep_menu", "冒険の準備")
@@ -265,13 +310,24 @@ class Inn(BaseFacility):
             self._show_party_equipment_status
         )
         
-        prep_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [prep_menu]
-        )
+        # 新システムでは戻るボタンは自動的に管理される
+        if not self.use_new_menu_system:
+            prep_menu.add_menu_item(
+                config_manager.get_text("menu.back"),
+                self._back_to_main_menu_from_submenu,
+                [prep_menu]
+            )
+        else:
+            prep_menu.add_menu_item(
+                config_manager.get_text("menu.back"),
+                self.back_to_previous_menu
+            )
         
-        self._show_submenu(prep_menu)
+        # 新システムまたは旧システムでサブメニューを表示
+        if self.use_new_menu_system:
+            self.show_submenu(prep_menu, {'menu_type': 'adventure_prep'})
+        else:
+            self._show_submenu(prep_menu)
     
     def _show_item_organization(self):
         """アイテム整理画面を表示（新しい宿屋倉庫システム）"""
