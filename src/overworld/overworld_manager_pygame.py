@@ -284,14 +284,52 @@ class OverworldManager:
         logger.info("パーティ状況が選択されました")
         if self.current_party:
             # 詳細なパーティ情報表示
-            info_text = f"パーティ: {self.current_party.name}\\n"
-            info_text += f"メンバー数: {len(self.current_party.get_living_characters())}人\\n"
+            info_text = f"パーティ: {self.current_party.name}\n"
+            info_text += f"メンバー数: {len(self.current_party.get_living_characters())}人\n"
             info_text += f"ゴールド: {self.current_party.gold}G"
             
             for i, character in enumerate(self.current_party.get_living_characters()):
-                info_text += f"\\n{i+1}. {character.name} Lv.{character.level}"
+                info_text += f"\n{i+1}. {character.name} Lv.{character.experience.level}"
+                info_text += f"  HP: {character.derived_stats.current_hp}/{character.derived_stats.max_hp}"
+                info_text += f"  MP: {character.derived_stats.current_mp}/{character.derived_stats.max_mp}"
+                info_text += f"  状態: {character.status.value}"
+            
+            # UIダイアログでパーティ情報を表示
+            from src.ui.base_ui_pygame import UIDialog, UIButton
+            party_dialog = UIDialog("party_status_dialog", "パーティ状況", info_text)
+            
+            # OKボタンを追加
+            ok_button = UIButton("party_status_ok", "OK", 400, 600, 100, 40)
+            ok_button.on_click = self._close_party_status_dialog
+            party_dialog.add_element(ok_button)
+            
+            self.ui_manager.add_dialog(party_dialog)
+            self.ui_manager.show_dialog("party_status_dialog")
             
             logger.info(f"パーティ詳細: {info_text}")
+        else:
+            # パーティが設定されていない場合
+            from src.ui.base_ui_pygame import UIDialog, UIButton
+            no_party_dialog = UIDialog("no_party_dialog", "パーティ状況", "パーティが設定されていません。")
+            
+            # OKボタンを追加
+            ok_button = UIButton("no_party_ok", "OK", 400, 400, 100, 40)
+            ok_button.on_click = self._close_party_status_dialog
+            no_party_dialog.add_element(ok_button)
+            
+            self.ui_manager.add_dialog(no_party_dialog)
+            self.ui_manager.show_dialog("no_party_dialog")
+    
+    def _close_party_status_dialog(self):
+        """パーティ状況ダイアログを閉じる"""
+        try:
+            self.ui_manager.hide_dialog("party_status_dialog")
+        except:
+            pass
+        try:
+            self.ui_manager.hide_dialog("no_party_dialog")
+        except:
+            pass
     
     def _on_save_game(self):
         """ゲームを保存"""
