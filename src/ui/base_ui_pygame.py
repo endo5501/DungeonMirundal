@@ -267,10 +267,27 @@ class UIMenu:
         # メニュー項目の位置を自動計算
         item_count = len(self.elements)
         x = 300  # 中央寄り
-        y = 150 + (item_count * 50)  # 上から順に配置
+        y = 150 + (item_count * 40)  # 間隔を40に縮めて収まりやすくする
+        
+        # 画面高さ768に収まらない場合の調整
+        if y > 680:  # 下部マージンを考慮
+            y = 680  # 最大位置に固定
         
         button = UIButton(f"{self.menu_id}_item_{len(self.elements)}", text, 
-                         x=x, y=y, width=200, height=40)
+                         x=x, y=y, width=200, height=35)  # 高さも縮める
+        if args:
+            button.on_click = lambda: callback(*args)
+        else:
+            button.on_click = callback
+        self.add_element(button)
+    
+    def add_back_button(self, text: str, callback: callable, args: list = None):
+        """戻るボタンを画面下部に固定位置で追加"""
+        x = 300  # 中央寄り
+        y = 700  # 画面下部固定
+        
+        button = UIButton(f"{self.menu_id}_back_button", text, 
+                         x=x, y=y, width=200, height=35)
         if args:
             button.on_click = lambda: callback(*args)
         else:

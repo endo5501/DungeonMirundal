@@ -71,15 +71,8 @@ class AdventurersGuild(BaseFacility):
         
         self.created_characters.append(character)
         
-        # 成功メッセージ
+        # 成功メッセージ（ダイアログが閉じられた後、_close_dialogでメインメニューが自動表示される）
         self._show_success_message(config_manager.get_text("guild.messages.character_created").format(name=character.name))
-        
-        # メインメニューを再表示
-        if self.main_menu:
-            logger.info("ギルドメインメニューを再表示")
-            ui_manager.show_menu(self.main_menu.menu_id, modal=True)
-        else:
-            logger.warning("main_menuが存在しません")
         
         logger.info(f"新しいキャラクターを作成: {character.name}")
     
@@ -131,8 +124,8 @@ class AdventurersGuild(BaseFacility):
                 self._show_position_menu
             )
         
-        # 戻る
-        formation_menu.add_menu_item(
+        # 戻る（画面下部固定）
+        formation_menu.add_back_button(
             config_manager.get_text("menu.back"),
             self._back_to_main_menu_from_submenu,
             [formation_menu]
@@ -208,7 +201,7 @@ class AdventurersGuild(BaseFacility):
                 [char]
             )
         
-        add_menu.add_menu_item(
+        add_menu.add_back_button(
             config_manager.get_text("menu.back"),
             self._back_to_formation_menu,
             [add_menu]
@@ -256,7 +249,7 @@ class AdventurersGuild(BaseFacility):
                 [char]
             )
         
-        remove_menu.add_menu_item(
+        remove_menu.add_back_button(
             config_manager.get_text("menu.back"),
             self._back_to_formation_menu,
             [remove_menu]
@@ -307,7 +300,7 @@ class AdventurersGuild(BaseFacility):
                 [char]
             )
         
-        position_menu.add_menu_item(
+        position_menu.add_back_button(
             config_manager.get_text("menu.back"),
             self._back_to_formation_menu,
             [position_menu]
@@ -338,7 +331,7 @@ class AdventurersGuild(BaseFacility):
                     [character, position]
                 )
         
-        new_pos_menu.add_menu_item(
+        new_pos_menu.add_back_button(
             config_manager.get_text("menu.back"),
             self._show_position_menu
         )
@@ -393,7 +386,13 @@ class AdventurersGuild(BaseFacility):
         self._show_dialog(
             "character_list_dialog",
             "キャラクター一覧",
-            char_list_text
+            char_list_text,
+            buttons=[
+                {
+                    'text': config_manager.get_text("menu.back"),
+                    'command': self._close_dialog
+                }
+            ]
         )
     
     def _show_class_change(self):
@@ -401,7 +400,13 @@ class AdventurersGuild(BaseFacility):
         self._show_dialog(
             "class_change_dialog",
             "クラスチェンジ",
-            "クラスチェンジ機能は未実装です。\n将来のアップデートで追加予定です。"
+            "クラスチェンジ機能は未実装です。\n将来のアップデートで追加予定です。",
+            buttons=[
+                {
+                    'text': config_manager.get_text("menu.back"),
+                    'command': self._close_dialog
+                }
+            ]
         )
     
     def _show_submenu(self, submenu: UIMenu):

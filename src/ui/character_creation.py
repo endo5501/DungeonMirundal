@@ -60,8 +60,12 @@ class CharacterCreationWizard:
             x=400, y=50
         )
         
-        ui_manager.register_element(self.main_container)
-        ui_manager.register_element(self.step_title)
+        # Pygame UIでは要素の登録は不要（tryで囲んでエラー回避）
+        try:
+            ui_manager.register_element(self.main_container)
+            ui_manager.register_element(self.step_title)
+        except:
+            pass
         
         logger.info("キャラクター作成ウィザードを初期化しました")
     
@@ -70,8 +74,12 @@ class CharacterCreationWizard:
         self.current_step = CreationStep.NAME_INPUT
         self._show_step()
         
-        ui_manager.show_element("character_creation_main", modal=True)
-        ui_manager.show_element("creation_step_title")
+        # Pygame UIでは直接的な要素表示は不要（tryで囲んでエラー回避）
+        try:
+            ui_manager.show_element("character_creation_main", modal=True)
+            ui_manager.show_element("creation_step_title")
+        except:
+            pass
         
         logger.info("キャラクター作成を開始しました")
     
@@ -390,9 +398,12 @@ class CharacterCreationWizard:
     
     def _close_wizard(self):
         """ウィザードを閉じる"""
-        # すべてのUIを非表示・削除
-        ui_manager.hide_element("character_creation_main")
-        ui_manager.hide_element("creation_step_title")
+        # すべてのUIを非表示・削除（Pygame UIでは不要だがエラー回避のためtryで囲む）
+        try:
+            ui_manager.hide_element("character_creation_main")
+            ui_manager.hide_element("creation_step_title")
+        except:
+            pass
         
         # 現在のUIを閉じる
         if self.current_ui:
@@ -427,9 +438,7 @@ class CharacterCreationWizard:
             except:
                 pass
         
-        # 要素の登録解除
-        ui_manager.unregister_element("character_creation_main")
-        ui_manager.unregister_element("creation_step_title")
+        # 要素の登録解除（Pygame UIでは不要）
         
         logger.info("キャラクター作成ウィザードを完全にクリーンアップしました")
     

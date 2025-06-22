@@ -199,9 +199,18 @@ class OverworldManager:
         """宿屋"""
         logger.info("宿屋が選択されました")
         try:
-            from src.overworld.facilities.inn import Inn
-            inn = Inn()
-            inn.enter(self.current_party)
+            from src.overworld.base_facility import facility_manager, initialize_facilities
+            # 施設の初期化を確実に行う
+            if not facility_manager.facilities:
+                initialize_facilities()
+            
+            success = facility_manager.enter_facility("inn", self.current_party)
+            if success:
+                # 施設に入ったらメインメニューを隠す
+                if self.main_menu:
+                    self.main_menu.hide()
+            else:
+                logger.error("宿屋への入場に失敗しました")
         except Exception as e:
             logger.error(f"宿屋エラー: {e}")
             # 基本的な回復処理をフォールバック
@@ -215,34 +224,58 @@ class OverworldManager:
         """商店"""
         logger.info("商店が選択されました")
         try:
-            from src.overworld.facilities.shop import Shop
-            shop = Shop()
-            shop.enter(self.current_party)
+            from src.overworld.base_facility import facility_manager, initialize_facilities
+            # 施設の初期化を確実に行う
+            if not facility_manager.facilities:
+                initialize_facilities()
+            
+            success = facility_manager.enter_facility("shop", self.current_party)
+            if success:
+                # 施設に入ったらメインメニューを隠す
+                if self.main_menu:
+                    self.main_menu.hide()
+            else:
+                logger.error("商店への入場に失敗しました")
         except Exception as e:
             logger.error(f"商店エラー: {e}")
-            logger.info("商店の詳細機能を利用")
     
     def _on_temple(self):
         """教会"""
         logger.info("教会が選択されました")
         try:
-            from src.overworld.facilities.temple import Temple
-            temple = Temple()
-            temple.enter(self.current_party)
+            from src.overworld.base_facility import facility_manager, initialize_facilities
+            # 施設の初期化を確実に行う
+            if not facility_manager.facilities:
+                initialize_facilities()
+            
+            success = facility_manager.enter_facility("temple", self.current_party)
+            if success:
+                # 施設に入ったらメインメニューを隠す
+                if self.main_menu:
+                    self.main_menu.hide()
+            else:
+                logger.error("教会への入場に失敗しました")
         except Exception as e:
             logger.error(f"教会エラー: {e}")
-            logger.info("教会の詳細機能を利用")
     
     def _on_magic_guild(self):
         """魔術師ギルド"""
         logger.info("魔術師ギルドが選択されました")
         try:
-            from src.overworld.facilities.magic_guild import MagicGuild
-            magic_guild = MagicGuild()
-            magic_guild.enter(self.current_party)
+            from src.overworld.base_facility import facility_manager, initialize_facilities
+            # 施設の初期化を確実に行う
+            if not facility_manager.facilities:
+                initialize_facilities()
+            
+            success = facility_manager.enter_facility("magic_guild", self.current_party)
+            if success:
+                # 施設に入ったらメインメニューを隠す
+                if self.main_menu:
+                    self.main_menu.hide()
+            else:
+                logger.error("魔術師ギルドへの入場に失敗しました")
         except Exception as e:
             logger.error(f"魔術師ギルドエラー: {e}")
-            logger.info("魔術師ギルドの詳細機能を利用")
     
     # === 設定画面ハンドラー ===
     

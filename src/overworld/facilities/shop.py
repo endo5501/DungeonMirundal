@@ -104,8 +104,8 @@ class Shop(BaseFacility):
                 [item]
             )
         
-        # 戻るボタン
-        buy_menu.add_menu_item(
+        # 戻るボタン（画面下部固定）
+        buy_menu.add_back_button(
             config_manager.get_text("menu.back"),
             self._back_to_main_menu_from_submenu,
             [buy_menu]
@@ -325,8 +325,8 @@ class Shop(BaseFacility):
                 [slot, item_instance, item]
             )
         
-        # 戻るボタン
-        sell_menu.add_menu_item(
+        # 戻るボタン（画面下部固定）
+        sell_menu.add_back_button(
             config_manager.get_text("menu.back"),
             self._back_to_main_menu_from_submenu,
             [sell_menu]
@@ -398,7 +398,13 @@ class Shop(BaseFacility):
         self._show_dialog(
             "inventory_dialog",
             config_manager.get_text("shop.inventory.title"),
-            inventory_text
+            inventory_text,
+            buttons=[
+                {
+                    'text': config_manager.get_text("menu.back"),
+                    'command': self._close_dialog
+                }
+            ]
         )
     
     def _talk_to_shopkeeper(self):
@@ -429,7 +435,13 @@ class Shop(BaseFacility):
         self._show_dialog(
             "shopkeeper_dialog",
             f"{config_manager.get_text('shop.shopkeeper.title')} - {title}",
-            message
+            message,
+            buttons=[
+                {
+                    'text': config_manager.get_text("menu.back"),
+                    'command': self._close_dialog
+                }
+            ]
         )
     
     def _show_submenu(self, submenu: UIMenu):
