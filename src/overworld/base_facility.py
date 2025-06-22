@@ -107,10 +107,11 @@ class BaseFacility(ABC):
     
     def _exit_facility(self):
         """施設から出る（UI用）"""
+        logger.info(f"施設退出ボタンが押されました: {self.facility_id}")
         # FacilityManagerを通して退場処理を行う
         # これにより on_facility_exit_callback が正しく呼ばれる
-        # グローバルなfacility_managerを使用（ファイル末尾で定義）
-        globals()['facility_manager'].exit_current_facility()
+        result = facility_manager.exit_current_facility()
+        logger.info(f"施設退出処理結果: {result}")
     
     def _cleanup_ui(self):
         """UI要素のクリーンアップ"""
@@ -132,9 +133,14 @@ class BaseFacility(ABC):
         
         # ボタンがある場合は手動で追加
         if buttons:
-            for button_data in buttons:
+            for i, button_data in enumerate(buttons):
                 from src.ui.base_ui_pygame import UIButton
-                button = UIButton(f"{dialog_id}_button", button_data['text'])
+                # ボタンの位置を計算
+                button_x = 300 + (i * 120)  # 横に並べる
+                button_y = self.current_dialog.rect.y + self.current_dialog.rect.height - 50
+                
+                button = UIButton(f"{dialog_id}_button_{i}", button_data['text'], 
+                                x=button_x, y=button_y, width=100, height=30)
                 button.on_click = button_data['command']
                 self.current_dialog.add_element(button)
         
@@ -146,6 +152,10 @@ class BaseFacility(ABC):
         if self.current_dialog:
             ui_manager.hide_dialog(self.current_dialog.dialog_id)
             self.current_dialog = None
+            
+            # ダイアログを閉じた後、メインメニューを再表示
+            if self.main_menu:
+                ui_manager.show_menu(self.main_menu.menu_id, modal=True)
     
     def _show_welcome_message(self):
         """入場時のウェルカムメッセージを表示"""
@@ -178,7 +188,13 @@ class BaseFacility(ABC):
         self._show_dialog(
             f"{self.facility_id}_success",
             config_manager.get_text("common.info"),
-            message
+            message,
+            buttons=[
+                {
+                    'text': config_manager.get_text("common.ok"),
+                    'command': self._close_dialog
+                }
+            ]
         )
     
     def _show_error_message(self, message: str):
@@ -186,7 +202,13 @@ class BaseFacility(ABC):
         self._show_dialog(
             f"{self.facility_id}_error",
             config_manager.get_text("common.error"),
-            message
+            message,
+            buttons=[
+                {
+                    'text': config_manager.get_text("common.ok"),
+                    'command': self._close_dialog
+                }
+            ]
         )
     
     def _show_confirmation(self, message: str, on_confirm: Callable, on_cancel: Callable = None):
@@ -282,18 +304,33 @@ class FacilityManager:
     
     def exit_current_facility(self) -> bool:
         """現在の施設から出る"""
+        logger.info(f"退出処理開始: current_facility={self.current_facility}")
+        
         if not self.current_facility:
+            logger.warning("current_facilityが設定されていません")
+            return False
+        
+        if self.current_facility not in self.facilities:
+            logger.error(f"施設が見つかりません: {self.current_facility}")
             return False
         
         facility = self.facilities[self.current_facility]
+        logger.info(f"施設のexit()を呼び出し: {self.current_facility}")
+        
         if facility.exit():
+            logger.info(f"施設退出成功: {self.current_facility}")
             self.current_facility = None
             
             # 施設退場コールバックを呼び出し
             if self.on_facility_exit_callback:
+                logger.info("退場コールバックを実行")
                 self.on_facility_exit_callback()
+            else:
+                logger.warning("退場コールバックが設定されていません")
             
             return True
+        else:
+            logger.error(f"施設のexit()がFalseを返しました: {self.current_facility}")
         
         return False
     

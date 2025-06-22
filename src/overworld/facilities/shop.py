@@ -210,7 +210,7 @@ class Shop(BaseFacility):
             )
         
         ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id, modal=True)
+        ui_manager.show_element(dialog.menu_id, modal=True)
     
     def _buy_item(self, item: Item):
         """アイテム購入処理"""
@@ -436,18 +436,18 @@ class Shop(BaseFacility):
         """サブメニューを表示"""
         # メインメニューを隠す
         if self.main_menu:
-            ui_manager.hide_element(self.main_menu.element_id)
+            ui_manager.hide_element(self.main_menu.menu_id)
         
         ui_manager.register_element(submenu)
-        ui_manager.show_element(submenu.element_id, modal=True)
+        ui_manager.show_element(submenu.menu_id, modal=True)
     
     def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
         """サブメニューからメインメニューに戻る"""
-        ui_manager.hide_element(submenu.element_id)
-        ui_manager.unregister_element(submenu.element_id)
+        ui_manager.hide_element(submenu.menu_id)
+        ui_manager.unregister_element(submenu.menu_id)
         
         if self.main_menu:
-            ui_manager.show_element(self.main_menu.element_id)
+            ui_manager.show_element(self.main_menu.menu_id)
     
     def add_item_to_inventory(self, item_id: str):
         """在庫にアイテムを追加"""
@@ -532,7 +532,7 @@ class Shop(BaseFacility):
             )
             
             ui_manager.register_element(dialog)
-            ui_manager.show_element(dialog.element_id, modal=True)
+            ui_manager.show_element(dialog.menu_id, modal=True)
     
     def _sell_item(self, slot, item_instance: ItemInstance, item: Item, sell_price: int, quantity: int):
         """アイテム売却処理"""

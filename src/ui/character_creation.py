@@ -3,7 +3,7 @@
 from typing import Dict, List, Optional, Any
 from enum import Enum
 
-from src.ui.base_ui_pygame import UIElement, UIText, UIButton, UIMenu, UIDialog, ui_manager
+from src.ui.base_ui_pygame import UIElement, UIText, UIButton, UIMenu, UIDialog, UIInputDialog, ui_manager
 from src.character.character import Character
 from src.character.stats import BaseStats, StatGenerator, StatValidator
 from src.core.config_manager import config_manager
@@ -56,10 +56,8 @@ class CharacterCreationWizard:
         # ステップタイトル
         self.step_title = UIText(
             "creation_step_title",
-            ui_manager.get_text("character.creation_title"),
-            pos=(0, 0.9),
-            scale=0.08,
-            color=(1, 1, 0, 1)
+            config_manager.get_text("character.creation_title"),
+            x=400, y=50
         )
         
         ui_manager.register_element(self.main_container)
@@ -81,8 +79,10 @@ class CharacterCreationWizard:
         """現在のステップを表示"""
         # 前のUIを隠す
         if self.current_ui:
-            ui_manager.hide_element(self.current_ui.element_id)
-            ui_manager.unregister_element(self.current_ui.element_id)
+            if hasattr(self.current_ui, 'dialog_id'):
+                ui_manager.hide_dialog(self.current_ui.dialog_id)
+            elif hasattr(self.current_ui, 'menu_id'):
+                ui_manager.hide_menu(self.current_ui.menu_id)
         
         # ステップに応じたUIを表示
         if self.current_step == CreationStep.NAME_INPUT:
@@ -115,8 +115,8 @@ class CharacterCreationWizard:
         )
         
         self.current_ui = dialog
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _on_name_confirmed(self, name: str):
         """名前入力確認時の処理"""
@@ -137,9 +137,9 @@ class CharacterCreationWizard:
         self.character_data['name'] = name
         
         # UIを閉じて次のステップへ
-        ui_manager.hide_element(self.current_ui.element_id)
-        ui_manager.unregister_element(self.current_ui.element_id)
-        self.current_ui = None
+        if self.current_ui:
+            ui_manager.hide_dialog(self.current_ui.dialog_id)
+            self.current_ui = None
         
         self._next_step()
         
@@ -148,9 +148,9 @@ class CharacterCreationWizard:
     def _on_name_cancelled(self):
         """名前入力キャンセル時の処理"""
         # UIを閉じて前のステップに戻る
-        ui_manager.hide_element(self.current_ui.element_id)
-        ui_manager.unregister_element(self.current_ui.element_id)
-        self.current_ui = None
+        if self.current_ui:
+            ui_manager.hide_dialog(self.current_ui.dialog_id)
+            self.current_ui = None
         
         # キャラクター作成をキャンセル
         if self.on_cancel:
@@ -166,11 +166,10 @@ class CharacterCreationWizard:
     
     def _show_race_selection(self):
         """種族選択ステップ"""
-        menu = UIMenu("race_selection_menu", ui_manager.get_text("character.select_race"), 
-                     character_creation_mode=True)
+        menu = UIMenu("race_selection_menu", config_manager.get_text("character.select_race"))
         
         for race_id, race_config in self.races_config.items():
-            race_name = ui_manager.get_text(race_config.get('name_key', f'race.{race_id}'))
+            race_name = config_manager.get_text(race_config.get('name_key', f'race.{race_id}'))
             menu.add_menu_item(
                 race_name,
                 self._select_race,
@@ -179,13 +178,13 @@ class CharacterCreationWizard:
         
         # 戻るボタン
         menu.add_menu_item(
-            ui_manager.get_text("menu.back"),
+            config_manager.get_text("menu.back"),
             self._previous_step
         )
         
         self.current_ui = menu
-        ui_manager.register_element(menu)
-        ui_manager.show_element(menu.element_id)
+        ui_manager.add_menu(menu)
+        ui_manager.show_menu(menu.menu_id)
     
     def _show_stats_generation(self):
         """統計値生成ステップ"""
@@ -206,28 +205,30 @@ class CharacterCreationWizard:
         
         dialog = UIDialog(
             "stats_generation_dialog",
-            ui_manager.get_text("character.generated_stats"),
+            config_manager.get_text("character.generated_stats"),
             stats_text,
-            buttons=[
-                {
-                    'text': ui_manager.get_text("character.reroll"),
-                    'command': self._reroll_stats
-                },
-                {
-                    'text': ui_manager.get_text("common.ok"),
-                    'command': self._next_step
-                },
-                {
-                    'text': ui_manager.get_text("menu.back"),
-                    'command': self._previous_step
-                }
-            ],
-            character_creation_mode=True
+            x=150, y=100, width=500, height=350
         )
         
+        # ボタンを手動で追加
+        reroll_button = UIButton("reroll_button", config_manager.get_text("character.reroll"),
+                                x=170, y=400, width=100, height=30)
+        reroll_button.on_click = self._reroll_stats
+        dialog.add_element(reroll_button)
+        
+        ok_button = UIButton("ok_button", config_manager.get_text("common.ok"),
+                            x=290, y=400, width=100, height=30)
+        ok_button.on_click = self._next_step
+        dialog.add_element(ok_button)
+        
+        back_button = UIButton("back_button", config_manager.get_text("menu.back"),
+                              x=410, y=400, width=100, height=30)
+        back_button.on_click = self._previous_step
+        dialog.add_element(back_button)
+        
         self.current_ui = dialog
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _show_class_selection(self):
         """職業選択ステップ"""
@@ -237,12 +238,11 @@ class CharacterCreationWizard:
             self.classes_config
         )
         
-        menu = UIMenu("class_selection_menu", ui_manager.get_text("character.select_class"),
-                     character_creation_mode=True)
+        menu = UIMenu("class_selection_menu", config_manager.get_text("character.select_class"))
         
         for class_id in available_classes:
             class_config = self.classes_config[class_id]
-            class_name = ui_manager.get_text(class_config.get('name_key', f'class.{class_id}'))
+            class_name = config_manager.get_text(class_config.get('name_key', f'class.{class_id}'))
             menu.add_menu_item(
                 class_name,
                 self._select_class,
@@ -251,13 +251,13 @@ class CharacterCreationWizard:
         
         # 戻るボタン
         menu.add_menu_item(
-            ui_manager.get_text("menu.back"),
+            config_manager.get_text("menu.back"),
             self._previous_step
         )
         
         self.current_ui = menu
-        ui_manager.register_element(menu)
-        ui_manager.show_element(menu.element_id)
+        ui_manager.add_menu(menu)
+        ui_manager.show_menu(menu.menu_id)
     
     def _show_confirmation(self):
         """確認ステップ"""
@@ -266,28 +266,30 @@ class CharacterCreationWizard:
         
         dialog = UIDialog(
             "confirmation_dialog",
-            ui_manager.get_text("character.confirm_creation"),
+            config_manager.get_text("character.confirm_creation"),
             char_info,
-            buttons=[
-                {
-                    'text': ui_manager.get_text("character.create"),
-                    'command': self._create_character
-                },
-                {
-                    'text': ui_manager.get_text("menu.back"),
-                    'command': self._previous_step
-                },
-                {
-                    'text': ui_manager.get_text("common.cancel"),
-                    'command': self._cancel_creation
-                }
-            ],
-            character_creation_mode=True
+            x=150, y=100, width=500, height=350
         )
         
+        # ボタンを手動で追加
+        create_button = UIButton("create_button", config_manager.get_text("character.create"),
+                                x=170, y=400, width=100, height=30)
+        create_button.on_click = self._create_character
+        dialog.add_element(create_button)
+        
+        back_button = UIButton("back_button", config_manager.get_text("menu.back"),
+                              x=290, y=400, width=100, height=30)
+        back_button.on_click = self._previous_step
+        dialog.add_element(back_button)
+        
+        cancel_button = UIButton("cancel_button", config_manager.get_text("common.cancel"),
+                                x=410, y=400, width=100, height=30)
+        cancel_button.on_click = self._cancel_creation
+        dialog.add_element(cancel_button)
+        
         self.current_ui = dialog
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _select_race(self, race_id: str):
         """種族選択"""
@@ -335,8 +337,10 @@ class CharacterCreationWizard:
         """統計値を振り直し"""
         # 現在のダイアログを閉じる
         if self.current_ui:
-            ui_manager.hide_element(self.current_ui.element_id)
-            ui_manager.unregister_element(self.current_ui.element_id)
+            if hasattr(self.current_ui, 'dialog_id'):
+                ui_manager.hide_dialog(self.current_ui.dialog_id)
+            elif hasattr(self.current_ui, 'menu_id'):
+                ui_manager.hide_menu(self.current_ui.menu_id)
             self.current_ui = None
         
         # 統計値を再生成してステップを再表示
@@ -365,18 +369,19 @@ class CharacterCreationWizard:
             
             error_dialog = UIDialog(
                 "creation_error_dialog",
-                ui_manager.get_text("common.error"),
+                config_manager.get_text("common.error"),
                 f"{config_manager.get_text('character_creation.creation_failed')}: {str(e)}",
-                buttons=[
-                    {
-                        'text': ui_manager.get_text("common.ok"),
-                        'command': lambda: ui_manager.hide_element("creation_error_dialog")
-                    }
-                ]
+                x=200, y=200, width=400, height=200
             )
             
-            ui_manager.register_element(error_dialog)
-            ui_manager.show_element(error_dialog.element_id)
+            # OKボタンを手動で追加
+            ok_button = UIButton("error_ok_button", config_manager.get_text("common.ok"),
+                                x=300, y=350, width=80, height=30)
+            ok_button.on_click = lambda: ui_manager.hide_dialog("creation_error_dialog")
+            error_dialog.add_element(ok_button)
+            
+            ui_manager.add_dialog(error_dialog)
+            ui_manager.show_dialog(error_dialog.dialog_id)
     
     def _cancel_creation(self):
         """作成キャンセル"""
@@ -385,15 +390,48 @@ class CharacterCreationWizard:
     
     def _close_wizard(self):
         """ウィザードを閉じる"""
+        # すべてのUIを非表示・削除
         ui_manager.hide_element("character_creation_main")
         ui_manager.hide_element("creation_step_title")
         
+        # 現在のUIを閉じる
         if self.current_ui:
-            ui_manager.hide_element(self.current_ui.element_id)
-            ui_manager.unregister_element(self.current_ui.element_id)
+            if hasattr(self.current_ui, 'dialog_id'):
+                ui_manager.hide_dialog(self.current_ui.dialog_id)
+            elif hasattr(self.current_ui, 'menu_id'):
+                ui_manager.hide_menu(self.current_ui.menu_id)
+            self.current_ui = None
         
+        # 全ダイアログとメニューを強制クリーンアップ
+        dialog_ids_to_clean = [
+            "name_input_dialog",
+            "stats_generation_dialog", 
+            "confirmation_dialog",
+            "creation_error_dialog"
+        ]
+        
+        menu_ids_to_clean = [
+            "race_selection_menu",
+            "class_selection_menu"
+        ]
+        
+        for dialog_id in dialog_ids_to_clean:
+            try:
+                ui_manager.hide_dialog(dialog_id)
+            except:
+                pass
+                
+        for menu_id in menu_ids_to_clean:
+            try:
+                ui_manager.hide_menu(menu_id)
+            except:
+                pass
+        
+        # 要素の登録解除
         ui_manager.unregister_element("character_creation_main")
         ui_manager.unregister_element("creation_step_title")
+        
+        logger.info("キャラクター作成ウィザードを完全にクリーンアップしました")
     
     def _format_stats(self, stats: BaseStats) -> str:
         """統計値を整形して表示"""
@@ -405,8 +443,8 @@ class CharacterCreationWizard:
     
     def _format_character_info(self) -> str:
         """キャラクター情報を整形して表示"""
-        race_name = ui_manager.get_text(f"race.{self.character_data['race']}")
-        class_name = ui_manager.get_text(f"class.{self.character_data['character_class']}")
+        race_name = config_manager.get_text(f"race.{self.character_data['race']}")
+        class_name = config_manager.get_text(f"class.{self.character_data['character_class']}")
         stats_text = self._format_stats(self.character_data['base_stats'])
         
         return f"""{config_manager.get_text('character.name')}: {self.character_data['name']}

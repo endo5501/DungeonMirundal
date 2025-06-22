@@ -264,8 +264,13 @@ class UIMenu:
     
     def add_menu_item(self, text: str, callback: callable, args: list = None):
         """メニュー項目を追加（Panda3D互換性のため）"""
+        # メニュー項目の位置を自動計算
+        item_count = len(self.elements)
+        x = 300  # 中央寄り
+        y = 150 + (item_count * 50)  # 上から順に配置
+        
         button = UIButton(f"{self.menu_id}_item_{len(self.elements)}", text, 
-                         width=200, height=40)
+                         x=x, y=y, width=200, height=40)
         if args:
             button.on_click = lambda: callback(*args)
         else:
@@ -376,6 +381,7 @@ class UIDialog(UIMenu):
     def __init__(self, dialog_id: str, title: str, message: str, x: int = 100, y: int = 100, 
                  width: int = 400, height: int = 200):
         super().__init__(dialog_id, title)
+        self.dialog_id = dialog_id  # 互換性のため
         self.message = message
         self.rect = pygame.Rect(x, y, width, height)
         
@@ -618,21 +624,30 @@ class UIInputDialog(UIDialog):
     def __init__(self, dialog_id: str, title: str, message: str, 
                  initial_text: str = "", placeholder: str = "",
                  on_confirm: callable = None, on_cancel: callable = None):
-        super().__init__(dialog_id, title, message)
+        super().__init__(dialog_id, title, message, x=200, y=150, width=400, height=250)
         self.input_text = initial_text
         self.placeholder = placeholder
         self.on_confirm = on_confirm
         self.on_cancel = on_cancel
         self.is_active = False
         
-        # 確認・キャンセルボタンを追加
+        # 入力フィールドの位置を設定（メッセージの下に配置）
+        self.input_rect = pygame.Rect(self.rect.x + 20, self.rect.y + 120, 
+                                     self.rect.width - 40, 30)
+        
+        # 確認・キャンセルボタンを追加（位置を設定）
+        button_y = self.rect.y + self.rect.height - 50
         if on_confirm:
-            confirm_button = UIButton(f"{dialog_id}_confirm", "OK", width=80, height=30)
+            confirm_button = UIButton(f"{dialog_id}_confirm", "OK", 
+                                    x=self.rect.x + 80, y=button_y, 
+                                    width=80, height=30)
             confirm_button.on_click = self._confirm_input
             self.add_element(confirm_button)
         
         if on_cancel:
-            cancel_button = UIButton(f"{dialog_id}_cancel", "Cancel", width=80, height=30)
+            cancel_button = UIButton(f"{dialog_id}_cancel", "キャンセル", 
+                                   x=self.rect.x + 240, y=button_y, 
+                                   width=80, height=30)
             cancel_button.on_click = self._cancel_input
             self.add_element(cancel_button)
     
@@ -668,3 +683,60 @@ class UIInputDialog(UIDialog):
         
         # 親クラスのイベント処理
         return super().handle_event(event)
+    
+    def render(self, screen: pygame.Surface, font: Optional[pygame.font.Font] = None):
+        """入力ダイアログの描画"""
+        # 親クラスの描画（ダイアログ背景とメッセージ）
+        super().render(screen, font)
+        
+        # フォントを取得
+        use_font = font
+        if not use_font:
+            try:
+                from src.ui.font_manager_pygame import font_manager
+                use_font = font_manager.get_japanese_font(20)
+                if not use_font:
+                    use_font = font_manager.get_default_font()
+            except Exception:
+                use_font = pygame.font.Font(None, 20)
+        
+        # 入力フィールドの描画
+        if use_font:
+            # 入力フィールドの背景
+            pygame.draw.rect(screen, (255, 255, 255), self.input_rect)
+            pygame.draw.rect(screen, (100, 100, 100), self.input_rect, 2)
+            
+            # 入力テキストの描画
+            text_to_display = self.input_text if self.input_text else self.placeholder
+            text_color = (0, 0, 0) if self.input_text else (128, 128, 128)
+            
+            if text_to_display:
+                try:
+                    text_surface = use_font.render(text_to_display, True, text_color)
+                    text_rect = text_surface.get_rect()
+                    text_rect.left = self.input_rect.left + 5
+                    text_rect.centery = self.input_rect.centery
+                    
+                    # テキストが入力フィールドからはみ出る場合はクリップ
+                    clip_rect = self.input_rect.copy()
+                    clip_rect.width -= 10
+                    screen.set_clip(clip_rect)
+                    screen.blit(text_surface, text_rect)
+                    screen.set_clip(None)
+                except Exception as e:
+                    logger.warning(f"入力テキスト描画エラー: {e}")
+            
+            # カーソルの描画（点滅効果）
+            if self.input_text:
+                cursor_x = self.input_rect.left + 5
+                if self.input_text:
+                    try:
+                        text_width = use_font.size(self.input_text)[0]
+                        cursor_x += text_width
+                    except:
+                        cursor_x += len(self.input_text) * 10
+                
+                # 簡易カーソル（縦線）
+                pygame.draw.line(screen, (0, 0, 0), 
+                               (cursor_x, self.input_rect.top + 5),
+                               (cursor_x, self.input_rect.bottom - 5), 2)

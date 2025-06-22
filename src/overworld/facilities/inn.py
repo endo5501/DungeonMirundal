@@ -168,8 +168,8 @@ class Inn(BaseFacility):
             on_cancel=self._on_party_name_cancelled
         )
         
-        ui_manager.register_element(name_input_dialog)
-        ui_manager.show_element(name_input_dialog.element_id)
+        ui_manager.add_dialog(name_input_dialog)
+        ui_manager.show_dialog(name_input_dialog.dialog_id)
     
     def _on_party_name_confirmed(self, new_name: str):
         """パーティ名変更確認時の処理"""
@@ -802,8 +802,8 @@ class Inn(BaseFacility):
             ]
         )
         
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id, modal=True)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _execute_spell_item_usage(self, character, slot_index: int, item_instance, item):
         """魔術書・祈祷書使用を実行"""
@@ -1658,8 +1658,8 @@ class Inn(BaseFacility):
             ]
         )
         
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id, modal=True)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _execute_equipment_change(self, character, source, index, item, item_instance, slot_name):
         """装備変更を実行"""
@@ -1779,8 +1779,8 @@ class Inn(BaseFacility):
             ]
         )
         
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id, modal=True)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _execute_equipment_unequip(self, character, slot_name, display_name, item, item_instance):
         """装備解除を実行"""
@@ -1845,15 +1845,15 @@ class Inn(BaseFacility):
         """サブメニューを表示"""
         # メインメニューを隠す
         if self.main_menu:
-            ui_manager.hide_element(self.main_menu.element_id)
+            ui_manager.hide_element(self.main_menu.menu_id)
         
         ui_manager.register_element(submenu)
-        ui_manager.show_element(submenu.element_id, modal=True)
+        ui_manager.show_element(submenu.menu_id, modal=True)
     
     def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
         """サブメニューからメインメニューに戻る"""
-        ui_manager.hide_element(submenu.element_id)
-        ui_manager.unregister_element(submenu.element_id)
+        ui_manager.hide_element(submenu.menu_id)
+        ui_manager.unregister_element(submenu.menu_id)
         
         if self.main_menu:
-            ui_manager.show_element(self.main_menu.element_id)
+            ui_manager.show_element(self.main_menu.menu_id)

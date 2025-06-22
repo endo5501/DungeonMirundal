@@ -57,7 +57,7 @@ class AdventurersGuild(BaseFacility):
         """キャラクター作成ウィザードを表示"""
         # メインメニューを隠す
         if self.main_menu:
-            ui_manager.hide_element(self.main_menu.element_id)
+            ui_manager.hide_menu(self.main_menu.menu_id)
         
         # キャラクター作成ウィザードを起動
         wizard = CharacterCreationWizard(callback=self._on_character_created)
@@ -67,6 +67,8 @@ class AdventurersGuild(BaseFacility):
     
     def _on_character_created(self, character: Character):
         """キャラクター作成完了時のコールバック"""
+        logger.info(f"キャラクター作成完了コールバック開始: {character.name}")
+        
         self.created_characters.append(character)
         
         # 成功メッセージ
@@ -74,7 +76,10 @@ class AdventurersGuild(BaseFacility):
         
         # メインメニューを再表示
         if self.main_menu:
-            ui_manager.show_element(self.main_menu.element_id)
+            logger.info("ギルドメインメニューを再表示")
+            ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+        else:
+            logger.warning("main_menuが存在しません")
         
         logger.info(f"新しいキャラクターを作成: {character.name}")
     
@@ -82,7 +87,7 @@ class AdventurersGuild(BaseFacility):
         """キャラクター作成キャンセル時のコールバック"""
         # メインメニューを再表示
         if self.main_menu:
-            ui_manager.show_element(self.main_menu.element_id)
+            ui_manager.show_menu(self.main_menu.menu_id, modal=True)
         
         logger.info("キャラクター作成がキャンセルされ、ギルドメインメニューに戻りました")
     
@@ -135,10 +140,10 @@ class AdventurersGuild(BaseFacility):
         
         # メインメニューを隠して編成メニューを表示
         if self.main_menu:
-            ui_manager.hide_element(self.main_menu.element_id)
+            ui_manager.hide_element(self.main_menu.menu_id)
         
         ui_manager.register_element(formation_menu)
-        ui_manager.show_element(formation_menu.element_id, modal=True)
+        ui_manager.show_element(formation_menu.menu_id, modal=True)
     
     def _show_current_formation(self):
         """現在の編成を表示"""
@@ -407,12 +412,12 @@ class AdventurersGuild(BaseFacility):
             ui_manager.hide_element("party_formation_menu")
         
         ui_manager.register_element(submenu)
-        ui_manager.show_element(submenu.element_id, modal=True)
+        ui_manager.show_element(submenu.menu_id, modal=True)
     
     def _back_to_formation_menu(self, submenu: UIMenu):
         """編成メニューに戻る"""
-        ui_manager.hide_element(submenu.element_id)
-        ui_manager.unregister_element(submenu.element_id)
+        ui_manager.hide_element(submenu.menu_id)
+        ui_manager.unregister_element(submenu.menu_id)
         
         # 編成メニューを再表示
         formation_menu = ui_manager.get_element("party_formation_menu")
@@ -421,11 +426,11 @@ class AdventurersGuild(BaseFacility):
     
     def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
         """サブメニューからメインメニューに戻る"""
-        ui_manager.hide_element(submenu.element_id)
-        ui_manager.unregister_element(submenu.element_id)
+        ui_manager.hide_element(submenu.menu_id)
+        ui_manager.unregister_element(submenu.menu_id)
         
         if self.main_menu:
-            ui_manager.show_element(self.main_menu.element_id)
+            ui_manager.show_element(self.main_menu.menu_id)
     
     def _back_to_main_menu_fallback(self):
         """フォールバック: 直接メインメニューに戻る"""
@@ -445,7 +450,7 @@ class AdventurersGuild(BaseFacility):
         
         # メインメニューを表示
         if self.main_menu:
-            ui_manager.show_element(self.main_menu.element_id)
+            ui_manager.show_element(self.main_menu.menu_id)
     
     def _close_all_submenus_and_return_to_main(self):
         """すべてのサブメニューを閉じてメインメニューに戻る"""
@@ -468,6 +473,6 @@ class AdventurersGuild(BaseFacility):
                 # 最後の手段：基本的なメインメニュー表示
                 if self.main_menu:
                     try:
-                        ui_manager.show_element(self.main_menu.element_id)
+                        ui_manager.show_element(self.main_menu.menu_id)
                     except Exception:
                         pass  # 最後の手段が失敗しても続行

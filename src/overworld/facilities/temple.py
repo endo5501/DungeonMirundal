@@ -271,8 +271,8 @@ class Temple(BaseFacility):
                 ]
             )
         
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id, modal=True)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _close_blessing_dialog(self):
         """祝福ダイアログを閉じてメインメニューに戻る"""
@@ -281,7 +281,7 @@ class Temple(BaseFacility):
         
         # メインメニューを再表示
         if self.main_menu:
-            ui_manager.show_element(self.main_menu.element_id)
+            ui_manager.show_element(self.main_menu.menu_id)
     
     def _perform_blessing(self, cost: int):
         """祝福実行"""
@@ -444,8 +444,8 @@ class Temple(BaseFacility):
                 ]
             )
         
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id, modal=True)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _buy_prayerbook(self, item: Item):
         """祈祷書購入処理"""
@@ -522,18 +522,18 @@ class Temple(BaseFacility):
         """サブメニューを表示"""
         # メインメニューを隠す
         if self.main_menu:
-            ui_manager.hide_element(self.main_menu.element_id)
+            ui_manager.hide_element(self.main_menu.menu_id)
         
         ui_manager.register_element(submenu)
-        ui_manager.show_element(submenu.element_id, modal=True)
+        ui_manager.show_element(submenu.menu_id, modal=True)
     
     def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
         """サブメニューからメインメニューに戻る"""
-        ui_manager.hide_element(submenu.element_id)
-        ui_manager.unregister_element(submenu.element_id)
+        ui_manager.hide_element(submenu.menu_id)
+        ui_manager.unregister_element(submenu.menu_id)
         
         if self.main_menu:
-            ui_manager.show_element(self.main_menu.element_id)
+            ui_manager.show_element(self.main_menu.menu_id)
     
     def _show_status_cure_menu(self):
         """状態異常治療メニューを表示"""
@@ -628,7 +628,7 @@ class Temple(BaseFacility):
         )
         
         ui_manager.register_element(char_cure_menu)
-        ui_manager.show_element(char_cure_menu.element_id, modal=True)
+        ui_manager.show_element(char_cure_menu.menu_id, modal=True)
     
     def _cure_specific_status(self, character: Character, effect_type, cost: int):
         """特定の状態異常を治療"""
