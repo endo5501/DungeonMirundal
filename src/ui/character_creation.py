@@ -398,6 +398,8 @@ class CharacterCreationWizard:
     
     def _close_wizard(self):
         """ウィザードを閉じる"""
+        logger.info("キャラクター作成ウィザードのクリーンアップを開始")
+        
         # すべてのUIを非表示・削除（Pygame UIでは不要だがエラー回避のためtryで囲む）
         try:
             ui_manager.hide_element("character_creation_main")
@@ -405,12 +407,20 @@ class CharacterCreationWizard:
         except:
             pass
         
-        # 現在のUIを閉じる
+        # 現在のUIを確実に閉じる
         if self.current_ui:
             if hasattr(self.current_ui, 'dialog_id'):
-                ui_manager.hide_dialog(self.current_ui.dialog_id)
+                try:
+                    ui_manager.hide_dialog(self.current_ui.dialog_id)
+                    logger.info(f"現在のUI {self.current_ui.dialog_id} を削除しました")
+                except:
+                    pass
             elif hasattr(self.current_ui, 'menu_id'):
-                ui_manager.hide_menu(self.current_ui.menu_id)
+                try:
+                    ui_manager.hide_menu(self.current_ui.menu_id)
+                    logger.info(f"現在のメニュー {self.current_ui.menu_id} を削除しました")
+                except:
+                    pass
             self.current_ui = None
         
         # 全ダイアログとメニューを強制クリーンアップ
@@ -426,17 +436,31 @@ class CharacterCreationWizard:
             "class_selection_menu"
         ]
         
-        for dialog_id in dialog_ids_to_clean:
-            try:
-                ui_manager.hide_dialog(dialog_id)
-            except:
-                pass
-                
-        for menu_id in menu_ids_to_clean:
-            try:
-                ui_manager.hide_menu(menu_id)
-            except:
-                pass
+        # ダイアログの強制削除（2回実行して確実に削除）
+        for attempt in range(2):
+            for dialog_id in dialog_ids_to_clean:
+                try:
+                    ui_manager.hide_dialog(dialog_id)
+                    if attempt == 0:
+                        logger.info(f"ダイアログ {dialog_id} を削除しました（試行{attempt+1}）")
+                except:
+                    pass
+                    
+            for menu_id in menu_ids_to_clean:
+                try:
+                    ui_manager.hide_menu(menu_id)
+                    if attempt == 0:
+                        logger.info(f"メニュー {menu_id} を削除しました（試行{attempt+1}）")
+                except:
+                    pass
+        
+        # 追加の確実なクリーンアップ処理
+        try:
+            # UIマネージャーの状態をリセット（利用可能な場合）
+            if hasattr(ui_manager, 'cleanup_orphaned_dialogs'):
+                ui_manager.cleanup_orphaned_dialogs()
+        except:
+            pass
         
         # 要素の登録解除（Pygame UIでは不要）
         

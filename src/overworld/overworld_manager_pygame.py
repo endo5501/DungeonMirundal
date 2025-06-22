@@ -168,7 +168,156 @@ class OverworldManager:
         logger.info("設定画面メニューを作成しました")
     
     def _on_enter_dungeon(self):
-        """ダンジョン入場"""
+        """ダンジョン入場 - 選択画面を表示"""
+        logger.info("ダンジョン入場が選択されました")
+        self._show_dungeon_selection_menu()
+    
+    def _show_dungeon_selection_menu(self):
+        """ダンジョン選択画面を表示"""
+        logger.info("ダンジョン選択画面を表示します")
+        
+        if not self.ui_manager:
+            logger.error("UIマネージャーが設定されていません")
+            return
+        
+        # メインメニューを隠す
+        if self.main_menu:
+            self.ui_manager.hide_menu(self.main_menu.menu_id)
+        
+        # ダンジョン選択メニューを作成
+        dungeon_menu = UIMenu("dungeon_selection_menu", "ダンジョン選択")
+        
+        # ダンジョン一覧
+        available_dungeons = self._get_available_dungeons()
+        if available_dungeons:
+            for dungeon in available_dungeons:
+                dungeon_info = self._format_dungeon_info(dungeon)
+                dungeon_menu.add_menu_item(
+                    dungeon_info,
+                    self._enter_selected_dungeon,
+                    [dungeon['id']]
+                )
+        else:
+            # ダンジョンがない場合の表示
+            dungeon_menu.add_menu_item(
+                "利用可能なダンジョンがありません",
+                lambda: None
+            )
+        
+        # メニュー項目を追加
+        dungeon_menu.add_menu_item(
+            "ダンジョン新規生成",
+            self._generate_new_dungeon
+        )
+        
+        if available_dungeons:
+            dungeon_menu.add_menu_item(
+                "ダンジョン破棄",
+                self._show_dungeon_deletion_menu
+            )
+        
+        dungeon_menu.add_menu_item(
+            "戻る",
+            self._close_dungeon_selection_menu
+        )
+        
+        # メニューを表示
+        self.ui_manager.add_menu(dungeon_menu)
+        self.ui_manager.show_menu(dungeon_menu.menu_id, modal=True)
+        
+        logger.info("ダンジョン選択メニューを表示しました")
+    
+    def _get_available_dungeons(self):
+        """利用可能なダンジョン一覧を取得"""
+        # TODO: 実際のダンジョンデータストレージから取得
+        # 現在は仮のデータを返す
+        return [
+            {
+                "id": "main_dungeon",
+                "name": "メインダンジョン",
+                "difficulty": "Normal", 
+                "attribute": "Mixed",
+                "completed": False,
+                "hash": "default"
+            }
+        ]
+    
+    def _format_dungeon_info(self, dungeon):
+        """ダンジョン情報をフォーマット"""
+        completed_text = " [踏破済み]" if dungeon.get('completed', False) else ""
+        return f"{dungeon['name']} - {dungeon['difficulty']} ({dungeon['attribute']}){completed_text}"
+    
+    def _enter_selected_dungeon(self, dungeon_id):
+        """選択されたダンジョンに入場"""
+        logger.info(f"ダンジョン {dungeon_id} への入場を実行します")
+        if self.enter_dungeon_callback:
+            try:
+                # ダンジョン選択メニューを隠す
+                self.ui_manager.hide_menu("dungeon_selection_menu")
+                self.is_active = False
+                
+                # ダンジョンに遷移
+                self.enter_dungeon_callback(dungeon_id)
+            except Exception as e:
+                logger.error(f"ダンジョン入場エラー: {e}")
+                # エラーの場合はメニューを再表示
+                self._show_dungeon_selection_menu()
+    
+    def _generate_new_dungeon(self):
+        """新規ダンジョンを生成"""
+        import hashlib
+        import time
+        
+        logger.info("新規ダンジョンを生成します")
+        
+        # ハッシュ値を生成
+        current_time = str(time.time())
+        hash_value = hashlib.md5(current_time.encode()).hexdigest()[:8]
+        
+        new_dungeon = {
+            "id": f"dungeon_{hash_value}",
+            "name": f"生成ダンジョン_{hash_value[:4]}",
+            "difficulty": "Normal",
+            "attribute": "Mixed", 
+            "completed": False,
+            "hash": hash_value,
+            "generated_at": current_time
+        }
+        
+        # TODO: 実際のダンジョンデータストレージに保存
+        
+        logger.info(f"新規ダンジョンを生成しました: {new_dungeon['name']}")
+        
+        # 成功メッセージを表示
+        success_message = f"新しいダンジョン「{new_dungeon['name']}」を生成しました。"
+        self._show_dungeon_generation_success(success_message)
+    
+    def _show_dungeon_deletion_menu(self):
+        """ダンジョン削除メニューを表示"""
+        logger.info("ダンジョン削除メニューを表示します")
+        # TODO: 実装
+        pass
+    
+    def _show_dungeon_generation_success(self, message):
+        """ダンジョン生成成功メッセージを表示"""
+        # 簡易的な成功表示（実装を簡略化）
+        logger.info(f"ダンジョン生成成功: {message}")
+        # メニューを再表示
+        self._show_dungeon_selection_menu()
+    
+    def _close_dungeon_selection_menu(self):
+        """ダンジョン選択メニューを閉じて地上メニューに戻る"""
+        logger.info("ダンジョン選択メニューを閉じます")
+        
+        # ダンジョン選択メニューを隠す
+        self.ui_manager.hide_menu("dungeon_selection_menu")
+        
+        # メインメニューを再表示
+        if self.main_menu:
+            self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+    
+    def _on_enter_dungeon_old(self):
+        """ダンジョン入場（旧実装）"""
         logger.info("ダンジョン入場が選択されました")
         if self.enter_dungeon_callback:
             try:
@@ -345,7 +494,272 @@ class OverworldManager:
             pass
     
     def _on_save_game(self):
-        """ゲームを保存"""
+        """ゲームを保存 - スロット選択画面を表示"""
+        logger.info("ゲーム保存が選択されました")
+        self._show_save_slot_selection()
+    
+    def _on_load_game(self):
+        """ゲームをロード - スロット選択画面を表示"""
+        logger.info("ゲームロードが選択されました")
+        self._show_load_slot_selection()
+    
+    def _show_save_slot_selection(self):
+        """セーブスロット選択画面を表示"""
+        logger.info("セーブスロット選択画面を表示します")
+        
+        if not self.ui_manager:
+            logger.error("UIマネージャーが設定されていません")
+            return
+        
+        # 設定メニューを隠す
+        if self.settings_menu:
+            self.ui_manager.hide_menu(self.settings_menu.menu_id)
+        
+        # セーブスロット選択メニューを作成
+        save_slot_menu = UIMenu("save_slot_selection_menu", "セーブスロット選択")
+        
+        # 利用可能なセーブスロットを取得
+        save_slots = self._get_save_slots()
+        
+        for slot in save_slots:
+            slot_info = self._format_save_slot_info(slot)
+            save_slot_menu.add_menu_item(
+                slot_info,
+                self._save_to_slot,
+                [slot['slot_id']]
+            )
+        
+        # 戻るボタン
+        save_slot_menu.add_menu_item(
+            "戻る",
+            self._close_save_slot_selection
+        )
+        
+        # メニューを表示
+        self.ui_manager.add_menu(save_slot_menu)
+        self.ui_manager.show_menu(save_slot_menu.menu_id, modal=True)
+        
+        logger.info("セーブスロット選択メニューを表示しました")
+    
+    def _show_load_slot_selection(self):
+        """ロードスロット選択画面を表示"""
+        logger.info("ロードスロット選択画面を表示します")
+        
+        if not self.ui_manager:
+            logger.error("UIマネージャーが設定されていません")
+            return
+        
+        # 設定メニューを隠す
+        if self.settings_menu:
+            self.ui_manager.hide_menu(self.settings_menu.menu_id)
+        
+        # ロードスロット選択メニューを作成
+        load_slot_menu = UIMenu("load_slot_selection_menu", "ロードスロット選択")
+        
+        # 利用可能なセーブスロットを取得
+        save_slots = self._get_save_slots()
+        
+        # ロード可能なスロットのみ表示
+        loadable_slots = [slot for slot in save_slots if slot['is_used']]
+        
+        if loadable_slots:
+            for slot in loadable_slots:
+                slot_info = self._format_save_slot_info(slot)
+                load_slot_menu.add_menu_item(
+                    slot_info,
+                    self._load_from_slot,
+                    [slot['slot_id']]
+                )
+        else:
+            # ロード可能なスロットがない場合
+            load_slot_menu.add_menu_item(
+                "ロード可能なセーブデータがありません",
+                lambda: None
+            )
+        
+        # 戻るボタン
+        load_slot_menu.add_menu_item(
+            "戻る",
+            self._close_load_slot_selection
+        )
+        
+        # メニューを表示
+        self.ui_manager.add_menu(load_slot_menu)
+        self.ui_manager.show_menu(load_slot_menu.menu_id, modal=True)
+        
+        logger.info("ロードスロット選択メニューを表示しました")
+    
+    def _get_save_slots(self):
+        """セーブスロット情報を取得"""
+        # TODO: 実際のセーブデータストレージから取得
+        # 現在は仮のデータを返す
+        import datetime
+        
+        return [
+            {
+                "slot_id": 1,
+                "is_used": True,
+                "save_time": "2025-06-23 10:30:00",
+                "party_name": "勇者の一行",
+                "play_time": "05:30:15",
+                "location": "地上・冒険者ギルド",
+                "party_level": 5,
+                "gold": 1500
+            },
+            {
+                "slot_id": 2,
+                "is_used": False,
+                "save_time": None,
+                "party_name": None,
+                "play_time": None,
+                "location": None,
+                "party_level": None,
+                "gold": None
+            },
+            {
+                "slot_id": 3,
+                "is_used": True,
+                "save_time": "2025-06-22 18:45:30",
+                "party_name": "冒険者チーム",
+                "play_time": "02:15:45",
+                "location": "地上・商店",
+                "party_level": 3,
+                "gold": 800
+            },
+            {
+                "slot_id": 4,
+                "is_used": False,
+                "save_time": None,
+                "party_name": None,
+                "play_time": None,
+                "location": None,
+                "party_level": None,
+                "gold": None
+            },
+            {
+                "slot_id": 5,
+                "is_used": False,
+                "save_time": None,
+                "party_name": None,
+                "play_time": None,
+                "location": None,
+                "party_level": None,
+                "gold": None
+            }
+        ]
+    
+    def _format_save_slot_info(self, slot):
+        """セーブスロット情報をフォーマット"""
+        if slot['is_used']:
+            return f"スロット {slot['slot_id']}: {slot['party_name']} ({slot['save_time']})"
+        else:
+            return f"スロット {slot['slot_id']}: [空き]"
+    
+    def _save_to_slot(self, slot_id):
+        """指定されたスロットにセーブ"""
+        logger.info(f"スロット {slot_id} にセーブします")
+        
+        # スロット情報を取得
+        slots = self._get_save_slots()
+        selected_slot = next((slot for slot in slots if slot['slot_id'] == slot_id), None)
+        
+        if selected_slot and selected_slot['is_used']:
+            # 既存データがある場合は確認ダイアログを表示
+            self._show_save_confirmation(slot_id, selected_slot)
+        else:
+            # 空きスロットの場合は直接保存
+            self._execute_save(slot_id)
+    
+    def _show_save_confirmation(self, slot_id, existing_slot):
+        """セーブ確認ダイアログを表示"""
+        confirmation_message = (
+            f"スロット {slot_id} を上書きしますか？\\n\\n"
+            f"既存データ:\\n"
+            f"パーティ: {existing_slot['party_name']}\\n"
+            f"保存日時: {existing_slot['save_time']}"
+        )
+        
+        # TODO: 確認ダイアログの実装
+        # 現在は簡易的に直接保存
+        logger.info(f"上書き確認: {confirmation_message}")
+        self._execute_save(slot_id)
+    
+    def _execute_save(self, slot_id):
+        """セーブを実行"""
+        logger.info(f"スロット {slot_id} にセーブを実行します")
+        
+        # 実際のセーブ処理
+        slot_name = f"save_slot_{slot_id}"
+        success = self.save_overworld_state(slot_name)
+        
+        if success:
+            logger.info(f"スロット {slot_id} にゲームを保存しました")
+            # セーブ成功メッセージを表示
+            self._show_save_success(slot_id)
+        else:
+            logger.error(f"スロット {slot_id} へのゲーム保存に失敗しました")
+            # エラーメッセージを表示
+            self._show_save_error(slot_id)
+    
+    def _load_from_slot(self, slot_id):
+        """指定されたスロットからロード"""
+        logger.info(f"スロット {slot_id} からロードします")
+        
+        # 実際のロード処理
+        slot_name = f"save_slot_{slot_id}"
+        success = self.load_overworld_state(slot_name)
+        
+        if success:
+            logger.info(f"スロット {slot_id} からゲームをロードしました")
+            # ロード成功後は設定画面を閉じる
+            self._close_load_slot_selection()
+        else:
+            logger.error(f"スロット {slot_id} からのゲームロードに失敗しました")
+            # エラーメッセージを表示
+            self._show_load_error(slot_id)
+    
+    def _show_save_success(self, slot_id):
+        """セーブ成功メッセージを表示"""
+        logger.info(f"セーブ成功メッセージを表示: スロット {slot_id}")
+        # メニューを閉じて設定画面に戻る
+        self._close_save_slot_selection()
+    
+    def _show_save_error(self, slot_id):
+        """セーブエラーメッセージを表示"""
+        logger.error(f"セーブエラーメッセージを表示: スロット {slot_id}")
+        # メニューに戻る
+        self._show_save_slot_selection()
+    
+    def _show_load_error(self, slot_id):
+        """ロードエラーメッセージを表示"""
+        logger.error(f"ロードエラーメッセージを表示: スロット {slot_id}")
+        # メニューに戻る
+        self._show_load_slot_selection()
+    
+    def _close_save_slot_selection(self):
+        """セーブスロット選択メニューを閉じて設定画面に戻る"""
+        logger.info("セーブスロット選択メニューを閉じます")
+        
+        # セーブスロット選択メニューを隠す
+        self.ui_manager.hide_menu("save_slot_selection_menu")
+        
+        # 設定メニューを再表示
+        if self.settings_menu:
+            self.ui_manager.show_menu(self.settings_menu.menu_id, modal=True)
+    
+    def _close_load_slot_selection(self):
+        """ロードスロット選択メニューを閉じて設定画面に戻る"""
+        logger.info("ロードスロット選択メニューを閉じます")
+        
+        # ロードスロット選択メニューを隠す
+        self.ui_manager.hide_menu("load_slot_selection_menu")
+        
+        # 設定メニューを再表示
+        if self.settings_menu:
+            self.ui_manager.show_menu(self.settings_menu.menu_id, modal=True)
+    
+    def _on_save_game_old(self):
+        """ゲームを保存（旧実装）"""
         logger.info("ゲーム保存が選択されました")
         # セーブ処理の実装
         success = self.save_overworld_state("quicksave")
@@ -354,8 +768,8 @@ class OverworldManager:
         else:
             logger.error("ゲーム保存に失敗しました")
     
-    def _on_load_game(self):
-        """ゲームをロード"""
+    def _on_load_game_old(self):
+        """ゲームをロード（旧実装）"""
         logger.info("ゲームロードが選択されました")
         # ロード処理の実装
         success = self.load_overworld_state("quicksave")

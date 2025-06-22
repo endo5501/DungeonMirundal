@@ -235,9 +235,12 @@ class MagicGuild(BaseFacility):
             details += "※ 魔術書はパーティのインベントリに追加されます\n"
             details += "※ 読むことで対応する魔法を習得できます"
             
+            def purchase_callback():
+                self._purchase_spellbook(spellbook)
+            
             self._show_confirmation(
                 details,
-                lambda: self._purchase_spellbook(spellbook)
+                purchase_callback
             )
         else:
             details += "\n※ ゴールドが不足しています"

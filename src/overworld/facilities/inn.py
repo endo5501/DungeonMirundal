@@ -417,7 +417,8 @@ class Inn(BaseFacility):
         self._show_dialog(
             "inn_storage_status_dialog",
             "宿屋倉庫の状況",
-            storage_info
+            storage_info,
+            buttons=["戻る"]
         )
     
     def _show_character_item_management(self):
@@ -493,7 +494,8 @@ class Inn(BaseFacility):
             self._show_dialog(
                 "no_storage_items_dialog",
                 "倉庫→キャラクター",
-                "宿屋倉庫にアイテムがありません。"
+                "宿屋倉庫にアイテムがありません。",
+                buttons=["戻る"]
             )
             return
         
@@ -512,7 +514,8 @@ class Inn(BaseFacility):
             self._show_dialog(
                 "no_char_items_dialog",
                 "キャラクター→倉庫",
-                f"{character.name}はアイテムを所持していません。"
+                f"{character.name}はアイテムを所持していません。",
+                buttons=["戻る"]
             )
             return
         
@@ -707,7 +710,8 @@ class Inn(BaseFacility):
         self._show_dialog(
             "character_inventory_status_dialog",
             f"{character.name} の所持状況",
-            status_info
+            status_info,
+            buttons=["戻る"]
         )
     
     def _cleanup_inn_item_ui(self):
