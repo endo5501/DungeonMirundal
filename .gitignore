@@ -16,3 +16,4 @@ saves/
 
 # Test files with issues
 tests/test_transition_system.py
+.coverage
