@@ -1,6 +1,6 @@
 """キャラクター作成ウィザード"""
 
-from typing import Dict, List, Optional, Any
+from typing import Optional
 from enum import Enum
 
 from src.ui.base_ui_pygame import UIElement, UIText, UIButton, UIMenu, UIDialog, UIInputDialog, ui_manager
@@ -136,9 +136,7 @@ class CharacterCreationWizard:
         # 名前の文字数制限チェック
         name = name.strip()[:20]  # 最大20文字
         
-        # 特殊文字の除去（アルファベット、数字、日本語のみ許可）
-        allowed_chars = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789ひらがなカタカナ漢字")
-        # 簡易版：基本的な文字チェック
+        # 簡易版：基本的な文字チェック（危険な文字の除去）
         if any(c in name for c in ['<', '>', '&', '"', "'"]):
             name = config_manager.get_text('character_creation.default_name')  # 危険な文字がある場合はデフォルト名
         
@@ -146,7 +144,16 @@ class CharacterCreationWizard:
         
         # UIを閉じて次のステップへ
         if self.current_ui:
-            ui_manager.hide_dialog(self.current_ui.dialog_id)
+            dialog_id = self.current_ui.dialog_id
+            ui_manager.hide_dialog(dialog_id)
+            
+            # 重要：ダイアログオブジェクトを完全に削除（安全にチェック）
+            if (hasattr(ui_manager, 'dialogs') and 
+                ui_manager.dialogs is not None and 
+                dialog_id in ui_manager.dialogs):
+                del ui_manager.dialogs[dialog_id]
+                logger.info(f"名前入力ダイアログ {dialog_id} を完全に削除しました")
+            
             self.current_ui = None
         
         self._next_step()
@@ -157,7 +164,16 @@ class CharacterCreationWizard:
         """名前入力キャンセル時の処理"""
         # UIを閉じて前のステップに戻る
         if self.current_ui:
-            ui_manager.hide_dialog(self.current_ui.dialog_id)
+            dialog_id = self.current_ui.dialog_id
+            ui_manager.hide_dialog(dialog_id)
+            
+            # 重要：ダイアログオブジェクトを完全に削除（安全にチェック）
+            if (hasattr(ui_manager, 'dialogs') and 
+                ui_manager.dialogs is not None and 
+                dialog_id in ui_manager.dialogs):
+                del ui_manager.dialogs[dialog_id]
+                logger.info(f"名前入力ダイアログ {dialog_id} を完全に削除しました（キャンセル）")
+            
             self.current_ui = None
         
         # キャラクター作成をキャンセル
@@ -441,8 +457,16 @@ class CharacterCreationWizard:
             for dialog_id in dialog_ids_to_clean:
                 try:
                     ui_manager.hide_dialog(dialog_id)
-                    if attempt == 0:
-                        logger.info(f"ダイアログ {dialog_id} を削除しました（試行{attempt+1}）")
+                    
+                    # 重要：ダイアログオブジェクトを完全に削除（安全にチェック）
+                    if (hasattr(ui_manager, 'dialogs') and 
+                        ui_manager.dialogs is not None and 
+                        dialog_id in ui_manager.dialogs):
+                        del ui_manager.dialogs[dialog_id]
+                        if attempt == 0:
+                            logger.info(f"ダイアログ {dialog_id} を完全削除しました（試行{attempt+1}）")
+                    elif attempt == 0:
+                        logger.info(f"ダイアログ {dialog_id} は既に削除済み（試行{attempt+1}）")
                 except:
                     pass
                     
