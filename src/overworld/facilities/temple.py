@@ -5,7 +5,7 @@ from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.party import Party
 from src.character.character import Character, CharacterStatus
 from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
-from src.ui.base_ui import UIMenu, UIDialog, ui_manager
+from src.ui.base_ui_pygame import UIMenu, UIDialog, ui_manager
 # NOTE: panda3D UI components removed - using pygame-based UI now
 from src.core.config_manager import config_manager
 from src.utils.logger import logger

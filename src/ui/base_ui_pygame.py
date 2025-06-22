@@ -262,6 +262,16 @@ class UIMenu:
         self.elements.append(element)
         element.parent = self
     
+    def add_menu_item(self, text: str, callback: callable, args: list = None):
+        """メニュー項目を追加（Panda3D互換性のため）"""
+        button = UIButton(f"{self.menu_id}_item_{len(self.elements)}", text, 
+                         width=200, height=40)
+        if args:
+            button.on_click = lambda: callback(*args)
+        else:
+            button.on_click = callback
+        self.add_element(button)
+    
     def show(self):
         """メニューを表示"""
         self.state = UIState.VISIBLE
@@ -480,6 +490,42 @@ class UIManager:
         """要素を追加"""
         self.elements[element.element_id] = element
     
+    def register_element(self, element):
+        """要素を登録（互換性のため）"""
+        if hasattr(element, 'element_id'):
+            self.add_element(element)
+        elif hasattr(element, 'menu_id'):
+            self.add_menu(element)
+        elif hasattr(element, 'dialog_id'):
+            self.add_dialog(element)
+    
+    def show_element(self, element_id: str, modal: bool = False):
+        """要素を表示（互換性のため）"""
+        if element_id in self.elements:
+            self.elements[element_id].show()
+        elif element_id in self.menus:
+            self.show_menu(element_id, modal)
+        elif element_id in self.dialogs:
+            self.show_dialog(element_id)
+    
+    def hide_element(self, element_id: str):
+        """要素を非表示（互換性のため）"""
+        if element_id in self.elements:
+            self.elements[element_id].hide()
+        elif element_id in self.menus:
+            self.hide_menu(element_id)
+        elif element_id in self.dialogs:
+            self.hide_dialog(element_id)
+    
+    def unregister_element(self, element_id: str):
+        """要素の登録を解除（互換性のため）"""
+        if element_id in self.elements:
+            del self.elements[element_id]
+        elif element_id in self.menus:
+            del self.menus[element_id]
+        elif element_id in self.dialogs:
+            del self.dialogs[element_id]
+    
     def add_menu(self, menu: UIMenu):
         """メニューを追加"""
         self.menus[menu.menu_id] = menu
@@ -564,3 +610,61 @@ def initialize_ui_manager(screen: pygame.Surface):
     global ui_manager
     ui_manager = UIManager(screen)
     return ui_manager
+
+
+class UIInputDialog(UIDialog):
+    """入力ダイアログ"""
+    
+    def __init__(self, dialog_id: str, title: str, message: str, 
+                 initial_text: str = "", placeholder: str = "",
+                 on_confirm: callable = None, on_cancel: callable = None):
+        super().__init__(dialog_id, title, message)
+        self.input_text = initial_text
+        self.placeholder = placeholder
+        self.on_confirm = on_confirm
+        self.on_cancel = on_cancel
+        self.is_active = False
+        
+        # 確認・キャンセルボタンを追加
+        if on_confirm:
+            confirm_button = UIButton(f"{dialog_id}_confirm", "OK", width=80, height=30)
+            confirm_button.on_click = self._confirm_input
+            self.add_element(confirm_button)
+        
+        if on_cancel:
+            cancel_button = UIButton(f"{dialog_id}_cancel", "Cancel", width=80, height=30)
+            cancel_button.on_click = self._cancel_input
+            self.add_element(cancel_button)
+    
+    def _confirm_input(self):
+        """入力確認"""
+        if self.on_confirm:
+            self.on_confirm(self.input_text)
+    
+    def _cancel_input(self):
+        """入力キャンセル"""
+        if self.on_cancel:
+            self.on_cancel()
+    
+    def handle_event(self, event: pygame.event.Event) -> bool:
+        """入力イベント処理"""
+        if self.state != UIState.VISIBLE:
+            return False
+        
+        # テキスト入力処理
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:
+                self._confirm_input()
+                return True
+            elif event.key == pygame.K_ESCAPE:
+                self._cancel_input()
+                return True
+            elif event.key == pygame.K_BACKSPACE:
+                self.input_text = self.input_text[:-1]
+                return True
+        elif event.type == pygame.TEXTINPUT:
+            self.input_text += event.text
+            return True
+        
+        # 親クラスのイベント処理
+        return super().handle_event(event)

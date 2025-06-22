@@ -88,7 +88,7 @@ class BaseFacility(ABC):
     def _show_main_menu(self):
         """メインメニューの表示"""
         if self.main_menu:
-            ui_manager.unregister_element(self.main_menu.element_id)
+            ui_manager.hide_menu(self.main_menu.menu_id)
         
         menu_title = self.get_name()
         self.main_menu = UIMenu(f"{self.facility_id}_main_menu", menu_title)
@@ -102,8 +102,8 @@ class BaseFacility(ABC):
             self._exit_facility
         )
         
-        ui_manager.register_element(self.main_menu)
-        ui_manager.show_element(self.main_menu.element_id, modal=True)
+        ui_manager.add_menu(self.main_menu)
+        ui_manager.show_menu(self.main_menu.menu_id, modal=True)
     
     def _exit_facility(self):
         """施設から出る（UI用）"""
@@ -115,38 +115,36 @@ class BaseFacility(ABC):
     def _cleanup_ui(self):
         """UI要素のクリーンアップ"""
         if self.main_menu:
-            ui_manager.hide_element(self.main_menu.element_id)
-            ui_manager.unregister_element(self.main_menu.element_id)
+            ui_manager.hide_menu(self.main_menu.menu_id)
             self.main_menu = None
         
         if self.current_dialog:
-            ui_manager.hide_element(self.current_dialog.element_id)
-            ui_manager.unregister_element(self.current_dialog.element_id)
+            ui_manager.hide_dialog(self.current_dialog.dialog_id)
             self.current_dialog = None
     
     def _show_dialog(self, dialog_id: str, title: str, message: str, buttons: List[Dict[str, Any]] = None):
         """ダイアログの表示"""
         if self.current_dialog:
-            ui_manager.hide_element(self.current_dialog.element_id)
-            ui_manager.unregister_element(self.current_dialog.element_id)
+            ui_manager.hide_dialog(self.current_dialog.dialog_id)
         
-        if buttons is None:
-            buttons = [
-                {
-                    'text': config_manager.get_text("common.ok"),
-                    'command': self._close_dialog
-                }
-            ]
+        # UIDialogの代わりにUIDialogを使用するが、引数を修正
+        self.current_dialog = UIDialog(dialog_id, title, message)
         
-        self.current_dialog = UIDialog(dialog_id, title, message, buttons)
-        ui_manager.register_element(self.current_dialog)
-        ui_manager.show_element(self.current_dialog.element_id)
+        # ボタンがある場合は手動で追加
+        if buttons:
+            for button_data in buttons:
+                from src.ui.base_ui_pygame import UIButton
+                button = UIButton(f"{dialog_id}_button", button_data['text'])
+                button.on_click = button_data['command']
+                self.current_dialog.add_element(button)
+        
+        ui_manager.add_dialog(self.current_dialog)
+        ui_manager.show_dialog(self.current_dialog.dialog_id)
     
     def _close_dialog(self):
         """ダイアログを閉じる"""
         if self.current_dialog:
-            ui_manager.hide_element(self.current_dialog.element_id)
-            ui_manager.unregister_element(self.current_dialog.element_id)
+            ui_manager.hide_dialog(self.current_dialog.dialog_id)
             self.current_dialog = None
     
     def _show_welcome_message(self):
@@ -358,9 +356,5 @@ def initialize_facilities():
     logger.info("全施設の初期化・登録が完了しました")
 
 
-# 施設の自動初期化
-try:
-    initialize_facilities()
-except ImportError as e:
-    logger.warning(f"施設の初期化でエラーが発生しました: {e}")
-    logger.info("施設は後で手動で初期化されます")
+# 施設は必要時に手動で初期化
+# 循環インポートを避けるため、自動初期化は行わない

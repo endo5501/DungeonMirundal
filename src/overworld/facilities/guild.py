@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Any
 from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.character import Character
 from src.character.party import Party, PartyPosition
-from src.ui.base_ui import UIMenu, UIDialog, ui_manager
+from src.ui.base_ui_pygame import UIMenu, UIDialog, ui_manager
 from src.ui.character_creation import CharacterCreationWizard
 from src.core.config_manager import config_manager
 from src.utils.logger import logger

@@ -161,8 +161,7 @@ class OverworldManager:
         try:
             from src.overworld.facilities.guild import AdventurersGuild
             guild = AdventurersGuild()
-            guild.set_current_party(self.current_party)
-            guild.enter()
+            guild.enter(self.current_party)
         except Exception as e:
             logger.error(f"冒険者ギルドエラー: {e}")
             logger.info("冒険者ギルドの詳細機能を利用")
@@ -173,8 +172,7 @@ class OverworldManager:
         try:
             from src.overworld.facilities.inn import Inn
             inn = Inn()
-            inn.set_current_party(self.current_party)
-            inn.enter()
+            inn.enter(self.current_party)
         except Exception as e:
             logger.error(f"宿屋エラー: {e}")
             # 基本的な回復処理をフォールバック
@@ -190,8 +188,7 @@ class OverworldManager:
         try:
             from src.overworld.facilities.shop import Shop
             shop = Shop()
-            shop.set_current_party(self.current_party)
-            shop.enter()
+            shop.enter(self.current_party)
         except Exception as e:
             logger.error(f"商店エラー: {e}")
             logger.info("商店の詳細機能を利用")
@@ -202,8 +199,7 @@ class OverworldManager:
         try:
             from src.overworld.facilities.temple import Temple
             temple = Temple()
-            temple.set_current_party(self.current_party)
-            temple.enter()
+            temple.enter(self.current_party)
         except Exception as e:
             logger.error(f"教会エラー: {e}")
             logger.info("教会の詳細機能を利用")
@@ -214,8 +210,7 @@ class OverworldManager:
         try:
             from src.overworld.facilities.magic_guild import MagicGuild
             magic_guild = MagicGuild()
-            magic_guild.set_current_party(self.current_party)
-            magic_guild.enter()
+            magic_guild.enter(self.current_party)
         except Exception as e:
             logger.error(f"魔術師ギルドエラー: {e}")
             logger.info("魔術師ギルドの詳細機能を利用")
