@@ -33,6 +33,7 @@ class OverworldManager:
         self.ui_manager = ui_manager
         self._create_main_menu()
         self._create_settings_menu()
+        self.setup_facility_callbacks()
     
     def set_input_manager(self, input_manager):
         """入力マネージャーを設定"""
@@ -45,6 +46,25 @@ class OverworldManager:
     def set_exit_game_callback(self, callback: Callable):
         """ゲーム終了コールバックを設定"""
         self.exit_game_callback = callback
+    
+    def setup_facility_callbacks(self):
+        """FacilityManagerのコールバックを設定"""
+        try:
+            from src.overworld.base_facility import facility_manager
+            facility_manager.set_facility_exit_callback(self.on_facility_exit)
+        except Exception as e:
+            logger.error(f"FacilityManagerコールバック設定エラー: {e}")
+    
+    def on_facility_exit(self):
+        """施設退場時のコールバック"""
+        logger.info("施設から地上部に戻りました")
+        # メインメニューを再表示
+        if self.main_menu:
+            self.main_menu.show()
+        else:
+            self._create_main_menu()
+            if self.main_menu:
+                self.main_menu.show()
     
     def _create_main_menu(self):
         """メインメニューを作成（6つの施設 + 設定画面）"""
@@ -159,9 +179,18 @@ class OverworldManager:
         """冒険者ギルド"""
         logger.info("冒険者ギルドが選択されました")
         try:
-            from src.overworld.facilities.guild import AdventurersGuild
-            guild = AdventurersGuild()
-            guild.enter(self.current_party)
+            from src.overworld.base_facility import facility_manager, initialize_facilities
+            # 施設の初期化を確実に行う
+            if not facility_manager.facilities:
+                initialize_facilities()
+            
+            success = facility_manager.enter_facility("guild", self.current_party)
+            if success:
+                # 施設に入ったらメインメニューを隠す
+                if self.main_menu:
+                    self.main_menu.hide()
+            else:
+                logger.error("冒険者ギルドへの入場に失敗しました")
         except Exception as e:
             logger.error(f"冒険者ギルドエラー: {e}")
             logger.info("冒険者ギルドの詳細機能を利用")

@@ -110,6 +110,7 @@ class BaseFacility(ABC):
         logger.info(f"施設退出ボタンが押されました: {self.facility_id}")
         # FacilityManagerを通して退場処理を行う
         # これにより on_facility_exit_callback が正しく呼ばれる
+        logger.info(f"デバッグ: facility_manager.current_facility = {facility_manager.current_facility}")
         result = facility_manager.exit_current_facility()
         logger.info(f"施設退出処理結果: {result}")
     
@@ -287,18 +288,24 @@ class FacilityManager:
     
     def enter_facility(self, facility_id: str, party: Party) -> bool:
         """施設に入る"""
+        logger.info(f"施設入場処理開始: {facility_id}")
         if facility_id not in self.facilities:
             logger.error(f"施設が見つかりません: {facility_id}")
             return False
         
         # 現在の施設から出る
         if self.current_facility:
+            logger.info(f"現在の施設から退場: {self.current_facility}")
             self.exit_current_facility()
         
         facility = self.facilities[facility_id]
+        logger.info(f"施設オブジェクトを取得: {facility}")
         if facility.enter(party):
             self.current_facility = facility_id
+            logger.info(f"current_facilityを設定: {self.current_facility}")
             return True
+        else:
+            logger.error(f"施設のenter()がFalseを返しました: {facility_id}")
         
         return False
     

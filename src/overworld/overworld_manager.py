@@ -6,7 +6,7 @@ from enum import Enum
 from src.character.party import Party
 from src.character.character import Character, CharacterStatus
 from src.overworld.base_facility import BaseFacility, FacilityManager, facility_manager
-from src.ui.base_ui import UIMenu, UIDialog, UITileDialog, ui_manager
+from src.ui.base_ui_pygame import UIMenu, UIDialog, ui_manager
 from src.ui.dungeon_selection_ui import DungeonSelectionUI
 from src.core.config_manager import config_manager
 from src.core.save_manager import save_manager
@@ -157,9 +157,9 @@ class OverworldManager:
     def _show_main_menu(self):
         """地上マップメニューの表示（直接施設アクセス）"""
         if self.main_menu:
-            ui_manager.unregister_element(self.main_menu.element_id)
+            ui_manager.hide_menu(self.main_menu.menu_id)
         
-        self.main_menu = UIMenu("overworld_main_menu", config_manager.get_text("overworld.surface_map"), alignment="left")
+        self.main_menu = UIMenu("overworld_main_menu", config_manager.get_text("overworld.surface_map"))
         
         # 各施設への直接アクセス
         facilities = [
@@ -183,13 +183,13 @@ class OverworldManager:
             self._enter_dungeon
         )
         
-        ui_manager.register_element(self.main_menu)
-        ui_manager.show_element(self.main_menu.element_id, modal=True)
+        ui_manager.add_menu(self.main_menu)
+        ui_manager.show_menu(self.main_menu.menu_id, modal=True)
     
     def show_settings_menu(self):
         """設定画面の表示（ESCキー用）"""
         if self.location_menu:
-            ui_manager.unregister_element(self.location_menu.element_id)
+            ui_manager.hide_menu(self.location_menu.menu_id)
         
         self.location_menu = UIMenu("settings_menu", config_manager.get_text("menu.settings"))
         self.settings_menu_active = True
@@ -229,12 +229,12 @@ class OverworldManager:
             self._back_to_main_menu
         )
         
-        ui_manager.register_element(self.location_menu)
-        ui_manager.show_element(self.location_menu.element_id, modal=True)
+        ui_manager.add_menu(self.location_menu)
+        ui_manager.show_menu(self.location_menu.menu_id, modal=True)
         
         # メインメニューを隠す
         if self.main_menu:
-            ui_manager.hide_element(self.main_menu.element_id)
+            ui_manager.hide_menu(self.main_menu.menu_id)
         
         logger.info("設定画面を表示しました")
     
@@ -243,6 +243,7 @@ class OverworldManager:
         if not self.current_party:
             return
         
+        logger.info(f"FacilityManagerの状態: 登録済み施設={list(self.facility_manager.facilities.keys())}")
         success = self.facility_manager.enter_facility(facility_id, self.current_party)
         
         if success:
@@ -253,30 +254,19 @@ class OverworldManager:
             
             if self.main_menu:
                 try:
-                    # UIManagerに登録されているかチェックしてから隠す
-                    main_element = ui_manager.get_element(self.main_menu.element_id)
-                    if main_element:
-                        # メニューが表示状態かチェック（簡易版）
-                        try:
-                            # 現在表示されているかどうかを記録
-                            self.main_menu_was_visible = True
-                            ui_manager.hide_element(self.main_menu.element_id)
-                            logger.debug(f"メインメニューを隠しました: {self.main_menu.element_id}")
-                        except Exception as hide_error:
-                            logger.warning(f"メインメニューの非表示処理でエラー: {hide_error}")
-                    else:
-                        logger.warning("隠すべきメインメニューがUIManagerに見つかりません")
-                except Exception as check_error:
-                    logger.warning(f"メインメニューの状態チェックでエラー: {check_error}")
+                    # 現在表示されているかどうかを記録
+                    self.main_menu_was_visible = True
+                    ui_manager.hide_menu(self.main_menu.menu_id)
+                    logger.debug(f"メインメニューを隠しました: {self.main_menu.menu_id}")
+                except Exception as hide_error:
+                    logger.warning(f"メインメニューの非表示処理でエラー: {hide_error}")
             
             # 設定メニューがアクティブな場合も隠す
             if self.settings_menu_active and self.location_menu:
                 try:
-                    settings_element = ui_manager.get_element(self.location_menu.element_id)
-                    if settings_element:
-                        self.settings_menu_was_visible = True
-                        ui_manager.hide_element(self.location_menu.element_id)
-                        logger.debug(f"設定メニューを隠しました: {self.location_menu.element_id}")
+                    self.settings_menu_was_visible = True
+                    ui_manager.hide_menu(self.location_menu.menu_id)
+                    logger.debug(f"設定メニューを隠しました: {self.location_menu.menu_id}")
                 except Exception as hide_error:
                     logger.warning(f"設定メニューの非表示処理でエラー: {hide_error}")
             
@@ -287,14 +277,13 @@ class OverworldManager:
     def _back_to_main_menu(self):
         """メインメニューに戻る"""
         if self.location_menu:
-            ui_manager.hide_element(self.location_menu.element_id)
-            ui_manager.unregister_element(self.location_menu.element_id)
+            ui_manager.hide_menu(self.location_menu.menu_id)
             self.location_menu = None
         
         self.settings_menu_active = False
         
         if self.main_menu:
-            ui_manager.show_element(self.main_menu.element_id)
+            ui_manager.show_menu(self.main_menu.menu_id)
         
         logger.debug("メインメニューに戻りました")
     
@@ -326,12 +315,12 @@ class OverworldManager:
             lambda: self._back_to_settings_menu(from_party_status=True)
         )
         
-        ui_manager.register_element(party_menu)
-        ui_manager.show_element(party_menu.element_id, modal=True)
+        ui_manager.add_menu(party_menu)
+        ui_manager.show_menu(party_menu.menu_id, modal=True)
         
         # 設定メニューを隠す
         if self.location_menu:
-            ui_manager.hide_element(self.location_menu.element_id)
+            ui_manager.hide_menu(self.location_menu.menu_id)
     
     def _format_party_status(self) -> str:
         """パーティ状況をフォーマット"""
@@ -408,17 +397,19 @@ class OverworldManager:
             }
         ]
         
-        # タイルダイアログを作成・表示
-        tile_dialog = UITileDialog(
-            "party_overview_tiles",
+        # 簡易テキスト形式でダイアログを作成・表示
+        tile_text = f"【{self.current_party.name}】パーティ全体情報\n\n"
+        for tile in tiles_data:
+            tile_text += f"■ {tile['title']}\n{tile['content']}\n\n"
+        
+        dialog = UIDialog(
+            "party_overview_dialog",
             f"【{self.current_party.name}】パーティ全体情報",
-            tiles_data,
-            rows=2,
-            cols=3
+            tile_text
         )
         
-        ui_manager.register_element(tile_dialog)
-        ui_manager.show_element(tile_dialog.element_id, modal=True)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _show_character_details(self, character):
         """キャラクター詳細情報をタイル形式で表示（エラーハンドリング付き）"""
@@ -497,17 +488,19 @@ class OverworldManager:
                 }
             ]
             
-            # タイルダイアログを作成・表示
-            tile_dialog = UITileDialog(
+            # 簡易テキスト形式でダイアログを作成・表示
+            char_text = f"【{character.name}】詳細情報\n\n"
+            for tile in tiles_data:
+                char_text += f"■ {tile['title']}\n{tile['content']}\n\n"
+            
+            dialog = UIDialog(
                 f"character_details_{character.name}",
                 f"【{character.name}】詳細情報",
-                tiles_data,
-                rows=2,
-                cols=3
+                char_text
             )
             
-            ui_manager.register_element(tile_dialog)
-            ui_manager.show_element(tile_dialog.element_id, modal=True)
+            ui_manager.add_dialog(dialog)
+            ui_manager.show_dialog(dialog.dialog_id)
             
         except (AttributeError, Exception) as e:
             logger.error(f"キャラクター詳細表示エラー: {e}")
@@ -516,12 +509,11 @@ class OverworldManager:
     def _back_to_settings_menu(self):
         """設定メニューに戻る"""
         # パーティ状況メニューを隠す
-        ui_manager.hide_element("party_status_menu")
-        ui_manager.unregister_element("party_status_menu")
+        ui_manager.hide_menu("party_status_menu")
         
         # 設定メニューを再表示
         if self.location_menu:
-            ui_manager.show_element(self.location_menu.element_id)
+            ui_manager.show_menu(self.location_menu.menu_id)
     
     def _show_save_menu(self):
         """セーブスロット選択メニュー表示"""
@@ -557,10 +549,10 @@ class OverworldManager:
         
         # 現在のメニューを隠してセーブメニューを表示
         if self.location_menu:
-            ui_manager.hide_element(self.location_menu.element_id)
+            ui_manager.hide_menu(self.location_menu.menu_id)
         
-        ui_manager.register_element(save_menu)
-        ui_manager.show_element(save_menu.element_id, modal=True)
+        ui_manager.add_menu(save_menu)
+        ui_manager.show_menu(save_menu.menu_id, modal=True)
     
     def _save_to_slot(self, slot_id: int):
         """指定されたスロットにセーブ"""
@@ -628,10 +620,10 @@ class OverworldManager:
         
         # 現在のメニューを隠してロードメニューを表示
         if self.location_menu:
-            ui_manager.hide_element(self.location_menu.element_id)
+            ui_manager.hide_menu(self.location_menu.menu_id)
         
-        ui_manager.register_element(load_menu)
-        ui_manager.show_element(load_menu.element_id, modal=True)
+        ui_manager.add_menu(load_menu)
+        ui_manager.show_menu(load_menu.menu_id, modal=True)
     
     def _load_selected_save(self, slot_id: int):
         """選択されたセーブデータをロード"""
@@ -649,20 +641,20 @@ class OverworldManager:
         """設定メニューに戻る"""
         # パーティ状況メニューからの場合
         if from_party_status:
-            ui_manager.hide_element("party_status_menu")
-            ui_manager.unregister_element("party_status_menu")
+            ui_manager.hide_menu("party_status_menu")
+            # ui_manager.unregister_element("party_status_menu") - 不要
         elif from_save_menu:
             # セーブメニューからの場合
-            ui_manager.hide_element("save_slot_menu")
-            ui_manager.unregister_element("save_slot_menu")
+            ui_manager.hide_menu("save_slot_menu")
+            # ui_manager.unregister_element("save_slot_menu") - 不要
         else:
             # ロードメニューからの場合
-            ui_manager.hide_element("load_game_menu")
-            ui_manager.unregister_element("load_game_menu")
+            ui_manager.hide_menu("load_game_menu")
+            # ui_manager.unregister_element("load_game_menu") - 不要
         
         # 設定メニューを再表示（メインメニューは表示しない）
         if self.location_menu:
-            ui_manager.show_element(self.location_menu.element_id)
+            ui_manager.show_menu(self.location_menu.menu_id)
         else:
             # 設定メニューが存在しない場合は新規作成
             self.show_settings_menu()
@@ -751,8 +743,8 @@ class OverworldManager:
             ]
         )
         
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _show_error_dialog(self, title: str, message: str):
         """エラーダイアログの表示"""
@@ -779,28 +771,25 @@ class OverworldManager:
             ]
         )
         
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _close_dialog(self):
         """ダイアログを閉じる"""
         # 現在表示中のダイアログを探して閉じる
-        for element_id in ["overworld_info_dialog", "overworld_confirm_dialog"]:
-            element = ui_manager.get_element(element_id)
-            if element:
-                ui_manager.hide_element(element_id)
-                ui_manager.unregister_element(element_id)
+        for dialog_id in ["overworld_info_dialog", "overworld_confirm_dialog"]:
+            ui_manager.hide_dialog(dialog_id)
     
     def _cleanup_ui(self):
         """UI要素のクリーンアップ"""
         if self.main_menu:
-            ui_manager.hide_element(self.main_menu.element_id)
-            ui_manager.unregister_element(self.main_menu.element_id)
+            ui_manager.hide_menu(self.main_menu.menu_id)
+            # ui_manager.unregister_element(self.main_menu.menu_id) - 不要
             self.main_menu = None
         
         if self.location_menu:
-            ui_manager.hide_element(self.location_menu.element_id)
-            ui_manager.unregister_element(self.location_menu.element_id)
+            ui_manager.hide_menu(self.location_menu.menu_id)
+            # ui_manager.unregister_element(self.location_menu.menu_id) - 不要
             self.location_menu = None
         
         self._close_dialog()
@@ -878,10 +867,9 @@ class OverworldManager:
             # 設定画面が表示されている場合はそちらを表示
             if self.settings_menu_active and self.location_menu:
                 # 設定メニューが正常に存在するか確認
-                settings_element = ui_manager.get_element(self.location_menu.element_id)
-                if settings_element:
+                if self.location_menu.menu_id in ui_manager.menus:
                     try:
-                        ui_manager.show_element(self.location_menu.element_id)
+                        ui_manager.show_menu(self.location_menu.menu_id)
                         menu_restored = True
                         logger.debug("設定メニューに戻りました")
                     except Exception as show_error:
@@ -900,11 +888,10 @@ class OverworldManager:
                 # 施設入場前の状態に基づいてメニューを復元
                 if self.main_menu_was_visible and self.main_menu:
                     # メインメニューが入場前に表示されていた場合
-                    main_element = ui_manager.get_element(self.main_menu.element_id)
-                    if main_element:
+                    if self.main_menu.menu_id in ui_manager.menus:
                         try:
                             # 強制的に表示
-                            ui_manager.show_element(self.main_menu.element_id)
+                            ui_manager.show_menu(self.main_menu.menu_id)
                             menu_restored = True
                             logger.debug("メインメニューを復元しました（入場前状態に基づく）")
                         except Exception as show_error:
@@ -919,8 +906,8 @@ class OverworldManager:
                         # 既存のメニューをクリーンアップしてから再生成
                         if self.main_menu:
                             try:
-                                ui_manager.hide_element(self.main_menu.element_id)
-                                ui_manager.unregister_element(self.main_menu.element_id)
+                                ui_manager.hide_menu(self.main_menu.menu_id)
+                                # ui_manager.unregister_element(self.main_menu.menu_id) - 不要
                             except:
                                 pass  # クリーンアップに失敗しても続行
                         
