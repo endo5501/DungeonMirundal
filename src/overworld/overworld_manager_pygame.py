@@ -58,13 +58,13 @@ class OverworldManager:
     def on_facility_exit(self):
         """施設退場時のコールバック"""
         logger.info("施設から地上部に戻りました")
-        # メインメニューを再表示
+        # メインメニューを再表示（モーダルとして）
         if self.main_menu:
-            self.main_menu.show()
+            self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
         else:
             self._create_main_menu()
             if self.main_menu:
-                self.main_menu.show()
+                self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
     
     def _create_main_menu(self):
         """メインメニューを作成（6つの施設 + 設定画面）"""
@@ -161,7 +161,7 @@ class OverworldManager:
             try:
                 # メインメニューを隠す
                 if self.main_menu:
-                    self.main_menu.hide()
+                    self.ui_manager.hide_menu(self.main_menu.menu_id)
                 self.is_active = False
                 
                 # ダンジョンに遷移
@@ -188,7 +188,7 @@ class OverworldManager:
             if success:
                 # 施設に入ったらメインメニューを隠す
                 if self.main_menu:
-                    self.main_menu.hide()
+                    self.ui_manager.hide_menu(self.main_menu.menu_id)
             else:
                 logger.error("冒険者ギルドへの入場に失敗しました")
         except Exception as e:
@@ -208,7 +208,7 @@ class OverworldManager:
             if success:
                 # 施設に入ったらメインメニューを隠す
                 if self.main_menu:
-                    self.main_menu.hide()
+                    self.ui_manager.hide_menu(self.main_menu.menu_id)
             else:
                 logger.error("宿屋への入場に失敗しました")
         except Exception as e:
@@ -233,7 +233,7 @@ class OverworldManager:
             if success:
                 # 施設に入ったらメインメニューを隠す
                 if self.main_menu:
-                    self.main_menu.hide()
+                    self.ui_manager.hide_menu(self.main_menu.menu_id)
             else:
                 logger.error("商店への入場に失敗しました")
         except Exception as e:
@@ -252,7 +252,7 @@ class OverworldManager:
             if success:
                 # 施設に入ったらメインメニューを隠す
                 if self.main_menu:
-                    self.main_menu.hide()
+                    self.ui_manager.hide_menu(self.main_menu.menu_id)
             else:
                 logger.error("教会への入場に失敗しました")
         except Exception as e:
@@ -271,7 +271,7 @@ class OverworldManager:
             if success:
                 # 施設に入ったらメインメニューを隠す
                 if self.main_menu:
-                    self.main_menu.hide()
+                    self.ui_manager.hide_menu(self.main_menu.menu_id)
             else:
                 logger.error("魔術師ギルドへの入場に失敗しました")
         except Exception as e:
@@ -336,7 +336,7 @@ class OverworldManager:
     def _show_settings_menu(self):
         """設定画面を表示"""
         if self.main_menu:
-            self.main_menu.hide()
+            self.ui_manager.hide_menu(self.main_menu.menu_id)
         if self.settings_menu:
             self.settings_menu.show()
         self.settings_active = True
@@ -352,7 +352,7 @@ class OverworldManager:
     def _show_main_menu(self):
         """メインメニューを表示"""
         if self.main_menu:
-            self.main_menu.show()
+            self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
         logger.info("メインメニューを表示しました")
     
     def enter_overworld(self, party: Party, from_dungeon: bool = False) -> bool:
@@ -365,9 +365,9 @@ class OverworldManager:
             if self.ui_manager and not self.main_menu:
                 self._create_main_menu()
             
-            # メインメニューを表示
+            # メインメニューを表示（モーダルとして）
             if self.main_menu:
-                self.main_menu.show()
+                self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
             
             if from_dungeon:
                 logger.info("ダンジョンから地上部に帰還しました")
@@ -386,7 +386,7 @@ class OverworldManager:
         
         # メインメニューを隠す
         if self.main_menu:
-            self.main_menu.hide()
+            self.ui_manager.hide_menu(self.main_menu.menu_id)
         
         logger.info("地上部を退場しました")
     
