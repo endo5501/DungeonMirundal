@@ -145,13 +145,19 @@ class UIText(UIElement):
         if not use_font:
             try:
                 from src.ui.font_manager_pygame import font_manager
-                use_font = font_manager.get_default_font()
+                use_font = font_manager.get_japanese_font(24)
+                if not use_font:
+                    use_font = font_manager.get_default_font()
             except Exception as e:
                 logger.warning(f"フォントマネージャーの取得に失敗: {e}")
                 try:
-                    use_font = pygame.font.Font(None, 24)
+                    # システムフォントで日本語フォントを試す
+                    use_font = pygame.font.SysFont('notosanscjk,noto,ipagothic,takao,hiragino,meiryo,msgothic', 24)
                 except:
-                    return  # フォントが取得できない場合は描画しない
+                    try:
+                        use_font = pygame.font.Font(None, 24)
+                    except:
+                        return  # フォントが取得できない場合は描画しない
         
         # テキストをレンダリング
         try:
@@ -206,13 +212,19 @@ class UIButton(UIElement):
             if not use_font:
                 try:
                     from src.ui.font_manager_pygame import font_manager
-                    use_font = font_manager.get_default_font()
+                    use_font = font_manager.get_japanese_font(24)
+                    if not use_font:
+                        use_font = font_manager.get_default_font()
                 except Exception as e:
                     logger.warning(f"フォントマネージャーの取得に失敗: {e}")
                     try:
-                        use_font = pygame.font.Font(None, 24)
+                        # システムフォントで日本語フォントを試す
+                        use_font = pygame.font.SysFont('notosanscjk,noto,ipagothic,takao,hiragino,meiryo,msgothic', 24)
                     except:
-                        return  # フォントが取得できない場合は描画しない
+                        try:
+                            use_font = pygame.font.Font(None, 24)
+                        except:
+                            return  # フォントが取得できない場合は描画しない
             
             # テキストをレンダリング
             try:
@@ -290,24 +302,53 @@ class UIMenu:
         return False
     
     def render(self, screen: pygame.Surface, font: Optional[pygame.font.Font] = None):
-        """メニュー描画"""
+        """メニュー描画（日本語フォント対応）"""
         if self.state != UIState.VISIBLE:
             return
         
+        # フォントを取得（日本語対応）
+        use_font = font
+        if not use_font:
+            try:
+                from src.ui.font_manager_pygame import font_manager
+                use_font = font_manager.get_japanese_font(24)
+                if not use_font:
+                    use_font = font_manager.get_default_font()
+            except Exception as e:
+                logger.warning(f"フォントマネージャーの取得に失敗: {e}")
+                try:
+                    # システムフォントで日本語フォントを試す
+                    use_font = pygame.font.SysFont('notosanscjk,noto,ipagothic,takao,hiragino,meiryo,msgothic', 24)
+                except:
+                    use_font = pygame.font.Font(None, 24)
+        
         # 背景描画（半透明）
-        if self.background_color[3] < 255:  # アルファ値がある場合
+        if len(self.background_color) >= 4 and self.background_color[3] < 255:  # アルファ値がある場合
             overlay = pygame.Surface((screen.get_width(), screen.get_height()))
             overlay.set_alpha(self.background_color[3])
             overlay.fill(self.background_color[:3])
             screen.blit(overlay, (0, 0))
         
-        # タイトル描画
-        if font and self.title:
-            title_surface = font.render(self.title, True, self.title_color)
-            title_rect = title_surface.get_rect()
-            title_rect.centerx = screen.get_width() // 2
-            title_rect.y = 50
-            screen.blit(title_surface, title_rect)
+        # タイトル描画（日本語対応）
+        if use_font and self.title:
+            try:
+                title_surface = use_font.render(self.title, True, self.title_color)
+                title_rect = title_surface.get_rect()
+                title_rect.centerx = screen.get_width() // 2
+                title_rect.y = 50
+                screen.blit(title_surface, title_rect)
+            except Exception as e:
+                logger.warning(f"タイトル描画エラー: {e}")
+                # 英語フォールバック
+                try:
+                    fallback_font = pygame.font.Font(None, 24)
+                    title_surface = fallback_font.render(self.title, True, self.title_color)
+                    title_rect = title_surface.get_rect()
+                    title_rect.centerx = screen.get_width() // 2
+                    title_rect.y = 50
+                    screen.blit(title_surface, title_rect)
+                except:
+                    pass
         
         # 各要素を描画
         for i, element in enumerate(self.elements):
@@ -316,7 +357,7 @@ class UIMenu:
                 highlight_rect = element.rect.inflate(4, 4)
                 pygame.draw.rect(screen, (255, 255, 0), highlight_rect, 2)
             
-            element.render(screen, font)
+            element.render(screen, use_font)
 
 
 class UIDialog(UIMenu):
@@ -334,38 +375,61 @@ class UIDialog(UIMenu):
         self.message_color = (200, 200, 200)
         
     def render(self, screen: pygame.Surface, font: Optional[pygame.font.Font] = None):
-        """ダイアログ描画"""
+        """ダイアログ描画（日本語フォント対応）"""
         if self.state != UIState.VISIBLE:
             return
+        
+        # フォントを取得（日本語対応）
+        use_font = font
+        if not use_font:
+            try:
+                from src.ui.font_manager_pygame import font_manager
+                use_font = font_manager.get_japanese_font(24)
+                if not use_font:
+                    use_font = font_manager.get_default_font()
+            except Exception as e:
+                logger.warning(f"フォントマネージャーの取得に失敗: {e}")
+                try:
+                    # システムフォントで日本語フォントを試す
+                    use_font = pygame.font.SysFont('notosanscjk,noto,ipagothic,takao,hiragino,meiryo,msgothic', 24)
+                except:
+                    use_font = pygame.font.Font(None, 24)
         
         # ダイアログ背景
         pygame.draw.rect(screen, self.background_color, self.rect)
         pygame.draw.rect(screen, self.border_color, self.rect, 2)
         
-        if font:
-            # タイトル描画
+        if use_font:
+            # タイトル描画（日本語対応）
             if self.title:
-                title_surface = font.render(self.title, True, self.title_color)
-                title_rect = title_surface.get_rect()
-                title_rect.centerx = self.rect.centerx
-                title_rect.y = self.rect.y + 10
-                screen.blit(title_surface, title_rect)
+                try:
+                    title_surface = use_font.render(self.title, True, self.title_color)
+                    title_rect = title_surface.get_rect()
+                    title_rect.centerx = self.rect.centerx
+                    title_rect.y = self.rect.y + 10
+                    screen.blit(title_surface, title_rect)
+                except Exception as e:
+                    logger.warning(f"ダイアログタイトル描画エラー: {e}")
             
-            # メッセージ描画
+            # メッセージ描画（日本語対応）
             if self.message:
                 message_lines = self.message.split('\n')
                 y_offset = self.rect.y + 50
                 for line in message_lines:
-                    message_surface = font.render(line, True, self.message_color)
-                    message_rect = message_surface.get_rect()
-                    message_rect.centerx = self.rect.centerx
-                    message_rect.y = y_offset
-                    screen.blit(message_surface, message_rect)
-                    y_offset += font.get_height() + 5
+                    try:
+                        message_surface = use_font.render(line, True, self.message_color)
+                        message_rect = message_surface.get_rect()
+                        message_rect.centerx = self.rect.centerx
+                        message_rect.y = y_offset
+                        screen.blit(message_surface, message_rect)
+                        y_offset += use_font.get_height() + 5
+                    except Exception as e:
+                        logger.warning(f"メッセージ描画エラー: {e}")
+                        y_offset += 25  # フォールバック行高
         
         # 各要素を描画
         for element in self.elements:
-            element.render(screen, font)
+            element.render(screen, use_font)
 
 
 class UIManager:
@@ -386,10 +450,31 @@ class UIManager:
     def _initialize_fonts(self):
         """フォント初期化"""
         try:
-            self.default_font = pygame.font.Font(None, 24)
-            self.title_font = pygame.font.Font(None, 32)
+            from src.ui.font_manager_pygame import font_manager
+            # 日本語フォントを優先して取得
+            self.default_font = font_manager.get_japanese_font(24)
+            self.title_font = font_manager.get_japanese_font(32)
+            
+            # フォールバック処理
+            if not self.default_font:
+                self.default_font = font_manager.get_font('default', 24)
+            if not self.title_font:
+                self.title_font = font_manager.get_font('default', 32)
+                
+            # 最終フォールバック
+            if not self.default_font:
+                self.default_font = pygame.font.Font(None, 24)
+            if not self.title_font:
+                self.title_font = pygame.font.Font(None, 32)
+                
         except Exception as e:
             logger.warning(f"フォント初期化に失敗: {e}")
+            # 最終フォールバック
+            try:
+                self.default_font = pygame.font.Font(None, 24)
+                self.title_font = pygame.font.Font(None, 32)
+            except:
+                pass
     
     def add_element(self, element: UIElement):
         """要素を追加"""
