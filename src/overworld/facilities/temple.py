@@ -243,7 +243,7 @@ class Temple(BaseFacility):
         )
         
         if self.current_party.gold >= cost:
-            dialog = UIDialog(
+            self._show_dialog(
                 "blessing_dialog",
                 "祝福サービス",
                 blessing_info,
@@ -254,34 +254,26 @@ class Temple(BaseFacility):
                     },
                     {
                         'text': "戻る",
-                        'command': self._close_blessing_dialog
+                        'command': self._close_dialog
                     }
                 ]
             )
         else:
-            dialog = UIDialog(
+            self._show_dialog(
                 "blessing_dialog",
                 "祝福サービス",
                 blessing_info + "\n※ ゴールドが不足しています",
                 buttons=[
                     {
                         'text': "戻る",
-                        'command': self._close_blessing_dialog
+                        'command': self._close_dialog
                     }
                 ]
             )
-        
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
     
     def _close_blessing_dialog(self):
         """祝福ダイアログを閉じてメインメニューに戻る"""
-        ui_manager.hide_menu("blessing_dialog")
-        
-        
-        # メインメニューを再表示
-        if self.main_menu:
-            ui_manager.show_menu(self.main_menu.menu_id)
+        self._close_dialog()
     
     def _perform_blessing(self, cost: int):
         """祝福実行"""
@@ -414,7 +406,7 @@ class Temple(BaseFacility):
         if self.current_party.gold >= item.price:
             details += "\n購入しますか？"
             
-            dialog = UIDialog(
+            self._show_dialog(
                 "prayerbook_detail_dialog",
                 "祈祷書詳細",
                 details,
@@ -432,7 +424,7 @@ class Temple(BaseFacility):
         else:
             details += "\n※ ゴールドが不足しています"
             
-            dialog = UIDialog(
+            self._show_dialog(
                 "prayerbook_detail_dialog",
                 "祈祷書詳細",
                 details,
@@ -443,9 +435,6 @@ class Temple(BaseFacility):
                     }
                 ]
             )
-        
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
     
     def _buy_prayerbook(self, item: Item):
         """祈祷書購入処理"""

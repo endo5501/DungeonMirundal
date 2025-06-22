@@ -840,7 +840,7 @@ class MagicGuild(BaseFacility):
             details += "\n鑑定を実行しますか？\n"
             details += "※ 鑑定したアイテムの正体が明らかになります。"
             
-            dialog = UIDialog(
+            self._show_dialog(
                 "identification_confirmation_dialog",
                 "鑑定確認",
                 details,
@@ -858,7 +858,7 @@ class MagicGuild(BaseFacility):
         else:
             details += "\n※ ゴールドが不足しています"
             
-            dialog = UIDialog(
+            self._show_dialog(
                 "identification_confirmation_dialog",
                 "鑑定確認",
                 details,
@@ -869,9 +869,6 @@ class MagicGuild(BaseFacility):
                     }
                 ]
             )
-        
-        ui_manager.add_menu(dialog)
-        ui_manager.show_menu(dialog.menu_id, modal=True)
     
     def _identify_item(self, slot, item_instance: ItemInstance, item: Item, cost: int):
         """アイテム鑑定処理"""

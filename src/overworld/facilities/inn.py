@@ -786,7 +786,7 @@ class Inn(BaseFacility):
         confirm_info += "このアイテムを使用しますか？\\n"
         confirm_info += "※使用後、アイテムは消滅します"
         
-        dialog = UIDialog(
+        self._show_dialog(
             "spell_item_usage_confirm_dialog",
             "使用確認",
             confirm_info,
@@ -801,9 +801,6 @@ class Inn(BaseFacility):
                 }
             ]
         )
-        
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
     
     def _execute_spell_item_usage(self, character, slot_index: int, item_instance, item):
         """魔術書・祈祷書使用を実行"""
@@ -1642,7 +1639,7 @@ class Inn(BaseFacility):
         
         confirm_info += "\\n装備を変更しますか？"
         
-        dialog = UIDialog(
+        self._show_dialog(
             "equipment_change_confirm_dialog",
             "装備変更確認",
             confirm_info,
@@ -1657,9 +1654,6 @@ class Inn(BaseFacility):
                 }
             ]
         )
-        
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
     
     def _execute_equipment_change(self, character, source, index, item, item_instance, slot_name):
         """装備変更を実行"""
@@ -1763,7 +1757,7 @@ class Inn(BaseFacility):
         confirm_info += f"解除する装備: {display_name} - {item.get_name()}\\n\\n"
         confirm_info += "この装備を解除してインベントリに戻しますか？"
         
-        dialog = UIDialog(
+        self._show_dialog(
             "equipment_unequip_confirm_dialog",
             "装備解除確認",
             confirm_info,
@@ -1778,9 +1772,6 @@ class Inn(BaseFacility):
                 }
             ]
         )
-        
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
     
     def _execute_equipment_unequip(self, character, slot_name, display_name, item, item_instance):
         """装備解除を実行"""
