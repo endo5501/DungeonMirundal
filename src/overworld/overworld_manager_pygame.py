@@ -4,6 +4,7 @@ from typing import Optional, Callable
 import pygame
 from src.character.party import Party
 from src.ui.base_ui_pygame import UIMenu, UIButton, UIText
+from src.ui.menu_stack_manager import MenuStackManager, MenuType
 from src.utils.logger import logger
 from src.core.config_manager import config_manager
 
@@ -26,14 +27,26 @@ class OverworldManager:
         self.is_active = False
         self.settings_active = False
         
+        # MenuStackManager（統一されたメニュー管理）
+        self.menu_stack_manager: Optional[MenuStackManager] = None
+        
         logger.info("OverworldManager（Pygame版）を初期化しました")
     
     def set_ui_manager(self, ui_manager):
         """UIマネージャーを設定"""
         self.ui_manager = ui_manager
+        
+        # MenuStackManagerを初期化
+        self.menu_stack_manager = MenuStackManager(ui_manager)
+        self.menu_stack_manager.on_escape_pressed = self._handle_escape_from_menu_stack
+        
         self._create_main_menu()
         self._create_settings_menu()
         self.setup_facility_callbacks()
+        
+        # FacilityManagerにもUIマネージャーを設定
+        from src.overworld.base_facility import facility_manager
+        facility_manager.set_ui_manager(ui_manager)
     
     def set_input_manager(self, input_manager):
         """入力マネージャーを設定"""
@@ -403,8 +416,13 @@ class OverworldManager:
             if self.ui_manager and not self.main_menu:
                 self._create_main_menu()
             
-            # メインメニューを表示（モーダルとして）
-            if self.main_menu:
+            # MenuStackManagerを使用してメインメニューを表示
+            if self.main_menu and self.menu_stack_manager:
+                # スタックをクリアしてからROOTメニューを追加
+                self.menu_stack_manager.clear_stack()
+                self.menu_stack_manager.push_menu(self.main_menu, MenuType.ROOT)
+            elif self.main_menu:
+                # フォールバック：従来の方法
                 self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
             
             if from_dungeon:
@@ -502,14 +520,53 @@ class OverworldManager:
                         info_rect = info_text.get_rect(center=(screen.get_width()//2, 120))
                         screen.blit(info_text, info_rect)
     
+    def _handle_escape_from_menu_stack(self) -> bool:
+        """MenuStackManagerからのESCキー処理コールバック"""
+        try:
+            # MenuStackManagerが現在のメニュー状態に応じて適切に処理
+            # ROOTメニュー（地上マップ）の場合は設定画面表示
+            # その他の場合は前のメニューに戻る
+            current_entry = self.menu_stack_manager.peek_current_menu()
+            
+            if current_entry and current_entry.menu_type == MenuType.ROOT:
+                # 地上マップから設定画面へ
+                self._show_settings_menu()
+                return True
+            elif current_entry and current_entry.menu_type == MenuType.SETTINGS:
+                # 設定画面から地上マップへ
+                self._hide_settings_menu()
+                self._show_main_menu()
+                return True
+            
+            # その他の場合はMenuStackManagerにデフォルト処理を委譲
+            return False
+            
+        except Exception as e:
+            logger.error(f"ESCキー処理エラー: {e}")
+            return False
+    
     def handle_event(self, event: pygame.event.Event) -> bool:
         """イベント処理"""
         if not self.is_active:
             return False
         
-        # ESCキーで設定画面の表示・非表示を切り替え
+        # ESCキー処理
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
+                # 施設がアクティブな場合は施設にESCキー処理を委譲
+                from src.overworld.base_facility import facility_manager
+                current_facility = facility_manager.get_current_facility()
+                
+                if current_facility and current_facility.is_active:
+                    # 施設側でESCキー処理を実行（施設から出る）
+                    logger.info(f"施設 {current_facility.facility_id} でESCキーが押されました - 施設退出")
+                    success = facility_manager.exit_current_facility()
+                    if success:
+                        return True
+                    else:
+                        logger.warning("施設退出に失敗しました")
+                
+                # 地上部でのESCキー処理
                 if self.settings_active:
                     # 設定画面が表示中の場合は地上部に戻る
                     self._hide_settings_menu()

@@ -204,6 +204,11 @@ class BaseFacility(ABC):
     
     def _show_dialog(self, dialog_id: str, title: str, message: str, buttons: List[Dict[str, Any]] = None):
         """ダイアログの表示"""
+        # ui_managerがNoneの場合は安全にスキップ
+        if ui_manager is None:
+            logger.warning(f"ui_managerがNoneのため、ダイアログ表示をスキップ: {dialog_id}")
+            return
+            
         if self.current_dialog:
             ui_manager.hide_dialog(self.current_dialog.dialog_id)
         

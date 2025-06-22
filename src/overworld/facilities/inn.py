@@ -1052,8 +1052,7 @@ class Inn(BaseFacility):
         
         spell_mgmt_menu.add_menu_item(
             config_manager.get_text("menu.back"),
-            self._show_new_spell_user_selection,
-            [self._get_spell_users()]
+            self._show_adventure_preparation
         )
         
         self._show_submenu(spell_mgmt_menu)
@@ -1176,12 +1175,73 @@ class Inn(BaseFacility):
         success = spellbook.equip_spell_to_slot(spell_id, level, slot_index)
         
         if success:
-            self._show_success_message(f"{spell_id}をLv.{level}スロット[{slot_index+1}]に装備しました。")
+            # 成功メッセージ表示後にメニューに戻るためのコールバックを設定
+            def on_success_ok():
+                if self.use_new_menu_system:
+                    # 新システム: ダイアログのみ閉じて、メニューは明示的に表示
+                    # back_to_previous_menu()は使わず、直接メニューに戻る
+                    pass
+                else:
+                    # 旧システム: ダイアログを閉じて明示的にメニューに戻る
+                    self._close_dialog()
+                # 必ずキャラクタースペルスロット詳細に戻る
+                self._show_character_spell_slot_detail(character)
+            
+            # 新システムを優先的に使用
+            if self.use_new_menu_system and self.dialog_template:
+                # 新システムでダイアログ表示
+                self.show_success_dialog(
+                    "装備完了",
+                    f"{spell_id}をLv.{level}スロット[{slot_index+1}]に装備しました。",
+                    on_success_ok
+                )
+            else:
+                # 旧システムでダイアログ表示
+                self._show_dialog(
+                    f"{self.facility_id}_spell_equip_success",
+                    "装備完了",
+                    f"{spell_id}をLv.{level}スロット[{slot_index+1}]に装備しました。",
+                    buttons=[
+                        {
+                            'text': config_manager.get_text("common.ok"),
+                            'command': on_success_ok
+                        }
+                    ]
+                )
         else:
-            self._show_error_message("魔法の装備に失敗しました。")
-        
-        # スロット詳細に戻る
-        self._show_character_spell_slot_detail(character)
+            # エラーメッセージ表示後にメニューに戻るためのコールバックを設定
+            def on_error_ok():
+                if self.use_new_menu_system:
+                    # 新システム: ダイアログのみ閉じて、メニューは明示的に表示
+                    # back_to_previous_menu()は使わず、直接メニューに戻る
+                    pass
+                else:
+                    # 旧システム: ダイアログを閉じて明示的にメニューに戻る
+                    self._close_dialog()
+                # 必ずキャラクタースペルスロット詳細に戻る
+                self._show_character_spell_slot_detail(character)
+            
+            # 新システムを優先的に使用
+            if self.use_new_menu_system and self.dialog_template:
+                # 新システムでダイアログ表示
+                self.show_error_dialog(
+                    config_manager.get_text("common.error"),
+                    "魔法の装備に失敗しました。",
+                    on_error_ok
+                )
+            else:
+                # 旧システムでダイアログ表示
+                self._show_dialog(
+                    f"{self.facility_id}_spell_equip_error",
+                    config_manager.get_text("common.error"),
+                    "魔法の装備に失敗しました。",
+                    buttons=[
+                        {
+                            'text': config_manager.get_text("common.ok"),
+                            'command': on_error_ok
+                        }
+                    ]
+                )
     
     def _cleanup_spell_mgmt_ui(self):
         """魔法管理UIのクリーンアップ（pygame版では不要）"""
