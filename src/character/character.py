@@ -411,6 +411,18 @@ class Character:
         
         return True
     
+    def can_use_spell(self, spell) -> bool:
+        """魔法を使用できるかチェック"""
+        # MPが足りるかチェック
+        if self.derived_stats.current_mp < spell.mp_cost:
+            return False
+        
+        # キャラクターが生きているかチェック
+        if not self.is_alive:
+            return False
+            
+        return True
+    
     def use_mp(self, amount: int):
         """MPを消費"""
         self.derived_stats.current_mp = max(0, self.derived_stats.current_mp - amount)

@@ -125,11 +125,11 @@ class TestCombatMagicIntegration:
             test_spell = Spell('heal', spell_data)
             mock_get_spell.return_value = test_spell
             
-            # 回復魔法実行
+            # 回復魔法実行（自分をターゲットに）
             result = self.combat_manager.execute_action(
                 CombatAction.CAST_SPELL,
-                self.mage,
-                action_data
+                target=self.mage,
+                action_data=action_data
             )
             
             # 結果確認
