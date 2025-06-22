@@ -271,17 +271,27 @@ class AdventurersGuild(BaseFacility):
         
         success = self.current_party.remove_character(character.character_id)
         
+        # 削除確認メニューを閉じる
+        ui_manager.hide_menu("remove_character_menu")
+        
         if success:
             # 削除されたキャラクターを作成済みリストに戻す
             if character not in self.created_characters:
                 self.created_characters.append(character)
             
-            self._show_success_message(f"{character.name} をパーティから削除しました")
+            self._show_dialog(
+                "character_remove_success",
+                "キャラクター削除完了",
+                f"{character.name} をパーティから削除しました",
+                buttons=[
+                    {
+                        'text': config_manager.get_text("common.ok"),
+                        'command': lambda: self._return_to_party_formation()
+                    }
+                ]
+            )
         else:
             self._show_error_message("キャラクターの削除に失敗しました")
-        
-        # 編成メニューに戻る
-        self._show_party_formation()
     
     def _show_position_menu(self):
         """位置変更メニュー"""
@@ -322,9 +332,9 @@ class AdventurersGuild(BaseFacility):
         ]
         
         for position, pos_name in positions:
-            # 現在空いている位置のみ表示
+            # 現在空いている位置のみ表示（現在位置は除外）
             current_char_id = self.current_party.formation.positions[position]
-            if current_char_id is None or current_char_id == character.character_id:
+            if current_char_id is None:
                 new_pos_menu.add_menu_item(
                     pos_name,
                     self._move_character_to_position,
@@ -342,13 +352,23 @@ class AdventurersGuild(BaseFacility):
         """キャラクターを指定位置に移動"""
         success = self.current_party.move_character(character.character_id, position)
         
+        # サブメニューを閉じる
+        ui_manager.hide_menu("new_position_menu")
+        
         if success:
-            self._show_success_message(f"{character.name} を移動しました")
+            self._show_dialog(
+                "position_change_success",
+                "位置変更完了",
+                f"{character.name} を移動しました",
+                buttons=[
+                    {
+                        'text': config_manager.get_text("common.ok"),
+                        'command': lambda: self._return_to_party_formation()
+                    }
+                ]
+            )
         else:
             self._show_error_message("位置の変更に失敗しました")
-        
-        # 編成メニューに戻る
-        self._show_party_formation()
     
     def _show_character_list(self):
         """キャラクター一覧表示"""
@@ -408,6 +428,11 @@ class AdventurersGuild(BaseFacility):
                 }
             ]
         )
+    
+    def _return_to_party_formation(self):
+        """パーティ編成メニューに戻る"""
+        self._close_dialog()
+        self._show_party_formation()
     
     def _show_submenu(self, submenu: UIMenu):
         """サブメニューを表示"""
