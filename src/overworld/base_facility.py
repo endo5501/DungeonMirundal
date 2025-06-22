@@ -136,9 +136,9 @@ class BaseFacility(ABC):
         if buttons:
             for i, button_data in enumerate(buttons):
                 from src.ui.base_ui_pygame import UIButton
-                # ボタンの位置を計算
+                # ボタンの位置を計算（画面内に収まるように）
                 button_x = 300 + (i * 120)  # 横に並べる
-                button_y = self.current_dialog.rect.y + self.current_dialog.rect.height - 50
+                button_y = min(600, self.current_dialog.rect.y + self.current_dialog.rect.height + 10)  # 画面内に収める
                 
                 button = UIButton(f"{dialog_id}_button_{i}", button_data['text'], 
                                 x=button_x, y=button_y, width=100, height=30)

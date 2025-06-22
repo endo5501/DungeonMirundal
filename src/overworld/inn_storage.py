@@ -25,7 +25,12 @@ class InnStorage:
     def add_item(self, item_instance: ItemInstance) -> bool:
         """アイテムを倉庫に追加"""
         # 同種アイテムのスタック可能性をチェック
-        if item_instance.stackable:
+        # アイテム情報を取得してスタック可能かをチェック
+        from src.items.item import item_manager
+        item = item_manager.get_item(item_instance.item_id)
+        is_stackable = item and item.item_data.get('stackable', False) if item else False
+        
+        if is_stackable:
             for slot in self.slots:
                 if (not slot.is_empty() and 
                     slot.item_instance.item_id == item_instance.item_id and

@@ -179,7 +179,7 @@ class Shop(BaseFacility):
         if self.current_party.gold >= item.price:
             details += f"\n{config_manager.get_text('shop.purchase.purchase_confirm')}"
             
-            dialog = UIDialog(
+            self._show_dialog(
                 "item_detail_dialog",
                 config_manager.get_text("shop.purchase.item_details_title"),
                 details,
@@ -197,7 +197,7 @@ class Shop(BaseFacility):
         else:
             details += f"\n{config_manager.get_text('shop.purchase.gold_insufficient_note')}"
             
-            dialog = UIDialog(
+            self._show_dialog(
                 "item_detail_dialog",
                 config_manager.get_text("shop.purchase.item_details_title"),
                 details,
@@ -208,9 +208,6 @@ class Shop(BaseFacility):
                     }
                 ]
             )
-        
-        ui_manager.add_menu(dialog)
-        ui_manager.show_menu(dialog.menu_id, modal=True)
     
     def _buy_item(self, item: Item):
         """アイテム購入処理"""
@@ -244,12 +241,14 @@ class Shop(BaseFacility):
             return
         
         success_message = f"{item.get_name()}を購入し、宿屋の倉庫に搬入しました。\n残りゴールド: {self.current_party.gold}G"
-        self._show_success_message(success_message)
         
         logger.info(f"アイテム購入: {item.item_id} ({item.price}G)")
         
-        # 購入完了後、メインメニューに戻る
-        self._show_main_menu()
+        # 購入一覧画面（サブメニュー）を閉じる
+        ui_manager.hide_menu("shop_buy_menu")
+        
+        # 成功メッセージを表示（ダイアログを閉じた時にメインメニューが自動表示される）
+        self._show_success_message(success_message)
     
     def _show_item_scrolled_list(self, items: List[Item], title: str, 
                                 on_item_selected: callable, ui_id: str):
@@ -527,7 +526,7 @@ class Shop(BaseFacility):
         else:
             details += f"\n{config_manager.get_text('shop.sell.sell_confirm')}"
             
-            dialog = UIDialog(
+            self._show_dialog(
                 "sell_confirmation_dialog",
                 config_manager.get_text("shop.sell.confirmation_title"),
                 details,
@@ -542,9 +541,6 @@ class Shop(BaseFacility):
                     }
                 ]
             )
-            
-            ui_manager.add_menu(dialog)
-            ui_manager.show_menu(dialog.menu_id, modal=True)
     
     def _sell_item(self, slot, item_instance: ItemInstance, item: Item, sell_price: int, quantity: int):
         """アイテム売却処理"""
@@ -590,12 +586,13 @@ class Shop(BaseFacility):
                                                       price=total_price, 
                                                       gold=self.current_party.gold)
         
-        self._show_success_message(success_message)
-        
         logger.info(f"アイテム売却: {item.item_id} x{quantity} ({total_price}G)")
         
-        # メインメニューに戻る
-        self._show_main_menu()
+        # 売却一覧画面（サブメニュー）を閉じる
+        ui_manager.hide_menu("shop_sell_menu")
+        
+        # 成功メッセージを表示（ダイアログを閉じた時にメインメニューが自動表示される）
+        self._show_success_message(success_message)
     
     def get_inventory_items(self) -> List[Item]:
         """在庫アイテム一覧を取得"""
