@@ -308,7 +308,13 @@ class Shop(BaseFacility):
             self._show_dialog(
                 "no_items_dialog",
                 config_manager.get_text("shop.sell.title"),
-                config_manager.get_text("shop.messages.no_sellable_items")
+                config_manager.get_text("shop.messages.no_sellable_items"),
+                buttons=[
+                    {
+                        'text': config_manager.get_text("menu.back"),
+                        'command': self._close_dialog
+                    }
+                ]
             )
             return
         

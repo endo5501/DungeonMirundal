@@ -794,7 +794,13 @@ class MagicGuild(BaseFacility):
         self._show_dialog(
             "archmage_dialog",
             f"大魔術師 - {title}",
-            message
+            message,
+            buttons=[
+                {
+                    'text': config_manager.get_text("menu.back"),
+                    'command': self._close_dialog
+                }
+            ]
         )
     
     def _show_submenu(self, submenu: UIMenu):
@@ -922,7 +928,13 @@ class MagicGuild(BaseFacility):
         self._show_dialog(
             "identification_result_dialog",
             "鑑定結果",
-            result_message
+            result_message,
+            buttons=[
+                {
+                    'text': config_manager.get_text("menu.back"),
+                    'command': self._close_dialog
+                }
+            ]
         )
         
         logger.info(f"アイテム鑑定: {item.item_id} x{item_instance.quantity} ({cost}G)")

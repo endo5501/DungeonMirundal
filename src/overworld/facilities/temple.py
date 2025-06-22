@@ -90,7 +90,13 @@ class Temple(BaseFacility):
                 "no_resurrection_dialog",
                 "蘇生サービス",
                 "蘇生が必要なキャラクターはいません。\n\n"
-                "皆さん健康で何よりです！"
+                "皆さん健康で何よりです！",
+                buttons=[
+                    {
+                        'text': config_manager.get_text("menu.back"),
+                        'command': self._close_dialog
+                    }
+                ]
             )
             return
         
@@ -504,7 +510,13 @@ class Temple(BaseFacility):
         self._show_dialog(
             "priest_dialog",
             f"神父 - {title}",
-            message
+            message,
+            buttons=[
+                {
+                    'text': config_manager.get_text("menu.back"),
+                    'command': self._close_dialog
+                }
+            ]
         )
     
     def _show_submenu(self, submenu: UIMenu):
@@ -545,7 +557,13 @@ class Temple(BaseFacility):
                 "no_status_cure_dialog",
                 "状態異常治療",
                 "治療が必要な状態異常はありません。\n\n"
-                "皆さん健康で何よりです！"
+                "皆さん健康で何よりです！",
+                buttons=[
+                    {
+                        'text': config_manager.get_text("menu.back"),
+                        'command': self._close_dialog
+                    }
+                ]
             )
             return
         
