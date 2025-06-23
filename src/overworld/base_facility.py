@@ -174,9 +174,15 @@ class BaseFacility(ABC):
         logger.info(f"施設退出ボタンが押されました: {self.facility_id}")
         # FacilityManagerを通して退場処理を行う
         # これにより on_facility_exit_callback が正しく呼ばれる
-        logger.info(f"デバッグ: facility_manager.current_facility = {facility_manager.current_facility}")
-        result = facility_manager.exit_current_facility()
-        logger.info(f"施設退出処理結果: {result}")
+        # グローバルインスタンスを取得（circular importを避けるため）
+        global facility_manager
+        if 'facility_manager' in globals():
+            logger.info(f"デバッグ: facility_manager.current_facility = {facility_manager.current_facility}")
+            result = facility_manager.exit_current_facility()
+            logger.info(f"施設退出処理結果: {result}")
+        else:
+            logger.warning("facility_managerが利用できません。直接退場処理を実行します。")
+            self.exit()
     
     def _cleanup_ui(self):
         """UI要素のクリーンアップ"""
@@ -233,13 +239,17 @@ class BaseFacility(ABC):
     
     def _close_dialog(self):
         """ダイアログを閉じる"""
-        if self.current_dialog:
+        if self.current_dialog and ui_manager:
             ui_manager.hide_dialog(self.current_dialog.dialog_id)
             self.current_dialog = None
             
             # ダイアログを閉じた後、メインメニューを再表示
-            if self.main_menu:
+            if self.main_menu and ui_manager:
                 ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+        elif self.current_dialog:
+            # ui_managerがNoneの場合は最低限の処理のみ実行
+            logger.warning("ui_managerがNoneのため、ダイアログクリーンアップをスキップします")
+            self.current_dialog = None
     
     def _show_welcome_message(self):
         """入場時のウェルカムメッセージを表示"""

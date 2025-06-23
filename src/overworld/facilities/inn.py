@@ -112,12 +112,25 @@ class Inn(BaseFacility):
         
         # 新システムを使用（戻るボタン付き）
         if self.use_new_menu_system:
+            def on_innkeeper_close():
+                """宿屋の主人会話ダイアログ終了時の処理"""
+                # 新システムでは自動的にメニューが管理される
+                pass
+            
             self.show_information_dialog(
                 f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
-                message
+                message,
+                on_innkeeper_close
             )
         else:
             # 旧システム（戻るボタンを追加）
+            def on_innkeeper_back():
+                """宿屋の主人会話ダイアログの戻るボタン処理"""
+                self._close_dialog()
+                # 明示的にメインメニューを再表示（問題の修正）
+                if self.main_menu and ui_manager:
+                    ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+            
             self._show_dialog(
                 "innkeeper_dialog",
                 f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
@@ -125,7 +138,7 @@ class Inn(BaseFacility):
                 buttons=[
                     {
                         'text': config_manager.get_text("common.back"),
-                        'command': self._close_dialog
+                        'command': on_innkeeper_back
                     }
                 ]
             )
@@ -136,12 +149,25 @@ class Inn(BaseFacility):
         
         # 新システムを使用（戻るボタン付き）
         if self.use_new_menu_system:
+            def on_travel_info_close():
+                """旅の情報ダイアログ終了時の処理"""
+                # 新システムでは自動的にメニューが管理される
+                pass
+            
             self.show_information_dialog(
                 config_manager.get_text("inn.travel_info.title"),
-                travel_info
+                travel_info,
+                on_travel_info_close
             )
         else:
             # 旧システム（戻るボタンを追加）
+            def on_travel_info_back():
+                """旅の情報ダイアログの戻るボタン処理"""
+                self._close_dialog()
+                # 明示的にメインメニューを再表示（問題の修正）
+                if self.main_menu and ui_manager:
+                    ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+            
             self._show_dialog(
                 "travel_info_dialog",
                 config_manager.get_text("inn.travel_info.title"),
@@ -149,7 +175,7 @@ class Inn(BaseFacility):
                 buttons=[
                     {
                         'text': config_manager.get_text("common.back"),
-                        'command': self._close_dialog
+                        'command': on_travel_info_back
                     }
                 ]
             )
@@ -185,12 +211,26 @@ class Inn(BaseFacility):
         
         # 新システムを使用（戻るボタン付き）
         if self.use_new_menu_system:
+            # コールバック関数を定義（メニューが正しく復元されるように）
+            def on_rumor_close():
+                """噂話ダイアログ終了時の処理"""
+                # 新システムでは自動的にメニューが管理される
+                pass
+            
             self.show_information_dialog(
                 f"{config_manager.get_text('inn.rumors.title')} - {title}",
-                rumor
+                rumor,
+                on_rumor_close
             )
         else:
             # 旧システム（戻るボタンを追加）
+            def on_rumor_back():
+                """噂話ダイアログの戻るボタン処理"""
+                self._close_dialog()
+                # 明示的にメインメニューを再表示（問題の修正）
+                if self.main_menu and ui_manager:
+                    ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+            
             self._show_dialog(
                 "rumor_dialog",
                 f"{config_manager.get_text('inn.rumors.title')} - {title}",
@@ -198,7 +238,7 @@ class Inn(BaseFacility):
                 buttons=[
                     {
                         'text': config_manager.get_text("common.back"),
-                        'command': self._close_dialog
+                        'command': on_rumor_back
                     }
                 ]
             )
@@ -531,10 +571,14 @@ class Inn(BaseFacility):
         
         char_menu.add_menu_item(
             config_manager.get_text("menu.back"),
-            self._show_new_item_organization_menu
+            lambda: self.back_to_previous_menu() if self.use_new_menu_system else self._show_new_item_organization_menu()
         )
         
-        self._show_submenu(char_menu)
+        # 新システムが利用可能な場合は新システムを使用
+        if self.use_new_menu_system:
+            self.show_submenu(char_menu)
+        else:
+            self._show_submenu(char_menu)
     
     def _show_character_item_detail(self, character):
         """キャラクターのアイテム詳細管理"""
@@ -566,10 +610,14 @@ class Inn(BaseFacility):
         
         item_mgmt_menu.add_menu_item(
             config_manager.get_text("menu.back"),
-            self._show_character_item_management
+            lambda: self.back_to_previous_menu() if self.use_new_menu_system else self._show_character_item_management()
         )
         
-        self._show_submenu(item_mgmt_menu)
+        # 新システムが利用可能な場合は新システムを使用
+        if self.use_new_menu_system:
+            self.show_submenu(item_mgmt_menu, {'character': character})
+        else:
+            self._show_submenu(item_mgmt_menu)
     
     def _show_storage_to_character_transfer(self, character):
         """倉庫からキャラクターへのアイテム転送UI"""
