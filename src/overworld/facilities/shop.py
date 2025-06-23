@@ -129,8 +129,13 @@ class Shop(BaseFacility):
             return
         
         # UISelectionListを使用
-        import pygame
         list_rect = pygame.Rect(100, 100, 600, 500)
+        
+        # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
+        if not hasattr(ui_manager, 'pygame_gui_manager') or ui_manager.pygame_gui_manager is None:
+            logger.warning("pygame_gui_managerが利用できません。購入メニューの表示をスキップします。")
+            self._show_error_message("購入メニューの表示に失敗しました。")
+            return
         
         self.item_selection_list = ItemSelectionList(
             relative_rect=list_rect,
@@ -459,8 +464,13 @@ class Shop(BaseFacility):
     
     def _show_character_sellable_items_list(self, items, char_name):
         """キャラクター所持アイテム売却メニュー（UISelectionList）"""
-        import pygame
         list_rect = pygame.Rect(100, 100, 600, 500)
+        
+        # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
+        if not hasattr(ui_manager, 'pygame_gui_manager') or ui_manager.pygame_gui_manager is None:
+            logger.warning("pygame_gui_managerが利用できません。売却メニューの表示をスキップします。")
+            self._show_error_message("売却メニューの表示に失敗しました。")
+            return
         
         self.character_sell_list = ItemSelectionList(
             relative_rect=list_rect,
@@ -484,8 +494,13 @@ class Shop(BaseFacility):
     
     def _show_storage_sellable_items_list(self, items):
         """宿屋倉庫アイテム売却メニュー（UISelectionList）"""
-        import pygame
         list_rect = pygame.Rect(100, 100, 600, 500)
+        
+        # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
+        if not hasattr(ui_manager, 'pygame_gui_manager') or ui_manager.pygame_gui_manager is None:
+            logger.warning("pygame_gui_managerが利用できません。売却メニューの表示をスキップします。")
+            self._show_error_message("売却メニューの表示に失敗しました。")
+            return
         
         self.storage_sell_list = ItemSelectionList(
             relative_rect=list_rect,

@@ -847,18 +847,28 @@ class MagicGuild(BaseFacility):
         """サブメニューを表示"""
         # メインメニューを隠す
         if self.main_menu:
-            ui_manager.hide_menu(self.main_menu.menu_id)
+            if self.menu_stack_manager and self.menu_stack_manager.ui_manager:
+                self.menu_stack_manager.ui_manager.hide_menu(self.main_menu.menu_id)
+            else:
+                ui_manager.hide_menu(self.main_menu.menu_id)
         
-        ui_manager.add_menu(submenu)
-        ui_manager.show_menu(submenu.menu_id, modal=True)
+        if self.menu_stack_manager and self.menu_stack_manager.ui_manager:
+            self.menu_stack_manager.ui_manager.add_menu(submenu)
+            self.menu_stack_manager.ui_manager.show_menu(submenu.menu_id, modal=True)
+        else:
+            ui_manager.add_menu(submenu)
+            ui_manager.show_menu(submenu.menu_id, modal=True)
     
     def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
         """サブメニューからメインメニューに戻る"""
-        ui_manager.hide_menu(submenu.menu_id)
-        
-        
-        if self.main_menu:
-            ui_manager.show_menu(self.main_menu.menu_id)
+        if self.menu_stack_manager and self.menu_stack_manager.ui_manager:
+            self.menu_stack_manager.ui_manager.hide_menu(submenu.menu_id)
+            if self.main_menu:
+                self.menu_stack_manager.ui_manager.show_menu(self.main_menu.menu_id)
+        else:
+            ui_manager.hide_menu(submenu.menu_id)
+            if self.main_menu:
+                ui_manager.show_menu(self.main_menu.menu_id)
     
     def _show_identification_confirmation(self, slot, item_instance: ItemInstance, item: Item):
         """鑑定確認ダイアログを表示"""
