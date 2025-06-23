@@ -235,8 +235,9 @@ class MagicGuild(BaseFacility):
             details += "※ 魔術書はパーティのインベントリに追加されます\n"
             details += "※ 読むことで対応する魔法を習得できます"
             
-            def purchase_callback():
-                self._purchase_spellbook(spellbook)
+            def purchase_callback(confirmed=None):
+                if confirmed:
+                    self._purchase_spellbook(spellbook)
             
             self._show_confirmation(
                 details,
@@ -341,7 +342,7 @@ class MagicGuild(BaseFacility):
         
         self._show_confirmation(
             confirmation_text,
-            lambda: self._perform_spell_learning(character, spell_id, spell_data, cost)
+            lambda confirmed=None: self._perform_spell_learning(character, spell_id, spell_data, cost) if confirmed else None
         )
     
     def _perform_spell_learning(self, character: Character, spell_id: str, spell_data: Dict[str, Any], cost: int):
@@ -480,7 +481,7 @@ class MagicGuild(BaseFacility):
         if self.current_party.gold >= cost:
             self._show_confirmation(
                 confirmation_text,
-                lambda: self._perform_party_magic_analysis(cost)
+                lambda confirmed=None: self._perform_party_magic_analysis(cost) if confirmed else None
             )
         else:
             self._show_error_message(f"ゴールドが不足しています。（必要: {cost}G）")

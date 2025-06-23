@@ -276,7 +276,7 @@ class AdventurersGuild(BaseFacility):
         """パーティからキャラクターを削除"""
         self._show_confirmation(
             f"{character.name} をパーティから削除しますか？",
-            lambda: self._confirm_remove_character(character)
+            lambda confirmed=None: self._confirm_remove_character(character) if confirmed else None
         )
     
     def _confirm_remove_character(self, character: Character):

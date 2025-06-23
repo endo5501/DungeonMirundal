@@ -151,7 +151,7 @@ class Temple(BaseFacility):
         
         self._show_confirmation(
             confirmation_text,
-            lambda: self._perform_resurrection(character, cost)
+            lambda confirmed=None: self._perform_resurrection(character, cost) if confirmed else None
         )
     
     def _perform_resurrection(self, character: Character, cost: int):
@@ -200,7 +200,7 @@ class Temple(BaseFacility):
         
         self._show_confirmation(
             confirmation_text,
-            lambda: self._perform_ash_restoration(character, cost)
+            lambda confirmed=None: self._perform_ash_restoration(character, cost) if confirmed else None
         )
     
     def _perform_ash_restoration(self, character: Character, cost: int):
