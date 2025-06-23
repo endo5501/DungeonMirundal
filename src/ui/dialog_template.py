@@ -300,9 +300,18 @@ class DialogTemplate:
             bool: 成功した場合True
         """
         try:
+            # ui_managerがNoneの場合はmenu_stack_managerから取得を試行
+            current_ui_manager = ui_manager
+            if current_ui_manager is None and self.menu_stack_manager:
+                current_ui_manager = self.menu_stack_manager.ui_manager
+            
+            if current_ui_manager is None:
+                logger.warning(f"ui_managerが利用できないため、ダイアログ表示をスキップ: {dialog.dialog_id}")
+                return False
+            
             self.active_dialogs[dialog.dialog_id] = dialog
-            ui_manager.add_dialog(dialog)
-            ui_manager.show_dialog(dialog.dialog_id)
+            current_ui_manager.add_dialog(dialog)
+            current_ui_manager.show_dialog(dialog.dialog_id)
             
             logger.info(f"ダイアログを表示: {dialog.dialog_id}")
             return True

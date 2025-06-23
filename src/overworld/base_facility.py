@@ -370,6 +370,9 @@ class BaseFacility(ABC):
         """エラーダイアログを表示（新システム）"""
         if not self.use_new_menu_system or not self.dialog_template:
             logger.warning("新ダイアログシステムが利用できません")
+            # ダイアログ表示に失敗してもコールバックは実行
+            if on_close:
+                on_close()
             return False
         
         try:
@@ -379,9 +382,17 @@ class BaseFacility(ABC):
                 message,
                 on_close
             )
-            return self.dialog_template.show_dialog(dialog)
+            success = self.dialog_template.show_dialog(dialog)
+            # ダイアログ表示に失敗した場合、コールバックを直接実行
+            if not success and on_close:
+                logger.info("ダイアログ表示失敗、コールバックを直接実行")
+                on_close()
+            return success
         except Exception as e:
             logger.error(f"エラーダイアログ表示エラー: {e}")
+            # エラーが発生してもコールバックは実行
+            if on_close:
+                on_close()
             return False
     
     def show_success_dialog(self, title: str, message: str,
@@ -389,6 +400,9 @@ class BaseFacility(ABC):
         """成功ダイアログを表示（新システム）"""
         if not self.use_new_menu_system or not self.dialog_template:
             logger.warning("新ダイアログシステムが利用できません")
+            # ダイアログ表示に失敗してもコールバックは実行
+            if on_close:
+                on_close()
             return False
         
         try:
@@ -398,9 +412,17 @@ class BaseFacility(ABC):
                 message,
                 on_close
             )
-            return self.dialog_template.show_dialog(dialog)
+            success = self.dialog_template.show_dialog(dialog)
+            # ダイアログ表示に失敗した場合、コールバックを直接実行
+            if not success and on_close:
+                logger.info("ダイアログ表示失敗、コールバックを直接実行")
+                on_close()
+            return success
         except Exception as e:
             logger.error(f"成功ダイアログ表示エラー: {e}")
+            # エラーが発生してもコールバックは実行
+            if on_close:
+                on_close()
             return False
     
     def show_confirmation_dialog(self, title: str, message: str,
@@ -446,6 +468,15 @@ class BaseFacility(ABC):
         except Exception as e:
             logger.error(f"選択ダイアログ表示エラー: {e}")
             return False
+    
+    def handle_event(self, event: pygame.event.Event) -> bool:
+        """イベント処理（派生クラスでオーバーライド可能）"""
+        # UISelectionListのイベント処理（派生クラスで実装）
+        return self._handle_ui_selection_events(event)
+    
+    def _handle_ui_selection_events(self, event: pygame.event.Event) -> bool:
+        """UISelectionListのイベント処理（派生クラスでオーバーライド）"""
+        return False
     
     def back_to_previous_menu(self) -> bool:
         """前のメニューに戻る（新システム）"""

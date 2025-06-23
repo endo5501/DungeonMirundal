@@ -1,9 +1,11 @@
 """宿屋"""
 
+import pygame
 from typing import Dict, List, Optional, Any
 from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.party import Party
 from src.ui.base_ui_pygame import UIMenu, UIDialog, UIInputDialog, ui_manager
+from src.ui.selection_list_ui import ItemSelectionList, CustomSelectionList, SelectionListData
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 from src.inventory.inventory import Inventory, InventoryManager
@@ -30,6 +32,9 @@ class Inn(BaseFacility):
         # 宿屋のアイテム預かりシステム（永続的）
         self.storage_inventory: Optional[Inventory] = None
         self._storage_initialized = False
+        
+        # UI要素
+        self.storage_view_list: Optional[ItemSelectionList] = None
     
     def _setup_menu_items(self, menu: UIMenu):
         """宿屋固有のメニュー項目を設定"""
@@ -69,7 +74,20 @@ class Inn(BaseFacility):
     
     def _on_exit(self):
         """宿屋退場時の処理"""
+        self._cleanup_all_ui()
         logger.info("宿屋から出ました")
+    
+    def _cleanup_all_ui(self):
+        """全てのUI要素をクリーンアップ"""
+        self._hide_storage_view_list()
+    
+    def _handle_ui_selection_events(self, event: pygame.event.Event) -> bool:
+        """UISelectionListのイベント処理をオーバーライド"""
+        # 宿屋倉庫表示リスト
+        if self.storage_view_list and self.storage_view_list.handle_event(event):
+            return True
+        
+        return False
     
     def _talk_to_innkeeper(self):
         """宿屋の主人との会話"""
@@ -388,38 +406,108 @@ class Inn(BaseFacility):
         self._show_submenu(item_menu)
     
     def _show_inn_storage_status(self):
-        """宿屋倉庫の状況を表示"""
+        """宿屋倉庫の状況をUISelectionListで表示"""
         from src.overworld.inn_storage import inn_storage_manager
+        from src.items.item import item_manager
         
         storage = inn_storage_manager.get_storage()
         summary = inn_storage_manager.get_storage_summary()
         
-        storage_info = "【宿屋倉庫の状況】\\n\\n"
-        storage_info += f"使用状況: {summary['used_slots']}/{summary['capacity']} スロット\\n"
-        storage_info += f"使用率: {summary['usage_percentage']:.1f}%\\n\\n"
-        
         if summary['used_slots'] == 0:
+            # 倉庫が空の場合はダイアログで表示
+            storage_info = "【宿屋倉庫の状況】\\n\\n"
+            storage_info += f"使用状況: {summary['used_slots']}/{summary['capacity']} スロット\\n"
+            storage_info += f"使用率: {summary['usage_percentage']:.1f}%\\n\\n"
             storage_info += "倉庫は空です。\\n"
-        else:
-            storage_info += "保管中のアイテム:\\n"
-            items = storage.get_all_items()
-            for i, (slot_index, item_instance) in enumerate(items[:10]):  # 最初の10個まで表示
-                item = item_manager.get_item(item_instance.item_id)
-                if item:
-                    quantity_text = f" x{item_instance.quantity}" if item_instance.quantity > 1 else ""
-                    storage_info += f"  {item.get_name()}{quantity_text}\\n"
             
-            if len(items) > 10:
-                storage_info += f"  ...他 {len(items) - 10} 個\\n"
+            self._show_dialog(
+                "inn_storage_status_dialog",
+                "宿屋倉庫の状況",
+                storage_info,
+                buttons=[
+                    {
+                        'text': "戻る",
+                        'command': self._close_dialog
+                    }
+                ]
+            )
+            return
         
-        storage_info += "\\n※詳細な管理は「キャラクター別アイテム管理」で行えます"
+        # UISelectionListを使用して倉庫アイテムを表示
+        import pygame
+        list_rect = pygame.Rect(100, 100, 600, 500)
+        
+        self.storage_view_list = ItemSelectionList(
+            relative_rect=list_rect,
+            manager=ui_manager.pygame_gui_manager,
+            title=f"宿屋倉庫 ({summary['used_slots']}/{summary['capacity']} スロット使用中)"
+        )
+        
+        # アイテムをリストに追加
+        items = storage.get_all_items()
+        for slot_index, item_instance in items:
+            item = item_manager.get_item(item_instance.item_id)
+            if item:
+                quantity_text = f" x{item_instance.quantity}" if item_instance.quantity > 1 else ""
+                display_name = f"{item.get_name()}{quantity_text}"
+                self.storage_view_list.add_item_data(
+                    (slot_index, item_instance, item), 
+                    display_name
+                )
+        
+        # コールバック設定
+        self.storage_view_list.on_item_details = self._show_storage_item_details
+        
+        # 表示
+        self.storage_view_list.show()
+    
+    def _show_storage_item_details(self, item_data):
+        """倉庫アイテムの詳細を表示"""
+        slot_index, item_instance, item = item_data
+        
+        details = f"【{item.get_name()}】\\n\\n"
+        details += f"説明: {item.get_description()}\\n"
+        details += f"重量: {item.weight}\\n"
+        details += f"希少度: {item.rarity.value}\\n"
+        
+        if item.is_weapon():
+            details += f"攻撃力: {item.get_attack_power()}\\n"
+            details += f"属性: {item.get_attribute()}\\n"
+        elif item.is_armor():
+            details += f"防御力: {item.get_defense()}\\n"
+        elif item.is_consumable():
+            details += f"効果: {item.get_effect_type()}\\n"
+            if item.get_effect_value() > 0:
+                details += f"効果値: {item.get_effect_value()}\\n"
+        
+        if item_instance.quantity > 1:
+            details += f"\\n数量: {item_instance.quantity}\\n"
+        
+        if item_instance.identified:
+            details += "\\n鑑定済み"
+        else:
+            details += "\\n未鑑定"
+        
+        details += f"\\nスロット位置: {slot_index}"
         
         self._show_dialog(
-            "inn_storage_status_dialog",
-            "宿屋倉庫の状況",
-            storage_info,
-            buttons=["戻る"]
+            "storage_item_detail_dialog",
+            f"{item.get_name()} の詳細",
+            details,
+            buttons=[
+                {
+                    'text': "戻る",
+                    'command': self._close_dialog
+                }
+            ]
         )
+    
+    def _hide_storage_view_list(self):
+        """倉庫表示リストを非表示"""
+        if hasattr(self, 'storage_view_list') and self.storage_view_list:
+            self.storage_view_list.hide()
+            self.storage_view_list.kill()
+            self.storage_view_list = None
     
     def _show_character_item_management(self):
         """キャラクター別アイテム管理を表示"""

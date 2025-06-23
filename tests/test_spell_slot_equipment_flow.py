@@ -75,28 +75,40 @@ class TestSpellSlotEquipmentFlow:
     
     def test_spell_equipment_with_incorrect_slot_level_fails(self, inn, mock_character, mock_spellbook):
         """不適切なスロットレベルでの魔法装備が失敗する"""
-        # Arrange
+        # Arrange: UIマネージャーと新システムを設定
+        mock_ui_manager = Mock()
+        mock_ui_manager.add_dialog = Mock()
+        mock_ui_manager.show_dialog = Mock()
+        inn.initialize_menu_system(mock_ui_manager)
+        
         with patch.object(inn, '_get_or_create_spellbook', return_value=mock_spellbook):
             with patch.object(inn, '_show_character_spell_slot_detail') as mock_show_menu:
                 
                 # Act: レベル3魔法をレベル1スロットに装備（失敗するはず）
                 inn._equip_spell_to_slot(mock_character, 'fireball', 1, 0)
                 
-                # Assert: 実際のSpellBookでは失敗するため、エラーダイアログが表示される
-                # _show_character_spell_slot_detail は呼ばれるが、装備は失敗している
-                mock_show_menu.assert_called_with(mock_character)
+                # Assert: ダイアログが表示されたことを確認（UIダイアログの正常動作確認）
+                # 実際のアプリケーションでは、ユーザーがOKボタンを押すことでコールバックが実行される
+                mock_ui_manager.add_dialog.assert_called()
+                mock_ui_manager.show_dialog.assert_called()
     
     def test_spell_equipment_with_correct_slot_level_succeeds(self, inn, mock_character, mock_spellbook):
         """適切なスロットレベルでの魔法装備が成功する"""
-        # Arrange
+        # Arrange: UIマネージャーと新システムを設定
+        mock_ui_manager = Mock()
+        mock_ui_manager.add_dialog = Mock()
+        mock_ui_manager.show_dialog = Mock()
+        inn.initialize_menu_system(mock_ui_manager)
+        
         with patch.object(inn, '_get_or_create_spellbook', return_value=mock_spellbook):
             with patch.object(inn, '_show_character_spell_slot_detail') as mock_show_menu:
                 
                 # Act: レベル3魔法をレベル3スロットに装備（成功するはず）
                 inn._equip_spell_to_slot(mock_character, 'fireball', 3, 0)
                 
-                # Assert: 装備が成功し、メニューに戻る
-                mock_show_menu.assert_called_with(mock_character)
+                # Assert: 成功ダイアログが表示されたことを確認
+                mock_ui_manager.add_dialog.assert_called()
+                mock_ui_manager.show_dialog.assert_called()
                 
                 # 実際にスロットに装備されているか確認
                 level_3_slots = mock_spellbook.spell_slots[3]
@@ -187,6 +199,12 @@ class TestSpellSlotEquipmentFlow:
     
     def test_spell_equipment_error_handling(self, inn, mock_character, mock_spellbook):
         """魔法装備のエラーハンドリング"""
+        # Arrange: UIマネージャーと新システムを設定
+        mock_ui_manager = Mock()
+        mock_ui_manager.add_dialog = Mock()
+        mock_ui_manager.show_dialog = Mock()
+        inn.initialize_menu_system(mock_ui_manager)
+        
         # Arrange: 装備が失敗するようにモック
         with patch.object(inn, '_get_or_create_spellbook', return_value=mock_spellbook):
             with patch.object(mock_spellbook, 'equip_spell_to_slot', return_value=False):
@@ -195,5 +213,6 @@ class TestSpellSlotEquipmentFlow:
                     # Act: 装備が失敗する場合
                     inn._equip_spell_to_slot(mock_character, 'heal', 1, 0)
                     
-                    # Assert: エラーでもメニューに戻る
-                    mock_show_menu.assert_called_with(mock_character)
+                    # Assert: エラーダイアログが表示されたことを確認
+                    mock_ui_manager.add_dialog.assert_called()
+                    mock_ui_manager.show_dialog.assert_called()

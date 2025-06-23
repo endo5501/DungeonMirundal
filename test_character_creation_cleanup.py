@@ -59,7 +59,7 @@ class TestCharacterCreationCleanup:
             mock_character_class.create_character.return_value = mock_character
             
             # 確認ステップを実行（内部で_close_wizard()が呼ばれる）
-            wizard._confirm_creation()
+            wizard._create_character()
             
             # コールバックが呼ばれることを確認
             completion_callback.assert_called_once_with(mock_character)
@@ -82,9 +82,9 @@ class TestCharacterCreationCleanup:
     @patch('src.overworld.facilities.guild.CharacterCreationWizard')
     def test_guild_character_creation_ui_cleanup(self, mock_wizard_class, mock_ui_manager):
         """ギルドでのキャラクター作成完了後にUIが正しく処理されることをテスト"""
-        from src.overworld.facilities.guild import Guild
+        from src.overworld.facilities.guild import AdventurersGuild
         
-        guild = Guild()
+        guild = AdventurersGuild()
         guild.current_party = self.mock_party
         guild.created_characters = []
         guild.main_menu = Mock()

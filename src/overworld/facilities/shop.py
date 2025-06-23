@@ -1,10 +1,12 @@
 """商店"""
 
+import pygame
 from typing import Dict, List, Optional, Any
 from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.party import Party
 from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
 from src.ui.base_ui_pygame import UIMenu, UIDialog, ui_manager
+from src.ui.selection_list_ui import ItemSelectionList, SelectionListData
 # NOTE: panda3D UI components removed - using pygame-based UI now
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -23,6 +25,12 @@ class Shop(BaseFacility):
         # 商店の在庫
         self.inventory: List[str] = []
         self.item_manager = item_manager
+        
+        # UI要素
+        self.item_selection_list: Optional[ItemSelectionList] = None
+        self.sell_source_selection_list: Optional['CustomSelectionList'] = None
+        self.character_sell_list: Optional[ItemSelectionList] = None
+        self.storage_sell_list: Optional[ItemSelectionList] = None
         
         # 基本在庫を設定
         self._setup_basic_inventory()
@@ -73,10 +81,38 @@ class Shop(BaseFacility):
     
     def _on_exit(self):
         """商店退場時の処理"""
+        self._cleanup_all_ui()
         logger.info(config_manager.get_text("shop.messages.left_shop"))
     
+    def _cleanup_all_ui(self):
+        """全てのUI要素をクリーンアップ"""
+        self._hide_selection_list()
+        self._hide_sell_source_selection()
+        self._hide_character_sell_list()
+        self._hide_storage_sell_list()
+    
+    def _handle_ui_selection_events(self, event: pygame.event.Event) -> bool:
+        """UISelectionListのイベント処理をオーバーライド"""
+        # アイテム購入リスト
+        if self.item_selection_list and self.item_selection_list.handle_event(event):
+            return True
+        
+        # 売却元選択リスト
+        if self.sell_source_selection_list and self.sell_source_selection_list.handle_event(event):
+            return True
+        
+        # キャラクター売却リスト
+        if self.character_sell_list and self.character_sell_list.handle_event(event):
+            return True
+        
+        # 宿屋倉庫売却リスト
+        if self.storage_sell_list and self.storage_sell_list.handle_event(event):
+            return True
+        
+        return False
+    
     def _show_buy_menu(self):
-        """購入メニューをpygame UIで表示"""
+        """購入メニューをUISelectionListで表示"""
         if not self.current_party:
             self._show_error_message(config_manager.get_text("shop.messages.no_party_set"))
             return
@@ -92,26 +128,39 @@ class Shop(BaseFacility):
             self._show_error_message(config_manager.get_text("shop.purchase.no_stock").format(category="全アイテム"))
             return
         
-        # pygame版では通常のUIMenuを使用
-        buy_menu = UIMenu("shop_buy_menu", config_manager.get_text("shop.purchase.title"))
+        # UISelectionListを使用
+        import pygame
+        list_rect = pygame.Rect(100, 100, 600, 500)
         
-        # アイテムリストを追加
-        for item in available_items:
-            display_name = self._format_item_display_name(item)
-            buy_menu.add_menu_item(
-                display_name,
-                self._show_item_details,
-                [item]
-            )
-        
-        # 戻るボタン（画面下部固定）
-        buy_menu.add_back_button(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [buy_menu]
+        self.item_selection_list = ItemSelectionList(
+            relative_rect=list_rect,
+            manager=ui_manager.pygame_gui_manager,
+            title=config_manager.get_text("shop.purchase.title")
         )
         
-        self._show_submenu(buy_menu)
+        # アイテムを追加
+        for item in available_items:
+            display_name = self._format_item_display_name(item)
+            self.item_selection_list.add_item_data(item, display_name)
+        
+        # コールバック設定
+        self.item_selection_list.on_item_selected = self._on_item_selected_for_purchase
+        self.item_selection_list.on_item_details = self._show_item_details
+        
+        # 表示
+        self.item_selection_list.show()
+    
+    def _on_item_selected_for_purchase(self, item: Item):
+        """購入用アイテム選択時のコールバック"""
+        self._hide_selection_list()
+        self._show_item_details(item)
+    
+    def _hide_selection_list(self):
+        """選択リストを非表示"""
+        if hasattr(self, 'item_selection_list') and self.item_selection_list:
+            self.item_selection_list.hide()
+            self.item_selection_list.kill()
+            self.item_selection_list = None
     
     def _show_category_items(self, item_type: ItemType):
         """カテゴリ別アイテム一覧を表示"""
@@ -341,7 +390,7 @@ class Shop(BaseFacility):
         return sellable_items
     
     def _show_sell_source_selection(self, sellable_items):
-        """売却元選択メニューを表示"""
+        """売却元選択メニューを表示（UISelectionList使用）"""
         # アイテムを売却元でグループ化
         character_items = {}
         storage_items = []
@@ -354,32 +403,135 @@ class Shop(BaseFacility):
             else:
                 storage_items.append((index, item_instance, item))
         
-        # 売却元選択メニュー
-        source_menu = UIMenu("sell_source_menu", "売却元選択")
+        # UISelectionListを使用した売却元選択
+        import pygame
+        list_rect = pygame.Rect(100, 100, 600, 400)
         
-        # キャラクター別売却
-        for char_name, items in character_items.items():
-            source_menu.add_menu_item(
-                f"{char_name} の所持品 ({len(items)}個)",
-                self._show_character_sellable_items,
-                [items, char_name]
-            )
+        from src.ui.selection_list_ui import CustomSelectionList, SelectionListData
         
-        # 宿屋倉庫売却
-        if storage_items:
-            source_menu.add_menu_item(
-                f"宿屋倉庫 ({len(storage_items)}個)",
-                self._show_storage_sellable_items,
-                [storage_items]
-            )
-        
-        source_menu.add_back_button(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [source_menu]
+        self.sell_source_selection_list = CustomSelectionList(
+            relative_rect=list_rect,
+            manager=ui_manager.pygame_gui_manager,
+            title="売却元選択"
         )
         
-        self._show_submenu(source_menu)
+        # キャラクター別売却項目を追加
+        for char_name, items in character_items.items():
+            display_text = f"{char_name} の所持品 ({len(items)}個)"
+            source_data = SelectionListData(
+                display_text=display_text,
+                data=("character", items, char_name),
+                callback=lambda data=("character", items, char_name): self._on_sell_source_selected(data)
+            )
+            self.sell_source_selection_list.add_item(source_data)
+        
+        # 宿屋倉庫売却項目を追加
+        if storage_items:
+            display_text = f"宿屋倉庫 ({len(storage_items)}個)"
+            source_data = SelectionListData(
+                display_text=display_text,
+                data=("storage", storage_items),
+                callback=lambda data=("storage", storage_items): self._on_sell_source_selected(data)
+            )
+            self.sell_source_selection_list.add_item(source_data)
+        
+        # 表示
+        self.sell_source_selection_list.show()
+    
+    def _on_sell_source_selected(self, source_data):
+        """売却元選択時のコールバック"""
+        source_type = source_data[0]
+        if source_type == "character":
+            _, items, char_name = source_data
+            self._hide_sell_source_selection()
+            self._show_character_sellable_items_list(items, char_name)
+        elif source_type == "storage":
+            _, items = source_data
+            self._hide_sell_source_selection()
+            self._show_storage_sellable_items_list(items)
+    
+    def _hide_sell_source_selection(self):
+        """売却元選択リストを非表示"""
+        if hasattr(self, 'sell_source_selection_list') and self.sell_source_selection_list:
+            self.sell_source_selection_list.hide()
+            self.sell_source_selection_list.kill()
+            self.sell_source_selection_list = None
+    
+    def _show_character_sellable_items_list(self, items, char_name):
+        """キャラクター所持アイテム売却メニュー（UISelectionList）"""
+        import pygame
+        list_rect = pygame.Rect(100, 100, 600, 500)
+        
+        self.character_sell_list = ItemSelectionList(
+            relative_rect=list_rect,
+            manager=ui_manager.pygame_gui_manager,
+            title=f"{char_name} のアイテム売却"
+        )
+        
+        # アイテムを追加
+        for character, index, item_instance, item in items:
+            display_name = self._format_sellable_item_display_name(item_instance, item)
+            self.character_sell_list.add_item_data(
+                (character, index, item_instance, item), 
+                display_name
+            )
+        
+        # コールバック設定
+        self.character_sell_list.on_item_selected = self._on_character_item_selected_for_sell
+        
+        # 表示
+        self.character_sell_list.show()
+    
+    def _show_storage_sellable_items_list(self, items):
+        """宿屋倉庫アイテム売却メニュー（UISelectionList）"""
+        import pygame
+        list_rect = pygame.Rect(100, 100, 600, 500)
+        
+        self.storage_sell_list = ItemSelectionList(
+            relative_rect=list_rect,
+            manager=ui_manager.pygame_gui_manager,
+            title="宿屋倉庫アイテム売却"
+        )
+        
+        # アイテムを追加
+        for index, item_instance, item in items:
+            display_name = self._format_sellable_item_display_name(item_instance, item)
+            self.storage_sell_list.add_item_data(
+                (index, item_instance, item), 
+                display_name
+            )
+        
+        # コールバック設定
+        self.storage_sell_list.on_item_selected = self._on_storage_item_selected_for_sell
+        
+        # 表示
+        self.storage_sell_list.show()
+    
+    def _on_character_item_selected_for_sell(self, item_data):
+        """キャラクターアイテム売却選択時のコールバック"""
+        character, slot_index, item_instance, item = item_data
+        self._hide_character_sell_list()
+        self._show_character_item_sell_confirmation(character, slot_index, item_instance, item)
+    
+    def _on_storage_item_selected_for_sell(self, item_data):
+        """宿屋倉庫アイテム売却選択時のコールバック"""
+        slot_index, item_instance, item = item_data
+        self._hide_storage_sell_list()
+        self._show_storage_item_sell_confirmation(slot_index, item_instance, item)
+    
+    def _hide_character_sell_list(self):
+        """キャラクター売却リストを非表示"""
+        if hasattr(self, 'character_sell_list') and self.character_sell_list:
+            self.character_sell_list.hide()
+            self.character_sell_list.kill()
+            self.character_sell_list = None
+    
+    def _hide_storage_sell_list(self):
+        """宿屋倉庫売却リストを非表示"""
+        if hasattr(self, 'storage_sell_list') and self.storage_sell_list:
+            self.storage_sell_list.hide()
+            self.storage_sell_list.kill()
+            self.storage_sell_list = None
     
     def _show_character_sellable_items(self, items, char_name):
         """キャラクター所持アイテム売却メニュー"""
