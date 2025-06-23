@@ -247,7 +247,13 @@ class MagicGuild(BaseFacility):
             self._show_dialog(
                 "spellbook_details_dialog",
                 "魔術書詳細",
-                details
+                details,
+                buttons=[
+                    {
+                        'text': config_manager.get_text("menu.back"),
+                        'command': self._close_dialog
+                    }
+                ]
             )
     
     def _purchase_spellbook(self, spellbook: Dict[str, Any]):
@@ -384,7 +390,13 @@ class MagicGuild(BaseFacility):
                 "現在、未鑑定のアイテムはありません。\n\n"
                 "ダンジョンで見つけた未知のアイテムを\n"
                 "持参してください。\n\n"
-                f"鑑定費用: {self.service_costs['item_identification']}G/個"
+                f"鑑定費用: {self.service_costs['item_identification']}G/個",
+                buttons=[
+                    {
+                        'text': config_manager.get_text("menu.back"),
+                        'command': self._close_dialog
+                    }
+                ]
             )
             return
         
@@ -534,7 +546,13 @@ class MagicGuild(BaseFacility):
         self._show_dialog(
             "aptitude_analysis_dialog",
             "魔法適性分析",
-            analysis_result
+            analysis_result,
+            buttons=[
+                {
+                    'text': config_manager.get_text("menu.back"),
+                    'command': self._close_dialog
+                }
+            ]
         )
         
         logger.info(f"パーティ魔法適性分析実行: {self.current_party.name}")
@@ -633,7 +651,13 @@ class MagicGuild(BaseFacility):
         self._show_dialog(
             "character_analysis_dialog",
             f"{character.name} の分析結果",
-            analysis
+            analysis,
+            buttons=[
+                {
+                    'text': config_manager.get_text("menu.back"),
+                    'command': self._close_dialog
+                }
+            ]
         )
     
     def _show_spell_usage_info(self):
@@ -665,7 +689,13 @@ class MagicGuild(BaseFacility):
             self._show_dialog(
                 "no_magic_users_dialog",
                 "魔法使用回数確認",
-                info_text
+                info_text,
+                buttons=[
+                    {
+                        'text': config_manager.get_text("menu.back"),
+                        'command': self._close_dialog
+                    }
+                ]
             )
             return
         
@@ -747,7 +777,13 @@ class MagicGuild(BaseFacility):
         self._show_dialog(
             "character_spell_usage_dialog",
             f"{character.name} の魔法使用状況",
-            usage_info
+            usage_info,
+            buttons=[
+                {
+                    'text': config_manager.get_text("menu.back"),
+                    'command': self._close_dialog
+                }
+            ]
         )
     
     def _talk_to_archmage(self):
