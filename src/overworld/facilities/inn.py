@@ -124,13 +124,6 @@ class Inn(BaseFacility):
             )
         else:
             # 旧システム（戻るボタンを追加）
-            def on_innkeeper_back():
-                """宿屋の主人会話ダイアログの戻るボタン処理"""
-                self._close_dialog()
-                # 明示的にメインメニューを再表示（問題の修正）
-                if self.main_menu and ui_manager:
-                    ui_manager.show_menu(self.main_menu.menu_id, modal=True)
-            
             self._show_dialog(
                 "innkeeper_dialog",
                 f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
@@ -138,7 +131,7 @@ class Inn(BaseFacility):
                 buttons=[
                     {
                         'text': config_manager.get_text("common.back"),
-                        'command': on_innkeeper_back
+                        'command': self._close_dialog
                     }
                 ]
             )
@@ -161,13 +154,6 @@ class Inn(BaseFacility):
             )
         else:
             # 旧システム（戻るボタンを追加）
-            def on_travel_info_back():
-                """旅の情報ダイアログの戻るボタン処理"""
-                self._close_dialog()
-                # 明示的にメインメニューを再表示（問題の修正）
-                if self.main_menu and ui_manager:
-                    ui_manager.show_menu(self.main_menu.menu_id, modal=True)
-            
             self._show_dialog(
                 "travel_info_dialog",
                 config_manager.get_text("inn.travel_info.title"),
@@ -175,7 +161,7 @@ class Inn(BaseFacility):
                 buttons=[
                     {
                         'text': config_manager.get_text("common.back"),
-                        'command': on_travel_info_back
+                        'command': self._close_dialog
                     }
                 ]
             )
@@ -224,13 +210,6 @@ class Inn(BaseFacility):
             )
         else:
             # 旧システム（戻るボタンを追加）
-            def on_rumor_back():
-                """噂話ダイアログの戻るボタン処理"""
-                self._close_dialog()
-                # 明示的にメインメニューを再表示（問題の修正）
-                if self.main_menu and ui_manager:
-                    ui_manager.show_menu(self.main_menu.menu_id, modal=True)
-            
             self._show_dialog(
                 "rumor_dialog",
                 f"{config_manager.get_text('inn.rumors.title')} - {title}",
@@ -238,7 +217,7 @@ class Inn(BaseFacility):
                 buttons=[
                     {
                         'text': config_manager.get_text("common.back"),
-                        'command': on_rumor_back
+                        'command': self._close_dialog
                     }
                 ]
             )

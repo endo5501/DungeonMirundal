@@ -162,6 +162,10 @@ class TestInnIntegrationFix:
                     # ui_managerをリセット
                     mock_ui_manager.reset_mock()
                     
+                    # current_dialogを設定（_show_dialogがモックされているため）
+                    self.inn.current_dialog = Mock()
+                    self.inn.current_dialog.dialog_id = expected_dialog_id
+                    
                     # コールバックを実行
                     back_callback()
                     

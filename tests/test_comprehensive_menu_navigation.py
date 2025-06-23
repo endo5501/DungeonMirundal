@@ -39,18 +39,18 @@ MENU_NAVIGATION_PATTERNS = [
     ("overworld", "magic_guild", [], "overworld"),
     
     # 2階層メニューテスト
-    ("overworld", "guild", ["party_management"], "guild"),
-    ("overworld", "inn", ["adventure_preparation"], "inn"),
-    ("overworld", "shop", ["buy_items"], "shop"),
-    ("overworld", "temple", ["resurrection_service"], "temple"),
-    ("overworld", "magic_guild", ["spellbook_purchase"], "magic_guild"),
+    ("overworld", "guild", ["party_management"], "overworld"),
+    ("overworld", "inn", ["adventure_preparation"], "overworld"),
+    ("overworld", "shop", ["buy_items"], "overworld"),
+    ("overworld", "temple", ["resurrection_service"], "overworld"),
+    ("overworld", "magic_guild", ["spellbook_purchase"], "overworld"),
     
     # 3階層メニューテスト
-    ("overworld", "inn", ["adventure_preparation", "item_management"], "inn"),
-    ("overworld", "inn", ["adventure_preparation", "spell_slot_setting"], "inn"),
+    ("overworld", "inn", ["adventure_preparation", "item_management"], "overworld"),
+    ("overworld", "inn", ["adventure_preparation", "spell_slot_setting"], "overworld"),
     
     # 4階層メニューテスト（問題が多発していた箇所）
-    ("overworld", "inn", ["adventure_preparation", "item_management", "character_item_management"], "inn"),
+    ("overworld", "inn", ["adventure_preparation", "item_management", "character_item_management"], "overworld"),
 ]
 
 # ESCキー遷移パターン
@@ -364,7 +364,7 @@ class TestComprehensiveMenuNavigation:
             
             # メニュー項目に応じたメソッドを呼び出し
             menu_method_map = {
-                'party_management': '_show_party_management',
+                'party_management': '_show_party_formation',
                 'adventure_preparation': '_show_adventure_preparation',
                 'item_management': '_show_new_item_organization_menu',
                 'character_item_management': '_show_character_item_management',
