@@ -353,25 +353,24 @@ class TestFacilityDialogConsistency:
         ]
         
         for facility, facility_id in facilities:
-            with self.subTest(facility=facility_id):
-                facility.initialize_menu_system(self.ui_manager)
-                facility.enter(self.test_party)
-                
-                try:
-                    # 新システムが有効な場合の戻るボタン確認
-                    if facility.use_new_menu_system and facility.dialog_template:
-                        # 情報ダイアログを作成して戻るボタンの存在確認
-                        dialog = facility.dialog_template.create_information_dialog(
-                            f"test_{facility_id}",
-                            "テスト",
-                            "テストメッセージ"
-                        )
-                        
-                        assert dialog is not None
-                        assert len(dialog.elements) > 0  # 戻るボタンが存在するはず
-                
-                finally:
-                    facility.exit()
+            facility.initialize_menu_system(self.ui_manager)
+            facility.enter(self.test_party)
+            
+            try:
+                # 新システムが有効な場合の戻るボタン確認
+                if facility.use_new_menu_system and facility.dialog_template:
+                    # 情報ダイアログを作成して戻るボタンの存在確認
+                    dialog = facility.dialog_template.create_information_dialog(
+                        f"test_{facility_id}",
+                        "テスト",
+                        "テストメッセージ"
+                    )
+                    
+                    assert dialog is not None, f"{facility_id} ダイアログが作成されません"
+                    assert len(dialog.elements) > 0, f"{facility_id} ダイアログに戻るボタンが存在しません"
+            
+            finally:
+                facility.exit()
 
 
 class TestDialogCallbackConsistency:

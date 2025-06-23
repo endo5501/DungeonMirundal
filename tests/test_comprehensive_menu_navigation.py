@@ -273,25 +273,24 @@ class TestComprehensiveMenuNavigation:
         ]
         
         for facility_id, dialog_action in dialog_test_cases:
-            with self.subTest(facility=facility_id, dialog=dialog_action):
-                # 施設に入る
-                self._set_test_state('overworld')
-                assert self._enter_facility(facility_id)
-                
-                # ダイアログを表示
-                assert self._trigger_dialog(dialog_action), f"{facility_id} の {dialog_action} ダイアログ表示に失敗"
-                
-                # 戻るボタンの存在確認
-                assert self._check_dialog_back_button_exists(), f"{facility_id} の {dialog_action} ダイアログに戻るボタンがない"
-                
-                # 戻るボタンを押す
-                assert self._press_dialog_back_button(), f"{facility_id} の {dialog_action} ダイアログの戻るボタンが機能しない"
-                
-                # 施設メニューに戻ったことを確認
-                assert self.test_state['current_location'] == facility_id
-                
-                # 施設から出る
-                assert self._exit_facility()
+            # 施設に入る
+            self._set_test_state('overworld')
+            assert self._enter_facility(facility_id), f"{facility_id} への入場に失敗"
+            
+            # ダイアログを表示
+            assert self._trigger_dialog(dialog_action), f"{facility_id} の {dialog_action} ダイアログ表示に失敗"
+            
+            # 戻るボタンの存在確認
+            assert self._check_dialog_back_button_exists(), f"{facility_id} の {dialog_action} ダイアログに戻るボタンがない"
+            
+            # 戻るボタンを押す
+            assert self._press_dialog_back_button(), f"{facility_id} の {dialog_action} ダイアログの戻るボタンが機能しない"
+            
+            # 施設メニューに戻ったことを確認
+            assert self.test_state['current_location'] == facility_id
+            
+            # 施設から出る
+            assert self._exit_facility(), f"{facility_id} からの退場に失敗"
     
     def test_error_recovery_mechanisms(self):
         """エラー回復メカニズムのテスト"""
@@ -323,6 +322,9 @@ class TestComprehensiveMenuNavigation:
         self.test_state['current_location'] = location
         if location == 'overworld':
             self.test_state['active_facility'] = None
+            # 既存の施設から退出
+            if facility_manager.current_facility:
+                facility_manager.exit_current_facility()
             # オーバーワールドマネージャーにshow_main_menuメソッドがない場合は代替処理
             if hasattr(self.overworld_manager, 'show_main_menu'):
                 self.overworld_manager.show_main_menu()
@@ -330,6 +332,11 @@ class TestComprehensiveMenuNavigation:
             # オーバーワールドマネージャーにshow_settings_menuメソッドがない場合は代替処理
             if hasattr(self.overworld_manager, 'show_settings_menu'):
                 self.overworld_manager.show_settings_menu()
+        else:
+            # 施設の場合は実際に施設に入る
+            if location in facility_manager.facilities:
+                facility_manager.enter_facility(location, self.test_party)
+                self.test_state['active_facility'] = location
     
     def _enter_facility(self, facility_id: str) -> bool:
         """施設に入る"""

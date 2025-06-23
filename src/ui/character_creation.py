@@ -71,6 +71,10 @@ class CharacterCreationWizard:
     
     def start(self):
         """ウィザード開始"""
+        if not ui_manager:
+            logger.error("ui_managerが利用できないため、キャラクター作成ウィザードを開始できません")
+            return
+            
         self.current_step = CreationStep.NAME_INPUT
         self._show_step()
         
@@ -123,8 +127,11 @@ class CharacterCreationWizard:
         )
         
         self.current_ui = dialog
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
+        if ui_manager:
+            ui_manager.add_dialog(dialog)
+            ui_manager.show_dialog(dialog.dialog_id)
+        else:
+            logger.warning("ui_managerが利用できないため、ダイアログ表示をスキップしました")
     
     def _on_name_confirmed(self, name: str):
         """名前入力確認時の処理"""

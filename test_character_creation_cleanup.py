@@ -78,9 +78,8 @@ class TestCharacterCreationCleanup:
             for dialog_id in expected_dialog_ids:
                 mock_ui_manager.hide_dialog.assert_any_call(dialog_id)
 
-    @patch('src.overworld.facilities.guild.ui_manager')
     @patch('src.overworld.facilities.guild.CharacterCreationWizard')
-    def test_guild_character_creation_ui_cleanup(self, mock_wizard_class, mock_ui_manager):
+    def test_guild_character_creation_ui_cleanup(self, mock_wizard_class):
         """ギルドでのキャラクター作成完了後にUIが正しく処理されることをテスト"""
         from src.overworld.facilities.guild import AdventurersGuild
         
@@ -89,6 +88,9 @@ class TestCharacterCreationCleanup:
         guild.created_characters = []
         guild.main_menu = Mock()
         guild.main_menu.menu_id = "guild_main_menu"
+        
+        # ヘルパーメソッドをモック
+        guild._hide_menu_safe = Mock()
         
         # キャラクター作成ウィザードのモック
         mock_wizard = Mock()
@@ -109,7 +111,7 @@ class TestCharacterCreationCleanup:
         mock_wizard.start.assert_called_once()
         
         # メインメニューが隠されることを確認
-        mock_ui_manager.hide_menu.assert_called_with("guild_main_menu")
+        guild._hide_menu_safe.assert_called_with("guild_main_menu")
 
     def test_character_creation_dialog_cleanup_order(self):
         """キャラクター作成時のダイアログクリーンアップ順序テスト"""

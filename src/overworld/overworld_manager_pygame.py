@@ -874,6 +874,14 @@ class OverworldManager:
         
         logger.info("地上部を退場しました")
     
+    def show_main_menu(self):
+        """メインメニューを表示（外部から呼び出し可能）"""
+        self._show_main_menu()
+    
+    def show_settings_menu(self):
+        """設定メニューを表示（外部から呼び出し可能）"""
+        self._show_settings_menu()
+    
     def render(self, screen: pygame.Surface):
         """地上部の描画"""
         if not self.is_active:

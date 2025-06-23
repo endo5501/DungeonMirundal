@@ -331,7 +331,11 @@ class DialogTemplate:
         """
         try:
             if dialog_id in self.active_dialogs:
-                ui_manager.hide_dialog(dialog_id)
+                # UIマネージャーが利用可能な場合のみhide_dialogを呼ぶ
+                if ui_manager:
+                    ui_manager.hide_dialog(dialog_id)
+                
+                # UIマネージャーが利用できなくても内部状態はクリーンアップ
                 del self.active_dialogs[dialog_id]
                 
                 # コールバックもクリーンアップ
@@ -344,6 +348,11 @@ class DialogTemplate:
             
         except Exception as e:
             logger.error(f"ダイアログ非表示エラー: {e}")
+            # エラーが発生してもactive_dialogsからは削除する
+            if dialog_id in self.active_dialogs:
+                del self.active_dialogs[dialog_id]
+            if dialog_id in self.dialog_callbacks:
+                del self.dialog_callbacks[dialog_id]
             return False
     
     def handle_escape_key(self, dialog_id: str) -> bool:
