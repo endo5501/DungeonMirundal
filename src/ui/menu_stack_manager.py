@@ -212,18 +212,23 @@ class MenuStackManager:
             if not self.current_entry:
                 return False
             
+            # 既に施設メインメニューにいる場合
+            if self.current_entry.menu_type == MenuType.FACILITY_MAIN and not self.stack:
+                logger.info("既に施設メインメニューにいます")
+                return True
+            
             # FACILITY_MAINタイプが見つかるまでポップ
             while self.stack:
                 entry = self.stack[-1]
                 if entry.menu_type == MenuType.FACILITY_MAIN:
-                    break
+                    # FACILITY_MAINが見つかったら、それまでポップして表示
+                    self.pop_menu()
+                    logger.info("施設メインメニューに戻りました")
+                    return True
                 self.pop_menu()
             
-            # 最後にもう一度ポップしてFACILITY_MAINを表示
-            if self.stack:
-                self.pop_menu()
-                return True
-            
+            # スタックが空で現在のエントリがFACILITY_MAINでない場合
+            logger.warning("施設メインメニューが見つかりませんでした")
             return False
             
         except Exception as e:
@@ -342,6 +347,12 @@ class MenuStackManager:
         
         try:
             menu = self.current_entry.menu
+            
+            # ui_managerがNoneの場合の安全な処理
+            if not self.ui_manager:
+                logger.warning("ui_managerがNoneのため、メニュー表示をスキップします")
+                return
+            
             self.ui_manager.add_menu(menu)
             self.ui_manager.show_menu(menu.menu_id, modal=True)
             logger.debug(f"メニューを表示: {menu.menu_id}")
@@ -356,6 +367,12 @@ class MenuStackManager:
         
         try:
             menu = self.current_entry.menu
+            
+            # ui_managerがNoneの場合の安全な処理
+            if not self.ui_manager:
+                logger.warning("ui_managerがNoneのため、メニュー非表示をスキップします")
+                return
+                
             self.ui_manager.hide_menu(menu.menu_id)
             logger.debug(f"メニューを隠す: {menu.menu_id}")
             
