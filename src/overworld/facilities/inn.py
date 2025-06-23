@@ -456,8 +456,7 @@ class Inn(BaseFacility):
         list_rect = pygame.Rect(100, 100, 600, 500)
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
-        if not hasattr(ui_manager, 'pygame_gui_manager') or ui_manager.pygame_gui_manager is None:
-            logger.warning("pygame_gui_managerが利用できません。倉庫表示をスキップします。")
+        if not self._check_pygame_gui_manager():
             self._show_error_message("倉庫の表示に失敗しました。")
             return
         
@@ -2076,25 +2075,14 @@ class Inn(BaseFacility):
         """サブメニューを表示"""
         # メインメニューを隠す
         if self.main_menu:
-            if self.menu_stack_manager and self.menu_stack_manager.ui_manager:
-                self.menu_stack_manager.ui_manager.hide_menu(self.main_menu.menu_id)
-            else:
-                ui_manager.hide_menu(self.main_menu.menu_id)
+            self._hide_menu_safe(self.main_menu.menu_id)
         
-        if self.menu_stack_manager and self.menu_stack_manager.ui_manager:
-            self.menu_stack_manager.ui_manager.add_menu(submenu)
-            self.menu_stack_manager.ui_manager.show_menu(submenu.menu_id, modal=True)
-        else:
-            ui_manager.add_menu(submenu)
-            ui_manager.show_menu(submenu.menu_id, modal=True)
+        self._show_menu_safe(submenu, modal=True)
     
     def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
         """サブメニューからメインメニューに戻る"""
-        if self.menu_stack_manager and self.menu_stack_manager.ui_manager:
-            self.menu_stack_manager.ui_manager.hide_menu(submenu.menu_id)
-            if self.main_menu:
-                self.menu_stack_manager.ui_manager.show_menu(self.main_menu.menu_id)
-        else:
-            ui_manager.hide_menu(submenu.menu_id)
-            if self.main_menu:
-                ui_manager.show_menu(self.main_menu.menu_id)
+        self._hide_menu_safe(submenu.menu_id)
+        if self.main_menu:
+            ui_mgr = self._get_effective_ui_manager()
+            if ui_mgr:
+                ui_mgr.show_menu(self.main_menu.menu_id)

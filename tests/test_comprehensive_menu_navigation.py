@@ -368,7 +368,7 @@ class TestComprehensiveMenuNavigation:
                 'adventure_preparation': '_show_adventure_preparation',
                 'item_management': '_show_new_item_organization_menu',
                 'character_item_management': '_show_character_item_management',
-                'spell_slot_setting': '_show_new_spell_slot_setting',
+                'spell_slot_setting': '_show_spell_slot_management',
                 'buy_items': '_show_buy_menu',
                 'resurrection_service': '_show_resurrection_menu',
                 'spellbook_purchase': '_show_spellbook_shop_menu'

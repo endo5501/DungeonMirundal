@@ -132,8 +132,7 @@ class Shop(BaseFacility):
         list_rect = pygame.Rect(100, 100, 600, 500)
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
-        if not hasattr(ui_manager, 'pygame_gui_manager') or ui_manager.pygame_gui_manager is None:
-            logger.warning("pygame_gui_managerが利用できません。購入メニューの表示をスキップします。")
+        if not self._check_pygame_gui_manager():
             self._show_error_message("購入メニューの表示に失敗しました。")
             return
         
@@ -467,8 +466,7 @@ class Shop(BaseFacility):
         list_rect = pygame.Rect(100, 100, 600, 500)
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
-        if not hasattr(ui_manager, 'pygame_gui_manager') or ui_manager.pygame_gui_manager is None:
-            logger.warning("pygame_gui_managerが利用できません。売却メニューの表示をスキップします。")
+        if not self._check_pygame_gui_manager():
             self._show_error_message("売却メニューの表示に失敗しました。")
             return
         
@@ -497,8 +495,7 @@ class Shop(BaseFacility):
         list_rect = pygame.Rect(100, 100, 600, 500)
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
-        if not hasattr(ui_manager, 'pygame_gui_manager') or ui_manager.pygame_gui_manager is None:
-            logger.warning("pygame_gui_managerが利用できません。売却メニューの表示をスキップします。")
+        if not self._check_pygame_gui_manager():
             self._show_error_message("売却メニューの表示に失敗しました。")
             return
         
@@ -731,11 +728,6 @@ class Shop(BaseFacility):
             logger.error(f"宿屋倉庫アイテム売却エラー: {e}")
             self._show_error_message(f"売却処理に失敗しました: {str(e)}")
     
-    def _show_sellable_items_scrolled_list(self, sellable_items: List[tuple]):
-        """pygame UIメニューで売却可能アイテムを表示（互換性のために残している）"""
-        # この関数は上記の_show_sell_menuで置き換えられるため、
-        # 互換性のために残しているが実際には使用されない
-        pass
     
     def _format_sellable_item_display_name(self, item_instance, item: Item) -> str:
         """売却アイテム表示名をフォーマット"""

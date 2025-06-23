@@ -488,6 +488,38 @@ class BaseFacility(ABC):
         """UISelectionListのイベント処理（派生クラスでオーバーライド）"""
         return False
     
+    def _check_pygame_gui_manager(self) -> bool:
+        """pygame_gui_managerが利用可能かチェック"""
+        if not hasattr(ui_manager, 'pygame_gui_manager') or ui_manager.pygame_gui_manager is None:
+            logger.warning(f"{self.facility_id}: pygame_gui_managerが利用できません")
+            return False
+        return True
+    
+    def _get_effective_ui_manager(self):
+        """有効なUIマネージャーを取得（menu_stack_manager優先）"""
+        if self.menu_stack_manager and self.menu_stack_manager.ui_manager:
+            return self.menu_stack_manager.ui_manager
+        return ui_manager
+    
+    def _hide_menu_safe(self, menu_id: str):
+        """メニューを安全に非表示にする"""
+        try:
+            ui_mgr = self._get_effective_ui_manager()
+            if ui_mgr:
+                ui_mgr.hide_menu(menu_id)
+        except Exception as e:
+            logger.error(f"メニュー非表示エラー: {e}")
+    
+    def _show_menu_safe(self, menu: UIMenu, modal: bool = True):
+        """メニューを安全に表示する"""
+        try:
+            ui_mgr = self._get_effective_ui_manager()
+            if ui_mgr:
+                ui_mgr.add_menu(menu)
+                ui_mgr.show_menu(menu.menu_id, modal=modal)
+        except Exception as e:
+            logger.error(f"メニュー表示エラー: {e}")
+    
     def back_to_previous_menu(self) -> bool:
         """前のメニューに戻る（新システム）"""
         if not self.use_new_menu_system or not self.menu_stack_manager:
