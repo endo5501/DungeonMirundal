@@ -1,0 +1,85 @@
+{
+    "defaults": {
+        "font": {
+            "name": "noto",
+            "size": "14",
+            "regular_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "bold_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
+        },
+        "colours": {
+            "normal_text": "#FFFFFF",
+            "hovered_text": "#FFFFFF",
+            "selected_text": "#FFFFFF",
+            "active_text": "#FFFFFF",
+            "normal_border": "#DDDDDD",
+            "hovered_border": "#B0C4DE",
+            "disabled_border": "#808080",
+            "link_text": "#0000EE",
+            "link_hover": "#FF0000",
+            "link_selected": "#551A8B",
+            "text_shadow": "#777777",
+            "normal_bg": "#25292e",
+            "hovered_bg": "#35393e",
+            "disabled_bg": "#25292e",
+            "selected_bg": "#193784",
+            "active_bg": "#193784",
+            "dark_bg": "#15191e",
+            "text_entry_bg": "#FFFFFF",
+            "text_entry_selected_bg": "#3390FF"
+        }
+    },
+    "selection_list": {
+        "colours": {
+            "dark_bg": "#21282D",
+            "normal_border": "#999999",
+            "normal_text": "#FFFFFF",
+            "selected_text": "#FFFFFF"
+        },
+        "misc": {
+            "shape": "rectangle",
+            "list_item_height": "30"
+        },
+        "font": {
+            "name": "noto",
+            "size": "14"
+        }
+    },
+    "button": {
+        "colours": {
+            "normal_bg": "#25292e",
+            "hovered_bg": "#35393e",
+            "disabled_bg": "#25292e",
+            "selected_bg": "#193784",
+            "active_bg": "#193784",
+            "normal_text": "#FFFFFF",
+            "hovered_text": "#FFFFFF",
+            "selected_text": "#FFFFFF",
+            "disabled_text": "#808080",
+            "normal_border": "#DDDDDD",
+            "hovered_border": "#B0C4DE"
+        },
+        "font": {
+            "name": "noto",
+            "size": "14"
+        }
+    },
+    "panel": {
+        "colours": {
+            "normal_bg": "#25292e",
+            "normal_border": "#999999"
+        },
+        "misc": {
+            "shape": "rectangle",
+            "border_width": "1"
+        }
+    },
+    "label": {
+        "colours": {
+            "normal_text": "#FFFFFF"
+        },
+        "font": {
+            "name": "noto",
+            "size": "16"
+        }
+    }
+}

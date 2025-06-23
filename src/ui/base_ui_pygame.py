@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Callable, Any, Tuple
 from enum import Enum
 import pygame
+import pygame_gui
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
@@ -475,6 +476,15 @@ class UIManager:
         self.dialogs: Dict[str, UIDialog] = {}
         self.modal_stack: List[str] = []  # モーダル要素のスタック
         
+        # pygame-gui マネージャー（テーマファイル付き）
+        try:
+            theme_path = "/home/satorue/Dungeon/config/ui_theme.json"
+            self.pygame_gui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()), theme_path)
+            logger.info(f"UIテーマを読み込みました: {theme_path}")
+        except Exception as e:
+            logger.warning(f"UIテーマの読み込みに失敗、デフォルトテーマを使用: {e}")
+            self.pygame_gui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()))
+        
         # フォント初期化
         self.default_font = None
         self.title_font = None
@@ -586,6 +596,9 @@ class UIManager:
     
     def handle_event(self, event: pygame.event.Event) -> bool:
         """イベント処理（モーダルスタックを考慮）"""
+        # pygame-guiイベント処理
+        self.pygame_gui_manager.process_events(event)
+        
         # モーダル要素が最優先
         if self.modal_stack:
             top_modal = self.modal_stack[-1]
@@ -610,6 +623,10 @@ class UIManager:
         
         return False
     
+    def update(self, time_delta: float):
+        """UI更新処理"""
+        self.pygame_gui_manager.update(time_delta)
+    
     def render(self):
         """全UI要素を描画"""
         # 通常要素の描画
@@ -623,6 +640,9 @@ class UIManager:
         # ダイアログの描画（最前面）
         for dialog in self.dialogs.values():
             dialog.render(self.screen, self.default_font)
+        
+        # pygame-gui要素の描画
+        self.pygame_gui_manager.draw_ui(self.screen)
 
 
 # グローバルインスタンス（互換性のため）

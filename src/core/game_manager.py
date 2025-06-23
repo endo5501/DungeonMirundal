@@ -689,6 +689,11 @@ class GameManager:
             if hasattr(self, 'input_manager'):
                 self.input_manager.update()
             
+            # FPS制限とUIマネージャーの更新（pygame-gui）
+            time_delta = self.clock.tick(self.target_fps) / 1000.0
+            if hasattr(self, 'ui_manager') and self.ui_manager:
+                self.ui_manager.update(time_delta)
+            
             # 画面をクリア
             self.screen.fill((0, 0, 0))
             
@@ -705,9 +710,6 @@ class GameManager:
             
             # 画面更新
             pygame.display.flip()
-            
-            # FPS制限
-            self.clock.tick(self.target_fps)
     
     def _render_current_state(self):
         """現在の状態に応じた描画"""

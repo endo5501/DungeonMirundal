@@ -4,6 +4,7 @@ from typing import Optional, Callable
 import pygame
 from src.character.party import Party
 from src.ui.base_ui_pygame import UIMenu, UIButton, UIText
+from src.ui.selection_list_ui import CustomSelectionList, SelectionListData
 from src.ui.menu_stack_manager import MenuStackManager, MenuType
 from src.utils.logger import logger
 from src.core.config_manager import config_manager
@@ -24,6 +25,7 @@ class OverworldManager:
         # UI要素
         self.main_menu: Optional[UIMenu] = None
         self.settings_menu: Optional[UIMenu] = None
+        self.dungeon_selection_list: Optional[CustomSelectionList] = None
         self.is_active = False
         self.settings_active = False
         
@@ -173,7 +175,7 @@ class OverworldManager:
         self._show_dungeon_selection_menu()
     
     def _show_dungeon_selection_menu(self):
-        """ダンジョン選択画面を表示"""
+        """ダンジョン選択画面をUISelectionListで表示"""
         logger.info("ダンジョン選択画面を表示します")
         
         if not self.ui_manager:
@@ -184,46 +186,55 @@ class OverworldManager:
         if self.main_menu:
             self.ui_manager.hide_menu(self.main_menu.menu_id)
         
-        # ダンジョン選択メニューを作成
-        dungeon_menu = UIMenu("dungeon_selection_menu", "ダンジョン選択")
+        # UISelectionListを使用したダンジョン選択
+        list_rect = pygame.Rect(100, 100, 600, 500)
         
-        # ダンジョン一覧
+        self.dungeon_selection_list = CustomSelectionList(
+            relative_rect=list_rect,
+            manager=self.ui_manager.pygame_gui_manager,
+            title="ダンジョン選択"
+        )
+        
+        # ダンジョン一覧を追加
         available_dungeons = self._get_available_dungeons()
+        logger.info(f"取得したダンジョン数: {len(available_dungeons)}")
+        
         if available_dungeons:
             for dungeon in available_dungeons:
                 dungeon_info = self._format_dungeon_info(dungeon)
-                dungeon_menu.add_menu_item(
-                    dungeon_info,
-                    self._enter_selected_dungeon,
-                    [dungeon['id']]
+                logger.info(f"ダンジョン追加: {dungeon_info}")
+                dungeon_data = SelectionListData(
+                    display_text=dungeon_info,
+                    data=dungeon,
+                    callback=lambda d=dungeon: self._enter_selected_dungeon(d['id'])
                 )
-        else:
-            # ダンジョンがない場合の表示
-            dungeon_menu.add_menu_item(
-                "利用可能なダンジョンがありません",
-                lambda: None
-            )
+                self.dungeon_selection_list.add_item(dungeon_data)
         
-        # メニュー項目を追加
-        dungeon_menu.add_menu_item(
-            "ダンジョン新規生成",
-            self._generate_new_dungeon
+        # 管理機能を追加
+        new_dungeon_data = SelectionListData(
+            display_text="🆕 ダンジョン新規生成",
+            data=None,
+            callback=self._generate_new_dungeon
         )
+        self.dungeon_selection_list.add_item(new_dungeon_data)
         
         if available_dungeons:
-            dungeon_menu.add_menu_item(
-                "ダンジョン破棄",
-                self._show_dungeon_deletion_menu
+            delete_dungeon_data = SelectionListData(
+                display_text="🗑 ダンジョン破棄",
+                data=None,
+                callback=self._show_dungeon_deletion_menu
             )
+            self.dungeon_selection_list.add_item(delete_dungeon_data)
         
-        dungeon_menu.add_menu_item(
-            "戻る",
-            self._close_dungeon_selection_menu
+        back_data = SelectionListData(
+            display_text="⬅ 戻る",
+            data=None,
+            callback=self._close_dungeon_selection_menu
         )
+        self.dungeon_selection_list.add_item(back_data)
         
-        # メニューを表示
-        self.ui_manager.add_menu(dungeon_menu)
-        self.ui_manager.show_menu(dungeon_menu.menu_id, modal=True)
+        # 表示
+        self.dungeon_selection_list.show()
         
         logger.info("ダンジョン選択メニューを表示しました")
     
@@ -309,8 +320,11 @@ class OverworldManager:
         """ダンジョン選択メニューを閉じて地上メニューに戻る"""
         logger.info("ダンジョン選択メニューを閉じます")
         
-        # ダンジョン選択メニューを隠す
-        self.ui_manager.hide_menu("dungeon_selection_menu")
+        # UISelectionListを非表示にして破棄
+        if self.dungeon_selection_list:
+            self.dungeon_selection_list.hide()
+            self.dungeon_selection_list.kill()
+            self.dungeon_selection_list = None
         
         # メインメニューを再表示
         if self.main_menu:
@@ -964,9 +978,26 @@ class OverworldManager:
         if not self.is_active:
             return False
         
+        # UISelectionListのイベント処理
+        if self.dungeon_selection_list:
+            if self.dungeon_selection_list.handle_event(event):
+                return True
+        
+        # 施設のイベント処理
+        from src.overworld.base_facility import facility_manager
+        current_facility = facility_manager.get_current_facility()
+        if current_facility and current_facility.is_active:
+            if current_facility.handle_event(event):
+                return True
+        
         # ESCキー処理
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
+                # ダンジョン選択画面が表示中の場合は閉じる
+                if self.dungeon_selection_list:
+                    self._close_dungeon_selection_menu()
+                    return True
+                
                 # 施設がアクティブな場合は施設にESCキー処理を委譲
                 from src.overworld.base_facility import facility_manager
                 current_facility = facility_manager.get_current_facility()
