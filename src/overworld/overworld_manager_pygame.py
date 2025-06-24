@@ -484,12 +484,34 @@ class OverworldManager:
                 info_text += f"  MP: {character.derived_stats.current_mp}/{character.derived_stats.max_mp}"
                 info_text += f"  状態: {character.status.value}"
             
-            # UIダイアログでパーティ情報を表示
+            # UIダイアログでパーティ情報を表示（動的サイズ調整）
             from src.ui.base_ui_pygame import UIDialog, UIButton
-            party_dialog = UIDialog("party_status_dialog", "パーティ状況", info_text)
             
-            # OKボタンを追加
-            ok_button = UIButton("party_status_ok", "OK", 400, 600, 100, 40)
+            # テキスト量に基づいてダイアログサイズを計算
+            text_length = len(info_text)
+            line_count = info_text.count('\n') + 1
+            
+            # ダイアログサイズの動的調整
+            if text_length > 300:
+                dialog_width = 700
+            elif text_length > 150:
+                dialog_width = 600
+            else:
+                dialog_width = 500
+                
+            dialog_height = min(600, max(300, 80 + line_count * 25))
+            
+            # 画面中央に配置
+            dialog_x = (1024 - dialog_width) // 2
+            dialog_y = (768 - dialog_height) // 2
+            
+            party_dialog = UIDialog("party_status_dialog", "パーティ状況", info_text, 
+                                  dialog_x, dialog_y, dialog_width, dialog_height)
+            
+            # OKボタンを画面下部に配置
+            ok_x = dialog_x + (dialog_width - 100) // 2
+            ok_y = dialog_y + dialog_height - 60
+            ok_button = UIButton("party_status_ok", "OK", ok_x, ok_y, 100, 40)
             ok_button.on_click = self._close_party_status_dialog
             party_dialog.add_element(ok_button)
             

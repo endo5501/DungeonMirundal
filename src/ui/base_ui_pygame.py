@@ -9,6 +9,44 @@ from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
 
+def wrap_text(text: str, font: pygame.font.Font, max_width: int) -> List[str]:
+    """テキストを指定幅で折り返す"""
+    words = text.split(' ')
+    lines = []
+    current_line = ""
+    
+    for word in words:
+        # 改行文字が含まれている場合は分割して処理
+        if '\n' in word:
+            word_parts = word.split('\n')
+            for i, part in enumerate(word_parts):
+                if i > 0:  # 改行後の部分
+                    if current_line.strip():
+                        lines.append(current_line.strip())
+                    current_line = part
+                else:  # 改行前の部分
+                    test_line = current_line + (" " if current_line else "") + part
+                    if font.size(test_line)[0] <= max_width:
+                        current_line = test_line
+                    else:
+                        if current_line.strip():
+                            lines.append(current_line.strip())
+                        current_line = part
+        else:
+            test_line = current_line + (" " if current_line else "") + word
+            if font.size(test_line)[0] <= max_width:
+                current_line = test_line
+            else:
+                if current_line.strip():
+                    lines.append(current_line.strip())
+                current_line = word
+    
+    if current_line.strip():
+        lines.append(current_line.strip())
+    
+    return lines
+
+
 class UIState(Enum):
     """UI状態"""
     HIDDEN = "hidden"
@@ -227,17 +265,32 @@ class UIButton(UIElement):
                         except:
                             return  # フォントが取得できない場合は描画しない
             
-            # テキストをレンダリング
+            # テキストをレンダリング（折り返し対応）
             try:
-                text_surface = use_font.render(self.text, True, self.text_color)
-                text_rect = text_surface.get_rect(center=self.rect.center)
-                screen.blit(text_surface, text_rect)
+                # ボタン内でのテキスト幅制限（マージンを考慮）
+                max_text_width = self.rect.width - 20
+                
+                # テキストを折り返し
+                wrapped_lines = wrap_text(self.text, use_font, max_text_width)
+                
+                # 複数行テキストの描画
+                line_height = use_font.get_height()
+                total_height = len(wrapped_lines) * line_height
+                start_y = self.rect.centery - total_height // 2
+                
+                for i, line in enumerate(wrapped_lines):
+                    text_surface = use_font.render(line, True, self.text_color)
+                    text_rect = text_surface.get_rect()
+                    text_rect.centerx = self.rect.centerx
+                    text_rect.y = start_y + i * line_height
+                    screen.blit(text_surface, text_rect)
+                    
             except Exception as e:
                 logger.warning(f"ボタンテキストレンダリングエラー: {e}")
                 # フォールバック：システムフォント使用
                 try:
-                    fallback_font = pygame.font.Font(None, 24)
-                    text_surface = fallback_font.render(self.text, True, self.text_color)
+                    fallback_font = pygame.font.Font(None, 20)
+                    text_surface = fallback_font.render(self.text[:20] + "..." if len(self.text) > 20 else self.text, True, self.text_color)
                     text_rect = text_surface.get_rect(center=self.rect.center)
                     screen.blit(text_surface, text_rect)
                 except:
@@ -445,21 +498,37 @@ class UIDialog(UIMenu):
                 except Exception as e:
                     logger.warning(f"ダイアログタイトル描画エラー: {e}")
             
-            # メッセージ描画（日本語対応）
+            # メッセージ描画（日本語対応・折り返し対応）
             if self.message:
-                message_lines = self.message.split('\n')
+                # ダイアログ内でのテキスト幅制限（マージンを考慮）
+                max_text_width = self.rect.width - 40
+                
+                # 既存の改行を考慮しつつ、各行を折り返し
+                original_lines = self.message.split('\n')
+                all_wrapped_lines = []
+                
+                for original_line in original_lines:
+                    if original_line.strip():  # 空行でない場合
+                        wrapped_lines = wrap_text(original_line, use_font, max_text_width)
+                        all_wrapped_lines.extend(wrapped_lines)
+                    else:  # 空行の場合
+                        all_wrapped_lines.append("")
+                
                 y_offset = self.rect.y + 50
-                for line in message_lines:
+                line_height = use_font.get_height() + 3
+                
+                for line in all_wrapped_lines:
                     try:
-                        message_surface = use_font.render(line, True, self.message_color)
-                        message_rect = message_surface.get_rect()
-                        message_rect.centerx = self.rect.centerx
-                        message_rect.y = y_offset
-                        screen.blit(message_surface, message_rect)
-                        y_offset += use_font.get_height() + 5
+                        if line.strip():  # 空行でない場合
+                            message_surface = use_font.render(line, True, self.message_color)
+                            message_rect = message_surface.get_rect()
+                            message_rect.centerx = self.rect.centerx
+                            message_rect.y = y_offset
+                            screen.blit(message_surface, message_rect)
+                        y_offset += line_height
                     except Exception as e:
                         logger.warning(f"メッセージ描画エラー: {e}")
-                        y_offset += 25  # フォールバック行高
+                        y_offset += line_height  # フォールバック行高
         
         # 各要素を描画
         for element in self.elements:
