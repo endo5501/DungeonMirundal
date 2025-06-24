@@ -262,7 +262,7 @@ class Temple(BaseFacility):
                     },
                     {
                         'text': "戻る",
-                        'command': self._close_dialog
+                        'command': self._back_to_main_menu_from_blessing_dialog
                     }
                 ]
             )
@@ -274,7 +274,7 @@ class Temple(BaseFacility):
                 buttons=[
                     {
                         'text': "戻る",
-                        'command': self._close_dialog
+                        'command': self._back_to_main_menu_from_blessing_dialog
                     }
                 ]
             )
@@ -450,7 +450,7 @@ class Temple(BaseFacility):
                     },
                     {
                         'text': "戻る",
-                        'command': self._close_dialog
+                        'command': self._back_to_main_menu_from_prayerbook_dialog
                     }
                 ]
             )
@@ -464,7 +464,7 @@ class Temple(BaseFacility):
                 buttons=[
                     {
                         'text': "戻る",
-                        'command': self._close_dialog
+                        'command': self._back_to_main_menu_from_prayerbook_dialog
                     }
                 ]
             )
@@ -541,7 +541,7 @@ class Temple(BaseFacility):
             buttons=[
                 {
                     'text': config_manager.get_text("menu.back"),
-                    'command': self._close_dialog
+                    'command': self._back_to_main_menu_from_priest_dialog
                 }
             ]
         )
@@ -807,3 +807,27 @@ class Temple(BaseFacility):
         }
         
         return cost_map.get(effect_type, 100)
+    
+    def _back_to_main_menu_from_blessing_dialog(self):
+        """祝福ダイアログからメインメニューに戻る"""
+        self._close_dialog()
+        if self.main_menu:
+            ui_mgr = self._get_effective_ui_manager()
+            if ui_mgr:
+                ui_mgr.show_menu(self.main_menu.menu_id, modal=True)
+    
+    def _back_to_main_menu_from_priest_dialog(self):
+        """神父会話ダイアログからメインメニューに戻る"""
+        self._close_dialog()
+        if self.main_menu:
+            ui_mgr = self._get_effective_ui_manager()
+            if ui_mgr:
+                ui_mgr.show_menu(self.main_menu.menu_id, modal=True)
+    
+    def _back_to_main_menu_from_prayerbook_dialog(self):
+        """祈祷書ダイアログからメインメニューに戻る"""
+        self._close_dialog()
+        if self.main_menu:
+            ui_mgr = self._get_effective_ui_manager()
+            if ui_mgr:
+                ui_mgr.show_menu(self.main_menu.menu_id, modal=True)

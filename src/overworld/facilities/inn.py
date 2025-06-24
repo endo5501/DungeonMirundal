@@ -131,7 +131,7 @@ class Inn(BaseFacility):
                 buttons=[
                     {
                         'text': config_manager.get_text("common.back"),
-                        'command': self._close_dialog
+                        'command': self._back_to_main_menu_from_innkeeper_dialog
                     }
                 ],
                 width=550,  # 主人との会話内容表示に適切な幅
@@ -163,7 +163,7 @@ class Inn(BaseFacility):
                 buttons=[
                     {
                         'text': config_manager.get_text("common.back"),
-                        'command': self._close_dialog
+                        'command': self._back_to_main_menu_from_travel_info_dialog
                     }
                 ]
             )
@@ -219,7 +219,7 @@ class Inn(BaseFacility):
                 buttons=[
                     {
                         'text': config_manager.get_text("common.back"),
-                        'command': self._close_dialog
+                        'command': self._back_to_main_menu_from_tavern_rumors_dialog
                     }
                 ]
             )
@@ -448,7 +448,7 @@ class Inn(BaseFacility):
                 buttons=[
                     {
                         'text': "戻る",
-                        'command': self._close_dialog
+                        'command': self._back_to_item_organization_from_storage_dialog
                     }
                 ]
             )
@@ -522,7 +522,7 @@ class Inn(BaseFacility):
             buttons=[
                 {
                     'text': "戻る",
-                    'command': self._close_dialog
+                    'command': self._back_to_storage_list_from_item_details
                 }
             ]
         )
@@ -2088,3 +2088,38 @@ class Inn(BaseFacility):
             ui_mgr = self._get_effective_ui_manager()
             if ui_mgr:
                 ui_mgr.show_menu(self.main_menu.menu_id)
+    
+    def _back_to_main_menu_from_innkeeper_dialog(self):
+        """宿屋主人会話ダイアログからメインメニューに戻る"""
+        self._close_dialog()
+        if self.main_menu:
+            ui_mgr = self._get_effective_ui_manager()
+            if ui_mgr:
+                ui_mgr.show_menu(self.main_menu.menu_id, modal=True)
+    
+    def _back_to_main_menu_from_travel_info_dialog(self):
+        """旅の情報ダイアログからメインメニューに戻る"""
+        self._close_dialog()
+        if self.main_menu:
+            ui_mgr = self._get_effective_ui_manager()
+            if ui_mgr:
+                ui_mgr.show_menu(self.main_menu.menu_id, modal=True)
+    
+    def _back_to_main_menu_from_tavern_rumors_dialog(self):
+        """酒場の噂話ダイアログからメインメニューに戻る"""
+        self._close_dialog()
+        if self.main_menu:
+            ui_mgr = self._get_effective_ui_manager()
+            if ui_mgr:
+                ui_mgr.show_menu(self.main_menu.menu_id, modal=True)
+    
+    def _back_to_item_organization_from_storage_dialog(self):
+        """倉庫状況ダイアログからアイテム整理メニューに戻る"""
+        self._close_dialog()
+        self._show_item_organization()
+    
+    def _back_to_storage_list_from_item_details(self):
+        """アイテム詳細ダイアログから倉庫リストに戻る"""
+        self._close_dialog()
+        # 倉庫一覧を再表示
+        self._show_inn_storage_status()

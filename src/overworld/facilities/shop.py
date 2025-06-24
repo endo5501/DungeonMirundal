@@ -609,6 +609,9 @@ class Shop(BaseFacility):
         details += f"{config_manager.get_text('shop.sell.after_sell_label')}: {self.current_party.gold + (sell_price * item_instance.quantity)}G\\n"
         details += f"\\n売却しますか？"
         
+        # コンテキストを保存（戻るボタン用）
+        self._current_character_for_sell = character
+        
         self._show_dialog(
             "character_item_sell_confirm_dialog",
             f"{item.get_name()}の売却確認",
@@ -620,7 +623,7 @@ class Shop(BaseFacility):
                 },
                 {
                     'text': config_manager.get_text("menu.back"),
-                    'command': self._close_dialog
+                    'command': self._back_to_character_sell_list_from_confirmation
                 }
             ]
         )
@@ -652,7 +655,7 @@ class Shop(BaseFacility):
                 },
                 {
                     'text': config_manager.get_text("menu.back"),
-                    'command': self._close_dialog
+                    'command': self._back_to_storage_sell_list_from_confirmation
                 }
             ]
         )
@@ -931,7 +934,7 @@ class Shop(BaseFacility):
                     },
                     {
                         'text': config_manager.get_text("menu.back"),
-                        'command': self._close_dialog
+                        'command': self._back_to_sell_menu_from_confirmation
                     }
                 ]
             )
@@ -996,3 +999,22 @@ class Shop(BaseFacility):
             if item:
                 items.append(item)
         return items
+    
+    def _back_to_character_sell_list_from_confirmation(self):
+        """キャラクター売却確認ダイアログから売却リストに戻る"""
+        self._close_dialog()
+        # キャラクター売却リストを再表示
+        # 注意: この関数は現在のコンテキストに依存する
+        if hasattr(self, '_current_character_for_sell') and self._current_character_for_sell:
+            self._show_character_sellable_items_list(self._current_character_for_sell)
+    
+    def _back_to_storage_sell_list_from_confirmation(self):
+        """宿屋倉庫売却確認ダイアログから売却リストに戻る"""
+        self._close_dialog()
+        # 宿屋倉庫売却リストを再表示
+        self._show_storage_sellable_items_list()
+    
+    def _back_to_sell_menu_from_confirmation(self):
+        """売却確認ダイアログから売却メニューに戻る（旧システム用）"""
+        self._close_dialog()
+        self._show_sell_menu()

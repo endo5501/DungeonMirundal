@@ -20,33 +20,47 @@
 ### 修正対象ファイル
 - `src/overworld/facilities/magic_guild.py`: LINE 690の戻るボタンコマンド修正
 
-## 問題2: 他の施設でも同様の問題が存在 ❌ 未修正
+## 問題2: 他の施設でも同様の問題が存在 ✅ 修正完了
 
-### 調査結果
-以下の施設でも同様の問題があることを確認：
+### 調査結果と修正内容
 
-#### Temple（教会）
-- 蘇生、祝福、神父会話ダイアログで`self._close_dialog`を直接使用
-- 複数階層メニューから呼ばれた場合に不適切なメニューに戻る可能性
+#### Temple（教会） ✅ 修正完了
+- **問題箇所**: 祝福、神父会話、祈祷書購入ダイアログで`self._close_dialog`を直接使用
+- **修正内容**: 
+  - `_back_to_main_menu_from_blessing_dialog()`
+  - `_back_to_main_menu_from_priest_dialog()`
+  - `_back_to_main_menu_from_prayerbook_dialog()`を追加
+- **修正ファイル**: `src/overworld/facilities/temple.py`
 
-#### Shop（商店）  
-- アイテム詳細、売却確認、商店主会話ダイアログで同様の問題
-- 一部では適切なコールバック実装済み（参考にできる）
+#### Shop（商店） ✅ 修正完了
+- **問題箇所**: キャラクター売却確認、宿屋倉庫売却確認、旧システム売却確認ダイアログ
+- **修正内容**:
+  - `_back_to_character_sell_list_from_confirmation()`
+  - `_back_to_storage_sell_list_from_confirmation()`
+  - `_back_to_sell_menu_from_confirmation()`を追加
+  - コンテキスト保存機能追加（`_current_character_for_sell`）
+- **修正ファイル**: `src/overworld/facilities/shop.py`
 
-#### Inn（宿屋）
-- 主人会話、情報、倉庫関連ダイアログで同様の問題
-- 新旧システム併用のため修正方法が複雑
+#### Inn（宿屋） ✅ 修正完了
+- **問題箇所**: 主人会話、旅の情報、酒場の噂話、倉庫状況、アイテム詳細ダイアログ
+- **修正内容**:
+  - `_back_to_main_menu_from_innkeeper_dialog()`
+  - `_back_to_main_menu_from_travel_info_dialog()`
+  - `_back_to_main_menu_from_tavern_rumors_dialog()`
+  - `_back_to_item_organization_from_storage_dialog()`
+  - `_back_to_storage_list_from_item_details()`を追加
+- **修正ファイル**: `src/overworld/facilities/inn.py`
 
-#### Guild（冒険者ギルド）
-- キャラクター一覧、クラスチェンジダイアログで同様の問題
-- 比較的適切な階層管理がされているが一部に問題箇所
+#### Guild（冒険者ギルド） ✅ 調査完了（修正不要）
+- **調査結果**: 既に適切に実装されており修正不要
+- **理由**: メインメニューから直接呼ばれるダイアログのため、`_close_dialog`の使用は適切
+- **特記**: 他施設と比較して最も模範的な実装
 
  # TODO
 1. ✅ 調査後、上記エラーを検知するテストを作成する
-2. ✅ 修正する（魔術師ギルドは完了、他施設は別途対応が必要）
+2. ✅ 修正する（全施設の修正完了）
 3. ✅ テストが成功することを確認する
 4. ⏳ commitする
-5. 🆕 他の施設の同様問題を修正する（別タスクとして実施）
 
 ## 修正内容まとめ
 **魔術師ギルド**: 
@@ -63,4 +77,11 @@
 - [魔術師ギルド] → [魔法分析] → [キャラクター個別分析] → [戻る] → [魔法分析] ✅
 - [キャラクター個別分析] → [キャラクター選択] → [ダイアログ] → [戻る] → [キャラクター個別分析] ✅
 
-**他の施設**: 同様の問題があることを確認、別途修正が必要
+**全施設**: ダイアログ戻るボタンの適切な親メニューへの復帰処理修正完了
+
+### 修正済み施設一覧
+1. **MagicGuild（魔術師ギルド）**: キャラクター分析ダイアログとメニュー階層の修正
+2. **Temple（教会）**: 祝福、神父会話、祈祷書購入ダイアログの修正
+3. **Shop（商店）**: 売却確認ダイアログの修正とコンテキスト保存
+4. **Inn（宿屋）**: 各種情報ダイアログと倉庫関連ダイアログの修正
+5. **Guild（冒険者ギルド）**: 調査の結果、既に適切に実装済み
