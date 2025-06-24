@@ -46,6 +46,7 @@ class CustomSelectionList:
         # データ管理
         self.items: List[SelectionListData] = items or []
         self.selected_items: List[SelectionListData] = []
+        self.current_selected_index: Optional[int] = None
         
         # UI要素
         self.panel: Optional[UIPanel] = None
@@ -139,7 +140,7 @@ class CustomSelectionList:
     def add_item(self, item: SelectionListData):
         """項目を追加"""
         self.items.append(item)
-        logger.debug(f"UISelectionListに項目追加: {item.display_text}")
+        logger.debug(f"UISelectionListに項目追加: {item.display_text}, callback={item.callback}")
         self._refresh_list()
     
     def remove_item(self, item: SelectionListData):
@@ -173,6 +174,7 @@ class CustomSelectionList:
             selected_indices = self.selection_list.get_multi_selection()
         else:
             single_index = self.selection_list.get_single_selection()
+            logger.debug(f"get_single_selection結果: {single_index}")
             selected_indices = [single_index] if single_index is not None else []
         
         for index in selected_indices:
@@ -183,8 +185,13 @@ class CustomSelectionList:
     
     def get_selected_item(self) -> Optional[SelectionListData]:
         """選択された単一項目を取得"""
-        selected_items = self.get_selected_items()
-        return selected_items[0] if selected_items else None
+        if self.current_selected_index is not None and 0 <= self.current_selected_index < len(self.items):
+            selected_item = self.items[self.current_selected_index]
+            logger.debug(f"選択されたアイテム: {selected_item.display_text}")
+            return selected_item
+        else:
+            logger.debug("選択されたアイテムなし")
+            return None
     
     def handle_event(self, event: pygame.event.Event) -> bool:
         """イベント処理"""
@@ -194,7 +201,43 @@ class CustomSelectionList:
         # UIイベント処理
         if event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
             if event.ui_element == self.selection_list:
-                self.selected_items = self.get_selected_items()
+                # pygame_guiの選択インデックスを直接取得
+                selected_index = self.selection_list.get_single_selection()
+                logger.debug(f"選択イベント - インデックス: {selected_index}")
+                
+                if selected_index is not None:
+                    # pygame_guiは選択されたテキストを返すので、インデックスを逆引き
+                    if isinstance(selected_index, str):
+                        # テキストからインデックスを検索
+                        for i, item in enumerate(self.items):
+                            if item.display_text == selected_index:
+                                self.current_selected_index = i
+                                self.selected_items = [item]
+                                logger.debug(f"選択されたアイテム: {item.display_text} (インデックス: {i})")
+                                break
+                        else:
+                            logger.warning(f"選択されたテキストに対応するアイテムが見つかりません: {selected_index}")
+                            self.current_selected_index = None
+                            self.selected_items = []
+                    else:
+                        # 整数インデックスの場合
+                        try:
+                            index = int(selected_index)
+                            if 0 <= index < len(self.items):
+                                self.current_selected_index = index
+                                self.selected_items = [self.items[index]]
+                                logger.debug(f"選択されたアイテム: {self.items[index].display_text}")
+                            else:
+                                self.current_selected_index = None
+                                self.selected_items = []
+                        except (ValueError, TypeError):
+                            logger.warning(f"無効な選択インデックス: {selected_index}")
+                            self.current_selected_index = None
+                            self.selected_items = []
+                else:
+                    self.current_selected_index = None
+                    self.selected_items = []
+                
                 if self.on_selection_changed:
                     self.on_selection_changed(self.selected_items)
                 return True
@@ -202,8 +245,13 @@ class CustomSelectionList:
         elif event.type == pygame_gui.UI_SELECTION_LIST_DOUBLE_CLICKED_SELECTION:
             if event.ui_element == self.selection_list:
                 selected_item = self.get_selected_item()
+                logger.debug(f"ダブルクリック選択: {selected_item}")
                 if selected_item and self.on_double_click:
                     self.on_double_click(selected_item)
+                elif selected_item and selected_item.callback:
+                    # ダブルクリックでもコールバックを実行
+                    logger.info(f"ダブルクリックでコールバックを実行: {selected_item.display_text}")
+                    selected_item.callback()
                 return True
         
         elif event.type == pygame_gui.UI_BUTTON_PRESSED:
@@ -212,8 +260,16 @@ class CustomSelectionList:
                 button_text = event.ui_element.text
                 if button_text == "選択":
                     selected_item = self.get_selected_item()
-                    if selected_item and selected_item.callback:
-                        selected_item.callback()
+                    logger.debug(f"選択ボタンが押されました。選択アイテム: {selected_item}")
+                    if selected_item:
+                        logger.debug(f"選択アイテムのコールバック: {selected_item.callback}")
+                        if selected_item.callback:
+                            logger.info(f"コールバックを実行します: {selected_item.display_text}")
+                            selected_item.callback()
+                        else:
+                            logger.warning(f"選択アイテムにコールバックがありません: {selected_item.display_text}")
+                    else:
+                        logger.warning("選択されたアイテムがありません")
                     return True
                 elif button_text == "戻る":
                     self.kill()  # hideではなくkillで完全に破棄

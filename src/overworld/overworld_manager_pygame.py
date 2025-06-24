@@ -182,7 +182,7 @@ class OverworldManager:
         self._show_dungeon_selection_menu()
     
     def _show_dungeon_selection_menu(self):
-        """ダンジョン選択画面をUISelectionListで表示"""
+        """ダンジョン選択画面を表示"""
         logger.info("ダンジョン選択画面を表示します")
         
         if not self.ui_manager:
@@ -202,7 +202,7 @@ class OverworldManager:
             title="ダンジョン選択"
         )
         
-        # ダンジョン一覧を追加
+        # 生成済みダンジョン一覧のみを追加
         available_dungeons = self._get_available_dungeons()
         logger.info(f"取得したダンジョン数: {len(available_dungeons)}")
         
@@ -210,40 +210,32 @@ class OverworldManager:
             for dungeon in available_dungeons:
                 dungeon_info = self._format_dungeon_info(dungeon)
                 logger.info(f"ダンジョン追加: {dungeon_info}")
+                def create_callback(dungeon_id):
+                    def callback():
+                        logger.debug(f"ダンジョンコールバックが呼ばれました: {dungeon_id}")
+                        self._enter_selected_dungeon(dungeon_id)
+                    return callback
+                
                 dungeon_data = SelectionListData(
                     display_text=dungeon_info,
                     data=dungeon,
-                    callback=lambda d=dungeon: self._enter_selected_dungeon(d['id'])
+                    callback=create_callback(dungeon['id'])
                 )
                 self.dungeon_selection_list.add_item(dungeon_data)
-        
-        # 管理機能を追加
-        new_dungeon_data = SelectionListData(
-            display_text="🆕 ダンジョン新規生成",
-            data=None,
-            callback=self._generate_new_dungeon
-        )
-        self.dungeon_selection_list.add_item(new_dungeon_data)
-        
-        if available_dungeons:
-            delete_dungeon_data = SelectionListData(
-                display_text="🗑 ダンジョン破棄",
+        else:
+            # ダンジョンがない場合のメッセージ
+            no_dungeon_data = SelectionListData(
+                display_text="生成されたダンジョンがありません",
                 data=None,
-                callback=self._show_dungeon_deletion_menu
+                callback=None
             )
-            self.dungeon_selection_list.add_item(delete_dungeon_data)
+            self.dungeon_selection_list.add_item(no_dungeon_data)
         
-        back_data = SelectionListData(
-            display_text="⬅ 戻る",
-            data=None,
-            callback=self._close_dungeon_selection_menu
-        )
-        self.dungeon_selection_list.add_item(back_data)
-        
-        # 表示
+        # 表示（戻るボタンは追加しない）
         self.dungeon_selection_list.show()
         
         logger.info("ダンジョン選択メニューを表示しました")
+    
     
     def _get_available_dungeons(self):
         """利用可能なダンジョン一覧を取得"""
@@ -268,18 +260,29 @@ class OverworldManager:
     def _enter_selected_dungeon(self, dungeon_id):
         """選択されたダンジョンに入場"""
         logger.info(f"ダンジョン {dungeon_id} への入場を実行します")
+        logger.debug(f"enter_dungeon_callback: {self.enter_dungeon_callback}")
+        
         if self.enter_dungeon_callback:
             try:
-                # ダンジョン選択メニューを隠す
-                self.ui_manager.hide_menu("dungeon_selection_menu")
+                # ダンジョン選択リストを適切に非表示にする
+                if hasattr(self, 'dungeon_selection_list') and self.dungeon_selection_list:
+                    logger.debug("ダンジョン選択リストを非表示にします")
+                    self.dungeon_selection_list.hide()
+                    self.dungeon_selection_list.kill()
+                    self.dungeon_selection_list = None
+                
                 self.is_active = False
                 
                 # ダンジョンに遷移
+                logger.info(f"ダンジョン {dungeon_id} への遷移を開始します")
                 self.enter_dungeon_callback(dungeon_id)
             except Exception as e:
-                logger.error(f"ダンジョン入場エラー: {e}")
-                # エラーの場合はメニューを再表示
+                logger.error(f"ダンジョン入場エラー: {e}", exc_info=True)
+                # エラーの場合は状態を復旧してメニューを再表示
+                self.is_active = True
                 self._show_dungeon_selection_menu()
+        else:
+            logger.error("enter_dungeon_callbackが設定されていません")
     
     def _generate_new_dungeon(self):
         """新規ダンジョンを生成"""
@@ -320,15 +323,15 @@ class OverworldManager:
         """ダンジョン生成成功メッセージを表示"""
         # 簡易的な成功表示（実装を簡略化）
         logger.info(f"ダンジョン生成成功: {message}")
-        # メニューを再表示
-        self._show_dungeon_selection_menu()
+        # ダンジョン選択メニューを閉じて地上に戻る
+        self._close_dungeon_selection_menu()
     
     def _close_dungeon_selection_menu(self):
         """ダンジョン選択メニューを閉じて地上メニューに戻る"""
         logger.info("ダンジョン選択メニューを閉じます")
         
         # UISelectionListを非表示にして破棄
-        if self.dungeon_selection_list:
+        if hasattr(self, 'dungeon_selection_list') and self.dungeon_selection_list:
             self.dungeon_selection_list.hide()
             self.dungeon_selection_list.kill()
             self.dungeon_selection_list = None
@@ -336,6 +339,7 @@ class OverworldManager:
         # メインメニューを再表示
         if self.main_menu:
             self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+    
     
     def _on_enter_dungeon_old(self):
         """ダンジョン入場（旧実装）"""
@@ -1025,7 +1029,7 @@ class OverworldManager:
             return False
         
         # UISelectionListのイベント処理
-        if self.dungeon_selection_list:
+        if hasattr(self, 'dungeon_selection_list') and self.dungeon_selection_list:
             if self.dungeon_selection_list.handle_event(event):
                 return True
         
@@ -1040,7 +1044,7 @@ class OverworldManager:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 # ダンジョン選択画面が表示中の場合は閉じる
-                if self.dungeon_selection_list:
+                if hasattr(self, 'dungeon_selection_list') and self.dungeon_selection_list:
                     self._close_dungeon_selection_menu()
                     return True
                 
