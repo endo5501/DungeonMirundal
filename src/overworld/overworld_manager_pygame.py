@@ -6,6 +6,7 @@ from src.character.party import Party
 from src.ui.base_ui_pygame import UIMenu, UIButton, UIText
 from src.ui.selection_list_ui import CustomSelectionList, SelectionListData
 from src.ui.menu_stack_manager import MenuStackManager, MenuType
+from src.ui.character_status_bar import CharacterStatusBar, create_character_status_bar
 from src.utils.logger import logger
 from src.core.config_manager import config_manager
 
@@ -32,6 +33,9 @@ class OverworldManager:
         # MenuStackManager（統一されたメニュー管理）
         self.menu_stack_manager: Optional[MenuStackManager] = None
         
+        # キャラクターステータスバー
+        self.character_status_bar: Optional[CharacterStatusBar] = None
+        
         logger.info("OverworldManager（Pygame版）を初期化しました")
     
     def set_ui_manager(self, ui_manager):
@@ -45,6 +49,9 @@ class OverworldManager:
         self._create_main_menu()
         self._create_settings_menu()
         self.setup_facility_callbacks()
+        
+        # キャラクターステータスバーを初期化
+        self._initialize_character_status_bar()
         
         # FacilityManagerにもUIマネージャーを設定
         from src.overworld.base_facility import facility_manager
@@ -507,6 +514,26 @@ class OverworldManager:
         except:
             pass
     
+    def _initialize_character_status_bar(self):
+        """キャラクターステータスバーを初期化"""
+        try:
+            # 画面サイズを取得（デフォルト値を使用）
+            screen_width = 1024
+            screen_height = 768
+            
+            # キャラクターステータスバーを作成
+            self.character_status_bar = create_character_status_bar(screen_width, screen_height)
+            
+            # 現在のパーティが設定されている場合は設定
+            if self.current_party:
+                self.character_status_bar.set_party(self.current_party)
+            
+            logger.info("キャラクターステータスバーを初期化しました")
+            
+        except Exception as e:
+            logger.error(f"キャラクターステータスバー初期化エラー: {e}")
+            self.character_status_bar = None
+    
     def _on_save_game(self):
         """ゲームを保存 - スロット選択画面を表示"""
         logger.info("ゲーム保存が選択されました")
@@ -840,6 +867,10 @@ class OverworldManager:
             self.current_party = party
             self.is_active = True
             
+            # キャラクターステータスバーにパーティを設定
+            if self.character_status_bar:
+                self.character_status_bar.set_party(party)
+            
             # UIマネージャーが設定されていない場合は後で設定
             if self.ui_manager and not self.main_menu:
                 self._create_main_menu()
@@ -955,6 +986,13 @@ class OverworldManager:
                         info_text = font.render(party_info, True, (200, 200, 200))
                         info_rect = info_text.get_rect(center=(screen.get_width()//2, 120))
                         screen.blit(info_text, info_rect)
+        
+        # キャラクターステータスバーを描画
+        if self.character_status_bar:
+            try:
+                self.character_status_bar.render(screen, font)
+            except Exception as e:
+                logger.warning(f"キャラクターステータスバー描画エラー: {e}")
     
     def _handle_escape_from_menu_stack(self) -> bool:
         """MenuStackManagerからのESCキー処理コールバック"""

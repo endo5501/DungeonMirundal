@@ -49,6 +49,7 @@ class DungeonRendererPygame:
         self.enabled = True
         self.dungeon_manager = None
         self.current_party = None
+        self.dungeon_ui_manager = None
         
         # 疑似3D描画設定
         self.view_mode = ViewMode.FIRST_PERSON
@@ -101,7 +102,22 @@ class DungeonRendererPygame:
     def set_party(self, party: Party):
         """パーティ設定"""
         self.current_party = party
+        
+        # ダンジョンUIマネージャーにもパーティを設定
+        if self.dungeon_ui_manager:
+            self.dungeon_ui_manager.set_party(party)
+        
         logger.info(f"パーティ{party.name}を設定しました")
+    
+    def set_dungeon_ui_manager(self, dungeon_ui_manager):
+        """ダンジョンUIマネージャーを設定"""
+        self.dungeon_ui_manager = dungeon_ui_manager
+        
+        # 現在のパーティが設定されている場合は設定
+        if self.current_party:
+            dungeon_ui_manager.set_party(self.current_party)
+        
+        logger.info("ダンジョンUIマネージャーを設定しました")
     
     def update_ui(self):
         """UI更新（互換性メソッド）"""
@@ -163,6 +179,13 @@ class DungeonRendererPygame:
         help_text = "WASD: Move, Space: Menu, ESC: Return"
         help_surface = font.render(help_text, True, (200, 200, 200))
         self.screen.blit(help_surface, (10, self.screen_height - 30))
+        
+        # キャラクターステータスバーを描画
+        if self.dungeon_ui_manager:
+            try:
+                self.dungeon_ui_manager.render_overlay()
+            except Exception as e:
+                logger.warning(f"ダンジョンオーバーレイUI描画エラー: {e}")
     
     def render_dungeon(self, dungeon_state: DungeonState, force_render: bool = False) -> bool:
         """ダンジョンを描画（Pygame版）"""
@@ -441,6 +464,13 @@ class DungeonRendererPygame:
         except:
             help_surface = self.font_small.render(help_text, True, self.colors['gray'])
             self.screen.blit(help_surface, (10, self.screen_height - 30))
+        
+        # キャラクターステータスバーを描画
+        if self.dungeon_ui_manager:
+            try:
+                self.dungeon_ui_manager.render_overlay()
+            except Exception as e:
+                logger.warning(f"ダンジョンステータスバー描画エラー: {e}")
     
     def ensure_initial_render(self, dungeon_state: DungeonState) -> bool:
         """初期レンダリングを確実に実行"""

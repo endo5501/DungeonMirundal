@@ -5,6 +5,7 @@ from enum import Enum
 import pygame
 
 from src.ui.base_ui_pygame import UIElement, UIButton, UIText, UIMenu, UIState, ui_manager
+from src.ui.character_status_bar import CharacterStatusBar, create_character_status_bar
 from src.character.party import Party
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -45,6 +46,10 @@ class DungeonUIManagerPygame:
         self.is_menu_open = False
         self.current_menu_type = None
         self.current_party = None
+        
+        # キャラクターステータスバー
+        self.character_status_bar: Optional[CharacterStatusBar] = None
+        self._initialize_character_status_bar()
         
         # コールバック
         self.callbacks: Dict[str, Callable] = {}
@@ -100,12 +105,33 @@ class DungeonUIManagerPygame:
     def set_party(self, party: Party):
         """パーティを設定"""
         self.current_party = party
+        
+        # キャラクターステータスバーにパーティを設定
+        if self.character_status_bar:
+            self.character_status_bar.set_party(party)
+        
         logger.info(f"パーティ{party.name}を設定しました")
     
     def set_callback(self, action: str, callback: Callable):
         """コールバックを設定"""
         self.callbacks[action] = callback
         logger.debug(f"コールバックを設定: {action}")
+    
+    def _initialize_character_status_bar(self):
+        """キャラクターステータスバーを初期化"""
+        try:
+            # キャラクターステータスバーを作成
+            self.character_status_bar = create_character_status_bar(self.screen_width, self.screen_height)
+            
+            # 現在のパーティが設定されている場合は設定
+            if self.current_party:
+                self.character_status_bar.set_party(self.current_party)
+            
+            logger.info("ダンジョン用キャラクターステータスバーを初期化しました")
+            
+        except Exception as e:
+            logger.error(f"ダンジョン用キャラクターステータスバー初期化エラー: {e}")
+            self.character_status_bar = None
     
     def toggle_main_menu(self):
         """メインメニューの表示/非表示を切り替え"""
@@ -211,6 +237,15 @@ class DungeonUIManagerPygame:
         for i, help_text in enumerate(help_texts):
             help_surface = self.font_small.render(help_text, True, self.colors['gray'])
             self.screen.blit(help_surface, (self.menu_x + 20, help_y + i * 20))
+    
+    def render_overlay(self):
+        """オーバーレイUI（ステータスバー等）を描画"""
+        # キャラクターステータスバーを描画
+        if self.character_status_bar:
+            try:
+                self.character_status_bar.render(self.screen, self.font_medium)
+            except Exception as e:
+                logger.warning(f"ダンジョン用キャラクターステータスバー描画エラー: {e}")
     
     def update(self):
         """UI更新"""
