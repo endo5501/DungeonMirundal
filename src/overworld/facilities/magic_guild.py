@@ -1,11 +1,13 @@
 """魔術師ギルド"""
 
 from typing import Dict, List, Optional, Any
+import pygame
 from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.party import Party
 from src.character.character import Character
 from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
 from src.ui.base_ui_pygame import UIMenu, UIDialog, ui_manager
+from src.ui.selection_list_ui import ItemSelectionList
 # NOTE: panda3D UI components removed - using pygame-based UI now
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -75,7 +77,7 @@ class MagicGuild(BaseFacility):
         logger.info("魔術師ギルドから出ました")
     
     def _show_spellbook_shop_menu(self):
-        """魔術書購入メニューをpygame UIで表示"""
+        """魔術書購入メニューをリスト型UIで表示"""
         if not self.current_party:
             self._show_error_message("パーティが設定されていません")
             return
@@ -92,26 +94,47 @@ class MagicGuild(BaseFacility):
             self._show_error_message("現在、魔術書の在庫がありません")
             return
         
-        # pygame版では通常のUIMenuを使用
-        spellbook_menu = UIMenu("spellbook_shop_menu", "魔術書購入")
+        # UISelectionListを使用したリスト型UI
+        list_rect = pygame.Rect(100, 100, 600, 500)
         
-        # 魔術書リストを追加
-        for spellbook in all_spellbooks:
-            display_name = f"🔮 {spellbook['name']} - {spellbook['price']}G"
-            spellbook_menu.add_menu_item(
-                display_name,
-                self._show_spellbook_details,
-                [spellbook]
-            )
+        # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
+        if not self._check_pygame_gui_manager():
+            self._show_error_message("魔術書購入メニューの表示に失敗しました。")
+            return
         
-        # 戻るボタン
-        spellbook_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [spellbook_menu]
+        self.spellbook_selection_list = ItemSelectionList(
+            relative_rect=list_rect,
+            manager=ui_manager.pygame_gui_manager,
+            title="魔術書購入"
         )
         
-        self._show_submenu(spellbook_menu)
+        # 魔術書を追加
+        for spellbook in all_spellbooks:
+            display_name = f"🔮 {spellbook['name']} - {spellbook['price']}G"
+            self.spellbook_selection_list.add_item_data(spellbook, display_name)
+        
+        # コールバック設定
+        self.spellbook_selection_list.on_item_selected = self._on_spellbook_selected_for_purchase
+        self.spellbook_selection_list.on_item_details = self._show_spellbook_details_from_dict
+        
+        # 表示
+        self.spellbook_selection_list.show()
+    
+    def _on_spellbook_selected_for_purchase(self, spellbook):
+        """購入用魔術書選択時のコールバック"""
+        self._hide_spellbook_selection_list()
+        self._show_spellbook_details_from_dict(spellbook)
+    
+    def _hide_spellbook_selection_list(self):
+        """魔術書選択リストを非表示"""
+        if hasattr(self, 'spellbook_selection_list') and self.spellbook_selection_list:
+            self.spellbook_selection_list.hide()
+            self.spellbook_selection_list.kill()
+            self.spellbook_selection_list = None
+    
+    def _show_spellbook_details_from_dict(self, spellbook):
+        """辞書形式の魔術書詳細を表示（リストUI用）"""
+        self._show_spellbook_details(spellbook)
     
     def _get_spellbooks_by_category(self, category: str) -> List[Dict[str, Any]]:
         """カテゴリ別の魔術書を取得"""

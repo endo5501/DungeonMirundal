@@ -1,11 +1,13 @@
 """教会"""
 
 from typing import Dict, List, Optional, Any
+import pygame
 from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.party import Party
 from src.character.character import Character, CharacterStatus
 from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
 from src.ui.base_ui_pygame import UIMenu, UIDialog, ui_manager
+from src.ui.selection_list_ui import ItemSelectionList
 # NOTE: panda3D UI components removed - using pygame-based UI now
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -355,7 +357,7 @@ class Temple(BaseFacility):
         logger.info(f"教会寄付: {amount}G by {self.current_party.name}")
     
     def _show_prayerbook_shop(self):
-        """祈祷書購入ショップをpygame UIで表示"""
+        """祈祷書購入ショップをリスト型UIで表示"""
         # 祈祷書（SPELLBOOK）タイプのアイテムを取得
         prayerbook_items = item_manager.get_items_by_type(ItemType.SPELLBOOK)
         
@@ -363,30 +365,47 @@ class Temple(BaseFacility):
             self._show_error_message("現在、祈祷書の在庫がありません")
             return
         
-        self._show_prayerbook_scrolled_list(prayerbook_items)
+        self._show_prayerbook_list_ui(prayerbook_items)
     
-    def _show_prayerbook_scrolled_list(self, prayerbook_items: List[Item]):
-        """祈祷書一覧をpygame UIメニューで表示"""
-        # pygame版では通常のUIMenuを使用
-        prayerbook_menu = UIMenu("prayerbook_shop_menu", "祈祷書購入")
+    def _show_prayerbook_list_ui(self, prayerbook_items: List[Item]):
+        """祈祷書一覧をリスト型UIで表示"""
+        # UISelectionListを使用したリスト型UI
+        list_rect = pygame.Rect(100, 100, 600, 500)
         
-        # 祈祷書リストを追加
-        for item in prayerbook_items:
-            display_name = f"📜 {item.get_name()} - {item.price}G"
-            prayerbook_menu.add_menu_item(
-                display_name,
-                self._show_prayerbook_details,
-                [item]
-            )
+        # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
+        if not self._check_pygame_gui_manager():
+            self._show_error_message("祈祷書購入メニューの表示に失敗しました。")
+            return
         
-        # 戻るボタン
-        prayerbook_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [prayerbook_menu]
+        self.prayerbook_selection_list = ItemSelectionList(
+            relative_rect=list_rect,
+            manager=ui_manager.pygame_gui_manager,
+            title="祈祷書購入"
         )
         
-        self._show_submenu(prayerbook_menu)
+        # 祈祷書を追加
+        for item in prayerbook_items:
+            display_name = f"📜 {item.get_name()} - {item.price}G"
+            self.prayerbook_selection_list.add_item_data(item, display_name)
+        
+        # コールバック設定
+        self.prayerbook_selection_list.on_item_selected = self._on_prayerbook_selected_for_purchase
+        self.prayerbook_selection_list.on_item_details = self._show_prayerbook_details
+        
+        # 表示
+        self.prayerbook_selection_list.show()
+    
+    def _on_prayerbook_selected_for_purchase(self, item):
+        """購入用祈祷書選択時のコールバック"""
+        self._hide_prayerbook_selection_list()
+        self._show_prayerbook_details(item)
+    
+    def _hide_prayerbook_selection_list(self):
+        """祈祷書選択リストを非表示"""
+        if hasattr(self, 'prayerbook_selection_list') and self.prayerbook_selection_list:
+            self.prayerbook_selection_list.hide()
+            self.prayerbook_selection_list.kill()
+            self.prayerbook_selection_list = None
     
     def _cleanup_temple_ui(self):
         """教会UIのクリーンアップ（pygame版では不要）"""

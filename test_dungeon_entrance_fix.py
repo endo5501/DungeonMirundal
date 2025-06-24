@@ -50,7 +50,7 @@ class TestDungeonEntranceFix:
         
         with patch.object(self.overworld_manager, '_get_available_dungeons', return_value=mock_dungeons):
             # ダンジョン選択画面を表示
-            self.overworld_manager._show_pure_dungeon_selection_menu()
+            self.overworld_manager._show_dungeon_selection_menu()
             
             # CustomSelectionListが作成されることを確認
             assert hasattr(self.overworld_manager, 'dungeon_selection_list')
