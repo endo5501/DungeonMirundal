@@ -591,6 +591,7 @@ class MagicGuild(BaseFacility):
     
     def _show_character_analysis_menu(self):
         """キャラクター個別分析メニュー"""
+        logger.debug("キャラクター個別分析メニューを表示します")
         if not self.current_party:
             return
         
@@ -604,9 +605,12 @@ class MagicGuild(BaseFacility):
                 [character]
             )
         
+        # Store the character analysis menu for later reference
+        self.character_analysis_menu = char_menu
+        
         char_menu.add_menu_item(
             config_manager.get_text("menu.back"),
-            self._show_analysis_menu
+            self._back_to_analysis_menu_from_character_analysis
         )
         
         self._show_submenu(char_menu)
@@ -687,10 +691,22 @@ class MagicGuild(BaseFacility):
             buttons=[
                 {
                     'text': config_manager.get_text("menu.back"),
-                    'command': self._show_character_analysis_menu
+                    'command': self._close_dialog_and_return_to_character_analysis
                 }
             ]
         )
+    
+    def _close_dialog_and_return_to_character_analysis(self):
+        """ダイアログを閉じてキャラクター個別分析メニューに戻る"""
+        self._close_dialog()
+        self._show_character_analysis_menu()
+    
+    def _back_to_analysis_menu_from_character_analysis(self):
+        """キャラクター個別分析メニューから魔法分析メニューに戻る"""
+        logger.debug("キャラクター個別分析メニューから魔法分析メニューに戻ります")
+        if hasattr(self, 'character_analysis_menu') and self.character_analysis_menu:
+            self._back_to_main_menu_from_submenu(self.character_analysis_menu)
+        self._show_analysis_menu()
     
     def _show_spell_usage_info(self):
         """魔法使用回数情報表示"""
