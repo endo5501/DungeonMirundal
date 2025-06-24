@@ -117,7 +117,7 @@ class TestInnTavernRumorsFix:
             assert call_args[1]['buttons']  # ボタンがある
             assert len(call_args[1]['buttons']) == 1  # 戻るボタンが1つ
             assert call_args[1]['buttons'][0]['text'] == "戻る"
-            assert call_args[1]['buttons'][0]['command'] == self.inn._close_dialog
+            assert call_args[1]['buttons'][0]['command'] == self.inn._back_to_main_menu_from_tavern_rumors_dialog
     
     def test_close_dialog_restores_main_menu(self):
         """_close_dialogがメインメニューを正しく復元することをテスト"""
