@@ -202,6 +202,9 @@ class OverworldManager:
             title="ダンジョン選択"
         )
         
+        # 戻るコールバックを設定
+        self.dungeon_selection_list.on_back = self._close_dungeon_selection_menu
+        
         # 生成済みダンジョン一覧のみを追加
         available_dungeons = self._get_available_dungeons()
         logger.info(f"取得したダンジョン数: {len(available_dungeons)}")

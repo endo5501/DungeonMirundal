@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Callable, Any, Union
 from enum import Enum
 import pygame
 from src.ui.base_ui_pygame import UIDialog, UIButton, UIElement, ui_manager
+from src.ui.menu_stack_manager import MenuType
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
@@ -434,8 +435,16 @@ class DialogTemplate:
                 logger.error(f"ダイアログクローズコールバックエラー: {e}")
         
         # メニュースタックマネージャーがある場合は前のメニューに戻る
+        # ただし、現在のメニューがDIALOGタイプの場合のみ
         if self.menu_stack_manager:
-            self.menu_stack_manager.back_to_previous()
+            current_entry = self.menu_stack_manager.peek_current_menu()
+            if current_entry and current_entry.menu_type == MenuType.DIALOG:
+                logger.debug(f"ダイアログ {dialog_id} を閉じるため、メニュースタックをpopします")
+                self.menu_stack_manager.back_to_previous()
+            else:
+                logger.debug(f"現在のメニューはダイアログではないため、スタック操作をスキップします: {current_entry}")
+        else:
+            logger.debug("メニュースタックマネージャーがないため、スタック操作をスキップします")
     
     def _handle_dialog_action(self, dialog_id: str, callback: Optional[Callable], 
                             value: Any) -> None:

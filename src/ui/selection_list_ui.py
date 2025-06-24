@@ -57,6 +57,7 @@ class CustomSelectionList:
         # コールバック
         self.on_selection_changed: Optional[Callable[[List[SelectionListData]], None]] = None
         self.on_double_click: Optional[Callable[[SelectionListData], None]] = None
+        self.on_back: Optional[Callable[[], None]] = None  # 戻るボタン用コールバック
         
         self._create_ui()
     
@@ -272,7 +273,13 @@ class CustomSelectionList:
                         logger.warning("選択されたアイテムがありません")
                     return True
                 elif button_text == "戻る":
-                    self.kill()  # hideではなくkillで完全に破棄
+                    # 戻るコールバックがあれば実行
+                    if self.on_back:
+                        logger.debug("戻るコールバックを実行します")
+                        self.on_back()
+                    else:
+                        logger.debug("戻るコールバックが設定されていないため、デフォルト動作を実行")
+                        self.kill()  # デフォルト: 完全に破棄
                     return True
         
         return False

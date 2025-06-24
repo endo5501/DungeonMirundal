@@ -138,8 +138,14 @@ class MenuStackManager:
                 logger.info(f"メニューを戻りました: {self.current_entry.menu.menu_id}")
             else:
                 # スタックが空の場合
-                self.current_entry = None
-                logger.info("メニュースタックが空になりました")
+                # ROOTメニューの場合は消去せず、それ以外の場合のみ消去
+                if popped_entry.menu_type == MenuType.ROOT:
+                    logger.info("ROOTメニューはスタックに残します")
+                    self.current_entry = popped_entry
+                    self._show_current_menu()
+                else:
+                    self.current_entry = None
+                    logger.info("メニュースタックが空になりました")
             
             logger.debug(f"スタックサイズ: {len(self.stack)}")
             
@@ -213,7 +219,7 @@ class MenuStackManager:
                 return False
             
             # 既に施設メインメニューにいる場合
-            if self.current_entry.menu_type == MenuType.FACILITY_MAIN and not self.stack:
+            if self.current_entry.menu_type == MenuType.FACILITY_MAIN:
                 logger.info("既に施設メインメニューにいます")
                 return True
             
