@@ -81,8 +81,8 @@ class TestInnTavernRumorsFix:
                 call_args = self.inn._show_dialog.call_args
                 button_callback = call_args[1]['buttons'][0]['command']
                 
-                # コールバックが self._close_dialog であることを確認
-                assert button_callback == self.inn._close_dialog
+                # 実際のコールバックが _back_to_main_menu_from_tavern_rumors_dialog であることを確認
+                assert button_callback == self.inn._back_to_main_menu_from_tavern_rumors_dialog
     
     def test_travel_info_legacy_system_fix(self):
         """旧システムでの旅の情報ダイアログ修正をテスト"""
@@ -116,8 +116,8 @@ class TestInnTavernRumorsFix:
                 call_args = self.inn._show_dialog.call_args
                 button_callback = call_args[1]['buttons'][0]['command']
                 
-                # コールバックが self._close_dialog であることを確認
-                assert button_callback == self.inn._close_dialog
+                # 実際のコールバックが _back_to_main_menu_from_travel_info_dialog であることを確認
+                assert button_callback == self.inn._back_to_main_menu_from_travel_info_dialog
     
     def test_innkeeper_conversation_legacy_system_fix(self):
         """旧システムでの宿屋の主人会話ダイアログ修正をテスト"""
@@ -156,8 +156,8 @@ class TestInnTavernRumorsFix:
                 call_args = self.inn._show_dialog.call_args
                 button_callback = call_args[1]['buttons'][0]['command']
                 
-                # コールバックが self._close_dialog であることを確認
-                assert button_callback == self.inn._close_dialog
+                # 実際のコールバックが _back_to_main_menu_from_innkeeper_dialog であることを確認
+                assert button_callback == self.inn._back_to_main_menu_from_innkeeper_dialog
     
     def test_new_system_dialog_callbacks(self):
         """新システムでのダイアログコールバックをテスト"""
