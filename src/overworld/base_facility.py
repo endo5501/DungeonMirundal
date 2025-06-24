@@ -208,7 +208,8 @@ class BaseFacility(ABC):
         except Exception as e:
             logger.error(f"UIクリーンアップエラー: {e}")
     
-    def _show_dialog(self, dialog_id: str, title: str, message: str, buttons: List[Dict[str, Any]] = None):
+    def _show_dialog(self, dialog_id: str, title: str, message: str, buttons: List[Dict[str, Any]] = None,
+                     width: int = None, height: int = None):
         """ダイアログの表示"""
         # ui_managerがNoneの場合は安全にスキップ
         if ui_manager is None:
@@ -218,16 +219,38 @@ class BaseFacility(ABC):
         if self.current_dialog:
             ui_manager.hide_dialog(self.current_dialog.dialog_id)
         
-        # UIDialogの代わりにUIDialogを使用するが、引数を修正
-        self.current_dialog = UIDialog(dialog_id, title, message)
+        # テキスト量に応じたデフォルトサイズを設定
+        if width is None:
+            # メッセージの長さに基づいて幅を決定
+            message_length = len(message) if message else 0
+            if message_length > 200:
+                width = 700
+            elif message_length > 100:
+                width = 600
+            else:
+                width = 500
+        
+        if height is None:
+            # メッセージの行数に基づいて高さを決定
+            line_count = message.count('\n') + 1 if message else 1
+            if line_count > 15:
+                height = 500
+            elif line_count > 10:
+                height = 400
+            else:
+                height = max(300, line_count * 25 + 150)  # 基本高さ + テキスト分
+        
+        # UIDialogを適切なサイズで作成
+        self.current_dialog = UIDialog(dialog_id, title, message, width=width, height=height)
         
         # ボタンがある場合は手動で追加
         if buttons:
             for i, button_data in enumerate(buttons):
                 from src.ui.base_ui_pygame import UIButton
-                # ボタンの位置を計算（画面内に収まるように）
-                button_x = 300 + (i * 120)  # 横に並べる
-                button_y = min(600, self.current_dialog.rect.y + self.current_dialog.rect.height + 10)  # 画面内に収める
+                # ボタンの位置を計算（ダイアログの下部に配置）
+                dialog_bottom = self.current_dialog.rect.y + self.current_dialog.rect.height
+                button_x = self.current_dialog.rect.x + self.current_dialog.rect.width - 120 - (i * 130)  # 右から配置
+                button_y = dialog_bottom - 50  # ダイアログの下部余白内に配置
                 
                 button = UIButton(f"{dialog_id}_button_{i}", button_data['text'], 
                                 x=button_x, y=button_y, width=100, height=30)

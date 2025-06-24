@@ -105,7 +105,9 @@ class DungeonRendererPygame:
     
     def update_ui(self):
         """UI更新（互換性メソッド）"""
-        pass
+        # ダンジョンが設定されている場合は再描画を実行
+        if self.dungeon_manager and self.dungeon_manager.current_dungeon:
+            self.ensure_initial_render(self.dungeon_manager.current_dungeon)
     
     def render_dungeon_view(self, player_position: PlayerPosition, level: DungeonLevel) -> bool:
         """ダンジョンビューを描画（GameManagerからの呼び出し用）"""
@@ -512,6 +514,65 @@ class DungeonRendererPygame:
             logger.error(f"入力処理中にエラー: {e}")
         
         return False
+    
+    # GameManagerからの呼び出し用メソッド
+    def _move_forward(self):
+        """前進（GameManagerからの呼び出し用）"""
+        return self.handle_input("move_forward")
+    
+    def _move_backward(self):
+        """後退（GameManagerからの呼び出し用）"""
+        return self.handle_input("move_backward")
+    
+    def _move_left(self):
+        """左移動（GameManagerからの呼び出し用）"""
+        # 左移動は左回転 + 前進 + 右回転として実装
+        self.handle_input("turn_left")
+        result = self.handle_input("move_forward")
+        self.handle_input("turn_right")
+        return result
+    
+    def _move_right(self):
+        """右移動（GameManagerからの呼び出し用）"""
+        # 右移動は右回転 + 前進 + 左回転として実装
+        self.handle_input("turn_right")
+        result = self.handle_input("move_forward")
+        self.handle_input("turn_left")
+        return result
+    
+    def _turn_left(self):
+        """左回転（GameManagerからの呼び出し用）"""
+        return self.handle_input("turn_left")
+    
+    def _turn_right(self):
+        """右回転（GameManagerからの呼び出し用）"""
+        return self.handle_input("turn_right")
+    
+    def _show_menu(self):
+        """メニュー表示（GameManagerからの呼び出し用）"""
+        # TODO: ダンジョン内メニューの実装
+        logger.info("ダンジョン内メニューが呼び出されました")
+        return True
+    
+    def auto_recover(self) -> bool:
+        """自動復旧処理（GameManagerからの呼び出し用）"""
+        logger.info("ダンジョンレンダラーの自動復旧を開始します")
+        try:
+            # ダンジョンマネージャーが設定されている場合は初期描画を実行
+            if self.dungeon_manager and self.dungeon_manager.current_dungeon:
+                success = self.ensure_initial_render(self.dungeon_manager.current_dungeon)
+                if success:
+                    logger.info("ダンジョンレンダラーの自動復旧に成功しました")
+                    return True
+                else:
+                    logger.warning("初期描画に失敗しました")
+                    return False
+            else:
+                logger.warning("ダンジョンマネージャーまたは現在のダンジョンが設定されていません")
+                return False
+        except Exception as e:
+            logger.error(f"自動復旧中にエラー: {e}")
+            return False
     
     def get_debug_info(self) -> dict:
         """デバッグ情報を取得"""

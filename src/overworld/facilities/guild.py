@@ -154,7 +154,9 @@ class AdventurersGuild(BaseFacility):
                     'text': config_manager.get_text("menu.back"),
                     'command': self._close_current_formation_dialog
                 }
-            ]
+            ],
+            width=700,  # パーティ編成表示に十分な幅
+            height=450  # 複数キャラクターの情報表示に十分な高さ
         )
     
     def _close_current_formation_dialog(self):
@@ -431,7 +433,9 @@ class AdventurersGuild(BaseFacility):
                     'text': config_manager.get_text("menu.back"),
                     'command': self._close_dialog
                 }
-            ]
+            ],
+            width=750,  # キャラクター詳細情報表示に十分な幅
+            height=500  # 複数キャラクターのリスト表示に十分な高さ
         )
     
     def _show_class_change(self):

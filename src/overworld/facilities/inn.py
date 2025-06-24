@@ -133,7 +133,9 @@ class Inn(BaseFacility):
                         'text': config_manager.get_text("common.back"),
                         'command': self._close_dialog
                     }
-                ]
+                ],
+                width=550,  # 主人との会話内容表示に適切な幅
+                height=350  # 会話メッセージ表示に適切な高さ
             )
     
     def _show_travel_info(self):

@@ -313,11 +313,11 @@ class Shop(BaseFacility):
     def _format_item_display_name(self, item: Item) -> str:
         """アイテム表示名をフォーマット"""
         category_icon = {
-            ItemType.WEAPON: "⚔",
-            ItemType.ARMOR: "🛡",
-            ItemType.CONSUMABLE: "🧪",
-            ItemType.TOOL: "🔧"
-        }.get(item.item_type, "📦")
+            ItemType.WEAPON: "[W]",      # 武器 (Weapon)
+            ItemType.ARMOR: "[A]",       # 防具 (Armor)
+            ItemType.CONSUMABLE: "[C]",  # 消耗品 (Consumable)
+            ItemType.TOOL: "[T]"         # 道具 (Tool)
+        }.get(item.item_type, "[I]")     # アイテム (Item)
         
         return f"{category_icon} {item.get_name()} - {item.price}G"
     
@@ -732,11 +732,11 @@ class Shop(BaseFacility):
     def _format_sellable_item_display_name(self, item_instance, item: Item) -> str:
         """売却アイテム表示名をフォーマット"""
         category_icon = {
-            ItemType.WEAPON: "⚔",
-            ItemType.ARMOR: "🛡",
-            ItemType.CONSUMABLE: "🧪",
-            ItemType.TOOL: "🔧"
-        }.get(item.item_type, "📦")
+            ItemType.WEAPON: "[W]",      # 武器 (Weapon)
+            ItemType.ARMOR: "[A]",       # 防具 (Armor)
+            ItemType.CONSUMABLE: "[C]",  # 消耗品 (Consumable)
+            ItemType.TOOL: "[T]"         # 道具 (Tool)
+        }.get(item.item_type, "[I]")     # アイテム (Item)
         
         # 売却価格を計算（購入価格の50%）
         sell_price = max(1, item.price // 2)
@@ -793,7 +793,9 @@ class Shop(BaseFacility):
                     'text': config_manager.get_text("menu.back"),
                     'command': self._close_dialog
                 }
-            ]
+            ],
+            width=700,  # カテゴリ別在庫リスト表示に十分な幅
+            height=450  # 複数カテゴリの在庫情報表示に十分な高さ
         )
     
     def _talk_to_shopkeeper(self):
@@ -830,7 +832,9 @@ class Shop(BaseFacility):
                     'text': config_manager.get_text("menu.back"),
                     'command': self._close_dialog
                 }
-            ]
+            ],
+            width=550,  # 商店主人との会話内容表示に適切な幅
+            height=350  # 会話メッセージ表示に適切な高さ
         )
     
     def _show_submenu(self, submenu: UIMenu):
