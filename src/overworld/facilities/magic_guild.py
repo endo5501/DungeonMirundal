@@ -687,7 +687,7 @@ class MagicGuild(BaseFacility):
             buttons=[
                 {
                     'text': config_manager.get_text("menu.back"),
-                    'command': self._close_dialog
+                    'command': self._show_character_analysis_menu
                 }
             ]
         )
