@@ -9,6 +9,7 @@ from src.overworld.overworld_manager_pygame import OverworldManager
 from src.dungeon.dungeon_manager import DungeonManager
 from src.character.party import Party
 from src.rendering.dungeon_renderer_pygame import DungeonRendererPygame
+from src.ui.dungeon_ui_pygame import create_pygame_dungeon_ui
 from src.utils.logger import logger
 from src.utils.constants import *
 
@@ -387,6 +388,14 @@ class GameManager:
             # ダンジョンマネージャーを設定
             self.dungeon_renderer.set_dungeon_manager(self.dungeon_manager)
             
+            # ダンジョンUIマネージャーの初期化と設定
+            dungeon_ui_manager = create_pygame_dungeon_ui(self.screen)
+            self.dungeon_renderer.set_dungeon_ui_manager(dungeon_ui_manager)
+            
+            # 現在のパーティが存在する場合は設定
+            if self.current_party:
+                dungeon_ui_manager.set_party(self.current_party)
+            
             if self.dungeon_renderer.enabled:
                 logger.info("ダンジョンレンダラーを初期化しました")
             else:
@@ -410,6 +419,10 @@ class GameManager:
         # ダンジョンレンダラーにもパーティを設定（無効化されていても設定）
         if self.dungeon_renderer:
             self.dungeon_renderer.set_party(party)
+            
+            # ダンジョンUIマネージャーにもパーティを設定
+            if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
+                self.dungeon_renderer.dungeon_ui_manager.set_party(party)
         
         logger.info(f"パーティを設定: {party.name} ({len(party.get_living_characters())}人)")
     
@@ -581,7 +594,8 @@ class GameManager:
                 party_data = save_manager.load_additional_data(slot_id, 'party')
                 if party_data:
                     from src.character.party import Party
-                    self.current_party = Party.from_dict(party_data)
+                    party = Party.from_dict(party_data)
+                    self.set_current_party(party)
             
             # 場所に応じて読み込み
             if location == "overworld":
@@ -780,7 +794,7 @@ class GameManager:
             
             if save_data:
                 # パーティ情報を復元
-                self.current_party = save_data.party
+                self.set_current_party(save_data.party)
                 logger.info(f"パーティを復元しました: {self.current_party.name}")
                 
                 # ゲーム状態を復元

@@ -162,6 +162,9 @@ class CharacterStatusBar(UIElement):
         self.font = None
         self._initialize_font()
         
+        # 自動的に表示状態にする
+        self.show()
+        
         logger.info("CharacterStatusBarを初期化しました")
     
     def _initialize_font(self):
