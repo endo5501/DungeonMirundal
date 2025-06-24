@@ -89,7 +89,7 @@ class TestTextDisplayFixes:
     
     def test_guild_current_formation_dialog_size(self):
         """冒険者ギルドのパーティ編成確認ダイアログのサイズをテスト"""
-        with patch('src.overworld.facilities.guild.ui_manager') as mock_ui_manager:
+        with patch('src.overworld.base_facility.ui_manager') as mock_ui_manager:
             mock_ui_manager.hide_dialog = Mock()
             mock_ui_manager.add_dialog = Mock()
             mock_ui_manager.show_dialog = Mock()
@@ -111,7 +111,7 @@ class TestTextDisplayFixes:
     
     def test_guild_character_list_dialog_size(self):
         """冒険者ギルドのキャラクター一覧ダイアログのサイズをテスト"""
-        with patch('src.overworld.facilities.guild.ui_manager') as mock_ui_manager:
+        with patch('src.overworld.base_facility.ui_manager') as mock_ui_manager:
             mock_ui_manager.hide_dialog = Mock()
             mock_ui_manager.add_dialog = Mock()
             mock_ui_manager.show_dialog = Mock()
@@ -121,7 +121,22 @@ class TestTextDisplayFixes:
             mock_party = Mock(spec=Party)
             mock_party.characters = {}
             self.guild.current_party = mock_party
-            self.guild.created_characters = []
+            
+            # モックキャラクターを作成
+            mock_char = Mock()
+            mock_char.character_id = "test_char_1"
+            mock_char.name = "テストキャラ"
+            mock_char.experience = Mock()
+            mock_char.experience.level = 1
+            mock_char.get_race_name = Mock(return_value="人間")
+            mock_char.get_class_name = Mock(return_value="戦士")
+            mock_char.derived_stats = Mock()
+            mock_char.derived_stats.current_hp = 10
+            mock_char.derived_stats.max_hp = 10
+            mock_char.derived_stats.current_mp = 5
+            mock_char.derived_stats.max_mp = 5
+            
+            self.guild.created_characters = [mock_char]
             
             self.guild._show_character_list()
             
@@ -132,7 +147,7 @@ class TestTextDisplayFixes:
     
     def test_shop_inventory_dialog_size(self):
         """商店の在庫確認ダイアログのサイズをテスト"""
-        with patch('src.overworld.facilities.shop.ui_manager') as mock_ui_manager:
+        with patch('src.overworld.base_facility.ui_manager') as mock_ui_manager:
             mock_ui_manager.hide_dialog = Mock()
             mock_ui_manager.add_dialog = Mock()
             mock_ui_manager.show_dialog = Mock()
@@ -149,7 +164,7 @@ class TestTextDisplayFixes:
     
     def test_inn_innkeeper_dialog_size(self):
         """宿屋の主人との会話ダイアログのサイズをテスト"""
-        with patch('src.overworld.facilities.inn.ui_manager') as mock_ui_manager:
+        with patch('src.overworld.base_facility.ui_manager') as mock_ui_manager:
             mock_ui_manager.hide_dialog = Mock()
             mock_ui_manager.add_dialog = Mock()
             mock_ui_manager.show_dialog = Mock()
@@ -166,7 +181,7 @@ class TestTextDisplayFixes:
     
     def test_shop_shopkeeper_dialog_size(self):
         """商店の主人との会話ダイアログのサイズをテスト"""
-        with patch('src.overworld.facilities.shop.ui_manager') as mock_ui_manager:
+        with patch('src.overworld.base_facility.ui_manager') as mock_ui_manager:
             mock_ui_manager.hide_dialog = Mock()
             mock_ui_manager.add_dialog = Mock()
             mock_ui_manager.show_dialog = Mock()
