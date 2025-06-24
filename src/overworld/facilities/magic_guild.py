@@ -136,6 +136,14 @@ class MagicGuild(BaseFacility):
         """辞書形式の魔術書詳細を表示（リストUI用）"""
         self._show_spellbook_details(spellbook)
     
+    def _handle_ui_selection_events(self, event: pygame.event.Event) -> bool:
+        """UISelectionListのイベント処理をオーバーライド"""
+        # 魔術書購入リスト
+        if hasattr(self, 'spellbook_selection_list') and self.spellbook_selection_list and self.spellbook_selection_list.handle_event(event):
+            return True
+        
+        return False
+    
     def _get_spellbooks_by_category(self, category: str) -> List[Dict[str, Any]]:
         """カテゴリ別の魔術書を取得"""
         if category == 'attack':

@@ -407,6 +407,14 @@ class Temple(BaseFacility):
             self.prayerbook_selection_list.kill()
             self.prayerbook_selection_list = None
     
+    def _handle_ui_selection_events(self, event: pygame.event.Event) -> bool:
+        """UISelectionListのイベント処理をオーバーライド"""
+        # 祈祷書購入リスト
+        if hasattr(self, 'prayerbook_selection_list') and self.prayerbook_selection_list and self.prayerbook_selection_list.handle_event(event):
+            return True
+        
+        return False
+    
     def _cleanup_temple_ui(self):
         """教会UIのクリーンアップ（pygame版では不要）"""
         # pygame版ではUIMenuが自動的に管理されるため、特別なクリーンアップは不要

@@ -148,6 +148,54 @@ class TestSpellBookListUI(unittest.TestCase):
         mock_selection_list.hide.assert_called_once()
         mock_selection_list.kill.assert_called_once()
         assert self.temple.prayerbook_selection_list is None
+    
+    def test_magic_guild_handle_ui_selection_events(self):
+        """魔術ギルドのUIイベント処理のテスト"""
+        # モックの選択リストを作成
+        mock_selection_list = Mock()
+        mock_selection_list.handle_event.return_value = True
+        self.magic_guild.spellbook_selection_list = mock_selection_list
+        
+        # モックイベントを作成
+        mock_event = Mock()
+        
+        # イベント処理を実行
+        result = self.magic_guild._handle_ui_selection_events(mock_event)
+        
+        # handle_eventが呼ばれ、Trueが返されることを確認
+        mock_selection_list.handle_event.assert_called_once_with(mock_event)
+        assert result is True
+    
+    def test_temple_handle_ui_selection_events(self):
+        """神殿のUIイベント処理のテスト"""
+        # モックの選択リストを作成
+        mock_selection_list = Mock()
+        mock_selection_list.handle_event.return_value = True
+        self.temple.prayerbook_selection_list = mock_selection_list
+        
+        # モックイベントを作成
+        mock_event = Mock()
+        
+        # イベント処理を実行
+        result = self.temple._handle_ui_selection_events(mock_event)
+        
+        # handle_eventが呼ばれ、Trueが返されることを確認
+        mock_selection_list.handle_event.assert_called_once_with(mock_event)
+        assert result is True
+    
+    def test_magic_guild_handle_ui_selection_events_no_list(self):
+        """魔術ギルドでリストがない場合のUIイベント処理のテスト"""
+        # 選択リストが存在しない状態
+        self.magic_guild.spellbook_selection_list = None
+        
+        # モックイベントを作成
+        mock_event = Mock()
+        
+        # イベント処理を実行
+        result = self.magic_guild._handle_ui_selection_events(mock_event)
+        
+        # Falseが返されることを確認
+        assert result is False
 
 
 if __name__ == '__main__':
