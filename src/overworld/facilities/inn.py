@@ -52,6 +52,19 @@ class Inn(BaseFacility):
         """全てのUI要素をクリーンアップ"""
         self._hide_storage_view_list()
     
+    def _get_additional_menu_ids(self) -> List[str]:
+        """旧システム用：宿屋で使用される追加のメニューIDリストを返す"""
+        return [
+            "adventure_prep_menu",
+            "new_item_mgmt_menu", 
+            "character_item_menu",
+            "spell_mgmt_menu",
+            "prayer_mgmt_menu",
+            "character_spell_menu",
+            "character_prayer_menu",
+            "party_equipment_menu"
+        ]
+    
     def _handle_ui_selection_events(self, event: pygame.event.Event) -> bool:
         """UISelectionListのイベント処理をオーバーライド"""
         if self.storage_view_list and self.storage_view_list.handle_event(event):

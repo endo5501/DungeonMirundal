@@ -544,11 +544,53 @@ class BaseFacility(ABC):
             logger.error(f"メニュー表示エラー: {e}")
     
     def back_to_previous_menu(self) -> bool:
-        """前のメニューに戻る（新システム）"""
-        if not self.use_new_menu_system or not self.menu_stack_manager:
+        """前のメニューに戻る（新システム対応、旧システムフォールバック）"""
+        if self.use_new_menu_system and self.menu_stack_manager:
+            return self.menu_stack_manager.back_to_previous()
+        else:
+            # 旧システム用のフォールバック処理
+            return self._back_to_main_menu_legacy()
+    
+    def _back_to_main_menu_legacy(self) -> bool:
+        """旧システム用：メインメニューに戻る"""
+        try:
+            # 現在のサブメニューを全て非表示にする
+            possible_menus = [
+                "adventure_prep_menu",
+                "new_item_mgmt_menu", 
+                "character_item_menu",
+                "spell_mgmt_menu",
+                "prayer_mgmt_menu",
+                "character_spell_menu",
+                "character_prayer_menu",
+                "party_equipment_menu",
+                # 施設固有のメニューID（派生クラスでオーバーライド可能）
+                f"{self.facility_id}_submenu"
+            ]
+            
+            # 派生クラスで追加のメニューIDがある場合
+            if hasattr(self, '_get_additional_menu_ids'):
+                possible_menus.extend(self._get_additional_menu_ids())
+            
+            ui_mgr = self._get_effective_ui_manager()
+            if ui_mgr:
+                for menu_id in possible_menus:
+                    try:
+                        ui_mgr.hide_menu(menu_id)
+                    except:
+                        pass  # メニューが存在しない場合は無視
+                
+                # メインメニューを表示
+                if self.main_menu:
+                    ui_mgr.show_menu(self.main_menu.menu_id, modal=True)
+                    logger.info("旧システムでメインメニューに戻りました")
+                    return True
+            
             return False
-        
-        return self.menu_stack_manager.back_to_previous()
+            
+        except Exception as e:
+            logger.error(f"メインメニュー復帰エラー: {e}")
+            return False
     
     def back_to_facility_main(self) -> bool:
         """施設メインメニューに戻る（新システム）"""
