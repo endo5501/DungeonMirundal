@@ -112,8 +112,8 @@ class TestCombatMagicIntegration:
             'target': 'single_ally',
             'mp_cost': 2,
             'effect_type': 'heal',
-            'base_heal': 6,
-            'heal_scaling': 'faith'
+            'base_value': 6,
+            'scaling_stat': 'faith'
         }
         
         action_data = {
@@ -131,6 +131,14 @@ class TestCombatMagicIntegration:
                 target=self.mage,
                 action_data=action_data
             )
+            
+            # デバッグ出力
+            print(f"Result: {result}")
+            print(f"Initial HP: {initial_hp}, Current HP: {self.mage.derived_stats.current_hp}")
+            print(f"Initial MP: {initial_mp}, Current MP: {self.mage.derived_stats.current_mp}")
+            print(f"Spell effect base_value: {test_spell.effect.base_value}")
+            print(f"Spell effect scaling_stat: {test_spell.effect.scaling_stat}")
+            print(f"Mage faith: {self.mage.base_stats.faith}")
             
             # 結果確認
             assert result == CombatResult.CONTINUE
