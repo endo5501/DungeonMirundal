@@ -10,6 +10,13 @@ from src.ui.selection_list_ui import ItemSelectionList, CustomSelectionList, Sel
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
+# 商店施設定数
+ITEM_LIST_RECT_X = 100
+ITEM_LIST_RECT_Y = 100
+ITEM_LIST_RECT_WIDTH = 600
+ITEM_LIST_RECT_HEIGHT_LARGE = 500
+ITEM_LIST_RECT_HEIGHT_SMALL = 400
+
 
 class Shop(BaseFacility):
     """商店"""
@@ -123,7 +130,7 @@ class Shop(BaseFacility):
             return
         
         # UISelectionListを使用
-        list_rect = pygame.Rect(100, 100, 600, 500)
+        list_rect = pygame.Rect(ITEM_LIST_RECT_X, ITEM_LIST_RECT_Y, ITEM_LIST_RECT_WIDTH, ITEM_LIST_RECT_HEIGHT_LARGE)
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
         if not self._check_pygame_gui_manager():
@@ -397,7 +404,7 @@ class Shop(BaseFacility):
         
         # UISelectionListを使用した売却元選択
         import pygame
-        list_rect = pygame.Rect(100, 100, 600, 400)
+        list_rect = pygame.Rect(ITEM_LIST_RECT_X, ITEM_LIST_RECT_Y, ITEM_LIST_RECT_WIDTH, ITEM_LIST_RECT_HEIGHT_SMALL)
         
         from src.ui.selection_list_ui import CustomSelectionList, SelectionListData
         
@@ -451,7 +458,7 @@ class Shop(BaseFacility):
     
     def _show_character_sellable_items_list(self, items, char_name):
         """キャラクター所持アイテム売却メニュー（UISelectionList）"""
-        list_rect = pygame.Rect(100, 100, 600, 500)
+        list_rect = pygame.Rect(ITEM_LIST_RECT_X, ITEM_LIST_RECT_Y, ITEM_LIST_RECT_WIDTH, ITEM_LIST_RECT_HEIGHT_LARGE)
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
         if not self._check_pygame_gui_manager():
@@ -480,7 +487,7 @@ class Shop(BaseFacility):
     
     def _show_storage_sellable_items_list(self, items):
         """宿屋倉庫アイテム売却メニュー（UISelectionList）"""
-        list_rect = pygame.Rect(100, 100, 600, 500)
+        list_rect = pygame.Rect(ITEM_LIST_RECT_X, ITEM_LIST_RECT_Y, ITEM_LIST_RECT_WIDTH, ITEM_LIST_RECT_HEIGHT_LARGE)
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
         if not self._check_pygame_gui_manager():

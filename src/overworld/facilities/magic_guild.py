@@ -12,6 +12,22 @@ from src.ui.selection_list_ui import ItemSelectionList
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
+# 魔術師ギルド定数
+SERVICE_COST_SPELL_LEARNING = 200
+SERVICE_COST_ITEM_IDENTIFICATION = 100
+SERVICE_COST_MAGICAL_ANALYSIS = 300
+SERVICE_COST_ENCHANTMENT = 500
+SERVICE_COST_CURSE_ANALYSIS = 150
+SPELL_LIST_RECT_X = 100
+SPELL_LIST_RECT_Y = 100
+SPELL_LIST_RECT_WIDTH = 600
+SPELL_LIST_RECT_HEIGHT = 500
+
+# 魔術書価格
+SPELLBOOK_PRICE_BASIC = 300
+SPELLBOOK_PRICE_INTERMEDIATE = 500
+SPELLBOOK_PRICE_ADVANCED = 800
+
 
 class MagicGuild(BaseFacility):
     """魔術師ギルド"""
@@ -27,11 +43,11 @@ class MagicGuild(BaseFacility):
         
         # サービス料金
         self.service_costs = {
-            'spell_learning': 200,  # 魔法習得
-            'item_identification': 100,  # アイテム鑑定
-            'magical_analysis': 300,  # 魔法分析
-            'enchantment': 500,  # エンチャント
-            'curse_analysis': 150,  # 呪い分析
+            'spell_learning': SERVICE_COST_SPELL_LEARNING,  # 魔法習得
+            'item_identification': SERVICE_COST_ITEM_IDENTIFICATION,  # アイテム鑑定
+            'magical_analysis': SERVICE_COST_MAGICAL_ANALYSIS,  # 魔法分析
+            'enchantment': SERVICE_COST_ENCHANTMENT,  # エンチャント
+            'curse_analysis': SERVICE_COST_CURSE_ANALYSIS,  # 呪い分析
         }
         
         # 習得可能魔法一覧
@@ -40,8 +56,8 @@ class MagicGuild(BaseFacility):
             'heal': {'name': 'ヒール', 'level': 1, 'cost': 200},
             'cure': {'name': 'キュア', 'level': 1, 'cost': 150},
             'light': {'name': 'ライト', 'level': 1, 'cost': 100},
-            'fireball': {'name': 'ファイアボール', 'level': 3, 'cost': 500},
-            'greater_heal': {'name': 'グレーターヒール', 'level': 3, 'cost': 500},
+            'fireball': {'name': 'ファイアボール', 'level': 3, 'cost': SERVICE_COST_ENCHANTMENT},
+            'greater_heal': {'name': 'グレーターヒール', 'level': 3, 'cost': SERVICE_COST_ENCHANTMENT},
             'teleport': {'name': 'テレポート', 'level': 5, 'cost': 1000},
             'resurrection': {'name': 'リザレクション', 'level': 7, 'cost': 2000}
         }
@@ -95,7 +111,7 @@ class MagicGuild(BaseFacility):
             return
         
         # UISelectionListを使用したリスト型UI
-        list_rect = pygame.Rect(100, 100, 600, 500)
+        list_rect = pygame.Rect(SPELL_LIST_RECT_X, SPELL_LIST_RECT_Y, SPELL_LIST_RECT_WIDTH, SPELL_LIST_RECT_HEIGHT)
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
         if not self._check_pygame_gui_manager():

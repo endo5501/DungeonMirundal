@@ -9,6 +9,13 @@ from src.ui.character_creation import CharacterCreationWizard
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
+# 冒険者ギルド定数
+FORMATION_DIALOG_WIDTH = 700
+FORMATION_DIALOG_HEIGHT = 450
+CHARACTER_LIST_DIALOG_HEIGHT = 500
+CHARACTER_INFO_DIALOG_WIDTH = 500
+CHARACTER_INFO_DIALOG_HEIGHT = 400
+
 
 class AdventurersGuild(BaseFacility):
     """冒険者ギルド"""
@@ -155,8 +162,8 @@ class AdventurersGuild(BaseFacility):
                     'command': self._close_current_formation_dialog
                 }
             ],
-            width=700,  # パーティ編成表示に十分な幅
-            height=450  # 複数キャラクターの情報表示に十分な高さ
+            width=FORMATION_DIALOG_WIDTH,  # パーティ編成表示に十分な幅
+            height=FORMATION_DIALOG_HEIGHT  # 複数キャラクターの情報表示に十分な高さ
         )
     
     def _close_current_formation_dialog(self):
@@ -435,7 +442,7 @@ class AdventurersGuild(BaseFacility):
                 }
             ],
             width=750,  # キャラクター詳細情報表示に十分な幅
-            height=500  # 複数キャラクターのリスト表示に十分な高さ
+            height=CHARACTER_LIST_DIALOG_HEIGHT  # 複数キャラクターのリスト表示に十分な高さ
         )
     
     def _show_class_change(self):
@@ -574,8 +581,8 @@ class AdventurersGuild(BaseFacility):
             "クラスチェンジ確認",
             confirm_text,
             buttons=buttons,
-            width=500,
-            height=400
+            width=CHARACTER_INFO_DIALOG_WIDTH,
+            height=CHARACTER_INFO_DIALOG_HEIGHT
         )
     
     def _execute_class_change(self, character: Character, target_class: str):

@@ -12,6 +12,20 @@ from src.ui.selection_list_ui import ItemSelectionList
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
+# 教会施設定数
+SERVICE_COST_RESURRECTION = 500
+SERVICE_COST_ASH_RESTORATION = 1000
+SERVICE_COST_BLESSING = 100
+SERVICE_COST_CURSE_REMOVAL = 200
+SERVICE_COST_POISON_CURE = 50
+SERVICE_COST_PARALYSIS_CURE = 80
+SERVICE_COST_SLEEP_CURE = 30
+SERVICE_COST_ALL_STATUS_CURE = 150
+SERVICE_LIST_RECT_X = 100
+SERVICE_LIST_RECT_Y = 100
+SERVICE_LIST_RECT_WIDTH = 600
+SERVICE_LIST_RECT_HEIGHT = 500
+
 
 class Temple(BaseFacility):
     """教会"""
@@ -25,14 +39,14 @@ class Temple(BaseFacility):
         
         # サービス料金
         self.service_costs = {
-            'resurrection': 500,  # 蘇生
-            'ash_restoration': 1000,  # 灰化回復
-            'blessing': 100,  # 祝福
-            'curse_removal': 200,  # 呪い解除
-            'poison_cure': 50,   # 毒治療
-            'paralysis_cure': 80,  # 麻痺治療
-            'sleep_cure': 30,    # 睡眠治療
-            'all_status_cure': 150,  # 全状態異常治療
+            'resurrection': SERVICE_COST_RESURRECTION,  # 蘇生
+            'ash_restoration': SERVICE_COST_ASH_RESTORATION,  # 灰化回復
+            'blessing': SERVICE_COST_BLESSING,  # 祝福
+            'curse_removal': SERVICE_COST_CURSE_REMOVAL,  # 呪い解除
+            'poison_cure': SERVICE_COST_POISON_CURE,   # 毒治療
+            'paralysis_cure': SERVICE_COST_PARALYSIS_CURE,  # 麻痺治療
+            'sleep_cure': SERVICE_COST_SLEEP_CURE,    # 睡眠治療
+            'all_status_cure': SERVICE_COST_ALL_STATUS_CURE,  # 全状態異常治療
         }
     
     def _setup_menu_items(self, menu: UIMenu):
@@ -316,7 +330,7 @@ class Temple(BaseFacility):
     def _show_prayerbook_list_ui(self, prayerbook_items: List[Item]):
         """祈祷書一覧をリスト型UIで表示"""
         # UISelectionListを使用したリスト型UI
-        list_rect = pygame.Rect(100, 100, 600, 500)
+        list_rect = pygame.Rect(SERVICE_LIST_RECT_X, SERVICE_LIST_RECT_Y, SERVICE_LIST_RECT_WIDTH, SERVICE_LIST_RECT_HEIGHT)
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
         if not self._check_pygame_gui_manager():
