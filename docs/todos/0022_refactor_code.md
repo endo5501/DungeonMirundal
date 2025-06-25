@@ -44,10 +44,18 @@
 
    **テスト結果：** コア関連の22テストすべて成功
 
-4. @src/dungeon 以下のコードをFowler式のリファクタリングしましょう。
+4. ✅ @src/dungeon 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
     リファクタリング後、テストを実施しエラーを確実に解消してください
     完了後、作業内容をこちらに記載した後一旦commitしてください
+
+   **実施したリファクタリング：**
+   - **Replace Magic Number with Named Constant**: ダンジョン生成で19個の定数を追加（サイズ、レート、制限値等）
+   - **Extract Method**: 長い_place_special_elementsを3つのメソッドに分割（_place_stairs, _place_treasures, _place_traps）
+   - **Remove Duplicated Code**: _direction_to_deltaメソッドの重複を解消（dungeon_generatorを再利用）
+   - **Replace Magic Number with Named Constant**: DungeonManagerで5つの定数を追加
+
+   **テスト結果：** ダンジョン関連の27テストすべて成功
 
 5. @src/effects 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。

@@ -9,6 +9,28 @@ import math
 
 from src.utils.logger import logger
 
+# ダンジョン生成定数
+DEFAULT_WIDTH = 20
+DEFAULT_HEIGHT = 20
+MIN_ROOM_SIZE = 3
+MAX_ROOM_SIZE = 8
+MAX_ROOMS = 8
+DEFAULT_MAX_FLOORS = 20
+MIN_LEVEL_SIZE = 15
+MAX_LEVEL_SIZE = 30
+LEVEL_SIZE_VARIANCE = 3
+ROOM_GENERATION_ATTEMPTS = 100
+ROOM_BUFFER_SIZE = 1
+BASE_ENCOUNTER_RATE = 0.05
+BASE_TRAP_RATE = 0.02
+BASE_TREASURE_RATE = 0.01
+MAX_ENCOUNTER_RATE = 0.25
+MAX_TRAP_RATE = 0.15
+MAX_TREASURE_RATE = 0.08
+ENCOUNTER_RATE_INCREASE = 0.01
+TRAP_RATE_INCREASE = 0.005
+TREASURE_RATE_INCREASE = 0.002
+
 
 class CellType(Enum):
     """セルタイプ"""
@@ -207,11 +229,11 @@ class DungeonGenerator:
         self.hash_seed = hashlib.md5(seed.encode()).hexdigest()
         
         # デフォルト設定
-        self.default_width = 20
-        self.default_height = 20
-        self.min_room_size = 3
-        self.max_room_size = 8
-        self.max_rooms = 8
+        self.default_width = DEFAULT_WIDTH
+        self.default_height = DEFAULT_HEIGHT
+        self.min_room_size = MIN_ROOM_SIZE
+        self.max_room_size = MAX_ROOM_SIZE
+        self.max_rooms = MAX_ROOMS
         
         logger.info(f"DungeonGeneratorを初期化: seed={seed}")
     
@@ -234,9 +256,9 @@ class DungeonGenerator:
         )
         
         # レベル特性を設定
-        dungeon_level.encounter_rate = min(0.05 + level * 0.01, 0.25)
-        dungeon_level.trap_rate = min(0.02 + level * 0.005, 0.15)
-        dungeon_level.treasure_rate = min(0.01 + level * 0.002, 0.08)
+        dungeon_level.encounter_rate = min(BASE_ENCOUNTER_RATE + level * ENCOUNTER_RATE_INCREASE, MAX_ENCOUNTER_RATE)
+        dungeon_level.trap_rate = min(BASE_TRAP_RATE + level * TRAP_RATE_INCREASE, MAX_TRAP_RATE)
+        dungeon_level.treasure_rate = min(BASE_TREASURE_RATE + level * TREASURE_RATE_INCREASE, MAX_TREASURE_RATE)
         
         # ダンジョン構造生成
         self._generate_structure(dungeon_level, rng)
@@ -257,7 +279,7 @@ class DungeonGenerator:
             dungeon_info = dungeons_config.get("dungeons", {}).get(dungeon_id, {})
             return dungeon_info.get("floors", 20)
         except Exception:
-            return 20  # デフォルト値
+            return DEFAULT_MAX_FLOORS
     
     def _determine_level_attribute(self, level: int, rng: random.Random) -> DungeonAttribute:
         """レベル属性を決定"""
@@ -277,10 +299,10 @@ class DungeonGenerator:
         """レベルサイズを決定"""
         # レベルが深いほど大きくなる傾向
         base_size = self.default_width + level // 3
-        variance = rng.randint(-3, 3)
+        variance = rng.randint(-LEVEL_SIZE_VARIANCE, LEVEL_SIZE_VARIANCE)
         
-        width = max(15, min(30, base_size + variance))
-        height = max(15, min(30, base_size + variance))
+        width = max(MIN_LEVEL_SIZE, min(MAX_LEVEL_SIZE, base_size + variance))
+        height = max(MIN_LEVEL_SIZE, min(MAX_LEVEL_SIZE, base_size + variance))
         
         return width, height
     
@@ -305,7 +327,7 @@ class DungeonGenerator:
         """部屋を生成"""
         rooms = []
         attempts = 0
-        max_attempts = 100
+        max_attempts = ROOM_GENERATION_ATTEMPTS
         
         while len(rooms) < self.max_rooms and attempts < max_attempts:
             attempts += 1
@@ -339,8 +361,9 @@ class DungeonGenerator:
         
         for x2, y2, w2, h2 in rooms:
             # バッファを含めた重複チェック
-            if (x1 < x2 + w2 + 1 and x1 + w1 + 1 > x2 and
-                y1 < y2 + h2 + 1 and y1 + h1 + 1 > y2):
+            buffer = ROOM_BUFFER_SIZE
+            if (x1 < x2 + w2 + buffer and x1 + w1 + buffer > x2 and
+                y1 < y2 + h2 + buffer and y1 + h1 + buffer > y2):
                 return True
         
         return False
@@ -456,18 +479,8 @@ class DungeonGenerator:
         }
         return direction_map[direction]
     
-    def _place_special_elements(self, dungeon_level: DungeonLevel, rng: random.Random, dungeon_id: str):
-        """特殊要素（階段、宝箱、トラップ）を配置"""
-        floor_cells = [(pos, cell) for pos, cell in dungeon_level.cells.items() 
-                      if cell.cell_type == CellType.FLOOR]
-        
-        if not floor_cells:
-            return
-        
-        # 開始位置を設定（最初の部屋の中央付近）
-        start_pos, start_cell = floor_cells[0]
-        dungeon_level.start_position = start_pos
-        
+    def _place_stairs(self, dungeon_level: DungeonLevel, floor_cells: List, rng: random.Random, dungeon_id: str):
+        """階段を配置"""
         # 上階段を配置（レベル1以外）
         if dungeon_level.level > 1:
             up_pos, up_cell = rng.choice(floor_cells)
@@ -489,8 +502,9 @@ class DungeonGenerator:
             boss_cell.cell_type = CellType.BOSS
             dungeon_level.boss_position = boss_pos
             floor_cells.remove((boss_pos, boss_cell))
-        
-        # 宝箱配置
+    
+    def _place_treasures(self, dungeon_level: DungeonLevel, floor_cells: List, rng: random.Random):
+        """宝箱を配置"""
         treasure_count = max(1, int(len(floor_cells) * dungeon_level.treasure_rate))
         for _ in range(treasure_count):
             if floor_cells:
@@ -498,15 +512,40 @@ class DungeonGenerator:
                 cell.has_treasure = True
                 cell.treasure_id = f"treasure_{dungeon_level.level}_{pos[0]}_{pos[1]}"
                 floor_cells.remove((pos, cell))
-        
-        # トラップ配置
+        return treasure_count
+    
+    def _place_traps(self, dungeon_level: DungeonLevel, floor_cells: List, rng: random.Random):
+        """トラップを配置"""
+        trap_types = ["poison", "paralysis", "damage", "teleport"]
         trap_count = max(0, int(len(floor_cells) * dungeon_level.trap_rate))
         for _ in range(trap_count):
             if floor_cells:
                 pos, cell = rng.choice(floor_cells)
                 cell.has_trap = True
-                cell.trap_type = rng.choice(["poison", "paralysis", "damage", "teleport"])
+                cell.trap_type = rng.choice(trap_types)
                 floor_cells.remove((pos, cell))
+        return trap_count
+    
+    def _place_special_elements(self, dungeon_level: DungeonLevel, rng: random.Random, dungeon_id: str):
+        """特殊要素（階段、宝箱、トラップ）を配置"""
+        floor_cells = [(pos, cell) for pos, cell in dungeon_level.cells.items() 
+                      if cell.cell_type == CellType.FLOOR]
+        
+        if not floor_cells:
+            return
+        
+        # 開始位置を設定（最初の部屋の中央付近）
+        start_pos, start_cell = floor_cells[0]
+        dungeon_level.start_position = start_pos
+        
+        # 階段とボス配置
+        self._place_stairs(dungeon_level, floor_cells, rng, dungeon_id)
+        
+        # 宝箱配置
+        treasure_count = self._place_treasures(dungeon_level, floor_cells, rng)
+        
+        # トラップ配置
+        trap_count = self._place_traps(dungeon_level, floor_cells, rng)
         
         logger.debug(f"特殊要素配置完了: 宝箱{treasure_count}, トラップ{trap_count}")
 

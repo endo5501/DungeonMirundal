@@ -11,6 +11,12 @@ from src.character.party import Party
 from src.character.character import Character
 from src.utils.logger import logger
 
+# ダンジョン管理定数
+DEFAULT_SAVE_DIR = "saves/dungeons"
+DEFAULT_VISION_RANGE = 1
+DEFAULT_MAX_LEVEL = 20
+MIN_LEVEL = 1
+
 
 class DungeonStatus(Enum):
     """ダンジョンステータス"""
@@ -114,7 +120,7 @@ class DungeonState:
 class DungeonManager:
     """ダンジョン管理システム"""
     
-    def __init__(self, save_directory: str = "saves/dungeons"):
+    def __init__(self, save_directory: str = DEFAULT_SAVE_DIR):
         self.save_directory = save_directory
         self.generator = DungeonGenerator()
         self.active_dungeons: Dict[str, DungeonState] = {}
@@ -297,7 +303,7 @@ class DungeonManager:
         # 上階段チェック
         if (target_level == pos.level - 1 and 
             current_cell.cell_type == CellType.STAIRS_UP and
-            target_level >= 1):
+            target_level >= MIN_LEVEL):
             
             # 目標レベルが存在しない場合は生成
             if target_level not in self.current_dungeon.levels:
@@ -314,7 +320,7 @@ class DungeonManager:
         # 下階段チェック
         elif (target_level == pos.level + 1 and 
               current_cell.cell_type == CellType.STAIRS_DOWN and
-              target_level <= 20):
+              target_level <= DEFAULT_MAX_LEVEL):
             
             # 目標レベルが存在しない場合は生成
             if target_level not in self.current_dungeon.levels:
@@ -343,7 +349,7 @@ class DungeonManager:
         
         return current_level.get_cell(pos.x, pos.y)
     
-    def get_visible_cells(self, vision_range: int = 1) -> List[Tuple[int, int, DungeonCell]]:
+    def get_visible_cells(self, vision_range: int = DEFAULT_VISION_RANGE) -> List[Tuple[int, int, DungeonCell]]:
         """視界内のセルを取得"""
         if not self.current_dungeon or not self.current_dungeon.player_position:
             return []
@@ -433,13 +439,9 @@ class DungeonManager:
     
     def _direction_to_delta(self, direction: Direction) -> Tuple[int, int]:
         """方向をデルタ座標に変換"""
-        direction_map = {
-            Direction.NORTH: (0, -1),
-            Direction.SOUTH: (0, 1),
-            Direction.EAST: (1, 0),
-            Direction.WEST: (-1, 0)
-        }
-        return direction_map[direction]
+        # dungeon_generatorの同名メソッドを再利用
+        from .dungeon_generator import dungeon_generator
+        return dungeon_generator._direction_to_delta(direction)
 
 
 # グローバルインスタンス
