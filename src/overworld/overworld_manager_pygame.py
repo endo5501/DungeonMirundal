@@ -852,7 +852,20 @@ class OverworldManager:
         """設定"""
         logger.info("設定が選択されました")
         # ゲーム設定画面の表示
-        logger.info("設定画面を表示（未実装）")
+        try:
+            from src.ui.settings_ui import settings_ui
+            settings_ui.set_close_callback(self._on_settings_close)
+            settings_ui.show()
+            logger.info("設定画面を表示しました")
+        except Exception as e:
+            logger.error(f"設定画面表示エラー: {e}")
+    
+    def _on_settings_close(self):
+        """設定画面終了時のコールバック"""
+        logger.info("設定画面が閉じられました")
+        # 設定メニューに戻る
+        if self.settings_menu:
+            self.ui_manager.show_menu(self.settings_menu.menu_id, modal=True)
     
     def _on_back_to_overworld(self):
         """地上部に戻る"""

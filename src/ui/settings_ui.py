@@ -3,9 +3,10 @@
 from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
 
-from src.ui.base_ui import UIElement, UIButton, UIText, UIMenu, UIDialog, UIState, ui_manager
+from src.ui.base_ui_pygame import UIElement, UIButton, UIText, UIMenu, UIDialog, UIState, ui_manager
 from src.core.config_manager import config_manager
-from src.core.input_manager import input_manager, FeedbackLevel
+# input_managerは動的にインポート（循環インポート回避）
+# from src.core.input_manager import input_manager
 from src.utils.logger import logger
 
 
@@ -36,10 +37,28 @@ class SettingsUI:
     def _load_current_settings(self) -> Dict[str, Any]:
         """現在の設定を読み込み"""
         try:
-            # ゲーム設定の読み込み
-            game_config = config_manager.load_config("game_settings")
-            return game_config.get("user_settings", {})
-        except:
+            import yaml
+            from pathlib import Path
+            
+            # ユーザー設定ファイルから読み込み
+            config_file = Path("config") / "user_settings.yaml"
+            if config_file.exists():
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    user_settings = yaml.safe_load(f) or {}
+                    # デフォルト設定とマージ
+                    default_settings = self._get_default_settings()
+                    default_settings.update(user_settings)
+                    return default_settings
+            else:
+                # ゲーム設定の読み込み（後方互換性）
+                game_config = config_manager.load_config("game_settings")
+                user_settings = game_config.get("user_settings", {})
+                # デフォルト設定とマージ
+                default_settings = self._get_default_settings()
+                default_settings.update(user_settings)
+                return default_settings
+        except Exception as e:
+            logger.warning(f"設定読み込みエラー: {e}")
             # デフォルト設定を返す
             return self._get_default_settings()
     
@@ -48,6 +67,7 @@ class SettingsUI:
         return {
             # ゲームプレイ
             "auto_save": True,
+            "language": "ja",
             "difficulty": "normal",
             "battle_speed": "normal",
             "message_speed": "normal",
@@ -125,8 +145,8 @@ class SettingsUI:
             self._close_settings_ui
         )
         
-        ui_manager.register_element(settings_menu)
-        ui_manager.show_element(settings_menu.element_id, modal=True)
+        ui_manager.add_menu(settings_menu)
+        ui_manager.show_menu(settings_menu.menu_id, modal=True)
         self.is_open = True
         
         logger.info("設定メニューを表示")
@@ -149,6 +169,15 @@ class SettingsUI:
     def _show_gameplay_settings(self):
         """ゲームプレイ設定を表示"""
         gameplay_menu = UIMenu("gameplay_settings", config_manager.get_text("settings.gameplay_settings"))
+        
+        # 言語設定
+        language = self._get_setting_value("language")
+        language_text = {"ja": "日本語", "en": "English"}.get(language, language)
+        gameplay_menu.add_menu_item(
+            f"言語 / Language: {language_text}",
+            self._cycle_setting,
+            ["language", ["ja", "en"]]
+        )
         
         # オートセーブ
         auto_save = self._get_setting_value("auto_save")
@@ -200,8 +229,8 @@ class SettingsUI:
             self._back_to_main_settings
         )
         
-        ui_manager.register_element(gameplay_menu)
-        ui_manager.show_element(gameplay_menu.element_id, modal=True)
+        ui_manager.add_menu(gameplay_menu)
+        ui_manager.show_menu(gameplay_menu.menu_id, modal=True)
     
     def _show_controls_settings(self):
         """操作設定を表示"""
@@ -252,8 +281,8 @@ class SettingsUI:
             self._back_to_main_settings
         )
         
-        ui_manager.register_element(controls_menu)
-        ui_manager.show_element(controls_menu.element_id, modal=True)
+        ui_manager.add_menu(controls_menu)
+        ui_manager.show_menu(controls_menu.menu_id, modal=True)
     
     def _show_audio_settings(self):
         """音声設定を表示"""
@@ -297,8 +326,8 @@ class SettingsUI:
             self._back_to_main_settings
         )
         
-        ui_manager.register_element(audio_menu)
-        ui_manager.show_element(audio_menu.element_id, modal=True)
+        ui_manager.add_menu(audio_menu)
+        ui_manager.show_menu(audio_menu.menu_id, modal=True)
     
     def _show_graphics_settings(self):
         """表示設定を表示"""
@@ -350,8 +379,8 @@ class SettingsUI:
             self._back_to_main_settings
         )
         
-        ui_manager.register_element(graphics_menu)
-        ui_manager.show_element(graphics_menu.element_id, modal=True)
+        ui_manager.add_menu(graphics_menu)
+        ui_manager.show_menu(graphics_menu.menu_id, modal=True)
     
     def _show_accessibility_settings(self):
         """アクセシビリティ設定を表示"""
@@ -406,8 +435,8 @@ class SettingsUI:
             self._back_to_main_settings
         )
         
-        ui_manager.register_element(accessibility_menu)
-        ui_manager.show_element(accessibility_menu.element_id, modal=True)
+        ui_manager.add_menu(accessibility_menu)
+        ui_manager.show_menu(accessibility_menu.menu_id, modal=True)
     
     def _show_keybind_settings(self):
         """キーバインド設定を表示"""
@@ -445,8 +474,8 @@ class SettingsUI:
             self._show_controls_settings
         )
         
-        ui_manager.register_element(keybind_menu)
-        ui_manager.show_element(keybind_menu.element_id, modal=True)
+        ui_manager.add_menu(keybind_menu)
+        ui_manager.show_menu(keybind_menu.menu_id, modal=True)
     
     def _get_setting_value(self, key: str) -> Any:
         """設定値を取得（保留中の変更を優先）"""
@@ -493,8 +522,8 @@ class SettingsUI:
             ]
         )
         
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id, modal=True)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _reset_keybinds(self):
         """キーバインドを初期化"""
@@ -511,14 +540,18 @@ class SettingsUI:
             ]
         )
         
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id, modal=True)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _execute_keybind_reset(self):
         """キーバインド初期化を実行"""
         # InputManagerのデフォルトバインディングを復元
-        if hasattr(input_manager, '_setup_default_bindings'):
-            input_manager._setup_default_bindings()
+        try:
+            from src.core.input_manager import input_manager
+            if hasattr(input_manager, '_setup_default_bindings'):
+                input_manager._setup_default_bindings()
+        except ImportError:
+            logger.warning("input_managerの読み込みに失敗しました")
         
         self._show_message("キーバインドを初期設定に戻しました")
     
@@ -551,8 +584,19 @@ class SettingsUI:
     def _save_settings_to_file(self):
         """設定をファイルに保存"""
         try:
-            # 設定ファイルの更新（実装は簡略化）
-            logger.info("設定ファイルに保存")
+            import yaml
+            from pathlib import Path
+            
+            # 設定ファイルパス
+            config_dir = Path("config")
+            config_dir.mkdir(exist_ok=True)
+            config_file = config_dir / "user_settings.yaml"
+            
+            # 現在の設定を保存
+            with open(config_file, 'w', encoding='utf-8') as f:
+                yaml.dump(self.current_settings, f, default_flow_style=False, allow_unicode=True)
+            
+            logger.info(f"設定ファイルに保存しました: {config_file}")
         except Exception as e:
             logger.error(f"設定ファイル保存エラー: {e}")
             raise
@@ -561,11 +605,20 @@ class SettingsUI:
         """設定を適用"""
         # 各システムに設定を適用
         try:
-            # 入力システムに適用
-            if hasattr(input_manager, 'analog_deadzone'):
-                input_manager.analog_deadzone = self.current_settings.get("analog_deadzone", 0.3)
-                input_manager.analog_sensitivity = self.current_settings.get("analog_sensitivity", 1.0)
-                input_manager.controller_enabled = self.current_settings.get("controller_enabled", True)
+            # 言語設定の適用
+            language = self.current_settings.get("language", "ja")
+            config_manager.set_language(language)
+            logger.info(f"言語を設定しました: {language}")
+            
+            # 入力システムに適用（動的インポート）
+            try:
+                from src.core.input_manager import input_manager
+                if hasattr(input_manager, 'analog_deadzone'):
+                    input_manager.analog_deadzone = self.current_settings.get("analog_deadzone", 0.3)
+                    input_manager.analog_sensitivity = self.current_settings.get("analog_sensitivity", 1.0)
+                    input_manager.controller_enabled = self.current_settings.get("controller_enabled", True)
+            except ImportError:
+                logger.warning("input_managerの読み込みに失敗しました")
             
             # フィードバックシステムに適用
             feedback_level = self.current_settings.get("feedback_level", "normal")
@@ -596,8 +649,8 @@ class SettingsUI:
             ]
         )
         
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id, modal=True)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
     
     def _reset_all_settings(self):
         """すべての設定を初期化"""
@@ -625,7 +678,7 @@ class SettingsUI:
     def hide(self):
         """設定UIを非表示"""
         try:
-            ui_manager.hide_element("settings_main")
+            ui_manager.hide_menu("settings_main")
         except:
             pass
         self.is_open = False
@@ -700,8 +753,8 @@ class SettingsUI:
             ]
         )
         
-        ui_manager.register_element(dialog)
-        ui_manager.show_element(dialog.element_id, modal=True)
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
 
 
 # グローバルインスタンス
