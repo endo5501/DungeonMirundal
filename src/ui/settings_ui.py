@@ -129,6 +129,12 @@ class SettingsUI:
             self._show_reset_confirmation
         )
         
+        # 新規ゲーム開始
+        settings_menu.add_menu_item(
+            config_manager.get_text("settings.new_game"),
+            self._show_new_game_confirmation
+        )
+        
         # 変更の保存
         if self.pending_changes:
             settings_menu.add_menu_item(
@@ -516,11 +522,16 @@ class SettingsUI:
         dialog = UIDialog(
             "keybind_input",
             "キーバインド変更",
-            dialog_text,
-            buttons=[
-                {"text": "キャンセル", "command": self._close_dialog}
-            ]
+            dialog_text
         )
+        
+        # ボタンを手動で追加
+        from src.ui.base_ui_pygame import UIButton
+        cancel_button = UIButton("cancel_keybind", "キャンセル",
+                               x=dialog.rect.x + dialog.rect.width - 130, y=dialog.rect.y + dialog.rect.height - 50,
+                               width=100, height=30)
+        cancel_button.on_click = self._close_dialog
+        dialog.add_element(cancel_button)
         
         ui_manager.add_dialog(dialog)
         ui_manager.show_dialog(dialog.dialog_id)
@@ -533,12 +544,22 @@ class SettingsUI:
         dialog = UIDialog(
             "reset_keybinds_confirm",
             "キーバインド初期化",
-            confirm_text,
-            buttons=[
-                {"text": "はい", "command": self._execute_keybind_reset},
-                {"text": "いいえ", "command": self._close_dialog}
-            ]
+            confirm_text
         )
+        
+        # ボタンを手動で追加
+        from src.ui.base_ui_pygame import UIButton
+        yes_button = UIButton("yes_reset_keybinds", "はい",
+                             x=dialog.rect.x + 50, y=dialog.rect.y + dialog.rect.height - 50,
+                             width=100, height=30)
+        yes_button.on_click = self._execute_keybind_reset
+        dialog.add_element(yes_button)
+        
+        no_button = UIButton("no_reset_keybinds", "いいえ",
+                            x=dialog.rect.x + dialog.rect.width - 130, y=dialog.rect.y + dialog.rect.height - 50,
+                            width=100, height=30)
+        no_button.on_click = self._close_dialog
+        dialog.add_element(no_button)
         
         ui_manager.add_dialog(dialog)
         ui_manager.show_dialog(dialog.dialog_id)
@@ -642,12 +663,22 @@ class SettingsUI:
         dialog = UIDialog(
             "reset_settings_confirm",
             "設定初期化",
-            confirm_text,
-            buttons=[
-                {"text": "はい", "command": self._reset_all_settings},
-                {"text": "いいえ", "command": self._close_dialog}
-            ]
+            confirm_text
         )
+        
+        # ボタンを手動で追加
+        from src.ui.base_ui_pygame import UIButton
+        yes_button = UIButton("yes_reset_settings", "はい",
+                             x=dialog.rect.x + 50, y=dialog.rect.y + dialog.rect.height - 50,
+                             width=100, height=30)
+        yes_button.on_click = self._reset_all_settings
+        dialog.add_element(yes_button)
+        
+        no_button = UIButton("no_reset_settings", "いいえ",
+                            x=dialog.rect.x + dialog.rect.width - 130, y=dialog.rect.y + dialog.rect.height - 50,
+                            width=100, height=30)
+        no_button.on_click = self._close_dialog
+        dialog.add_element(no_button)
         
         ui_manager.add_dialog(dialog)
         ui_manager.show_dialog(dialog.dialog_id)
@@ -709,13 +740,28 @@ class SettingsUI:
             dialog = UIDialog(
                 "unsaved_changes_confirm",
                 "未保存の変更",
-                confirm_text,
-                buttons=[
-                    {"text": "保存して閉じる", "command": self._save_and_close},
-                    {"text": "保存せずに閉じる", "command": self._close_without_saving},
-                    {"text": "戻る", "command": self._close_dialog}
-                ]
+                confirm_text
             )
+            
+            # ボタンを手動で追加
+            from src.ui.base_ui_pygame import UIButton
+            save_button = UIButton("save_close", "保存して閉じる",
+                                  x=dialog.rect.x + 20, y=dialog.rect.y + dialog.rect.height - 50,
+                                  width=120, height=30)
+            save_button.on_click = self._save_and_close
+            dialog.add_element(save_button)
+            
+            nosave_button = UIButton("nosave_close", "保存せずに閉じる",
+                                    x=dialog.rect.x + 150, y=dialog.rect.y + dialog.rect.height - 50,
+                                    width=120, height=30)
+            nosave_button.on_click = self._close_without_saving
+            dialog.add_element(nosave_button)
+            
+            back_button = UIButton("back_unsaved", "戻る",
+                                  x=dialog.rect.x + dialog.rect.width - 80, y=dialog.rect.y + dialog.rect.height - 50,
+                                  width=60, height=30)
+            back_button.on_click = self._close_dialog
+            dialog.add_element(back_button)
             
             ui_manager.register_element(dialog)
             ui_manager.show_element(dialog.element_id, modal=True)
@@ -747,14 +793,161 @@ class SettingsUI:
         dialog = UIDialog(
             "settings_message",
             "設定",
-            message,
-            buttons=[
-                {"text": "OK", "command": self._close_dialog}
-            ]
+            message
         )
+        
+        # ボタンを手動で追加
+        from src.ui.base_ui_pygame import UIButton
+        ok_button = UIButton("ok_message", "OK",
+                            x=dialog.rect.x + dialog.rect.width // 2 - 50, y=dialog.rect.y + dialog.rect.height - 50,
+                            width=100, height=30)
+        ok_button.on_click = self._close_dialog
+        dialog.add_element(ok_button)
         
         ui_manager.add_dialog(dialog)
         ui_manager.show_dialog(dialog.dialog_id)
+    
+    def _show_new_game_confirmation(self):
+        """新規ゲーム開始の確認"""
+        confirm_text = "新規ゲームを開始しますか？\n\n警告: 現在のすべてのセーブデータが削除されます。\nこの操作は取り消せません。"
+        
+        dialog = UIDialog(
+            "new_game_confirm",
+            "新規ゲーム開始確認",
+            confirm_text
+        )
+        
+        # ボタンを手動で追加
+        from src.ui.base_ui_pygame import UIButton
+        confirm_button = UIButton("confirm_new_game", "新規ゲーム開始", 
+                                 x=dialog.rect.x + 50, y=dialog.rect.y + dialog.rect.height - 50,
+                                 width=150, height=30)
+        confirm_button.on_click = self._show_final_new_game_confirmation
+        dialog.add_element(confirm_button)
+        
+        cancel_button = UIButton("cancel_new_game", "キャンセル",
+                                x=dialog.rect.x + dialog.rect.width - 150, y=dialog.rect.y + dialog.rect.height - 50,
+                                width=100, height=30)
+        cancel_button.on_click = self._close_dialog
+        dialog.add_element(cancel_button)
+        
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
+    
+    def _show_final_new_game_confirmation(self):
+        """新規ゲーム開始の最終確認"""
+        final_text = "本当に新規ゲームを開始しますか？\n\n現在のプレイデータ:\n• キャラクター\n• パーティ\n• アイテム\n• ダンジョン進行状況\n\nすべてが削除されます。"
+        
+        dialog = UIDialog(
+            "new_game_final_confirm",
+            "最終確認",
+            final_text,
+            width=500, height=300
+        )
+        
+        # ボタンを手動で追加
+        from src.ui.base_ui_pygame import UIButton
+        execute_button = UIButton("execute_new_game", "はい、新規ゲームを開始", 
+                                 x=dialog.rect.x + 30, y=dialog.rect.y + dialog.rect.height - 50,
+                                 width=200, height=30)
+        execute_button.on_click = self._execute_new_game
+        dialog.add_element(execute_button)
+        
+        cancel_button = UIButton("cancel_final", "キャンセル",
+                                x=dialog.rect.x + dialog.rect.width - 130, y=dialog.rect.y + dialog.rect.height - 50,
+                                width=100, height=30)
+        cancel_button.on_click = self._close_dialog
+        dialog.add_element(cancel_button)
+        
+        ui_manager.add_dialog(dialog)
+        ui_manager.show_dialog(dialog.dialog_id)
+    
+    def _execute_new_game(self):
+        """新規ゲームを実行"""
+        try:
+            # セーブデータをクリア
+            self._clear_all_save_data()
+            
+            # 成功メッセージ
+            self._show_message("新規ゲームを開始しました。\\nタイトル画面に戻ります。")
+            
+            # タイトル画面に戻る処理
+            self._return_to_title()
+            
+        except Exception as e:
+            logger.error(f"新規ゲーム開始エラー: {e}")
+            self._show_message(f"新規ゲーム開始に失敗しました: {str(e)}")
+    
+    def _clear_all_save_data(self):
+        """すべてのセーブデータをクリア"""
+        import shutil
+        from pathlib import Path
+        
+        logger.info("セーブデータのクリアを開始します")
+        
+        # セーブディレクトリのパス
+        save_dirs = [
+            Path("saves"),
+            Path("saves/characters"),
+            Path("saves/parties"),
+            Path("saves/dungeons"),
+            Path("saves/game_state")
+        ]
+        
+        # 各ディレクトリをクリア
+        for save_dir in save_dirs:
+            if save_dir.exists():
+                try:
+                    # ディレクトリ内のファイルを削除
+                    for file in save_dir.glob("*"):
+                        if file.is_file():
+                            file.unlink()
+                            logger.debug(f"削除: {file}")
+                except Exception as e:
+                    logger.error(f"ディレクトリ {save_dir} のクリアに失敗: {e}")
+        
+        # デフォルトパーティを再作成
+        self._create_default_party()
+        
+        logger.info("セーブデータのクリアが完了しました")
+    
+    def _create_default_party(self):
+        """デフォルトパーティを作成"""
+        try:
+            from src.character.party import Party
+            from src.managers.save_manager import save_manager
+            
+            # デフォルトパーティを作成
+            default_party = Party("新しい冒険者")
+            
+            # セーブ
+            save_manager.save_party(default_party)
+            
+            logger.info("デフォルトパーティを作成しました")
+        except Exception as e:
+            logger.error(f"デフォルトパーティ作成エラー: {e}")
+    
+    def _return_to_title(self):
+        """タイトル画面に戻る"""
+        try:
+            # 現在の画面をすべて閉じる
+            self._actually_close()
+            
+            # GameManagerに通知（存在する場合）
+            try:
+                from src.managers.game_manager import game_manager
+                if hasattr(game_manager, 'return_to_title'):
+                    game_manager.return_to_title()
+                else:
+                    # タイトル画面に戻る別の方法
+                    if hasattr(game_manager, 'set_game_state'):
+                        from src.managers.game_state import GameState
+                        game_manager.set_game_state(GameState.TITLE)
+            except ImportError:
+                logger.warning("GameManagerへのアクセスに失敗しました")
+                
+        except Exception as e:
+            logger.error(f"タイトル画面への遷移エラー: {e}")
 
 
 # グローバルインスタンス
