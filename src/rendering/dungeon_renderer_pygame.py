@@ -229,11 +229,16 @@ class DungeonRendererPygame:
         self.camera_y = player_pos.y
         
         # 向きを角度に変換
+        # 数学的な座標系では:
+        # - 0度は東（+X方向）
+        # - 90度（π/2）は北（-Y方向、画面上では上）
+        # - 180度（π）は西（-X方向）
+        # - 270度（3π/2）は南（+Y方向、画面上では下）
         direction_angles = {
-            Direction.NORTH: 0,
-            Direction.EAST: math.pi/2,
-            Direction.SOUTH: math.pi,
-            Direction.WEST: 3*math.pi/2
+            Direction.NORTH: -math.pi/2,    # -90度（北を向く）
+            Direction.EAST: 0,               # 0度（東を向く）
+            Direction.SOUTH: math.pi/2,      # 90度（南を向く）
+            Direction.WEST: math.pi          # 180度（西を向く）
         }
         self.camera_angle = direction_angles.get(player_pos.facing, 0)
         
