@@ -57,11 +57,6 @@ class Temple(BaseFacility):
             "祈祷書購入",
             self._show_prayerbook_shop
         )
-        
-        menu.add_menu_item(
-            "寄付をする",
-            self._show_donation_menu
-        )
     
     def _on_enter(self):
         """教会入場時の処理"""
@@ -306,55 +301,6 @@ class Temple(BaseFacility):
         self._show_success_message(success_message)
         logger.info(f"パーティ祝福実行: {self.current_party.name}")
     
-    def _show_donation_menu(self):
-        """寄付メニューを表示"""
-        if not self.current_party:
-            self._show_error_message("パーティが設定されていません")
-            return
-        
-        donation_amounts = [10, 50, 100, 500, 1000]
-        
-        donation_menu = UIMenu("donation_menu", "寄付")
-        
-        for amount in donation_amounts:
-            if self.current_party.gold >= amount:
-                donation_menu.add_menu_item(
-                    f"{amount}G を寄付",
-                    self._make_donation,
-                    [amount]
-                )
-        
-        donation_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [donation_menu]
-        )
-        
-        self._show_submenu(donation_menu)
-    
-    def _make_donation(self, amount: int):
-        """寄付実行"""
-        if not self.current_party:
-            return
-        
-        if self.current_party.gold < amount:
-            self._show_error_message("ゴールドが不足しています")
-            return
-        
-        # 寄付処理
-        self.current_party.gold -= amount
-        
-        # TODO: Phase 4で寄付による名声ポイント等を実装
-        
-        gratitude_message = (
-            f"{amount}G のご寄付をありがとうございます！\n\n"
-            "あなたの善意は必ず報われるでしょう。\n"
-            "神の加護がありますように。\n\n"
-            f"残りゴールド: {self.current_party.gold}G"
-        )
-        
-        self._show_success_message(gratitude_message)
-        logger.info(f"教会寄付: {amount}G by {self.current_party.name}")
     
     def _show_prayerbook_shop(self):
         """祈祷書購入ショップをリスト型UIで表示"""
