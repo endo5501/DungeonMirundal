@@ -87,18 +87,32 @@ class Inn(BaseFacility):
         import random
         title, message = random.choice(messages)
         
-        self.show_information_dialog(
-            f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
-            message
-        )
+        if self.use_new_menu_system and self.dialog_template:
+            self.show_information_dialog(
+                f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
+                message,
+                buttons=[{"text": "戻る", "callback": None}]
+            )
+        else:
+            self.show_information_dialog(
+                f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
+                message
+            )
     
     def _show_travel_info(self):
         """旅の情報を表示"""
         travel_info = config_manager.get_text("inn.travel_info.content")
-        self.show_information_dialog(
-            config_manager.get_text("inn.travel_info.title"),
-            travel_info
-        )
+        if self.use_new_menu_system and self.dialog_template:
+            self.show_information_dialog(
+                config_manager.get_text("inn.travel_info.title"),
+                travel_info,
+                buttons=[{"text": "戻る", "callback": None}]
+            )
+        else:
+            self.show_information_dialog(
+                config_manager.get_text("inn.travel_info.title"),
+                travel_info
+            )
     
     def _show_tavern_rumors(self):
         """酒場の噂話を表示"""
@@ -118,10 +132,17 @@ class Inn(BaseFacility):
         import random
         title, rumor = random.choice(rumors)
         
-        self.show_information_dialog(
-            f"{config_manager.get_text('inn.rumors.title')} - {title}",
-            rumor
-        )
+        if self.use_new_menu_system and self.dialog_template:
+            self.show_information_dialog(
+                f"{config_manager.get_text('inn.rumors.title')} - {title}",
+                rumor,
+                buttons=[{"text": "戻る", "callback": None}]
+            )
+        else:
+            self.show_information_dialog(
+                f"{config_manager.get_text('inn.rumors.title')} - {title}",
+                rumor
+            )
     
     # === パーティ管理 ===
     
@@ -293,7 +314,10 @@ class Inn(BaseFacility):
             else:
                 status_text += "倉庫は空です。"
             
-            self.show_information_dialog("宿屋倉庫の状況", status_text, buttons=[{"text": "戻る", "callback": None}])
+            if self.use_new_menu_system and self.dialog_template:
+                self.show_information_dialog("宿屋倉庫の状況", status_text, buttons=[{"text": "戻る", "callback": None}])
+            else:
+                self.show_information_dialog("宿屋倉庫の状況", status_text)
             
         except Exception as e:
             logger.error(f"倉庫状況表示エラー: {e}")
