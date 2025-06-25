@@ -8,6 +8,10 @@ from src.character.stats import BaseStats
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
+# 定数
+MIN_LEVEL_FOR_CLASS_CHANGE = 10
+DEFAULT_CLASS_CHANGE_COST = 1000
+
 
 @dataclass
 class ClassChangeRequirements:
@@ -49,9 +53,9 @@ class ClassChangeValidator:
         target_class_config = classes_config[target_class]
         requirements = target_class_config.get("requirements", {})
         
-        # レベル要求（一般的にレベル10以上）
-        if character.experience.level < 10:
-            errors.append(f"レベルが不足しています（必要: 10、現在: {character.experience.level}）")
+        # レベル要求
+        if character.experience.level < MIN_LEVEL_FOR_CLASS_CHANGE:
+            errors.append(f"レベルが不足しています（必要: {MIN_LEVEL_FOR_CLASS_CHANGE}、現在: {character.experience.level}）")
         
         # 能力値要求
         for stat_name, required_value in requirements.items():
@@ -91,7 +95,7 @@ class ClassChangeManager:
     """クラスチェンジ管理クラス"""
     
     @staticmethod
-    def change_class(character: Character, target_class: str, gold_cost: int = 1000) -> Tuple[bool, str]:
+    def change_class(character: Character, target_class: str, gold_cost: int = DEFAULT_CLASS_CHANGE_COST) -> Tuple[bool, str]:
         """クラスチェンジを実行
         
         Args:

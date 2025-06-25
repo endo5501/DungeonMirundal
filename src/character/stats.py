@@ -158,7 +158,7 @@ class StatGenerator:
         """派生統計値の計算"""
         # HP計算
         base_hp = 10  # 基本HP
-        con_bonus = (base_stats.strength - 10) // 2  # 体力ボーナス
+        con_bonus = (base_stats.vitality - 10) // 2  # 体力ボーナス（vitalityを使用）
         class_hp_mult = class_config.get('hp_multiplier', 1.0)
         max_hp = int((base_hp + con_bonus + level * 2) * class_hp_mult)
         

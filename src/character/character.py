@@ -1,7 +1,7 @@
 """キャラクタークラス"""
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from enum import Enum
 import uuid
 from datetime import datetime
@@ -155,6 +155,41 @@ class Character:
         return self._spellbook
     
     @classmethod
+    def _validate_race_and_class(cls, race: str, character_class: str, char_config: Dict) -> Tuple[Dict, Dict]:
+        """種族と職業の検証"""
+        races_config = char_config.get("races", {})
+        classes_config = char_config.get("classes", {})
+        
+        if race not in races_config:
+            raise ValueError(f"無効な種族: {race}")
+        if character_class not in classes_config:
+            raise ValueError(f"無効な職業: {character_class}")
+        
+        return races_config, classes_config
+    
+    @classmethod
+    def _generate_or_use_stats(cls, base_stats: Optional[BaseStats], char_config: Dict) -> BaseStats:
+        """統計値の生成または使用"""
+        if base_stats is None:
+            creation_config = char_config.get("character_creation", {})
+            method = creation_config.get("stat_roll_method", "4d6_drop_lowest")
+            base_stats = StatGenerator.generate_stats(method)
+        return base_stats
+    
+    @classmethod
+    def _apply_race_and_class_bonuses(cls, base_stats: BaseStats, race_config: Dict, class_config: Dict) -> BaseStats:
+        """種族と職業ボーナスの適用"""
+        # 種族ボーナスの適用
+        race_bonuses = race_config.get("base_stats", {})
+        stats_with_race = base_stats.add_bonuses(race_bonuses)
+        
+        # 職業ボーナスの適用
+        class_bonuses = class_config.get("base_stats", {})
+        final_stats = stats_with_race.add_bonuses(class_bonuses)
+        
+        return final_stats
+    
+    @classmethod
     def create_character(
         cls,
         name: str,
@@ -165,34 +200,23 @@ class Character:
         """新しいキャラクターを作成"""
         # 設定データの読み込み
         char_config = config_manager.load_config("characters")
-        races_config = char_config.get("races", {})
-        classes_config = char_config.get("classes", {})
         
         # 種族・職業の検証
-        if race not in races_config:
-            raise ValueError(f"無効な種族: {race}")
-        if character_class not in classes_config:
-            raise ValueError(f"無効な職業: {character_class}")
+        races_config, classes_config = cls._validate_race_and_class(race, character_class, char_config)
         
         # 統計値の生成または適用
-        if base_stats is None:
-            creation_config = char_config.get("character_creation", {})
-            method = creation_config.get("stat_roll_method", "4d6_drop_lowest")
-            base_stats = StatGenerator.generate_stats(method)
+        base_stats = cls._generate_or_use_stats(base_stats, char_config)
         
-        # 種族ボーナスの適用
+        # 設定取得
         race_config = races_config[race]
-        race_bonuses = race_config.get("base_stats", {})
-        base_stats = base_stats.add_bonuses(race_bonuses)
+        class_config = classes_config[character_class]
+        
+        # ボーナス適用
+        final_stats = cls._apply_race_and_class_bonuses(base_stats, race_config, class_config)
         
         # 職業要件の確認
-        class_config = classes_config[character_class]
-        if not StatValidator.check_class_requirements(base_stats, class_config):
+        if not StatValidator.check_class_requirements(final_stats, class_config):
             raise ValueError(f"統計値が職業要件を満たしていません: {character_class}")
-        
-        # 職業ボーナスの適用
-        class_bonuses = class_config.get("base_stats", {})
-        final_stats = base_stats.add_bonuses(class_bonuses)
         
         # 派生統計値の計算
         derived_stats = StatGenerator.calculate_derived_stats(
@@ -317,7 +341,7 @@ class Character:
     
     def get_defense(self) -> int:
         """防御力を取得（装備ボーナス・ステータス効果含む）"""
-        base_defense = self.base_stats.strength // 2  # 基本防御力は力の半分
+        base_defense = self.base_stats.strength // 2  # 基本防御力は力の半分（Wizardryスタイル）
         
         equipment_bonus = 0
         if self._equipment_initialized:
@@ -376,11 +400,11 @@ class Character:
     
     def get_race_name(self) -> str:
         """種族名を取得"""
-        return config_manager.get_text(f"race.{self.race}")
+        return config_manager.get_text(f"race.{self.race}", default=self.race)
     
     def get_class_name(self) -> str:
         """職業名を取得"""
-        return config_manager.get_text(f"class.{self.character_class}")
+        return config_manager.get_text(f"class.{self.character_class}", default=self.character_class)
     
     def can_use_spell(self, spell) -> bool:
         """魔法が使用可能かチェック"""
@@ -411,17 +435,6 @@ class Character:
         
         return True
     
-    def can_use_spell(self, spell) -> bool:
-        """魔法を使用できるかチェック"""
-        # MPが足りるかチェック
-        if self.derived_stats.current_mp < spell.mp_cost:
-            return False
-        
-        # キャラクターが生きているかチェック
-        if not self.is_alive:
-            return False
-            
-        return True
     
     def use_mp(self, amount: int):
         """MPを消費"""
@@ -455,13 +468,6 @@ class Character:
         except ValueError:
             # カスタム効果（defending等）の場合は簡易実装
             logger.debug(f"{self.name}に{effect}が付与されました（簡易実装）")
-    
-    def initialize_status_effects(self):
-        """状態効果システムを初期化（遅延初期化）"""
-        if not self._status_effects_initialized:
-            from src.effects.status_effects import status_effect_manager
-            # 必要に応じて初期化処理
-            self._status_effects_initialized = True
     
     def revive(self):
         """蘇生"""
@@ -543,10 +549,3 @@ class Character:
         """個人インベントリを取得（新インベントリシステム）"""
         return self.get_inventory()
     
-    def get_race_name(self) -> str:
-        """種族名を取得"""
-        return config_manager.get_text(f"race.{self.race}", default=self.race)
-    
-    def get_class_name(self) -> str:
-        """職業名を取得"""
-        return config_manager.get_text(f"class.{self.character_class}", default=self.character_class)
