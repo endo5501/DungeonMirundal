@@ -8,6 +8,12 @@ from src.character.character import Character, CharacterStatus
 from src.character.party import Party
 from src.utils.logger import logger
 
+# アイテム使用システム定数
+CONSUME_QUANTITY = 1
+MINIMUM_REVIVE_HP = 1
+PERCENT_DIVISOR = 100
+ZERO_QUANTITY = 0
+
 
 class UsageResult(Enum):
     """使用結果"""
@@ -89,7 +95,7 @@ class ItemUsageManager:
             return UsageResult.CANNOT_USE, "未鑑定のアイテムは使用できません", {}
         
         # 数量チェック
-        if item_instance.quantity <= 0:
+        if item_instance.quantity <= ZERO_QUANTITY:
             return UsageResult.INSUFFICIENT_QUANTITY, "アイテムがありません", {}
         
         # 使用可能性チェック
@@ -112,7 +118,7 @@ class ItemUsageManager:
             
             if success:
                 # アイテム消費
-                item_instance.quantity -= 1
+                item_instance.quantity -= CONSUME_QUANTITY
                 logger.info(f"アイテム使用: {user.name} が {item.get_name()} を使用")
                 return UsageResult.SUCCESS, message, results
             else:
@@ -135,7 +141,7 @@ class ItemUsageManager:
         healed = target.derived_stats.current_hp - old_hp
         
         # 意識不明状態から回復する可能性をチェック
-        if target.status == CharacterStatus.UNCONSCIOUS and target.derived_stats.current_hp > 0:
+        if target.status == CharacterStatus.UNCONSCIOUS and target.derived_stats.current_hp > ZERO_QUANTITY:
             target.status = CharacterStatus.GOOD
         
         message = f"{target.name}のHPが{healed}回復しました"
@@ -251,7 +257,7 @@ class ItemUsageManager:
         
         # 蘇生処理
         target.status = CharacterStatus.GOOD
-        revive_hp = max(1, target.derived_stats.max_hp * effect_value // 100)
+        revive_hp = max(MINIMUM_REVIVE_HP, target.derived_stats.max_hp * effect_value // PERCENT_DIVISOR)
         target.derived_stats.current_hp = revive_hp
         
         message = f"{target.name}が蘇生しました（HP: {revive_hp}）"
@@ -347,7 +353,7 @@ class ItemUsageManager:
         usable_items = []
         
         for slot, item_instance in inventory_items:
-            if item_instance.quantity <= 0 or not item_instance.identified:
+            if item_instance.quantity <= ZERO_QUANTITY or not item_instance.identified:
                 continue
             
             item = item_manager.get_item(item_instance.item_id)

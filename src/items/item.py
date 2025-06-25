@@ -8,6 +8,19 @@ import uuid
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
+# アイテムシステム定数
+DEFAULT_SELL_RATIO = 0.5
+DEFAULT_REPAIR_RATIO = 0.3
+DEFAULT_IDENTIFICATION_COST = 100
+PERFECT_CONDITION = 1.0
+DEFAULT_QUANTITY = 1
+MINIMUM_PRICE = 1
+CONDITION_EXCELLENT = 0.8
+CONDITION_GOOD = 0.6
+CONDITION_DAMAGED = 0.4
+FALLBACK_LANGUAGE = 'ja'
+FIRST_ELEMENT_INDEX = 0
+
 
 class ItemType(Enum):
     """アイテムタイプ"""
@@ -57,9 +70,9 @@ class ItemInstance:
         return cls(
             instance_id=data.get('instance_id', str(uuid.uuid4())),
             item_id=data.get('item_id', ''),
-            quantity=data.get('quantity', 1),
+            quantity=data.get('quantity', DEFAULT_QUANTITY),
             identified=data.get('identified', True),
-            condition=data.get('condition', 1.0),
+            condition=data.get('condition', PERFECT_CONDITION),
             enchantments=data.get('enchantments', []),
             custom_properties=data.get('custom_properties', {})
         )
@@ -93,14 +106,7 @@ class Item:
         """アイテム名を取得"""
         # 新しい多言語対応形式をチェック
         if 'names' in self.item_data:
-            current_language = getattr(config_manager, 'current_language', 'ja')
-            names = self.item_data['names']
-            if current_language in names:
-                return names[current_language]
-            elif 'ja' in names:  # フォールバック
-                return names['ja']
-            elif names:  # 何らかの言語があれば使用
-                return list(names.values())[0]
+            return self._get_localized_text('names')
         
         # 従来の形式にフォールバック
         return config_manager.get_text(self.name_key)
@@ -109,17 +115,24 @@ class Item:
         """アイテム説明を取得"""
         # 新しい多言語対応形式をチェック
         if 'descriptions' in self.item_data:
-            current_language = getattr(config_manager, 'current_language', 'ja')
-            descriptions = self.item_data['descriptions']
-            if current_language in descriptions:
-                return descriptions[current_language]
-            elif 'ja' in descriptions:  # フォールバック
-                return descriptions['ja']
-            elif descriptions:  # 何らかの言語があれば使用
-                return list(descriptions.values())[0]
+            return self._get_localized_text('descriptions')
         
         # 従来の形式にフォールバック
         return config_manager.get_text(self.description_key)
+    
+    def _get_localized_text(self, field_name: str) -> str:
+        """ローカライズされたテキストを取得"""
+        current_language = getattr(config_manager, 'current_language', FALLBACK_LANGUAGE)
+        text_data = self.item_data[field_name]
+        
+        if current_language in text_data:
+            return text_data[current_language]
+        elif FALLBACK_LANGUAGE in text_data:
+            return text_data[FALLBACK_LANGUAGE]
+        elif text_data:
+            return list(text_data.values())[FIRST_ELEMENT_INDEX]
+        
+        return ''
     
     def can_use(self, character_class: str) -> bool:
         """指定されたクラスが使用可能かチェック"""
@@ -171,11 +184,11 @@ class Item:
         """魔法IDを取得（魔法書の場合）"""
         return self.item_data.get('spell_id', '')
     
-    def get_sell_price(self, sell_ratio: float = 0.5) -> int:
+    def get_sell_price(self, sell_ratio: float = DEFAULT_SELL_RATIO) -> int:
         """売却価格を取得"""
         return int(self.price * sell_ratio)
     
-    def create_instance(self, quantity: int = 1, identified: bool = True) -> ItemInstance:
+    def create_instance(self, quantity: int = DEFAULT_QUANTITY, identified: bool = True) -> ItemInstance:
         """アイテムインスタンスを作成"""
         return ItemInstance(
             item_id=self.item_id,
@@ -271,7 +284,7 @@ class ItemManager:
             return 0
         
         pricing = self.item_config.get('pricing', {})
-        sell_ratio = pricing.get('base_sell_ratio', 0.5)
+        sell_ratio = pricing.get('base_sell_ratio', DEFAULT_SELL_RATIO)
         
         # 状態による価格補正
         condition_modifier = instance.condition
@@ -279,12 +292,12 @@ class ItemManager:
         base_price = item.get_sell_price(sell_ratio)
         final_price = int(base_price * condition_modifier * instance.quantity)
         
-        return max(1, final_price)
+        return max(MINIMUM_PRICE, final_price)
     
     def get_identification_cost(self) -> int:
         """鑑定費用を取得"""
         pricing = self.item_config.get('pricing', {})
-        return pricing.get('identification_cost', 100)
+        return pricing.get('identification_cost', DEFAULT_IDENTIFICATION_COST)
     
     def identify_item(self, instance: ItemInstance) -> bool:
         """アイテムを鑑定"""
@@ -305,19 +318,19 @@ class ItemManager:
             return 0
         
         pricing = self.item_config.get('pricing', {})
-        repair_ratio = pricing.get('repair_cost_ratio', 0.3)
+        repair_ratio = pricing.get('repair_cost_ratio', DEFAULT_REPAIR_RATIO)
         
-        damage_amount = 1.0 - instance.condition
+        damage_amount = PERFECT_CONDITION - instance.condition
         repair_cost = int(item.price * repair_ratio * damage_amount)
         
-        return max(1, repair_cost)
+        return max(MINIMUM_PRICE, repair_cost)
     
     def perform_repair(self, instance: ItemInstance) -> bool:
         """アイテム修理を実行"""
         if instance.condition >= 1.0:
             return False
         
-        instance.condition = 1.0
+        instance.condition = PERFECT_CONDITION
         logger.info(f"アイテムを修理しました: {instance.item_id}")
         return True
     

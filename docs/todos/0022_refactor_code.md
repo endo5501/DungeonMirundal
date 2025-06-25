@@ -114,10 +114,20 @@
 
    **テスト結果：** インベントリ関連の24テストすべて成功
 
-9. @src/items 以下のコードをFowler式のリファクタリングしましょう。
+9. ✅ @src/items 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
     リファクタリング後、テストを実施しエラーを確実に解消してください
     完了後、作業内容をこちらに記載した後一旦commitしてください
+
+   **実施したリファクタリング：**
+   - **Replace Magic Number with Named Constant**: 13個の定数を追加（DEFAULT_SELL_RATIO、PERFECT_CONDITION、CONDITION_EXCELLENT等）
+   - **Extract Method**: get_name/get_descriptionメソッドから_get_localized_textメソッドを抽出
+   - **Extract Method**: get_item_display_nameメソッドを4つの小さなメソッドに分割（_get_base_display_name等）
+   - **Replace Magic Number with Named Constant**: 価格、数量、状態値等の魔法数をすべて定数に置換
+   - **Simplify Conditional**: 状態表示ロジックを独立メソッドに分離して可読性向上
+   - **Replace Magic Number with Named Constant**: item_usage.pyでも使用関連の定数を4個追加
+
+   **テスト結果：** アイテム関連の35テストすべて成功
 
 10. @src/magic 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
