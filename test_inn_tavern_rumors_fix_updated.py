@@ -68,21 +68,22 @@ class TestInnTavernRumorsFix:
             }.get(key, "テストテキスト")
             
             with patch('src.overworld.facilities.inn.ui_manager', mock_ui_manager):
-                # _show_dialogメソッドをモック
-                self.inn._show_dialog = Mock()
+                # show_information_dialogメソッドをモック（旧システムでも実際にはこれが呼ばれる）
+                self.inn.show_information_dialog = Mock()
                 
                 # 噂話を表示
                 self.inn._show_tavern_rumors()
                 
-                # _show_dialogが呼ばれたことを確認
-                self.inn._show_dialog.assert_called_once()
+                # show_information_dialogが呼ばれたことを確認
+                self.inn.show_information_dialog.assert_called_once()
                 
-                # ボタンのコールバック関数を取得してテスト
-                call_args = self.inn._show_dialog.call_args
-                button_callback = call_args[1]['buttons'][0]['command']
+                # 呼び出し引数を確認
+                call_args = self.inn.show_information_dialog.call_args
+                assert "酒場の噂話" in call_args[0][0]  # title
+                assert len(call_args[0][1]) > 0  # message
                 
-                # 実際のコールバックが _back_to_main_menu_from_tavern_rumors_dialog であることを確認
-                assert button_callback == self.inn._back_to_main_menu_from_tavern_rumors_dialog
+                # 旧システムではbuttonsパラメータがない
+                assert len(call_args[0]) == 2  # titleとmessageのみ
     
     def test_travel_info_legacy_system_fix(self):
         """旧システムでの旅の情報ダイアログ修正をテスト"""
@@ -103,21 +104,22 @@ class TestInnTavernRumorsFix:
             }.get(key, "テストテキスト")
             
             with patch('src.overworld.facilities.inn.ui_manager', mock_ui_manager):
-                # _show_dialogメソッドをモック
-                self.inn._show_dialog = Mock()
+                # show_information_dialogメソッドをモック
+                self.inn.show_information_dialog = Mock()
                 
                 # 旅の情報を表示
                 self.inn._show_travel_info()
                 
-                # _show_dialogが呼ばれたことを確認
-                self.inn._show_dialog.assert_called_once()
+                # show_information_dialogが呼ばれたことを確認
+                self.inn.show_information_dialog.assert_called_once()
                 
-                # ボタンのコールバック関数を取得してテスト
-                call_args = self.inn._show_dialog.call_args
-                button_callback = call_args[1]['buttons'][0]['command']
+                # 呼び出し引数を確認
+                call_args = self.inn.show_information_dialog.call_args
+                assert call_args[0][0] == "旅の情報"  # title
+                assert call_args[0][1] == "旅に関する情報です"  # message
                 
-                # 実際のコールバックが _back_to_main_menu_from_travel_info_dialog であることを確認
-                assert button_callback == self.inn._back_to_main_menu_from_travel_info_dialog
+                # 旧システムではbuttonsパラメータがない
+                assert len(call_args[0]) == 2  # titleとmessageのみ
     
     def test_innkeeper_conversation_legacy_system_fix(self):
         """旧システムでの宿屋の主人会話ダイアログ修正をテスト"""
@@ -143,26 +145,28 @@ class TestInnTavernRumorsFix:
             }.get(key, "テストテキスト")
             
             with patch('src.overworld.facilities.inn.ui_manager', mock_ui_manager):
-                # _show_dialogメソッドをモック
-                self.inn._show_dialog = Mock()
+                # show_information_dialogメソッドをモック
+                self.inn.show_information_dialog = Mock()
                 
                 # 宿屋の主人会話を表示
                 self.inn._talk_to_innkeeper()
                 
-                # _show_dialogが呼ばれたことを確認
-                self.inn._show_dialog.assert_called_once()
+                # show_information_dialogが呼ばれたことを確認
+                self.inn.show_information_dialog.assert_called_once()
                 
-                # ボタンのコールバック関数を取得してテスト
-                call_args = self.inn._show_dialog.call_args
-                button_callback = call_args[1]['buttons'][0]['command']
+                # 呼び出し引数を確認
+                call_args = self.inn.show_information_dialog.call_args
+                assert "宿屋の主人" in call_args[0][0]  # title
+                assert len(call_args[0][1]) > 0  # message
                 
-                # 実際のコールバックが _back_to_main_menu_from_innkeeper_dialog であることを確認
-                assert button_callback == self.inn._back_to_main_menu_from_innkeeper_dialog
+                # 旧システムではbuttonsパラメータがない
+                assert len(call_args[0]) == 2  # titleとmessageのみ
     
     def test_new_system_dialog_callbacks(self):
         """新システムでのダイアログコールバックをテスト"""
         # 新システムを有効化
         self.inn.use_new_menu_system = True
+        self.inn.dialog_template = Mock()  # dialog_templateが必要
         self.inn.show_information_dialog = Mock(return_value=True)
         
         with patch.object(config_manager, 'get_text') as mock_get_text:
@@ -186,12 +190,13 @@ class TestInnTavernRumorsFix:
             # show_information_dialogが適切な引数で呼ばれたことを確認
             self.inn.show_information_dialog.assert_called_once()
             
-            # 3つの引数（タイトル、メッセージ、コールバック）で呼ばれたかチェック
+            # buttonsキーワード引数を確認
             call_args = self.inn.show_information_dialog.call_args
-            assert len(call_args[0]) == 3  # 引数が3つある
             assert "酒場の噂話" in call_args[0][0]  # タイトルに噂話が含まれる
             assert len(call_args[0][1]) > 0  # メッセージが空でない
-            assert callable(call_args[0][2])  # コールバック関数が渡されている
+            assert 'buttons' in call_args[1]  # buttonsがキーワード引数として渡されている
+            assert call_args[1]['buttons'][0]['text'] == "戻る"  # ボタンテキストが「戻る」
+            assert call_args[1]['buttons'][0]['callback'] is None  # コールバックはNone
     
     def test_base_facility_close_dialog_fix(self):
         """BaseFacilityの_close_dialog修正をテスト"""

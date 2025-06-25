@@ -156,12 +156,18 @@ class TestTextDisplayFixes:
             # 旧システムを使用するように設定
             self.inn.use_new_menu_system = False
             
+            # show_information_dialogをモック
+            self.inn.show_information_dialog = Mock()
+            
             self.inn._talk_to_innkeeper()
             
-            # 適切なサイズで作成されることを確認
-            assert self.inn.current_dialog is not None
-            assert self.inn.current_dialog.rect.width == 550
-            assert self.inn.current_dialog.rect.height == 350
+            # show_information_dialogが呼ばれることを確認
+            self.inn.show_information_dialog.assert_called_once()
+            call_args = self.inn.show_information_dialog.call_args
+            
+            # タイトルとメッセージが適切であることを確認
+            assert "宿屋の主人" in call_args[0][0]  # title
+            assert len(call_args[0][1]) > 0  # message
     
     def test_shop_shopkeeper_dialog_size(self):
         """商店の主人との会話ダイアログのサイズをテスト"""

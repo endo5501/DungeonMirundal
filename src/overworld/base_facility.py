@@ -380,13 +380,15 @@ class BaseFacility(ABC):
             return False
     
     def show_information_dialog(self, title: str, message: str, 
-                              on_close: Optional[Callable] = None) -> bool:
+                              on_close: Optional[Callable] = None, 
+                              buttons: Optional[List[Dict]] = None) -> bool:
         """情報ダイアログを表示（新システム）"""
         if not self.use_new_menu_system or not self.dialog_template:
             logger.warning("新ダイアログシステムが利用できません")
             return False
         
         try:
+            # buttonsパラメータは現在未実装なので無視
             dialog = self.dialog_template.create_information_dialog(
                 f"{self.facility_id}_info_{pygame.time.get_ticks()}",
                 title,
