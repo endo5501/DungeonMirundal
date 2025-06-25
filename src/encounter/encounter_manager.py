@@ -11,6 +11,29 @@ from src.dungeon.dungeon_generator import DungeonAttribute, DungeonLevel
 from src.character.party import Party
 from src.utils.logger import logger
 
+# エンカウンター定数
+MAX_DUNGEON_LEVEL = 20
+BASE_LEVELS_PER_TIER = 4
+MAX_TIER_LEVEL = 5
+ATTRIBUTE_ABILITY_CHANCE = 0.3
+AMBUSH_ABILITY_CHANCE = 0.5
+TREASURE_GUARDIAN_ABILITY_CHANCE = 0.7
+DEEP_DUNGEON_THRESHOLD = 15
+ENHANCED_MONSTER_CHANCE = 0.2
+
+# 成功率関連定数
+BASE_FLEE_CHANCE = 0.5
+BASE_NEGOTIATION_CHANCE = 0.2
+TREASURE_GUARDIAN_NEGOTIATION_BONUS = 0.3
+AGILITY_BONUS_RATE = 0.05
+CHARISMA_BONUS_RATE = 0.03
+BASE_AGILITY = 12
+BASE_CHARISMA = 12
+MIN_FLEE_CHANCE = 0.05
+MAX_FLEE_CHANCE = 0.95
+MIN_NEGOTIATION_CHANCE = 0.01
+MAX_NEGOTIATION_CHANCE = 0.8
+
 
 class EncounterType(Enum):
     """エンカウンタータイプ"""
@@ -100,34 +123,30 @@ class EncounterManager:
                           dungeon_attribute: DungeonAttribute,
                           location: Tuple[int, int, int]) -> EncounterEvent:
         """エンカウンター生成"""
-        
-        # エンカウンタータイプを決定
         encounter_enum = self._parse_encounter_type(encounter_type)
+        monster_group = self._generate_monster_group(encounter_enum, level, dungeon_attribute, location)
         
-        # モンスターグループを生成
-        monster_group = self._generate_monster_group(
-            encounter_enum, level, dungeon_attribute, location
-        )
+        encounter_event = self._create_encounter_event(encounter_enum, monster_group, location, dungeon_attribute)
+        self._finalize_encounter(encounter_event, level)
         
-        # エンカウンターイベント作成
-        encounter_event = EncounterEvent(
+        logger.info(f"エンカウンター生成: {encounter_enum.value} at {location}")
+        return encounter_event
+    
+    def _create_encounter_event(self, encounter_enum: EncounterType, monster_group: MonsterGroup,
+                               location: Tuple[int, int, int], dungeon_attribute: DungeonAttribute) -> EncounterEvent:
+        """エンカウンターイベント作成"""
+        return EncounterEvent(
             encounter_type=encounter_enum,
             monster_group=monster_group,
             location=location,
             dungeon_attribute=dungeon_attribute
         )
-        
-        # 特殊条件設定
+    
+    def _finalize_encounter(self, encounter_event: EncounterEvent, level: int):
+        """エンカウンターの最終化処理"""
         self._apply_special_conditions(encounter_event, level)
-        
-        # 説明文生成
         encounter_event.description = self._generate_encounter_description(encounter_event)
-        
-        # 統計更新
         self.encounter_statistics['total_encounters'] += 1
-        
-        logger.info(f"エンカウンター生成: {encounter_enum.value} at {location}")
-        return encounter_event
     
     def _initialize_encounter_tables(self):
         """エンカウンターテーブル初期化"""
@@ -145,9 +164,9 @@ class EncounterManager:
         for attribute in DungeonAttribute:
             self.encounter_tables[attribute] = {}
             
-            for level in range(1, 21):  # レベル1-20
+            for level in range(1, MAX_DUNGEON_LEVEL + 1):  # レベル1-20
                 # 基本レベルを計算
-                base_level = min(5, (level - 1) // 4 + 1)
+                base_level = min(MAX_TIER_LEVEL, (level - 1) // BASE_LEVELS_PER_TIER + 1)
                 monsters = base_monsters.get(base_level, ["unknown"])
                 
                 # 属性による変更
@@ -230,33 +249,42 @@ class EncounterManager:
         if encounter_type == EncounterType.BOSS:
             return MonsterRank.BOSS
         
-        # レベルベースの確率
-        rank_probabilities = {
+        rank_probabilities = self._calculate_base_rank_probabilities(level)
+        self._adjust_probabilities_by_encounter_type(rank_probabilities, encounter_type)
+        self._normalize_probabilities(rank_probabilities)
+        
+        return self._select_rank_by_probability(rank_probabilities, rng)
+    
+    def _calculate_base_rank_probabilities(self, level: int) -> Dict[MonsterRank, float]:
+        """レベルベースのランク確率を計算"""
+        return {
             MonsterRank.WEAK: max(0.1, 0.4 - level * 0.02),
             MonsterRank.NORMAL: 0.5,
             MonsterRank.STRONG: min(0.3, level * 0.02),
             MonsterRank.ELITE: min(0.1, max(0, level - 10) * 0.01)
         }
-        
-        # エンカウンタータイプによる調整
+    
+    def _adjust_probabilities_by_encounter_type(self, probabilities: Dict[MonsterRank, float], encounter_type: EncounterType):
+        """エンカウンタータイプによる確率調整"""
         if encounter_type == EncounterType.AMBUSH:
-            rank_probabilities[MonsterRank.STRONG] *= 1.5
+            probabilities[MonsterRank.STRONG] *= 1.5
         elif encounter_type == EncounterType.TREASURE_GUARDIAN:
-            rank_probabilities[MonsterRank.ELITE] *= 2.0
-        
-        # 正規化
-        total_prob = sum(rank_probabilities.values())
-        for rank in rank_probabilities:
-            rank_probabilities[rank] /= total_prob
-        
-        # ランダム選択
+            probabilities[MonsterRank.ELITE] *= 2.0
+    
+    def _normalize_probabilities(self, probabilities: Dict[MonsterRank, float]):
+        """確率の正規化"""
+        total_prob = sum(probabilities.values())
+        for rank in probabilities:
+            probabilities[rank] /= total_prob
+    
+    def _select_rank_by_probability(self, probabilities: Dict[MonsterRank, float], rng: random.Random) -> MonsterRank:
+        """確率に基づいたランク選択"""
         rand_val = rng.random()
         cumulative = 0
-        for rank, prob in rank_probabilities.items():
+        for rank, prob in probabilities.items():
             cumulative += prob
             if rand_val <= cumulative:
                 return rank
-        
         return MonsterRank.NORMAL
     
     def _generate_special_abilities(self, encounter_type: EncounterType, 
@@ -273,13 +301,13 @@ class EncounterManager:
             DungeonAttribute.LIGHT: ["holy_light", "blessing"]
         }
         
-        if attribute in attribute_abilities and rng.random() < 0.3:
+        if attribute in attribute_abilities and rng.random() < ATTRIBUTE_ABILITY_CHANCE:
             abilities.append(rng.choice(attribute_abilities[attribute]))
         
         # エンカウンタータイプベースの能力
-        if encounter_type == EncounterType.AMBUSH and rng.random() < 0.5:
+        if encounter_type == EncounterType.AMBUSH and rng.random() < AMBUSH_ABILITY_CHANCE:
             abilities.append("surprise_attack")
-        elif encounter_type == EncounterType.TREASURE_GUARDIAN and rng.random() < 0.7:
+        elif encounter_type == EncounterType.TREASURE_GUARDIAN and rng.random() < TREASURE_GUARDIAN_ABILITY_CHANCE:
             abilities.append("treasure_bond")
         
         return abilities
@@ -348,9 +376,9 @@ class EncounterManager:
             encounter.special_conditions["guarding_treasure"] = True
         
         # 深い階層での特殊条件
-        if level > 15:
+        if level > DEEP_DUNGEON_THRESHOLD:
             encounter.special_conditions["deep_dungeon"] = True
-            if random.random() < 0.2:
+            if random.random() < ENHANCED_MONSTER_CHANCE:
                 encounter.special_conditions["enhanced_monsters"] = True
     
     def _generate_encounter_description(self, encounter: EncounterEvent) -> str:
@@ -434,10 +462,10 @@ class EncounterManager:
         avg_agility = sum(char.base_stats.agility for char in living_chars) / len(living_chars)
         
         # 基本成功率
-        base_chance = 0.5
+        base_chance = BASE_FLEE_CHANCE
         
         # 敏捷性による修正
-        agility_bonus = (avg_agility - 12) * 0.05  # 敏捷性12を基準に±5%
+        agility_bonus = (avg_agility - BASE_AGILITY) * AGILITY_BONUS_RATE
         
         # エンカウンタータイプによる修正
         type_penalties = {
@@ -462,7 +490,7 @@ class EncounterManager:
             rank_penalty = rank_penalties.get(encounter.monster_group.rank, 0)
         
         final_chance = base_chance + agility_bonus + type_penalty + rank_penalty
-        return max(0.05, min(0.95, final_chance))  # 5%-95%の範囲に制限
+        return max(MIN_FLEE_CHANCE, min(MAX_FLEE_CHANCE, final_chance))
     
     def _calculate_negotiation_chance(self, encounter: EncounterEvent) -> float:
         """交渉成功率計算"""
@@ -477,17 +505,17 @@ class EncounterManager:
         max_charisma = max(char.base_stats.intelligence for char in living_chars)  # 知力を交渉力として使用
         
         # 基本成功率
-        base_chance = 0.2
+        base_chance = BASE_NEGOTIATION_CHANCE
         
         # 知力による修正
-        charisma_bonus = (max_charisma - 12) * 0.03
+        charisma_bonus = (max_charisma - BASE_CHARISMA) * CHARISMA_BONUS_RATE
         
         # エンカウンタータイプによる修正
         if encounter.encounter_type == EncounterType.TREASURE_GUARDIAN:
-            base_chance += 0.3  # 宝箱守護者は交渉しやすい
+            base_chance += TREASURE_GUARDIAN_NEGOTIATION_BONUS
         
         final_chance = base_chance + charisma_bonus
-        return max(0.01, min(0.8, final_chance))  # 1%-80%の範囲に制限
+        return max(MIN_NEGOTIATION_CHANCE, min(MAX_NEGOTIATION_CHANCE, final_chance))
     
     def get_encounter_statistics(self) -> Dict[str, Any]:
         """エンカウンター統計取得"""

@@ -71,10 +71,19 @@
 
    **テスト結果：** エフェクト関連の26テストすべて成功
 
-6. @src/encounter 以下のコードをFowler式のリファクタリングしましょう。
+6. ✅ @src/encounter 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
     リファクタリング後、テストを実施しエラーを確実に解消してください
     完了後、作業内容をこちらに記載した後一旦commitしてください
+
+   **実施したリファクタリング：**
+   - **Replace Magic Number with Named Constant**: 15個の定数を追加（MAX_DUNGEON_LEVEL、確率関連定数、しきい値等）
+   - **Extract Method**: 長いgenerate_encounterメソッドから_create_encounter_event、_finalize_encounterメソッドを抽出
+   - **Extract Method**: _determine_monster_rankメソッドを4つの小さなメソッドに分割（_calculate_base_rank_probabilities等）
+   - **Replace Magic Number with Named Constant**: 逃走・交渉確率計算の魔法数をすべて定数に置換
+   - **Simplify Conditional**: 確率計算の複雑な条件文をより読みやすい形に改善
+
+   **テスト結果：** エンカウンター関連の23テストすべて成功
 
 7. @src/equipment 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
