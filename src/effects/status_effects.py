@@ -7,6 +7,17 @@ import time
 
 from src.utils.logger import logger
 
+# デフォルト効果持続時間と強度
+DEFAULT_POISON_DURATION = 5
+DEFAULT_PARALYSIS_DURATION = 3
+DEFAULT_SLEEP_DURATION = 4
+DEFAULT_REGEN_DURATION = 10
+DEFAULT_BUFF_DURATION = 6
+DEFAULT_BUFF_STRENGTH = 3
+DEFAULT_EFFECT_STRENGTH = 1
+HEALTH_DAMAGE_RATIO = 20
+STAT_MODIFIER_INITIAL_VALUE = 0
+
 
 class StatusEffectType(Enum):
     """ステータス効果の種類"""
@@ -96,7 +107,7 @@ class StatusEffect(ABC):
 class PoisonEffect(StatusEffect):
     """毒効果"""
     
-    def __init__(self, duration: int = 5, strength: int = 1, source: str = "poison"):
+    def __init__(self, duration: int = DEFAULT_POISON_DURATION, strength: int = DEFAULT_EFFECT_STRENGTH, source: str = "poison"):
         super().__init__(StatusEffectType.POISON, duration, strength, source)
     
     def apply_effect(self, character) -> Dict[str, Any]:
@@ -117,7 +128,7 @@ class PoisonEffect(StatusEffect):
     
     def _process_turn_effect(self, character) -> Dict[str, Any]:
         """ターン毎のダメージ処理"""
-        poison_damage = max(1, character.derived_stats.max_hp // 20 * self.strength)
+        poison_damage = max(1, character.derived_stats.max_hp // HEALTH_DAMAGE_RATIO * self.strength)
         old_hp = character.derived_stats.current_hp
         character.take_damage(poison_damage)
         actual_damage = old_hp - character.derived_stats.current_hp
@@ -132,7 +143,7 @@ class PoisonEffect(StatusEffect):
 class ParalysisEffect(StatusEffect):
     """麻痺効果"""
     
-    def __init__(self, duration: int = 3, strength: int = 1, source: str = "paralysis"):
+    def __init__(self, duration: int = DEFAULT_PARALYSIS_DURATION, strength: int = DEFAULT_EFFECT_STRENGTH, source: str = "paralysis"):
         super().__init__(StatusEffectType.PARALYSIS, duration, strength, source)
     
     def apply_effect(self, character) -> Dict[str, Any]:
@@ -155,7 +166,7 @@ class ParalysisEffect(StatusEffect):
 class SleepEffect(StatusEffect):
     """睡眠効果"""
     
-    def __init__(self, duration: int = 4, strength: int = 1, source: str = "sleep"):
+    def __init__(self, duration: int = DEFAULT_SLEEP_DURATION, strength: int = DEFAULT_EFFECT_STRENGTH, source: str = "sleep"):
         super().__init__(StatusEffectType.SLEEP, duration, strength, source)
     
     def apply_effect(self, character) -> Dict[str, Any]:
@@ -178,7 +189,7 @@ class SleepEffect(StatusEffect):
 class RegenEffect(StatusEffect):
     """再生効果"""
     
-    def __init__(self, duration: int = 10, strength: int = 1, source: str = "regen"):
+    def __init__(self, duration: int = DEFAULT_REGEN_DURATION, strength: int = DEFAULT_EFFECT_STRENGTH, source: str = "regen"):
         super().__init__(StatusEffectType.REGEN, duration, strength, source)
     
     def apply_effect(self, character) -> Dict[str, Any]:
@@ -199,7 +210,7 @@ class RegenEffect(StatusEffect):
     
     def _process_turn_effect(self, character) -> Dict[str, Any]:
         """ターン毎の回復処理"""
-        regen_amount = max(1, character.derived_stats.max_hp // 20 * self.strength)
+        regen_amount = max(1, character.derived_stats.max_hp // HEALTH_DAMAGE_RATIO * self.strength)
         old_hp = character.derived_stats.current_hp
         character.heal(regen_amount)
         actual_heal = character.derived_stats.current_hp - old_hp
@@ -214,7 +225,7 @@ class RegenEffect(StatusEffect):
 class StrengthUpEffect(StatusEffect):
     """筋力強化効果"""
     
-    def __init__(self, duration: int = 6, strength: int = 3, source: str = "buff"):
+    def __init__(self, duration: int = DEFAULT_BUFF_DURATION, strength: int = DEFAULT_BUFF_STRENGTH, source: str = "buff"):
         super().__init__(StatusEffectType.STRENGTH_UP, duration, strength, source)
     
     def apply_effect(self, character) -> Dict[str, Any]:
@@ -239,7 +250,7 @@ class StrengthUpEffect(StatusEffect):
 class DefenseUpEffect(StatusEffect):
     """防御強化効果"""
     
-    def __init__(self, duration: int = 6, strength: int = 3, source: str = "buff"):
+    def __init__(self, duration: int = DEFAULT_BUFF_DURATION, strength: int = DEFAULT_BUFF_STRENGTH, source: str = "buff"):
         super().__init__(StatusEffectType.DEFENSE_UP, duration, strength, source)
     
     def apply_effect(self, character) -> Dict[str, Any]:
@@ -270,23 +281,29 @@ class StatusEffectManager:
         
     def add_effect(self, effect: StatusEffect, character=None) -> Tuple[bool, Dict[str, Any]]:
         """ステータス効果を追加"""
-        effect_type = effect.effect_type
-        
-        # 既存の同じ効果がある場合は上書き（より強い効果または長い効果を優先）
-        if effect_type in self.active_effects:
-            existing = self.active_effects[effect_type]
-            if effect.duration <= existing.duration and effect.strength <= existing.strength:
-                return False, {'message': f'より強い{effect_type.value}効果が既にかかっています'}
-        
-        # 効果を適用（キャラクターオブジェクトを直接受け取る）
         if not character:
             return False, {'message': 'キャラクターが指定されていません'}
         
+        effect_type = effect.effect_type
+        
+        # 既存効果のチェック
+        if not self._should_apply_effect(effect, effect_type):
+            return False, {'message': f'より強い{effect_type.value}効果が既にかかっています'}
+        
+        # 効果を適用
         result = effect.apply_effect(character)
         self.active_effects[effect_type] = effect
         
         logger.info(f"ステータス効果追加: {self.character_id} - {effect_type.value}")
         return True, result
+    
+    def _should_apply_effect(self, new_effect: StatusEffect, effect_type: StatusEffectType) -> bool:
+        """新しい効果を適用すべきかチェック"""
+        if effect_type not in self.active_effects:
+            return True
+        
+        existing = self.active_effects[effect_type]
+        return not (new_effect.duration <= existing.duration and new_effect.strength <= existing.strength)
     
     def remove_effect(self, effect_type: StatusEffectType, character=None) -> Tuple[bool, Dict[str, Any]]:
         """ステータス効果を除去"""
@@ -314,30 +331,41 @@ class StatusEffectManager:
     
     def process_turn(self, character=None) -> List[Dict[str, Any]]:
         """ターン処理（効果の継続・除去）"""
+        if not character:
+            return []
+        
         results = []
         effects_to_remove = []
         
-        if not character:
-            return results
-        
+        # 各効果の処理
         for effect_type, effect in self.active_effects.items():
-            continues, result = effect.tick(character)
+            result = self._process_single_effect(effect, character)
+            if result['result']:
+                results.append(result['result'])
             
-            if result:
-                results.append(result)
-            
-            if not continues:
-                # 効果終了
+            if not result['continues']:
                 remove_result = effect.remove_effect(character)
                 results.append(remove_result)
                 effects_to_remove.append(effect_type)
         
         # 終了した効果を除去
+        self._remove_expired_effects(effects_to_remove)
+        
+        return results
+    
+    def _process_single_effect(self, effect: StatusEffect, character) -> Dict[str, Any]:
+        """単一効果の処理"""
+        continues, result = effect.tick(character)
+        return {
+            'continues': continues,
+            'result': result
+        }
+    
+    def _remove_expired_effects(self, effects_to_remove: List[StatusEffectType]):
+        """期限切れ効果の除去"""
         for effect_type in effects_to_remove:
             del self.active_effects[effect_type]
             logger.info(f"ステータス効果終了: {self.character_id} - {effect_type.value}")
-        
-        return results
     
     def cure_negative_effects(self, character=None) -> List[Dict[str, Any]]:
         """負の効果を全て治療"""
@@ -369,24 +397,32 @@ class StatusEffectManager:
     
     def get_stat_modifiers(self) -> Dict[str, int]:
         """ステータス修正値を取得"""
-        modifiers = {
-            'strength': 0,
-            'agility': 0,
-            'intelligence': 0,
-            'faith': 0,
-            'luck': 0,
-            'attack': 0,
-            'defense': 0
-        }
+        modifiers = self._create_default_modifiers()
         
         for effect in self.active_effects.values():
-            if effect.effect_type == StatusEffectType.STRENGTH_UP:
-                modifiers['strength'] += effect.strength
-                modifiers['attack'] += effect.strength
-            elif effect.effect_type == StatusEffectType.DEFENSE_UP:
-                modifiers['defense'] += effect.strength
+            self._apply_effect_modifiers(effect, modifiers)
         
         return modifiers
+    
+    def _create_default_modifiers(self) -> Dict[str, int]:
+        """デフォルトのステータス修正値を作成"""
+        return {
+            'strength': STAT_MODIFIER_INITIAL_VALUE,
+            'agility': STAT_MODIFIER_INITIAL_VALUE,
+            'intelligence': STAT_MODIFIER_INITIAL_VALUE,
+            'faith': STAT_MODIFIER_INITIAL_VALUE,
+            'luck': STAT_MODIFIER_INITIAL_VALUE,
+            'attack': STAT_MODIFIER_INITIAL_VALUE,
+            'defense': STAT_MODIFIER_INITIAL_VALUE
+        }
+    
+    def _apply_effect_modifiers(self, effect: StatusEffect, modifiers: Dict[str, int]):
+        """効果のステータス修正を適用"""
+        if effect.effect_type == StatusEffectType.STRENGTH_UP:
+            modifiers['strength'] += effect.strength
+            modifiers['attack'] += effect.strength
+        elif effect.effect_type == StatusEffectType.DEFENSE_UP:
+            modifiers['defense'] += effect.strength
     
     def can_act(self) -> Tuple[bool, str]:
         """行動可能かチェック"""

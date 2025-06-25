@@ -57,10 +57,19 @@
 
    **テスト結果：** ダンジョン関連の27テストすべて成功
 
-5. @src/effects 以下のコードをFowler式のリファクタリングしましょう。
+5. ✅ @src/effects 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
     リファクタリング後、テストを実施しエラーを確実に解消してください
     完了後、作業内容をこちらに記載した後一旦commitしてください
+
+   **実施したリファクタリング：**
+   - **Replace Magic Number with Named Constant**: 8個の定数を追加（DEFAULT_POISON_DURATION等のデフォルト持続時間・強度、HEALTH_DAMAGE_RATIO等）
+   - **Extract Method**: StatusEffectManagerの長いadd_effectメソッドから_should_apply_effectメソッドを抽出
+   - **Extract Method**: 長いprocess_turnメソッドから_process_single_effect、_remove_expired_effectsメソッドを抽出
+   - **Extract Method**: get_stat_modifiersメソッドから_create_default_modifiers、_apply_effect_modifiersメソッドを抽出
+   - **Replace Conditional with Constants**: HPダメージ計算の魔法数20をHEALTH_DAMAGE_RATIOに統一
+
+   **テスト結果：** エフェクト関連の26テストすべて成功
 
 6. @src/encounter 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
