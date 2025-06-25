@@ -49,16 +49,17 @@ class TestSpellSlotEquipmentFlow:
     def test_spell_equipment_success_callback_returns_to_correct_menu(self, inn, mock_character, mock_spellbook):
         """魔法装備成功後のコールバックが正しいメニューに戻る"""
         # Arrange
-        with patch.object(inn, '_get_or_create_spellbook', return_value=mock_spellbook):
+        with patch.object(inn, '_get_or_create_spellbook', return_value=mock_spellbook) as mock_get_spellbook:
             with patch.object(mock_spellbook, 'equip_spell_to_slot', return_value=True):
                 with patch.object(inn, '_show_character_spell_slot_detail') as mock_show_menu:
-                    with patch.object(inn, '_show_dialog') as mock_show_dialog:
+                    with patch.object(inn, 'show_information_dialog') as mock_show_dialog:
                         
                         # Act: 適切なスロットレベルで魔法を装備
                         inn._equip_spell_to_slot(mock_character, 'heal', 1, 0)
                         
-                        # _show_dialogが成功メッセージで呼ばれたか確認
+                        # show_information_dialogが成功メッセージで呼ばれたか確認
                         mock_show_dialog.assert_called()
+                        mock_get_spellbook.assert_called_with(mock_character)
                         
                         # ダイアログのボタンコールバックを手動実行
                         call_args = mock_show_dialog.call_args
@@ -67,8 +68,8 @@ class TestSpellSlotEquipmentFlow:
                             if buttons and len(buttons) > 0:
                                 # OKボタンのコールバックを実行
                                 ok_button = buttons[0]
-                                if 'command' in ok_button:
-                                    ok_button['command']()
+                                if 'callback' in ok_button and ok_button['callback']:
+                                    ok_button['callback']()
                         
                         # Assert: キャラクタースペルスロット詳細メニューが呼ばれる
                         mock_show_menu.assert_called_with(mock_character)
@@ -121,26 +122,27 @@ class TestSpellSlotEquipmentFlow:
         success1 = mock_spellbook.equip_spell_to_slot('heal', 1, 0)
         success2 = mock_spellbook.equip_spell_to_slot('fireball', 3, 0)
         
-        with patch.object(inn, '_get_or_create_spellbook', return_value=mock_spellbook):
-            with patch.object(inn, '_show_dialog') as mock_show_dialog:
+        with patch.object(inn, '_get_or_create_spellbook', return_value=mock_spellbook) as mock_get_spellbook:
+            with patch.object(inn, 'show_information_dialog') as mock_show_dialog:
                 
                 # Act: スロット状況を表示
                 inn._show_spell_slot_status(mock_character)
                 
                 # Assert: ダイアログが呼ばれ、装備済み魔法が含まれている
                 mock_show_dialog.assert_called_once()
+                mock_get_spellbook.assert_called_with(mock_character)
                 
                 # ダイアログメッセージに装備済み魔法が含まれているか確認
                 call_args = mock_show_dialog.call_args
-                dialog_message = call_args[0][2]  # 3番目の引数がメッセージ
+                dialog_message = call_args[0][1]  # 2番目の引数がメッセージ
                 
-                # 装備成功した場合のみアサーション
+                # 装備成功した場合のみアサーション（日本語名での確認）
                 if success1:
-                    assert 'heal' in dialog_message
-                    assert '[1] heal' in dialog_message or 'heal' in dialog_message
+                    assert 'ヒール' in dialog_message or 'heal' in dialog_message
+                    assert '[1] ヒール' in dialog_message or '[1] heal' in dialog_message or 'ヒール' in dialog_message
                 if success2:
-                    assert 'fireball' in dialog_message
-                    assert '[1] fireball' in dialog_message or 'fireball' in dialog_message
+                    assert 'ファイアボール' in dialog_message or 'fireball' in dialog_message
+                    assert '[1] ファイアボール' in dialog_message or '[1] fireball' in dialog_message or 'ファイアボール' in dialog_message
                 
                 # スロット状況が正しく表示されるかのテスト
                 assert 'Lv.1 スロット' in dialog_message
@@ -149,8 +151,8 @@ class TestSpellSlotEquipmentFlow:
     def test_back_button_works_after_spell_equipment(self, inn, mock_character, mock_spellbook):
         """魔法装備後に戻るボタンが機能する"""
         # Arrange
-        with patch.object(inn, '_get_or_create_spellbook', return_value=mock_spellbook):
-            with patch.object(inn, '_show_submenu') as mock_show_submenu:
+        with patch.object(inn, '_get_or_create_spellbook', return_value=mock_spellbook) as mock_get_spellbook:
+            with patch.object(inn, 'show_submenu') as mock_show_submenu:
                 with patch.object(inn, '_show_adventure_preparation') as mock_show_adventure_prep:
                     
                     # Act1: キャラクタースペルスロット詳細メニューを表示
@@ -179,8 +181,8 @@ class TestSpellSlotEquipmentFlow:
     def test_menu_navigation_consistency(self, inn, mock_character, mock_spellbook):
         """メニューナビゲーションの一貫性テスト"""
         # Arrange
-        with patch.object(inn, '_get_or_create_spellbook', return_value=mock_spellbook):
-            with patch.object(inn, '_show_submenu') as mock_show_submenu:
+        with patch.object(inn, '_get_or_create_spellbook', return_value=mock_spellbook) as mock_get_spellbook:
+            with patch.object(inn, 'show_submenu') as mock_show_submenu:
                 
                 # スパイユーザー選択 → キャラクター詳細 → 装備メニュー → スロット選択 → 装備実行
                 

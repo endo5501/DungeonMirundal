@@ -281,7 +281,10 @@ class TestInnMenuFlow:
                 self.tester.facility._show_new_item_organization_menu()
                 
                 if hasattr(self.tester.facility, '_show_character_item_management'):
-                    self.tester.facility._show_character_item_management()
+                    # テスト用のキャラクターを取得して渡す
+                    test_character = self.tester.test_party.get_all_characters()[0] if self.tester.test_party.get_all_characters() else None
+                    if test_character:
+                        self.tester.facility._show_character_item_management(test_character)
                     
                     # 4階層目でも戻るボタンが機能することをテスト
                     if self.tester.facility.use_new_menu_system:

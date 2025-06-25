@@ -12,6 +12,7 @@ from src.inventory.inventory import Inventory, InventoryManager
 from src.equipment.equipment import Equipment, EquipmentManager
 from src.magic.spells import SpellManager
 from src.items.item import item_manager
+from src.magic.spells import SpellBook, spell_manager
 
 
 class Inn(BaseFacility):
@@ -451,12 +452,185 @@ class Inn(BaseFacility):
         self.show_information_dialog("実装予定", "この機能は実装予定です")
     
     def _show_spell_equip_menu(self, character):
-        """魔術装備メニュー（実装予定）"""
-        self.show_information_dialog("実装予定", "この機能は実装予定です")
+        """魔術装備メニュー"""
+        try:
+            spellbook = self._get_or_create_spellbook(character)
+            
+            # 習得済み魔法があるかチェック
+            if not spellbook.learned_spells:
+                self.show_information_dialog("情報", f"{character.name}は魔法を習得していません")
+                return
+            
+            equip_menu = UIMenu("spell_equip_menu", f"{character.name} - 魔術装備")
+            
+            # 習得済み魔法を表示
+            for spell_id in spellbook.learned_spells:
+                spell = spell_manager.get_spell(spell_id)
+                if spell:
+                    equip_menu.add_menu_item(
+                        f"{spell.get_name()} (Lv.{spell.level})",
+                        self._show_spell_slot_selection,
+                        [character, spell_id]
+                    )
+            
+            equip_menu.add_menu_item("戻る", self._show_character_spell_slot_detail, [character])
+            self.show_submenu(equip_menu, {'character': character})
+            
+        except Exception as e:
+            logger.error(f"魔法装備メニュー表示エラー: {e}")
+            self.show_error_dialog("エラー", "魔法装備メニューの表示に失敗しました")
     
     def _show_spell_status(self, character):
         """魔術状況表示（実装予定）"""
         self.show_information_dialog("実装予定", "この機能は実装予定です")
+    
+    # === 魔法スロット管理の実装メソッド ===
+    
+    def _get_or_create_spellbook(self, character) -> SpellBook:
+        """キャラクターのスペルブックを取得または作成"""
+        # キャラクターIDを使用してスペルブックを取得/作成
+        if not hasattr(character, 'spellbook') or character.spellbook is None:
+            character.spellbook = SpellBook(character.character_id)
+        return character.spellbook
+    
+    def _equip_spell_to_slot(self, character, spell_id: str, level: int, slot_index: int):
+        """魔法をスロットに装備"""
+        try:
+            spellbook = self._get_or_create_spellbook(character)
+            success = spellbook.equip_spell_to_slot(spell_id, level, slot_index)
+            
+            if success:
+                # 成功メッセージを表示
+                spell = spell_manager.get_spell(spell_id)
+                spell_name = spell.get_name() if spell else spell_id
+                message = f"{spell_name}をレベル{level}スロット{slot_index + 1}に装備しました。"
+                
+                if self.use_new_menu_system and self.dialog_template:
+                    self.show_information_dialog(
+                        "装備成功",
+                        message,
+                        buttons=[{
+                            "text": "OK",
+                            "callback": lambda: self._show_character_spell_slot_detail(character)
+                        }]
+                    )
+                else:
+                    self.show_information_dialog("装備成功", message)
+                    self._show_character_spell_slot_detail(character)
+            else:
+                # 失敗メッセージを表示
+                message = "魔法の装備に失敗しました。\n\n原因：\n・魔法レベルがスロットレベルより高い\n・魔法を習得していない\n・無効なスロット"
+                
+                if self.use_new_menu_system and self.dialog_template:
+                    self.show_information_dialog(
+                        "装備失敗",
+                        message,
+                        buttons=[{
+                            "text": "OK",
+                            "callback": lambda: self._show_character_spell_slot_detail(character)
+                        }]
+                    )
+                else:
+                    self.show_information_dialog("装備失敗", message)
+                    self._show_character_spell_slot_detail(character)
+                    
+        except Exception as e:
+            logger.error(f"魔法装備エラー: {e}")
+            self.show_error_dialog("エラー", "魔法装備中にエラーが発生しました")
+    
+    def _show_character_spell_slot_detail(self, character):
+        """キャラクター魔法スロット詳細メニューを表示"""
+        spell_mgmt_menu = UIMenu("character_spell_slot_detail", f"{character.name} - 魔法スロット詳細")
+        
+        spell_mgmt_menu.add_menu_item("魔法装備", self._show_spell_equip_menu, [character])
+        spell_mgmt_menu.add_menu_item("スロット状況", self._show_spell_slot_status, [character])
+        spell_mgmt_menu.add_menu_item("戻る", self._show_adventure_preparation)
+        
+        self.show_submenu(spell_mgmt_menu, {'character': character})
+    
+    def _show_spell_slot_status(self, character):
+        """魔法スロット状況を表示"""
+        try:
+            spellbook = self._get_or_create_spellbook(character)
+            
+            status_text = f"{character.name}の魔法スロット状況\n\n"
+            
+            for level in sorted(spellbook.spell_slots.keys()):
+                level_slots = spellbook.spell_slots[level]
+                status_text += f"Lv.{level} スロット:\n"
+                
+                for i, slot in enumerate(level_slots):
+                    if slot.is_empty():
+                        status_text += f"  [{i + 1}] (空)\n"
+                    else:
+                        spell = spell_manager.get_spell(slot.spell_id)
+                        spell_name = spell.get_name() if spell else slot.spell_id
+                        uses_text = f"{slot.current_uses}/{slot.max_uses}"
+                        status_text += f"  [{i + 1}] {spell_name} ({uses_text})\n"
+                
+                status_text += "\n"
+            
+            if self.use_new_menu_system and self.dialog_template:
+                self.show_information_dialog(
+                    "魔法スロット状況",
+                    status_text,
+                    buttons=[{"text": "戻る", "callback": None}]
+                )
+            else:
+                self.show_information_dialog("魔法スロット状況", status_text)
+                
+        except Exception as e:
+            logger.error(f"スロット状況表示エラー: {e}")
+            self.show_error_dialog("エラー", "スロット状況の表示に失敗しました")
+    
+    def _show_new_spell_user_selection(self, spell_users: List):
+        """魔法使用者選択メニューを表示"""
+        if not spell_users:
+            self.show_information_dialog("情報", "魔法を使用できるキャラクターがいません")
+            return
+        
+        user_menu = UIMenu("spell_user_selection", "魔法使用者選択")
+        
+        for character in spell_users:
+            user_menu.add_menu_item(
+                f"{character.name} ({character.character_class})",
+                self._show_character_spell_slot_detail,
+                [character]
+            )
+        
+        user_menu.add_menu_item("戻る", self.back_to_previous_menu)
+        self.show_submenu(user_menu)
+    
+    def _show_spell_slot_selection(self, character, spell_id: str):
+        """魔法装備用のスロット選択メニューを表示"""
+        try:
+            spellbook = self._get_or_create_spellbook(character)
+            spell = spell_manager.get_spell(spell_id)
+            
+            if not spell:
+                self.show_error_dialog("エラー", "魔法データが見つかりません")
+                return
+            
+            slot_menu = UIMenu("spell_slot_selection", f"{spell.get_name()} - スロット選択")
+            
+            # 適切なレベルのスロットのみ表示
+            for level in sorted(spellbook.spell_slots.keys()):
+                if level >= spell.level:  # 魔法レベル以上のスロットのみ
+                    level_slots = spellbook.spell_slots[level]
+                    for i, slot in enumerate(level_slots):
+                        status = "空" if slot.is_empty() else f"使用中: {slot.spell_id}"
+                        slot_menu.add_menu_item(
+                            f"Lv.{level} スロット {i + 1} ({status})",
+                            self._equip_spell_to_slot,
+                            [character, spell_id, level, i]
+                        )
+            
+            slot_menu.add_menu_item("戻る", self._show_spell_equip_menu, [character])
+            self.show_submenu(slot_menu, {'character': character, 'spell_id': spell_id})
+            
+        except Exception as e:
+            logger.error(f"スロット選択メニュー表示エラー: {e}")
+            self.show_error_dialog("エラー", "スロット選択メニューの表示に失敗しました")
     
     def _show_prayer_equip_menu(self, character):
         """祈祷装備メニュー（実装予定）"""

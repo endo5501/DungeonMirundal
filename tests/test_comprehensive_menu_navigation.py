@@ -384,8 +384,20 @@ class TestComprehensiveMenuNavigation:
             method_name = menu_method_map.get(menu_item)
             if method_name and hasattr(facility, method_name):
                 method = getattr(facility, method_name)
-                method()
-                return True
+                
+                # character_item_managementの場合は引数でcharacterを渡す必要がある
+                if menu_item == 'character_item_management':
+                    # テスト用のキャラクターを取得
+                    test_character = self.test_party.get_all_characters()[0] if self.test_party.get_all_characters() else None
+                    if test_character:
+                        method(test_character)
+                        return True
+                    else:
+                        logger.warning("テスト用キャラクターが見つかりません")
+                        return False
+                else:
+                    method()
+                    return True
             
             return False
         except Exception as e:
