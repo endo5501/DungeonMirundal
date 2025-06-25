@@ -318,8 +318,8 @@ class DungeonRendererPygame:
             grid_x = int(ray_x)
             grid_y = int(ray_y)
             
-            # 範囲外チェック
-            if grid_x < 0 or grid_x >= level.width or grid_y < 0 or grid_y >= level.height:
+            # 範囲外チェック（レイ位置自体をチェック）
+            if ray_x < 0 or ray_x >= level.width or ray_y < 0 or ray_y >= level.height:
                 return distance, True
             
             # セルをチェック
@@ -561,19 +561,45 @@ class DungeonRendererPygame:
     
     def _move_left(self):
         """左移動（GameManagerからの呼び出し用）"""
-        # 左移動は左回転 + 前進 + 右回転として実装
-        self.handle_input("turn_left")
-        result = self.handle_input("move_forward")
-        self.handle_input("turn_right")
-        return result
+        # ダンジョンマネージャーや現在のダンジョンがない場合は何もしない
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
+            return False
+            
+        # 真のストレイフ移動実装
+        current_pos = self.dungeon_manager.current_dungeon.player_position
+        facing = current_pos.facing
+        
+        # 左方向を計算
+        left_direction = {
+            Direction.NORTH: Direction.WEST,
+            Direction.EAST: Direction.NORTH,
+            Direction.SOUTH: Direction.EAST,
+            Direction.WEST: Direction.SOUTH
+        }[facing]
+        
+        # 左方向に移動を試行
+        return self.dungeon_manager.move_player(left_direction)
     
     def _move_right(self):
         """右移動（GameManagerからの呼び出し用）"""
-        # 右移動は右回転 + 前進 + 左回転として実装
-        self.handle_input("turn_right")
-        result = self.handle_input("move_forward")
-        self.handle_input("turn_left")
-        return result
+        # ダンジョンマネージャーや現在のダンジョンがない場合は何もしない
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
+            return False
+            
+        # 真のストレイフ移動実装
+        current_pos = self.dungeon_manager.current_dungeon.player_position
+        facing = current_pos.facing
+        
+        # 右方向を計算
+        right_direction = {
+            Direction.NORTH: Direction.EAST,
+            Direction.EAST: Direction.SOUTH,
+            Direction.SOUTH: Direction.WEST,
+            Direction.WEST: Direction.NORTH
+        }[facing]
+        
+        # 右方向に移動を試行
+        return self.dungeon_manager.move_player(right_direction)
     
     def _turn_left(self):
         """左回転（GameManagerからの呼び出し用）"""

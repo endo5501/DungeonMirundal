@@ -293,7 +293,7 @@ class Inn(BaseFacility):
             else:
                 status_text += "倉庫は空です。"
             
-            self.show_information_dialog("宿屋倉庫の状況", status_text)
+            self.show_information_dialog("宿屋倉庫の状況", status_text, buttons=[{"text": "戻る", "callback": None}])
             
         except Exception as e:
             logger.error(f"倉庫状況表示エラー: {e}")

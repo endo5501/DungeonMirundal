@@ -32,21 +32,25 @@ class TestDeepMenuNavigationFixes:
         mock_storage_manager.get_storage_summary.return_value = {
             'used_slots': 0,
             'capacity': 100,
+            'free_slots': 100,
             'usage_percentage': 0.0
         }
         
         inn = Inn()
         inn.current_party = self.mock_party
-        inn._show_dialog = Mock()
+        inn.use_new_menu_system = True
+        inn.dialog_template = Mock()
+        inn.show_information_dialog = Mock()
         
         inn._show_inn_storage_status()
         
         # ダイアログ呼び出しを確認
-        inn._show_dialog.assert_called_once()
-        args = inn._show_dialog.call_args
+        inn.show_information_dialog.assert_called_once()
+        args = inn.show_information_dialog.call_args
         
-        # buttonsパラメータが渡されていることを確認（修正後はこれが成功する）
-        # 修正後はbuttonsパラメータが追加されてテストが通る
+        # タイトルとメッセージが正しく呼び出されたかを確認
+        assert args[0][0] == "宿屋倉庫の状況"
+        assert "倉庫は空です" in args[0][1]
         has_buttons = 'buttons' in (args.kwargs if args.kwargs else {}) or len(args[0] if args else []) > 3
         assert has_buttons, "ダイアログにbuttonsパラメータが必要"
 
@@ -110,14 +114,14 @@ class TestDeepMenuNavigationFixes:
         
         inn = Inn()
         inn.current_party = self.mock_party
-        inn._show_submenu = Mock()
+        inn.show_submenu = Mock()
         inn._show_new_item_organization_menu = Mock()
         
-        inn._show_character_item_management()
+        inn._show_character_item_management(mock_character)
         
         # サブメニューが表示されることを確認
-        inn._show_submenu.assert_called_once()
-        menu = inn._show_submenu.call_args[0][0]
+        inn.show_submenu.assert_called_once()
+        menu = inn.show_submenu.call_args[0][0]
         
         # 戻るメニュー項目があることを確認（この部分は既に実装されているはず）
         # メニュー項目は正常に実装されていることを確認
