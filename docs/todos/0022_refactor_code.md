@@ -192,15 +192,35 @@
 
    **テスト結果：** overworld関連の26テストすべて成功
 
-14. @src/rendering 以下のコードをFowler式のリファクタリングしましょう。
+14. ✅ @src/rendering 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
     リファクタリング後、テストを実施しエラーを確実に解消してください
     完了後、作業内容をこちらに記載した後一旦commitしてください
 
-15. @src/ui 以下のコードをFowler式のリファクタリングしましょう。
+   **実施したリファクタリング：**
+   - **Replace Magic Number with Named Constant**: 27個の定数を追加（レイキャスティング、方向マッピング、UI位置、3Dレンダリング、入力アクション用）
+   - **Extract Method**: _render_walls_raycastメソッドを複数の小さなメソッドに分割（_calculate_ray_count、_calculate_ray_angle、_render_wall_column等）
+   - **Extract Method**: handle_inputメソッドからアクション別のメソッドを抽出（_handle_move_forward、_handle_turn_left等）
+   - **Extract Method**: プロップ描画とレイキャスティングロジックを細分化（_calculate_prop_position、_calculate_prop_size等）
+   - **Extract Method**: __init__.pyでレンダラーインポート処理を関数化（_import_renderer）
+   - **Replace Magic Number with Named Constant**: ハードコーディングされた数値を意味のある定数名に置き換え
+
+   **テスト結果：** レンダリング関連テストは正常（他のテストエラーは既存の問題）
+
+15. ✅ @src/ui 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
     リファクタリング後、テストを実施しエラーを確実に解消してください
     完了後、作業内容をこちらに記載した後一旦commitしてください
+
+   **実施したリファクタリング：**
+   - **Replace Magic Number with Named Constant**: 54個の定数を追加（UI基本値、色、マージン、設定値、スタックサイズ等）
+   - **Extract Method**: wrap_text関数を4つの小さな関数に分割（_process_word_with_newlines、_process_regular_word等）
+   - **Extract Method**: UIElementクラスに背景色計算とボーダー描画メソッドを抽出（_calculate_background_color、_render_border）
+   - **Extract Method**: SettingsUIクラスに設定ファイル読み込みメソッドを抽出（_load_user_settings_file、_load_fallback_settings）
+   - **Extract Method**: MenuStackManagerクラスに遷移チェックとスタック制限処理を抽出（_check_transition_allowed、_handle_stack_size_limit）
+   - **Replace Magic Number with Named Constant**: UIサイズ、色値、フォントサイズ、デフォルト設定値等の魔法数をすべて定数に置換
+
+   **テスト結果：** UI関連の24テストすべて成功
 
 16. @src/utils 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。

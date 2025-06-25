@@ -11,6 +11,77 @@ from src.character.party import Party
 from src.utils.logger import logger
 from src.core.config_manager import config_manager
 
+# ダンジョンレンダラー定数
+DEFAULT_SCREEN_WIDTH = 1024
+DEFAULT_SCREEN_HEIGHT = 768
+DEFAULT_FOV = 75
+DEFAULT_VIEW_DISTANCE = 10
+WALL_HEIGHT = 64
+WALL_DISTANCE_SCALE = 50
+RAY_RESOLUTION_DIVISOR = 2
+STEP_SIZE = 0.1
+WALL_COLLISION_THRESHOLD = 0.1
+WALL_COLLISION_THRESHOLD_HIGH = 0.9
+RENDER_RANGE_3D = 5
+MIN_WALL_HEIGHT = 1
+MIN_DISTANCE = 0.5
+STAIRS_BASE_SIZE = 20
+TREASURE_BASE_SIZE = 15
+MIN_PROP_SIZE = 4
+BRIGHTNESS_MIN = 0.3
+BRIGHTNESS_MAX = 1.0
+RAY_WIDTH = 2
+COMPASS_X_OFFSET = 60
+COMPASS_Y_OFFSET = 20
+UI_MARGIN = 10
+UI_BOTTOM_MARGIN = 30
+FONT_SIZE_SMALL = 18
+FONT_SIZE_MEDIUM = 24
+FONT_SIZE_LARGE = 36
+
+# レイキャスティング定数
+RAYCAST_STEP_SIZE = 0.1
+RAYCAST_MAX_DISTANCE = 1.0
+
+# 方向マッピング定数
+DIRECTION_ANGLE_NORTH = -math.pi/2
+DIRECTION_ANGLE_EAST = 0
+DIRECTION_ANGLE_SOUTH = math.pi/2
+DIRECTION_ANGLE_WEST = math.pi
+
+# UI位置定数
+COMPASS_POS_X = 60
+COMPASS_POS_Y = 20
+POSITION_TEXT_X = 10
+POSITION_TEXT_Y = 10
+HELP_TEXT_X = 10
+HELP_TEXT_Y_OFFSET = 30
+
+# 3Dレンダリング定数
+FLOOR_CEILING_SPLIT_RATIO = 0.5
+WALL_RENDER_WIDTH = 2
+PROP_VISIBILITY_RANGE = 5
+PROP_SIZE_DIVISOR = 0.5
+
+# 入力アクション定数
+ACTION_MOVE_FORWARD = "move_forward"
+ACTION_MOVE_BACKWARD = "move_backward"
+ACTION_TURN_LEFT = "turn_left"
+ACTION_TURN_RIGHT = "turn_right"
+
+# 色定数
+COLOR_BLACK = (0, 0, 0)
+COLOR_WHITE = (255, 255, 255)
+COLOR_GRAY = (128, 128, 128)
+COLOR_DARK_GRAY = (64, 64, 64)
+COLOR_FLOOR = (101, 67, 33)
+COLOR_CEILING = (51, 51, 51)
+COLOR_WALL = (102, 102, 102)
+COLOR_STAIRS_UP = (200, 200, 150)
+COLOR_STAIRS_DOWN = (150, 150, 200)
+COLOR_TREASURE = (255, 215, 0)
+COLOR_TREASURE_DETAIL = (200, 180, 0)
+
 
 class ViewMode(Enum):
     """表示モード"""
@@ -39,7 +110,7 @@ class DungeonRendererPygame:
         # 画面設定
         self.screen = screen
         if not self.screen:
-            self.screen = pygame.display.set_mode((1024, 768))
+            self.screen = pygame.display.set_mode((DEFAULT_SCREEN_WIDTH, DEFAULT_SCREEN_HEIGHT))
             pygame.display.set_caption("ダンジョンエクスプローラー")
         
         self.screen_width = self.screen.get_width()
@@ -54,8 +125,8 @@ class DungeonRendererPygame:
         # 疑似3D描画設定
         self.view_mode = ViewMode.FIRST_PERSON
         self.render_quality = RenderQuality.MEDIUM
-        self.fov = 75
-        self.view_distance = 10
+        self.fov = DEFAULT_FOV
+        self.view_distance = DEFAULT_VIEW_DISTANCE
         
         # カメラ設定（1人称視点）
         self.camera_x = 0
@@ -63,8 +134,8 @@ class DungeonRendererPygame:
         self.camera_angle = 0  # ラジアン
         
         # 描画設定
-        self.wall_height = 64
-        self.wall_distance_scale = 50
+        self.wall_height = WALL_HEIGHT
+        self.wall_distance_scale = WALL_DISTANCE_SCALE
         
         # UI要素
         self.ui_elements = {}
@@ -72,24 +143,24 @@ class DungeonRendererPygame:
         # フォント初期化（日本語対応）
         try:
             # 日本語対応フォントを使用
-            self.font_small = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', 18)
-            self.font_medium = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', 24)
-            self.font_large = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', 36)
+            self.font_small = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', FONT_SIZE_SMALL)
+            self.font_medium = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', FONT_SIZE_MEDIUM)
+            self.font_large = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', FONT_SIZE_LARGE)
         except:
             # フォールバック：システムデフォルト
-            self.font_small = pygame.font.SysFont(None, 18)
-            self.font_medium = pygame.font.SysFont(None, 24)
-            self.font_large = pygame.font.SysFont(None, 36)
+            self.font_small = pygame.font.SysFont(None, FONT_SIZE_SMALL)
+            self.font_medium = pygame.font.SysFont(None, FONT_SIZE_MEDIUM)
+            self.font_large = pygame.font.SysFont(None, FONT_SIZE_LARGE)
         
         # 色設定
         self.colors = {
-            'black': (0, 0, 0),
-            'white': (255, 255, 255),
-            'gray': (128, 128, 128),
-            'dark_gray': (64, 64, 64),
-            'floor': (101, 67, 33),
-            'ceiling': (51, 51, 51),
-            'wall': (102, 102, 102)
+            'black': COLOR_BLACK,
+            'white': COLOR_WHITE,
+            'gray': COLOR_GRAY,
+            'dark_gray': COLOR_DARK_GRAY,
+            'floor': COLOR_FLOOR,
+            'ceiling': COLOR_CEILING,
+            'wall': COLOR_WALL
         }
         
         logger.info("DungeonRendererPygame 初期化完了")
@@ -229,18 +300,7 @@ class DungeonRendererPygame:
         self.camera_y = player_pos.y
         
         # 向きを角度に変換
-        # 数学的な座標系では:
-        # - 0度は東（+X方向）
-        # - 90度（π/2）は北（-Y方向、画面上では上）
-        # - 180度（π）は西（-X方向）
-        # - 270度（3π/2）は南（+Y方向、画面上では下）
-        direction_angles = {
-            Direction.NORTH: -math.pi/2,    # -90度（北を向く）
-            Direction.EAST: 0,               # 0度（東を向く）
-            Direction.SOUTH: math.pi/2,      # 90度（南を向く）
-            Direction.WEST: math.pi          # 180度（西を向く）
-        }
-        self.camera_angle = direction_angles.get(player_pos.facing, 0)
+        self.camera_angle = self._get_direction_angle(player_pos.facing)
         
         logger.debug(f"カメラ位置更新: ({self.camera_x}, {self.camera_y}) 角度: {math.degrees(self.camera_angle)}°")
     
@@ -268,32 +328,14 @@ class DungeonRendererPygame:
     def _render_walls_raycast(self, level: DungeonLevel, player_pos: PlayerPosition):
         """レイキャスティングによる壁面描画"""
         # レイキャスティングの準備
-        ray_count = self.screen_width // 2  # 解像度調整
+        ray_count = self._calculate_ray_count()
         
         for ray_index in range(ray_count):
-            # レイの角度を計算
-            ray_angle = self.camera_angle + (ray_index - ray_count // 2) * (self.fov * math.pi / 180) / ray_count
-            
-            # レイキャストを実行
+            ray_angle = self._calculate_ray_angle(ray_index, ray_count)
             distance, hit_wall = self._cast_ray(level, player_pos, ray_angle)
             
             if hit_wall:
-                # 壁の高さを距離に応じて計算
-                wall_height = int(self.wall_height * self.wall_distance_scale / max(distance, 1))
-                wall_height = min(wall_height, self.screen_height)
-                
-                # 壁の描画位置を計算
-                wall_top = (self.screen_height - wall_height) // 2
-                wall_bottom = wall_top + wall_height
-                
-                # 壁の明度を距離に応じて調整
-                brightness = max(0.3, 1.0 - distance / self.view_distance)
-                wall_color = tuple(int(c * brightness) for c in self.colors['wall'])
-                
-                # 壁を描画
-                x = ray_index * 2  # レイ幅を2ピクセルに
-                wall_rect = pygame.Rect(x, wall_top, 2, wall_height)
-                pygame.draw.rect(self.screen, wall_color, wall_rect)
+                self._render_wall_column(ray_index, distance)
     
     def _cast_ray(self, level: DungeonLevel, player_pos: PlayerPosition, angle: float) -> Tuple[float, bool]:
         """レイキャスティング実行"""
@@ -302,33 +344,19 @@ class DungeonRendererPygame:
         dy = math.sin(angle)
         
         # レイの開始位置
-        ray_x = float(player_pos.x)
-        ray_y = float(player_pos.y)
-        
-        # レイを進める
-        step_size = 0.1
+        ray_x, ray_y = self._get_ray_start_position(player_pos)
         distance = 0
         
         while distance < self.view_distance:
-            ray_x += dx * step_size
-            ray_y += dy * step_size
-            distance += step_size
+            ray_x, ray_y, distance = self._advance_ray(ray_x, ray_y, dx, dy, distance)
             
-            # グリッド座標に変換
-            grid_x = int(ray_x)
-            grid_y = int(ray_y)
-            
-            # 範囲外チェック（レイ位置自体をチェック）
-            if ray_x < 0 or ray_x >= level.width or ray_y < 0 or ray_y >= level.height:
+            if self._is_ray_out_of_bounds(ray_x, ray_y, level):
                 return distance, True
             
-            # セルをチェック
+            grid_x, grid_y = int(ray_x), int(ray_y)
             cell = level.get_cell(grid_x, grid_y)
-            if not cell or cell.cell_type == CellType.WALL:
-                return distance, True
             
-            # 壁の存在をチェック
-            if self._check_wall_collision(cell, ray_x - grid_x, ray_y - grid_y):
+            if self._is_wall_hit(cell, ray_x - grid_x, ray_y - grid_y):
                 return distance, True
         
         return self.view_distance, False
@@ -360,26 +388,14 @@ class DungeonRendererPygame:
                 if not cell:
                     continue
                 
-                # プレイヤーからの距離と角度を計算
-                dx = x - player_pos.x
-                dy = y - player_pos.y
-                distance = math.sqrt(dx * dx + dy * dy)
+                # プロップの位置情報を計算
+                prop_info = self._calculate_prop_position(x, y, player_pos)
                 
-                if distance > render_range:
+                if not prop_info['visible']:
                     continue
                 
-                # 角度計算
-                angle_to_prop = math.atan2(dy, dx)
-                relative_angle = angle_to_prop - self.camera_angle
-                
-                # 視野内かチェック
-                fov_rad = self.fov * math.pi / 180
-                if abs(relative_angle) > fov_rad / 2:
-                    continue
-                
-                # 画面上の位置を計算
-                screen_x = int(self.screen_width / 2 + 
-                              (relative_angle / (fov_rad / 2)) * (self.screen_width / 2))
+                screen_x = prop_info['screen_x']
+                distance = prop_info['distance']
                 
                 # プロップを描画
                 if cell.cell_type == CellType.STAIRS_UP:
@@ -395,45 +411,24 @@ class DungeonRendererPygame:
         if distance > self.view_distance:
             return
         
-        # 距離に応じてサイズを調整
-        size = max(5, int(20 / max(distance, 0.5)))
+        size = self._calculate_prop_size(distance, STAIRS_BASE_SIZE)
+        color = COLOR_STAIRS_UP if is_up else COLOR_STAIRS_DOWN
         
-        # 色を設定
-        color = (200, 200, 150) if is_up else (150, 150, 200)
-        
-        # 階段を描画
-        stairs_rect = pygame.Rect(screen_x - size // 2, self.screen_height // 2 - size // 2, size, size)
+        stairs_rect = self._create_centered_rect(screen_x, size)
         pygame.draw.rect(self.screen, color, stairs_rect)
         
-        # 階段の印を描画
-        if is_up:
-            pygame.draw.polygon(self.screen, (255, 255, 255), [
-                (screen_x, stairs_rect.top),
-                (screen_x - size // 4, stairs_rect.bottom - 2),
-                (screen_x + size // 4, stairs_rect.bottom - 2)
-            ])
-        else:
-            pygame.draw.polygon(self.screen, (255, 255, 255), [
-                (screen_x, stairs_rect.bottom),
-                (screen_x - size // 4, stairs_rect.top + 2),
-                (screen_x + size // 4, stairs_rect.top + 2)
-            ])
+        self._draw_stairs_arrow(screen_x, stairs_rect, size, is_up)
     
     def _draw_treasure(self, screen_x: int, distance: float):
         """宝箱を描画"""
         if distance > self.view_distance:
             return
         
-        # 距離に応じてサイズを調整
-        size = max(4, int(15 / max(distance, 0.5)))
+        size = self._calculate_prop_size(distance, TREASURE_BASE_SIZE)
         
-        # 金色で宝箱を描画
-        color = (255, 215, 0)
-        treasure_rect = pygame.Rect(screen_x - size // 2, self.screen_height // 2 - size // 2, size, size)
-        pygame.draw.rect(self.screen, color, treasure_rect)
-        
-        # 宝箱の詳細を描画
-        pygame.draw.rect(self.screen, (200, 180, 0), treasure_rect, 1)
+        treasure_rect = self._create_centered_rect(screen_x, size)
+        pygame.draw.rect(self.screen, COLOR_TREASURE, treasure_rect)
+        pygame.draw.rect(self.screen, COLOR_TREASURE_DETAIL, treasure_rect, 1)
     
     def _render_ui(self, dungeon_state: DungeonState):
         """UI要素を描画"""
@@ -501,49 +496,14 @@ class DungeonRendererPygame:
             return False
         
         try:
-            if action == "move_forward":
-                facing = self.dungeon_manager.current_dungeon.player_position.facing
-                success, message = self.dungeon_manager.move_player(facing)
-                if success:
-                    self.render_dungeon(self.dungeon_manager.current_dungeon)
-                return success
-                
-            elif action == "move_backward":
-                facing = self.dungeon_manager.current_dungeon.player_position.facing
-                opposite = {
-                    Direction.NORTH: Direction.SOUTH,
-                    Direction.SOUTH: Direction.NORTH,
-                    Direction.EAST: Direction.WEST,
-                    Direction.WEST: Direction.EAST
-                }
-                success, message = self.dungeon_manager.move_player(opposite[facing])
-                if success:
-                    self.render_dungeon(self.dungeon_manager.current_dungeon)
-                return success
-                
-            elif action == "turn_left":
-                facing = self.dungeon_manager.current_dungeon.player_position.facing
-                left = {
-                    Direction.NORTH: Direction.WEST,
-                    Direction.WEST: Direction.SOUTH,
-                    Direction.SOUTH: Direction.EAST,
-                    Direction.EAST: Direction.NORTH
-                }
-                self.dungeon_manager.turn_player(left[facing])
-                self.render_dungeon(self.dungeon_manager.current_dungeon)
-                return True
-                
-            elif action == "turn_right":
-                facing = self.dungeon_manager.current_dungeon.player_position.facing
-                right = {
-                    Direction.NORTH: Direction.EAST,
-                    Direction.EAST: Direction.SOUTH,
-                    Direction.SOUTH: Direction.WEST,
-                    Direction.WEST: Direction.NORTH
-                }
-                self.dungeon_manager.turn_player(right[facing])
-                self.render_dungeon(self.dungeon_manager.current_dungeon)
-                return True
+            if action == ACTION_MOVE_FORWARD:
+                return self._handle_move_forward()
+            elif action == ACTION_MOVE_BACKWARD:
+                return self._handle_move_backward()
+            elif action == ACTION_TURN_LEFT:
+                return self._handle_turn_left()
+            elif action == ACTION_TURN_RIGHT:
+                return self._handle_turn_right()
                 
         except Exception as e:
             logger.error(f"入力処理中にエラー: {e}")
@@ -570,12 +530,7 @@ class DungeonRendererPygame:
         facing = current_pos.facing
         
         # 左方向を計算
-        left_direction = {
-            Direction.NORTH: Direction.WEST,
-            Direction.EAST: Direction.NORTH,
-            Direction.SOUTH: Direction.EAST,
-            Direction.WEST: Direction.SOUTH
-        }[facing]
+        left_direction = self._get_left_direction(facing)
         
         # 左方向に移動を試行
         return self.dungeon_manager.move_player(left_direction)
@@ -591,12 +546,7 @@ class DungeonRendererPygame:
         facing = current_pos.facing
         
         # 右方向を計算
-        right_direction = {
-            Direction.NORTH: Direction.EAST,
-            Direction.EAST: Direction.SOUTH,
-            Direction.SOUTH: Direction.WEST,
-            Direction.WEST: Direction.NORTH
-        }[facing]
+        right_direction = self._get_right_direction(facing)
         
         # 右方向に移動を試行
         return self.dungeon_manager.move_player(right_direction)
@@ -661,6 +611,185 @@ class DungeonRendererPygame:
                 }
         
         return debug_info
+    
+    def _get_direction_angle(self, direction: Direction) -> float:
+        """方向をラジアン角度に変換"""
+        direction_angles = {
+            Direction.NORTH: DIRECTION_ANGLE_NORTH,
+            Direction.EAST: DIRECTION_ANGLE_EAST,
+            Direction.SOUTH: DIRECTION_ANGLE_SOUTH,
+            Direction.WEST: DIRECTION_ANGLE_WEST
+        }
+        return direction_angles.get(direction, 0)
+    
+    def _calculate_ray_count(self) -> int:
+        """レイキャスティングのレイ数を計算"""
+        return self.screen_width // RAY_RESOLUTION_DIVISOR
+    
+    def _calculate_ray_angle(self, ray_index: int, ray_count: int) -> float:
+        """レイの角度を計算"""
+        return self.camera_angle + (ray_index - ray_count // 2) * (self.fov * math.pi / 180) / ray_count
+    
+    def _render_wall_column(self, ray_index: int, distance: float):
+        """壁の縦線を描画"""
+        wall_height = self._calculate_wall_height(distance)
+        wall_top = self._calculate_wall_position(wall_height)
+        wall_color = self._calculate_wall_color(distance)
+        
+        x = ray_index * WALL_RENDER_WIDTH
+        wall_rect = pygame.Rect(x, wall_top, WALL_RENDER_WIDTH, wall_height)
+        pygame.draw.rect(self.screen, wall_color, wall_rect)
+    
+    def _calculate_wall_height(self, distance: float) -> int:
+        """距離に基づいて壁の高さを計算"""
+        wall_height = int(self.wall_height * self.wall_distance_scale / max(distance, MIN_DISTANCE))
+        return min(wall_height, self.screen_height)
+    
+    def _calculate_wall_position(self, wall_height: int) -> int:
+        """壁の描画位置（上端）を計算"""
+        return (self.screen_height - wall_height) // 2
+    
+    def _calculate_wall_color(self, distance: float) -> tuple:
+        """距離に基づいて壁の色を計算"""
+        brightness = max(BRIGHTNESS_MIN, BRIGHTNESS_MAX - distance / self.view_distance)
+        return tuple(int(c * brightness) for c in self.colors['wall'])
+    
+    def _get_ray_start_position(self, player_pos: PlayerPosition) -> tuple:
+        """レイの開始位置を取得"""
+        return float(player_pos.x), float(player_pos.y)
+    
+    def _advance_ray(self, ray_x: float, ray_y: float, dx: float, dy: float, distance: float) -> tuple:
+        """レイを前進させる"""
+        ray_x += dx * RAYCAST_STEP_SIZE
+        ray_y += dy * RAYCAST_STEP_SIZE
+        distance += RAYCAST_STEP_SIZE
+        return ray_x, ray_y, distance
+    
+    def _is_ray_out_of_bounds(self, ray_x: float, ray_y: float, level: DungeonLevel) -> bool:
+        """レイが範囲外かチェック"""
+        return ray_x < 0 or ray_x >= level.width or ray_y < 0 or ray_y >= level.height
+    
+    def _is_wall_hit(self, cell: DungeonCell, local_x: float, local_y: float) -> bool:
+        """壁にヒットしたかチェック"""
+        if not cell or cell.cell_type == CellType.WALL:
+            return True
+        return self._check_wall_collision(cell, local_x, local_y)
+    
+    def _calculate_prop_position(self, x: int, y: int, player_pos: PlayerPosition) -> dict:
+        """プロップの画面位置情報を計算"""
+        dx = x - player_pos.x
+        dy = y - player_pos.y
+        distance = math.sqrt(dx * dx + dy * dy)
+        
+        if distance > PROP_VISIBILITY_RANGE:
+            return {'visible': False}
+        
+        angle_to_prop = math.atan2(dy, dx)
+        relative_angle = angle_to_prop - self.camera_angle
+        
+        fov_rad = self.fov * math.pi / 180
+        if abs(relative_angle) > fov_rad / 2:
+            return {'visible': False}
+        
+        screen_x = int(self.screen_width / 2 + 
+                      (relative_angle / (fov_rad / 2)) * (self.screen_width / 2))
+        
+        return {
+            'visible': True,
+            'screen_x': screen_x,
+            'distance': distance
+        }
+    
+    def _calculate_prop_size(self, distance: float, base_size: int) -> int:
+        """距離に基づいてプロップのサイズを計算"""
+        return max(MIN_PROP_SIZE, int(base_size / max(distance, PROP_SIZE_DIVISOR)))
+    
+    def _create_centered_rect(self, screen_x: int, size: int) -> pygame.Rect:
+        """中央揃えの矩形を作成"""
+        return pygame.Rect(
+            screen_x - size // 2, 
+            self.screen_height // 2 - size // 2, 
+            size, 
+            size
+        )
+    
+    def _draw_stairs_arrow(self, screen_x: int, stairs_rect: pygame.Rect, size: int, is_up: bool):
+        """階段の矢印を描画"""
+        if is_up:
+            pygame.draw.polygon(self.screen, COLOR_WHITE, [
+                (screen_x, stairs_rect.top),
+                (screen_x - size // 4, stairs_rect.bottom - 2),
+                (screen_x + size // 4, stairs_rect.bottom - 2)
+            ])
+        else:
+            pygame.draw.polygon(self.screen, COLOR_WHITE, [
+                (screen_x, stairs_rect.bottom),
+                (screen_x - size // 4, stairs_rect.top + 2),
+                (screen_x + size // 4, stairs_rect.top + 2)
+            ])
+    
+    def _handle_move_forward(self) -> bool:
+        """前進処理"""
+        facing = self.dungeon_manager.current_dungeon.player_position.facing
+        success, _ = self.dungeon_manager.move_player(facing)
+        if success:
+            self.render_dungeon(self.dungeon_manager.current_dungeon)
+        return success
+    
+    def _handle_move_backward(self) -> bool:
+        """後退処理"""
+        facing = self.dungeon_manager.current_dungeon.player_position.facing
+        opposite = self._get_opposite_direction(facing)
+        success, _ = self.dungeon_manager.move_player(opposite)
+        if success:
+            self.render_dungeon(self.dungeon_manager.current_dungeon)
+        return success
+    
+    def _handle_turn_left(self) -> bool:
+        """左回転処理"""
+        facing = self.dungeon_manager.current_dungeon.player_position.facing
+        left = self._get_left_direction(facing)
+        self.dungeon_manager.turn_player(left)
+        self.render_dungeon(self.dungeon_manager.current_dungeon)
+        return True
+    
+    def _handle_turn_right(self) -> bool:
+        """右回転処理"""
+        facing = self.dungeon_manager.current_dungeon.player_position.facing
+        right = self._get_right_direction(facing)
+        self.dungeon_manager.turn_player(right)
+        self.render_dungeon(self.dungeon_manager.current_dungeon)
+        return True
+    
+    def _get_opposite_direction(self, direction: Direction) -> Direction:
+        """反対方向を取得"""
+        opposite_map = {
+            Direction.NORTH: Direction.SOUTH,
+            Direction.SOUTH: Direction.NORTH,
+            Direction.EAST: Direction.WEST,
+            Direction.WEST: Direction.EAST
+        }
+        return opposite_map[direction]
+    
+    def _get_left_direction(self, direction: Direction) -> Direction:
+        """左方向を取得"""
+        left_map = {
+            Direction.NORTH: Direction.WEST,
+            Direction.EAST: Direction.NORTH,
+            Direction.SOUTH: Direction.EAST,
+            Direction.WEST: Direction.SOUTH
+        }
+        return left_map[direction]
+    
+    def _get_right_direction(self, direction: Direction) -> Direction:
+        """右方向を取得"""
+        right_map = {
+            Direction.NORTH: Direction.EAST,
+            Direction.EAST: Direction.SOUTH,
+            Direction.SOUTH: Direction.WEST,
+            Direction.WEST: Direction.NORTH
+        }
+        return right_map[direction]
     
     def cleanup(self):
         """リソースのクリーンアップ"""

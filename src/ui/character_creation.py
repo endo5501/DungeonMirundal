@@ -9,6 +9,27 @@ from src.character.stats import BaseStats, StatGenerator, StatValidator
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
+# キャラクター作成UI定数
+CREATION_TITLE_X = 400
+CREATION_TITLE_Y = 50
+CREATION_DIALOG_WIDTH = 600
+CREATION_DIALOG_HEIGHT = 400
+STATS_DIALOG_WIDTH = 500
+STATS_DIALOG_HEIGHT = 350
+CONFIRM_DIALOG_WIDTH = 500
+CONFIRM_DIALOG_HEIGHT = 300
+
+# キャラクターデータキー定数
+CHAR_DATA_NAME = 'name'
+CHAR_DATA_RACE = 'race'
+CHAR_DATA_CLASS = 'character_class'
+CHAR_DATA_STATS = 'base_stats'
+
+# 設定ファイルキー定数
+CONFIG_CHARACTERS = "characters"
+CONFIG_RACES = "races"
+CONFIG_CLASSES = "classes"
+
 
 class CreationStep(Enum):
     """作成ステップ"""
@@ -30,10 +51,10 @@ class CharacterCreationWizard:
         
         # 作成中のキャラクターデータ
         self.character_data = {
-            'name': '',
-            'race': '',
-            'character_class': '',
-            'base_stats': None
+            CHAR_DATA_NAME: '',
+            CHAR_DATA_RACE: '',
+            CHAR_DATA_CLASS: '',
+            CHAR_DATA_STATS: None
         }
         
         # UI要素
@@ -42,9 +63,9 @@ class CharacterCreationWizard:
         self.current_ui = None
         
         # 設定データ
-        self.char_config = config_manager.load_config("characters")
-        self.races_config = self.char_config.get("races", {})
-        self.classes_config = self.char_config.get("classes", {})
+        self.char_config = config_manager.load_config(CONFIG_CHARACTERS)
+        self.races_config = self.char_config.get(CONFIG_RACES, {})
+        self.classes_config = self.char_config.get(CONFIG_CLASSES, {})
         
         self._initialize_ui()
     
@@ -57,7 +78,7 @@ class CharacterCreationWizard:
         self.step_title = UIText(
             "creation_step_title",
             config_manager.get_text("character.creation_title"),
-            x=400, y=50
+            x=CREATION_TITLE_X, y=CREATION_TITLE_Y
         )
         
         # Pygame UIでは要素の登録は不要（tryで囲んでエラー回避）

@@ -1,12 +1,22 @@
 """レンダリングシステム"""
 
-try:
-    from .dungeon_renderer_pygame import DungeonRenderer
-except ImportError:
+# レンダラー初期化定数
+PRIMARY_RENDERER = "dungeon_renderer_pygame"
+FALLBACK_RENDERER = "dungeon_renderer"
+
+def _import_renderer():
+    """レンダラーをインポート"""
     try:
-        from .dungeon_renderer import DungeonRenderer
+        from .dungeon_renderer_pygame import DungeonRenderer
+        return DungeonRenderer
     except ImportError:
-        DungeonRenderer = None
+        try:
+            from .dungeon_renderer import DungeonRenderer
+            return DungeonRenderer
+        except ImportError:
+            return None
+
+DungeonRenderer = _import_renderer()
 
 __all__ = [
     "DungeonRenderer"

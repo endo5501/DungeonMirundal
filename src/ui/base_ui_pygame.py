@@ -8,43 +8,83 @@ import pygame_gui
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
+# UI基本定数
+DEFAULT_UI_WIDTH = 100
+DEFAULT_UI_HEIGHT = 30
+DEFAULT_FONT_SIZE = 24
+DEFAULT_BORDER_WIDTH = 1
+
+# UI色定数
+DEFAULT_BACKGROUND_COLOR = (50, 50, 50)
+DEFAULT_BORDER_COLOR = (100, 100, 100)
+DEFAULT_TEXT_COLOR = (255, 255, 255)
+TRANSPARENT_COLOR = (0, 0, 0, 0)
+HOVER_BRIGHTNESS_OFFSET = 30
+PRESS_BRIGHTNESS_OFFSET = -30
+COLOR_MIN_VALUE = 0
+COLOR_MAX_VALUE = 255
+
+# UI空白・マージン定数
+DEFAULT_SPACING = 10
+DEFAULT_MARGIN = 5
+DEFAULT_PADDING = 8
+
+# テキスト折り返し定数
+EMPTY_LINE_FALLBACK = [""]
+SPACE_CHAR = " "
+NEWLINE_CHAR = "\n"
+
 
 def wrap_text(text: str, font: pygame.font.Font, max_width: int) -> List[str]:
     """テキストを指定幅で折り返す"""
-    words = text.split(' ')
+    if not text:
+        return EMPTY_LINE_FALLBACK
+    
+    words = text.split(SPACE_CHAR)
     lines = []
     current_line = ""
     
     for word in words:
-        # 改行文字が含まれている場合は分割して処理
-        if '\n' in word:
-            word_parts = word.split('\n')
-            for i, part in enumerate(word_parts):
-                if i > 0:  # 改行後の部分
-                    if current_line.strip():
-                        lines.append(current_line.strip())
-                    current_line = part
-                else:  # 改行前の部分
-                    test_line = current_line + (" " if current_line else "") + part
-                    if font.size(test_line)[0] <= max_width:
-                        current_line = test_line
-                    else:
-                        if current_line.strip():
-                            lines.append(current_line.strip())
-                        current_line = part
+        if NEWLINE_CHAR in word:
+            lines.extend(_process_word_with_newlines(word, current_line, font, max_width))
+            current_line = lines.pop() if lines else ""
         else:
-            test_line = current_line + (" " if current_line else "") + word
-            if font.size(test_line)[0] <= max_width:
-                current_line = test_line
-            else:
-                if current_line.strip():
-                    lines.append(current_line.strip())
-                current_line = word
+            current_line = _process_regular_word(word, current_line, lines, font, max_width)
     
     if current_line.strip():
         lines.append(current_line.strip())
     
-    return lines
+    return lines if lines else EMPTY_LINE_FALLBACK
+
+def _process_word_with_newlines(word: str, current_line: str, font: pygame.font.Font, max_width: int) -> List[str]:
+    """改行文字を含む単語を処理"""
+    word_parts = word.split(NEWLINE_CHAR)
+    result_lines = []
+    
+    for i, part in enumerate(word_parts):
+        if i > 0:  # 改行後の部分
+            if current_line.strip():
+                result_lines.append(current_line.strip())
+            current_line = part
+        else:  # 改行前の部分
+            current_line = _try_add_word_to_line(part, current_line, result_lines, font, max_width)
+    
+    result_lines.append(current_line)
+    return result_lines
+
+def _process_regular_word(word: str, current_line: str, lines: List[str], font: pygame.font.Font, max_width: int) -> str:
+    """通常の単語を処理"""
+    return _try_add_word_to_line(word, current_line, lines, font, max_width)
+
+def _try_add_word_to_line(word: str, current_line: str, lines: List[str], font: pygame.font.Font, max_width: int) -> str:
+    """単語を行に追加を試行"""
+    test_line = current_line + (SPACE_CHAR if current_line else "") + word
+    if font.size(test_line)[0] <= max_width:
+        return test_line
+    else:
+        if current_line.strip():
+            lines.append(current_line.strip())
+        return word
 
 
 class UIState(Enum):
@@ -67,7 +107,7 @@ class UIAlignment(Enum):
 class UIElement:
     """UI要素の基底クラス（Pygame版）"""
     
-    def __init__(self, element_id: str, x: int = 0, y: int = 0, width: int = 100, height: int = 30):
+    def __init__(self, element_id: str, x: int = 0, y: int = 0, width: int = DEFAULT_UI_WIDTH, height: int = DEFAULT_UI_HEIGHT):
         self.element_id = element_id
         self.state = UIState.HIDDEN
         self.rect = pygame.Rect(x, y, width, height)
@@ -75,10 +115,10 @@ class UIElement:
         self.children: List['UIElement'] = []
         
         # 描画設定
-        self.background_color = (50, 50, 50)
-        self.border_color = (100, 100, 100)
-        self.text_color = (255, 255, 255)
-        self.border_width = 1
+        self.background_color = DEFAULT_BACKGROUND_COLOR
+        self.border_color = DEFAULT_BORDER_COLOR
+        self.text_color = DEFAULT_TEXT_COLOR
+        self.border_width = DEFAULT_BORDER_WIDTH
         
         # イベントハンドラー
         self.on_click: Optional[Callable] = None
@@ -135,15 +175,22 @@ class UIElement:
             return
         
         # 背景描画
-        bg_color = self.background_color
-        if self.is_hovered:
-            bg_color = tuple(min(255, c + 30) for c in bg_color)
-        if self.is_pressed:
-            bg_color = tuple(max(0, c - 30) for c in bg_color)
+        bg_color = self._calculate_background_color()
         
         pygame.draw.rect(screen, bg_color, self.rect)
-        
-        # ボーダー描画
+        self._render_border(screen)
+    
+    def _calculate_background_color(self) -> tuple:
+        """背景色を状態に応じて計算"""
+        bg_color = self.background_color
+        if self.is_hovered:
+            bg_color = tuple(min(COLOR_MAX_VALUE, c + HOVER_BRIGHTNESS_OFFSET) for c in bg_color)
+        if self.is_pressed:
+            bg_color = tuple(max(COLOR_MIN_VALUE, c + PRESS_BRIGHTNESS_OFFSET) for c in bg_color)
+        return bg_color
+    
+    def _render_border(self, screen: pygame.Surface):
+        """ボーダーを描画"""
         if self.border_width > 0:
             pygame.draw.rect(screen, self.border_color, self.rect, self.border_width)
 
@@ -152,7 +199,7 @@ class UIText(UIElement):
     """テキスト表示要素"""
     
     def __init__(self, element_id: str, text: str, x: int = 0, y: int = 0, 
-                 font_size: int = 24, alignment: UIAlignment = UIAlignment.LEFT):
+                 font_size: int = DEFAULT_FONT_SIZE, alignment: UIAlignment = UIAlignment.LEFT):
         super().__init__(element_id, x, y)
         self.text = text
         self.font_size = font_size
@@ -160,7 +207,7 @@ class UIText(UIElement):
         self.font = None
         
         # テキスト専用設定
-        self.background_color = (0, 0, 0, 0)  # 透明
+        self.background_color = TRANSPARENT_COLOR  # 透明
         self.border_width = 0
         
     def set_font(self, font: pygame.font.Font):
@@ -184,17 +231,17 @@ class UIText(UIElement):
         if not use_font:
             try:
                 from src.ui.font_manager_pygame import font_manager
-                use_font = font_manager.get_japanese_font(24)
+                use_font = font_manager.get_japanese_font(DEFAULT_FONT_SIZE)
                 if not use_font:
                     use_font = font_manager.get_default_font()
             except Exception as e:
                 logger.warning(f"フォントマネージャーの取得に失敗: {e}")
                 try:
                     # システムフォントで日本語フォントを試す
-                    use_font = pygame.font.SysFont('notosanscjk,noto,ipagothic,takao,hiragino,meiryo,msgothic', 24)
+                    use_font = pygame.font.SysFont('notosanscjk,noto,ipagothic,takao,hiragino,meiryo,msgothic', DEFAULT_FONT_SIZE)
                 except:
                     try:
-                        use_font = pygame.font.Font(None, 24)
+                        use_font = pygame.font.Font(None, DEFAULT_FONT_SIZE)
                     except:
                         return  # フォントが取得できない場合は描画しない
         
@@ -251,7 +298,7 @@ class UIButton(UIElement):
             if not use_font:
                 try:
                     from src.ui.font_manager_pygame import font_manager
-                    use_font = font_manager.get_japanese_font(24)
+                    use_font = font_manager.get_japanese_font(DEFAULT_FONT_SIZE)
                     if not use_font:
                         use_font = font_manager.get_default_font()
                 except Exception as e:
@@ -397,7 +444,7 @@ class UIMenu:
         if not use_font:
             try:
                 from src.ui.font_manager_pygame import font_manager
-                use_font = font_manager.get_japanese_font(24)
+                use_font = font_manager.get_japanese_font(DEFAULT_FONT_SIZE)
                 if not use_font:
                     use_font = font_manager.get_default_font()
             except Exception as e:
@@ -471,7 +518,7 @@ class UIDialog(UIMenu):
         if not use_font:
             try:
                 from src.ui.font_manager_pygame import font_manager
-                use_font = font_manager.get_japanese_font(24)
+                use_font = font_manager.get_japanese_font(DEFAULT_FONT_SIZE)
                 if not use_font:
                     use_font = font_manager.get_default_font()
             except Exception as e:

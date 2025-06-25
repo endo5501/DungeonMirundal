@@ -9,6 +9,16 @@ import pygame
 from src.ui.base_ui_pygame import UIMenu, UIElement, UIState
 from src.utils.logger import logger
 
+# メニュースタック定数
+DEFAULT_MAX_STACK_SIZE = 20
+MENU_CONTEXT_DEFAULT = {}
+TRANSITION_DELAY_MS = 100
+
+# ログメッセージ定数
+LOG_STACK_SIZE_LIMIT = "メニュースタックサイズが上限に達しました"
+LOG_TRANSITION_SKIP = "メニュー遷移中のため、プッシュ操作をスキップしました"
+LOG_EMPTY_STACK_POP = "スタックが空のためポップできません"
+
 
 class MenuType(Enum):
     """メニュータイプ"""
@@ -25,7 +35,7 @@ class MenuStackEntry:
     def __init__(self, menu: UIMenu, menu_type: MenuType, context: Dict[str, Any] = None):
         self.menu = menu
         self.menu_type = menu_type
-        self.context = context or {}
+        self.context = context or MENU_CONTEXT_DEFAULT
         self.timestamp = pygame.time.get_ticks()
         self.parent_entry: Optional['MenuStackEntry'] = None
         
@@ -50,7 +60,7 @@ class MenuStackManager:
         
         # 状態管理
         self.is_transition_in_progress = False
-        self.max_stack_size = 20  # スタックサイズ制限
+        self.max_stack_size = DEFAULT_MAX_STACK_SIZE  # スタックサイズ制限
         
         logger.info("MenuStackManagerを初期化しました")
     
@@ -66,18 +76,11 @@ class MenuStackManager:
             bool: 成功した場合True
         """
         try:
-            if self.is_transition_in_progress:
-                logger.warning("メニュー遷移中のため、プッシュ操作をスキップしました")
+            if not self._check_transition_allowed():
                 return False
             
             self.is_transition_in_progress = True
-            
-            # スタックサイズ制限チェック
-            if len(self.stack) >= self.max_stack_size:
-                logger.warning(f"メニュースタックサイズが上限に達しました: {self.max_stack_size}")
-                # 古いエントリを削除
-                old_entry = self.stack.pop(0)
-                self._cleanup_menu_entry(old_entry)
+            self._handle_stack_size_limit()
             
             # 現在のメニューを隠す
             if self.current_entry:
@@ -408,3 +411,17 @@ class MenuStackManager:
             'is_transition_in_progress': self.is_transition_in_progress,
             'stack_entries': [entry.menu.menu_id for entry in self.stack]
         }
+    
+    def _check_transition_allowed(self) -> bool:
+        """遷移が許可されているかチェック"""
+        if self.is_transition_in_progress:
+            logger.warning(LOG_TRANSITION_SKIP)
+            return False
+        return True
+    
+    def _handle_stack_size_limit(self):
+        """スタックサイズ制限を処理"""
+        if len(self.stack) >= self.max_stack_size:
+            logger.warning(f"{LOG_STACK_SIZE_LIMIT}: {self.max_stack_size}")
+            old_entry = self.stack.pop(0)
+            self._cleanup_menu_entry(old_entry)

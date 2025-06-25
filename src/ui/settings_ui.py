@@ -9,6 +9,27 @@ from src.core.config_manager import config_manager
 # from src.core.input_manager import input_manager
 from src.utils.logger import logger
 
+# 設定UI定数
+SETTINGS_CONFIG_DIR = "config"
+SETTINGS_FILE_NAME = "user_settings.yaml"
+GAME_SETTINGS_CONFIG = "game_settings"
+USER_SETTINGS_KEY = "user_settings"
+
+# デフォルト設定値
+DEFAULT_LANGUAGE = "ja"
+DEFAULT_DIFFICULTY = "normal"
+DEFAULT_BATTLE_SPEED = "normal"
+DEFAULT_MESSAGE_SPEED = "normal"
+DEFAULT_ANALOG_DEADZONE = 0.3
+DEFAULT_ANALOG_SENSITIVITY = 1.0
+DEFAULT_MASTER_VOLUME = 1.0
+DEFAULT_MUSIC_VOLUME = 0.8
+DEFAULT_SFX_VOLUME = 0.9
+DEFAULT_VOICE_VOLUME = 1.0
+DEFAULT_RESOLUTION = "1024x768"
+DEFAULT_UI_SCALE = 1.0
+DEFAULT_FEEDBACK_LEVEL = "normal"
+
 
 class SettingsCategory(Enum):
     """設定カテゴリ"""
@@ -41,61 +62,67 @@ class SettingsUI:
             from pathlib import Path
             
             # ユーザー設定ファイルから読み込み
-            config_file = Path("config") / "user_settings.yaml"
+            config_file = Path(SETTINGS_CONFIG_DIR) / SETTINGS_FILE_NAME
             if config_file.exists():
-                with open(config_file, 'r', encoding='utf-8') as f:
-                    user_settings = yaml.safe_load(f) or {}
-                    # デフォルト設定とマージ
-                    default_settings = self._get_default_settings()
-                    default_settings.update(user_settings)
-                    return default_settings
+                return self._load_user_settings_file(config_file)
             else:
-                # ゲーム設定の読み込み（後方互換性）
-                game_config = config_manager.load_config("game_settings")
-                user_settings = game_config.get("user_settings", {})
-                # デフォルト設定とマージ
-                default_settings = self._get_default_settings()
-                default_settings.update(user_settings)
-                return default_settings
+                return self._load_fallback_settings()
         except Exception as e:
             logger.warning(f"設定読み込みエラー: {e}")
             # デフォルト設定を返す
             return self._get_default_settings()
+    
+    def _load_user_settings_file(self, config_file):
+        """ユーザー設定ファイルを読み込み"""
+        import yaml
+        with open(config_file, 'r', encoding='utf-8') as f:
+            user_settings = yaml.safe_load(f) or {}
+            default_settings = self._get_default_settings()
+            default_settings.update(user_settings)
+            return default_settings
+    
+    def _load_fallback_settings(self):
+        """フォールバック設定を読み込み"""
+        game_config = config_manager.load_config(GAME_SETTINGS_CONFIG)
+        user_settings = game_config.get(USER_SETTINGS_KEY, {})
+        default_settings = self._get_default_settings()
+        default_settings.update(user_settings)
+        return default_settings
     
     def _get_default_settings(self) -> Dict[str, Any]:
         """デフォルト設定を取得"""
         return {
             # ゲームプレイ
             "auto_save": True,
-            "language": "ja",
-            "difficulty": "normal",
-            "battle_speed": "normal",
-            "message_speed": "normal",
+            "language": DEFAULT_LANGUAGE,
+            "difficulty": DEFAULT_DIFFICULTY,
+            "battle_speed": DEFAULT_BATTLE_SPEED,
+            "message_speed": DEFAULT_MESSAGE_SPEED,
             "confirm_actions": True,
             
             # 操作設定
             "controller_enabled": True,
             "keyboard_enabled": True,
-            "analog_deadzone": 0.3,
-            "analog_sensitivity": 1.0,
+            "analog_deadzone": DEFAULT_ANALOG_DEADZONE,
+            "analog_sensitivity": DEFAULT_ANALOG_SENSITIVITY,
             "vibration_enabled": True,
             
             # 音声設定
-            "master_volume": 1.0,
-            "music_volume": 0.8,
-            "sfx_volume": 0.9,
-            "voice_volume": 1.0,
+            "master_volume": DEFAULT_MASTER_VOLUME,
+            "music_volume": DEFAULT_MUSIC_VOLUME,
+            "sfx_volume": DEFAULT_SFX_VOLUME,
+            "voice_volume": DEFAULT_VOICE_VOLUME,
             "mute_on_focus_loss": True,
             
             # 表示設定
             "fullscreen": False,
-            "resolution": "1024x768",
+            "resolution": DEFAULT_RESOLUTION,
             "vsync": True,
             "show_fps": False,
-            "ui_scale": 1.0,
+            "ui_scale": DEFAULT_UI_SCALE,
             
             # アクセシビリティ
-            "feedback_level": "normal",
+            "feedback_level": DEFAULT_FEEDBACK_LEVEL,
             "high_contrast": False,
             "large_text": False,
             "color_blind_mode": "none",
