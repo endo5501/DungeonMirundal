@@ -218,7 +218,7 @@ class AdventurersGuild(BaseFacility):
         ]
         
         if not available_chars:
-            self._show_error_message("追加可能なキャラクターがいません")
+            self._show_error_message(self.config_manager.get_text("errors.no_addable_characters"))
             return
         
         for char in available_chars:
@@ -241,7 +241,7 @@ class AdventurersGuild(BaseFacility):
         """パーティにキャラクターを追加"""
         if not self.current_party:
             logger.warning("パーティが設定されていないため、キャラクターを追加できません")
-            self._show_error_message("パーティが設定されていません")
+            self._show_error_message(self.config_manager.get_text("errors.no_party_set"))
             return
         
         try:

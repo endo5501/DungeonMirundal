@@ -88,12 +88,12 @@ class CharacterCreationWizard:
         except:
             pass
         
-        logger.info("キャラクター作成ウィザードを初期化しました")
+        logger.info(config_manager.get_text("app_log.character_creation_initialized"))
     
     def start(self):
         """ウィザード開始"""
         if not ui_manager:
-            logger.error("ui_managerが利用できないため、キャラクター作成ウィザードを開始できません")
+            logger.error(config_manager.get_text("errors.ui_manager_unavailable"))
             return
             
         self.current_step = CreationStep.NAME_INPUT
@@ -186,7 +186,7 @@ class CharacterCreationWizard:
         
         self._next_step()
         
-        logger.info(f"キャラクター名が設定されました: {name}")
+        logger.info(config_manager.get_text("app_log.character_name_set").format(name=name))
     
     def _on_name_cancelled(self):
         """名前入力キャンセル時の処理"""

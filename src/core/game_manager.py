@@ -65,7 +65,7 @@ class GameManager:
         # 遷移システムの初期化
         self._setup_transition_system()
         
-        logger.info("GameManagerが初期化されました")
+        logger.info(self.game_config.get_text("app_log.game_manager_initialized"))
         
     def _load_initial_config(self):
         """初期設定の読み込み"""
@@ -76,7 +76,7 @@ class GameManager:
         language = game_config.get("gameplay", {}).get("language", "ja")
         self.game_config.set_language(language)
         
-        logger.info(f"初期設定を読み込みました: 言語={language}")
+        logger.info(self.game_config.get_text("app_log.config_loaded").format(language=language))
     
     def _load_input_settings(self):
         """入力設定の読み込み"""
@@ -84,9 +84,9 @@ class GameManager:
             input_settings = self.game_config.load_config("input_settings")
             if input_settings and hasattr(self, 'input_manager'):
                 self.input_manager.load_bindings(input_settings)
-                logger.info("入力設定を読み込みました")
+                logger.info(self.game_config.get_text("app_log.input_config_loaded"))
         except Exception as e:
-            logger.warning(f"入力設定の読み込みに失敗（デフォルト設定を使用）: {e}")
+            logger.warning(self.game_config.get_text("app_log.input_config_failed").format(error=e))
         
     def _setup_window(self):
         """ウィンドウの設定"""
@@ -107,7 +107,7 @@ class GameManager:
         graphics_config = game_config.get("graphics", {})
         self.target_fps = graphics_config.get("fps", FPS)
         
-        logger.info(f"ウィンドウを設定しました: {width}x{height}, FPS: {self.target_fps}")
+        logger.info(self.game_config.get_text("app_log.window_configured").format(width=width, height=height, fps=self.target_fps))
     
     def _setup_input(self):
         """入力システムの設定"""
@@ -150,7 +150,7 @@ class GameManager:
         # コントローラーのセットアップ
         self.input_manager.setup_controllers()
         
-        logger.info("拡張入力システムを設定しました")
+        logger.info(self.game_config.get_text("app_log.extended_input_configured"))
     
     def _setup_fonts(self):
         """フォントシステムの初期化"""
@@ -177,7 +177,8 @@ class GameManager:
             except:
                 self.debug_font = None
                 
-        logger.info(f"デバッグ設定: {'有効' if self.debug_enabled else '無効'}")
+        status = self.game_config.get_text("ui.settings.enabled") if self.debug_enabled else self.game_config.get_text("ui.settings.disabled")
+        logger.info(self.game_config.get_text("app_log.debug_setting").format(status=status))
     
     def _on_menu_action(self, action: str, pressed: bool, input_type):
         """メニューアクションの処理"""

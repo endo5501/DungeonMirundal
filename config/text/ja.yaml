@@ -314,6 +314,24 @@ app_log:
   shutdown: "=== Dungeon RPG 終了 ==="
   user_interrupt: "ユーザーによってゲームが中断されました"
   error_occurred: "ゲーム実行中にエラーが発生しました"
+  game_manager_initialized: "GameManagerが初期化されました"
+  config_loaded: "初期設定を読み込みました: 言語={language}"
+  input_config_loaded: "入力設定を読み込みました"
+  input_config_failed: "入力設定の読み込みに失敗（デフォルト設定を使用）: {error}"
+  window_configured: "ウィンドウを設定しました: {width}x{height}, FPS: {fps}"
+  extended_input_configured: "拡張入力システムを設定しました"
+  debug_setting: "デバッグ設定: {status}"
+  debug_mode_toggle: "デバッグモード切り替え: {status}"
+  game_paused: "ゲームを一時停止しました"
+  game_resumed: "ゲームを再開しました"
+  level_up: "レベルアップ: {old_level} -> {new_level}"
+  character_creation_initialized: "キャラクター作成ウィザードを初期化しました"
+  character_name_set: "キャラクター名が設定されました: {name}"
+  entered_guild: "冒険者ギルドに入りました"
+  left_guild: "冒険者ギルドから出ました"
+  entered_inn: "宿屋に入りました"
+  left_inn: "宿屋から出ました"
+  inventory_initialized: "インベントリを初期化: {owner_id} ({type}, {slots}スロット)"
 
 # ゲーム管理
 game_manager:
@@ -479,6 +497,34 @@ inn:
       きっと伝説の冒険者になれますよ！
     default_name: "勇者一行"
     anonymous_party: "無名のパーティ"
+
+# エラーメッセージ
+errors:
+  no_addable_characters: "追加可能なキャラクターがいません"
+  no_party_set: "パーティが設定されていません"
+  inn_storage_full: "宿屋の倉庫が満杯です。倉庫を整理してください。"
+  character_creation_failed: "キャラクター作成に失敗しました"
+  character_add_failed: "キャラクターの追加に失敗しました"
+  character_add_error: "キャラクター追加でエラーが発生しました: {error}"
+  character_remove_failed: "キャラクターの削除に失敗しました"
+  position_change_failed: "位置の変更に失敗しました"
+  no_characters: "キャラクターがいません"
+  no_party_members: "パーティにメンバーがいません"
+  ui_manager_unavailable: "ui_managerが利用できないため、キャラクター作成ウィザードを開始できません"
+
+# コメント・ドキュメント文字列
+comments:
+  character_status_good: "良好"
+  character_status_injured: "負傷"
+  character_status_unconscious: "意識不明"
+  character_status_dead: "死亡"
+  character_status_ash: "灰"
+  inventory_character: "キャラクター"
+  inventory_party: "パーティ"
+  equipment_weapon: "武器"
+  equipment_armor: "防具"
+  equipment_accessory1: "アクセサリ1"
+  equipment_accessory2: "アクセサリ2"
 
 # 商店関連
 shop:

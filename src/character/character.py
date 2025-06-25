@@ -40,7 +40,7 @@ class Experience:
         
         leveled_up = self.level > old_level
         if leveled_up:
-            logger.info(f"レベルアップ: {old_level} -> {self.level}")
+            logger.info(config_manager.get_text("app_log.level_up").format(old_level=old_level, new_level=self.level))
         
         return leveled_up
     
