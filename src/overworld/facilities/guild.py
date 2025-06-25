@@ -439,18 +439,169 @@ class AdventurersGuild(BaseFacility):
         )
     
     def _show_class_change(self):
-        """クラスチェンジ（未実装）"""
-        self._show_dialog(
-            "class_change_dialog",
-            "クラスチェンジ",
-            "クラスチェンジ機能は未実装です。\n将来のアップデートで追加予定です。",
-            buttons=[
+        """クラスチェンジ画面を表示"""
+        if not self.current_party:
+            self._show_error_message("パーティが設定されていません")
+            return
+        
+        # パーティメンバーが誰もいない場合
+        if not self.current_party.characters:
+            self._show_error_message("パーティにメンバーがいません")
+            return
+        
+        # クラスチェンジ可能なキャラクターを選択
+        class_change_menu = UIMenu("class_change_menu", "クラスチェンジ")
+        
+        for position, character in self.current_party.characters.items():
+            # レベル10以上のキャラクターのみ表示
+            if character.experience.level >= 10:
+                char_info = f"{character.name} (Lv.{character.experience.level} {character.get_class_name()})"
+                class_change_menu.add_menu_item(
+                    char_info,
+                    self._show_class_change_options,
+                    [character]
+                )
+        
+        # 該当者がいない場合
+        if len(class_change_menu.elements) == 0:
+            self._show_dialog(
+                "no_eligible_dialog",
+                "クラスチェンジ",
+                "クラスチェンジ可能なキャラクターがいません。\n\n"
+                "条件:\n"
+                "・レベル10以上\n"
+                "・転職先クラスの要求能力値を満たす",
+                buttons=[
+                    {
+                        'text': "戻る",
+                        'command': self._close_dialog
+                    }
+                ]
+            )
+            return
+        
+        class_change_menu.add_menu_item(
+            "戻る",
+            self._back_to_main_menu_from_submenu,
+            [class_change_menu]
+        )
+        
+        self._show_submenu(class_change_menu)
+    
+    def _show_class_change_options(self, character: Character):
+        """クラスチェンジ先の選択画面を表示"""
+        from src.character.class_change import ClassChangeValidator, ClassChangeManager
+        
+        # 転職可能なクラスを取得
+        available_classes = ClassChangeValidator.get_available_classes(character)
+        
+        if not available_classes:
+            self._show_dialog(
+                "no_available_classes",
+                "転職先がありません",
+                f"{character.name}が転職可能なクラスがありません。\n\n"
+                "能力値が要求を満たしていない可能性があります。",
+                buttons=[
+                    {
+                        'text': "戻る",
+                        'command': self._close_dialog
+                    }
+                ]
+            )
+            return
+        
+        # クラス選択メニュー
+        class_select_menu = UIMenu("class_select_menu", f"{character.name}の転職先")
+        
+        for class_name in available_classes:
+            class_info = ClassChangeManager.get_class_change_info(character, class_name)
+            display_name = f"{class_info['target_name']} (HP×{class_info['hp_multiplier']:.1f} MP×{class_info['mp_multiplier']:.1f})"
+            class_select_menu.add_menu_item(
+                display_name,
+                self._show_class_change_confirm,
+                [character, class_name]
+            )
+        
+        class_select_menu.add_menu_item(
+            "戻る",
+            self._back_to_class_change_menu,
+            [class_select_menu]
+        )
+        
+        self._show_submenu(class_select_menu)
+    
+    def _show_class_change_confirm(self, character: Character, target_class: str):
+        """クラスチェンジ確認画面"""
+        from src.character.class_change import ClassChangeManager
+        
+        class_info = ClassChangeManager.get_class_change_info(character, target_class)
+        
+        confirm_text = (
+            f"【クラスチェンジ確認】\n\n"
+            f"{character.name}\n"
+            f"{class_info['current_name']} → {class_info['target_name']}\n\n"
+            f"注意:\n"
+            f"・レベルが1に戻ります\n"
+            f"・経験値が0になります\n"
+            f"・HP/MPが再計算されます\n"
+            f"・費用: 1000G\n\n"
+            f"本当にクラスチェンジしますか？"
+        )
+        
+        # ゴールドチェック
+        if self.current_party.gold < 1000:
+            confirm_text += "\n\n※ ゴールドが不足しています"
+            buttons = [
                 {
-                    'text': config_manager.get_text("menu.back"),
+                    'text': "戻る",
                     'command': self._close_dialog
                 }
             ]
+        else:
+            buttons = [
+                {
+                    'text': "はい",
+                    'command': lambda: self._execute_class_change(character, target_class)
+                },
+                {
+                    'text': "いいえ",
+                    'command': self._close_dialog
+                }
+            ]
+        
+        self._show_dialog(
+            "class_change_confirm",
+            "クラスチェンジ確認",
+            confirm_text,
+            buttons=buttons,
+            width=500,
+            height=400
         )
+    
+    def _execute_class_change(self, character: Character, target_class: str):
+        """クラスチェンジを実行"""
+        from src.character.class_change import ClassChangeManager
+        
+        self._close_dialog()
+        
+        # ゴールドを消費
+        self.current_party.gold -= 1000
+        
+        # クラスチェンジ実行
+        success, message = ClassChangeManager.change_class(character, target_class)
+        
+        if success:
+            self._show_success_message(message + f"\n\n残りゴールド: {self.current_party.gold}G")
+        else:
+            # 失敗時はゴールドを戻す
+            self.current_party.gold += 1000
+            self._show_error_message(message)
+    
+    def _back_to_class_change_menu(self, submenu: UIMenu):
+        """クラスチェンジメニューに戻る"""
+        self._hide_menu_safe(submenu.menu_id)
+        # クラスチェンジメニューを再表示
+        self._show_class_change()
     
     def _return_to_party_formation(self):
         """パーティ編成メニューに戻る"""

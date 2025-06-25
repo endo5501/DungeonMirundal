@@ -542,3 +542,11 @@ class Character:
     def get_personal_inventory(self):
         """個人インベントリを取得（新インベントリシステム）"""
         return self.get_inventory()
+    
+    def get_race_name(self) -> str:
+        """種族名を取得"""
+        return config_manager.get_text(f"race.{self.race}", default=self.race)
+    
+    def get_class_name(self) -> str:
+        """職業名を取得"""
+        return config_manager.get_text(f"class.{self.character_class}", default=self.character_class)
