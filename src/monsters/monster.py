@@ -10,6 +10,30 @@ from src.dungeon.dungeon_generator import DungeonAttribute
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
+# モンスターシステム定数
+DEFAULT_LEVEL = 1
+DEFAULT_HIT_POINTS = 10
+DEFAULT_ARMOR_CLASS = 10
+DEFAULT_ATTACK_BONUS = 0
+DEFAULT_DAMAGE_DICE = "1d6"
+DEFAULT_STAT_VALUE = 10
+DEFAULT_DROP_CHANCE = 0.1
+DEFAULT_DROP_QUANTITY = 1
+FALLBACK_LANGUAGE = 'ja'
+MINIMUM_DAMAGE = 1
+DEFAULT_AC_BASE = 10
+LEVEL_HP_MODIFIER = 4
+LEVEL_ATTACK_DIVISOR = 2
+FIRST_ELEMENT_INDEX = 0
+RESISTANT_THRESHOLD = 50
+VULNERABLE_THRESHOLD = -30
+SCALING_LEVEL_THRESHOLD = 2
+SCALING_FACTOR_BASE = 0.1
+SCALING_DIVISOR = 3
+MINIMUM_SCALING_FACTOR = 0.5
+UNLIMITED_USAGE = -1
+COOLDOWN_EXPIRED = 0
+
 
 class MonsterType(Enum):
     """モンスタータイプ"""
@@ -178,22 +202,24 @@ class Monster:
     
     def take_damage(self, damage: int, damage_type: DungeonAttribute = DungeonAttribute.PHYSICAL) -> int:
         """ダメージを受ける"""
-        # 耐性による軽減
-        resistance = self.resistances.get(damage_type, MonsterResistance.NORMAL)
-        
-        if resistance == MonsterResistance.IMMUNE:
-            actual_damage = 0
-        elif resistance == MonsterResistance.RESISTANT:
-            actual_damage = damage // 2
-        elif resistance == MonsterResistance.VULNERABLE:
-            actual_damage = int(damage * 1.5)
-        else:
-            actual_damage = damage
-        
-        self.current_hp = max(0, self.current_hp - actual_damage)
+        actual_damage = self._calculate_damage_with_resistance(damage, damage_type)
+        self.current_hp = max(COOLDOWN_EXPIRED, self.current_hp - actual_damage)
         
         logger.debug(f"{self.name}が{actual_damage}ダメージを受けました（HP: {self.current_hp}/{self.max_hp}）")
         return actual_damage
+    
+    def _calculate_damage_with_resistance(self, damage: int, damage_type: DungeonAttribute) -> int:
+        """耐性を考慮したダメージ計算"""
+        resistance = self.resistances.get(damage_type, MonsterResistance.NORMAL)
+        
+        if resistance == MonsterResistance.IMMUNE:
+            return COOLDOWN_EXPIRED
+        elif resistance == MonsterResistance.RESISTANT:
+            return damage // LEVEL_ATTACK_DIVISOR
+        elif resistance == MonsterResistance.VULNERABLE:
+            return int(damage * 1.5)
+        else:
+            return damage
     
     def heal(self, amount: int) -> int:
         """回復"""
@@ -222,7 +248,7 @@ class Monster:
             return False
         
         # クールダウンチェック
-        if self.ability_cooldowns.get(ability_id, 0) > 0:
+        if self.ability_cooldowns.get(ability_id, COOLDOWN_EXPIRED) > COOLDOWN_EXPIRED:
             return False
         
         return True
@@ -237,7 +263,7 @@ class Monster:
             return False
         
         # クールダウン設定
-        if ability.cooldown > 0:
+        if ability.cooldown > COOLDOWN_EXPIRED:
             self.ability_cooldowns[ability_id] = ability.cooldown
         
         logger.debug(f"{self.name}が{ability.name}を使用しました")
@@ -246,8 +272,8 @@ class Monster:
     def update_cooldowns(self):
         """クールダウン更新"""
         for ability_id in list(self.ability_cooldowns.keys()):
-            self.ability_cooldowns[ability_id] -= 1
-            if self.ability_cooldowns[ability_id] <= 0:
+            self.ability_cooldowns[ability_id] -= MINIMUM_DAMAGE
+            if self.ability_cooldowns[ability_id] <= COOLDOWN_EXPIRED:
                 del self.ability_cooldowns[ability_id]
     
     def add_status_effect(self, effect: str):
@@ -268,31 +294,40 @@ class Monster:
     
     def get_attack_damage(self) -> int:
         """攻撃ダメージ計算"""
-        # 基本的なダイスロール実装
-        dice_parts = self.stats.damage_dice.split('d')
-        if len(dice_parts) == 2:
-            num_dice = int(dice_parts[0])
-            die_size = int(dice_parts[1])
-            damage = sum(random.randint(1, die_size) for _ in range(num_dice))
+        return self._roll_damage_dice(self.stats.damage_dice)
+    
+    def _roll_damage_dice(self, dice_string: str) -> int:
+        """ダイスロール計算"""
+        dice_parts = dice_string.split('d')
+        if len(dice_parts) == LEVEL_ATTACK_DIVISOR:
+            num_dice = int(dice_parts[FIRST_ELEMENT_INDEX])
+            die_size = int(dice_parts[FIRST_ELEMENT_INDEX + 1])
+            return sum(random.randint(MINIMUM_DAMAGE, die_size) for _ in range(num_dice))
         else:
-            damage = 1  # デフォルト
-        
-        return damage
+            return MINIMUM_DAMAGE
     
     def get_loot(self) -> List[Dict[str, Any]]:
         """ドロップアイテム取得"""
         dropped_items = []
         
         for loot_entry in self.loot_table:
-            drop_chance = loot_entry.get('chance', 0.1)
-            if random.random() < drop_chance:
-                dropped_items.append({
-                    'item_id': loot_entry['item_id'],
-                    'quantity': loot_entry.get('quantity', 1),
-                    'identified': loot_entry.get('identified', False)
-                })
+            if self._should_drop_item(loot_entry):
+                dropped_items.append(self._create_drop_item(loot_entry))
         
         return dropped_items
+    
+    def _should_drop_item(self, loot_entry: Dict[str, Any]) -> bool:
+        """アイテムをドロップするかどうか判定"""
+        drop_chance = loot_entry.get('chance', DEFAULT_DROP_CHANCE)
+        return random.random() < drop_chance
+    
+    def _create_drop_item(self, loot_entry: Dict[str, Any]) -> Dict[str, Any]:
+        """ドロップアイテムを作成"""
+        return {
+            'item_id': loot_entry['item_id'],
+            'quantity': loot_entry.get('quantity', DEFAULT_DROP_QUANTITY),
+            'identified': loot_entry.get('identified', False)
+        }
     
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式に変換"""
@@ -367,7 +402,7 @@ class MonsterManager:
             self.monster_templates = {}
     
     
-    def create_monster(self, monster_id: str, level_modifier: int = 0) -> Optional[Monster]:
+    def create_monster(self, monster_id: str, level_modifier: int = COOLDOWN_EXPIRED) -> Optional[Monster]:
         """モンスター作成"""
         if monster_id not in self.monster_templates:
             logger.error(f"未知のモンスターID: {monster_id}")
@@ -376,99 +411,122 @@ class MonsterManager:
         template = self.monster_templates[monster_id]
         
         # 多言語対応の名前と説明を取得
-        current_language = getattr(config_manager, 'current_language', 'ja')
+        name = self._get_localized_name(template)
+        description = self._get_localized_description(template)
         
-        # 名前取得
-        if 'names' in template:
-            names = template['names']
-            if current_language in names:
-                name = names[current_language]
-            elif 'ja' in names:
-                name = names['ja']
-            else:
-                name = list(names.values())[0]
-        else:
-            name = template.get('name', monster_id)
-        
-        # 説明取得
-        if 'descriptions' in template:
-            descriptions = template['descriptions']
-            if current_language in descriptions:
-                description = descriptions[current_language]
-            elif 'ja' in descriptions:
-                description = descriptions['ja']
-            else:
-                description = list(descriptions.values())[0]
-        else:
-            description = template.get('description', '')
-        
-        # 統計値作成（新しいYAML形式に対応）
-        stats_data = {
-            'level': template.get('level', 1),
-            'hit_points': template.get('hp', 10),
-            'armor_class': 10 + template.get('defense', 0),  # 防御力をACに変換
-            'attack_bonus': template.get('attack', 0),
-            'damage_dice': "1d6",  # デフォルト
-            'strength': template.get('attack', 10),  # 攻撃力を筋力として使用
-            'agility': template.get('agility', 10),
-            'intelligence': template.get('intelligence', 10),
-            'faith': template.get('faith', 10),
-            'luck': template.get('luck', 10)
-        }
-        
-        if level_modifier != 0:
-            # レベル修正を適用
-            stats_data['level'] += level_modifier
-            stats_data['hit_points'] += level_modifier * 4
-            stats_data['attack_bonus'] += level_modifier // 2
-        
-        stats = MonsterStats.from_dict(stats_data)
+        # 統計値作成
+        stats = self._create_monster_stats(template, level_modifier)
         
         # モンスター作成
         monster = Monster(
             monster_id=monster_id,
             name=name,
             description=description,
-            monster_type=MonsterType.HUMANOID,  # デフォルト（必要に応じて拡張）
-            size=MonsterSize.MEDIUM,  # デフォルト
+            monster_type=MonsterType.HUMANOID,
+            size=MonsterSize.MEDIUM,
             stats=stats,
             loot_table=self._convert_drops_to_loot_table(template.get('drops', [])),
-            experience_value=template.get('exp_reward', 0)
+            experience_value=template.get('exp_reward', COOLDOWN_EXPIRED)
         )
         
-        # 耐性設定（新しい形式に対応）
+        # 耐性と特殊能力設定
+        self._setup_monster_resistances(monster, template)
+        self._setup_monster_abilities(monster, template)
+        
+        logger.debug(f"モンスター作成: {monster.name} (Lv.{monster.stats.level})")
+        return monster
+    
+    def _get_localized_name(self, template: Dict[str, Any]) -> str:
+        """ローカライズされた名前を取得"""
+        current_language = getattr(config_manager, 'current_language', FALLBACK_LANGUAGE)
+        
+        if 'names' in template:
+            names = template['names']
+            if current_language in names:
+                return names[current_language]
+            elif FALLBACK_LANGUAGE in names:
+                return names[FALLBACK_LANGUAGE]
+            else:
+                return list(names.values())[FIRST_ELEMENT_INDEX]
+        else:
+            return template.get('name', '')
+    
+    def _get_localized_description(self, template: Dict[str, Any]) -> str:
+        """ローカライズされた説明を取得"""
+        current_language = getattr(config_manager, 'current_language', FALLBACK_LANGUAGE)
+        
+        if 'descriptions' in template:
+            descriptions = template['descriptions']
+            if current_language in descriptions:
+                return descriptions[current_language]
+            elif FALLBACK_LANGUAGE in descriptions:
+                return descriptions[FALLBACK_LANGUAGE]
+            else:
+                return list(descriptions.values())[FIRST_ELEMENT_INDEX]
+        else:
+            return template.get('description', '')
+    
+    def _create_monster_stats(self, template: Dict[str, Any], level_modifier: int) -> MonsterStats:
+        """モンスター統計値を作成"""
+        stats_data = {
+            'level': template.get('level', DEFAULT_LEVEL),
+            'hit_points': template.get('hp', DEFAULT_HIT_POINTS),
+            'armor_class': DEFAULT_AC_BASE + template.get('defense', COOLDOWN_EXPIRED),
+            'attack_bonus': template.get('attack', DEFAULT_ATTACK_BONUS),
+            'damage_dice': DEFAULT_DAMAGE_DICE,
+            'strength': template.get('attack', DEFAULT_STAT_VALUE),
+            'agility': template.get('agility', DEFAULT_STAT_VALUE),
+            'intelligence': template.get('intelligence', DEFAULT_STAT_VALUE),
+            'faith': template.get('faith', DEFAULT_STAT_VALUE),
+            'luck': template.get('luck', DEFAULT_STAT_VALUE)
+        }
+        
+        if level_modifier != COOLDOWN_EXPIRED:
+            self._apply_level_modifier(stats_data, level_modifier)
+        
+        return MonsterStats.from_dict(stats_data)
+    
+    def _apply_level_modifier(self, stats_data: Dict[str, Any], level_modifier: int):
+        """レベル修正を適用"""
+        stats_data['level'] += level_modifier
+        stats_data['hit_points'] += level_modifier * LEVEL_HP_MODIFIER
+        stats_data['attack_bonus'] += level_modifier // LEVEL_ATTACK_DIVISOR
+    
+    def _setup_monster_resistances(self, monster: Monster, template: Dict[str, Any]):
+        """モンスターの耐性を設定"""
         resistances = template.get('resistances', {})
         for attr_name, resistance_value in resistances.items():
             try:
-                # 属性名をDungeonAttributeに変換
-                if attr_name == 'physical':
-                    attr = DungeonAttribute.PHYSICAL
-                elif attr_name == 'fire':
-                    attr = DungeonAttribute.FIRE
-                elif attr_name == 'ice':
-                    attr = DungeonAttribute.ICE
-                elif attr_name == 'lightning':
-                    attr = DungeonAttribute.LIGHTNING
-                elif attr_name == 'dark':
-                    attr = DungeonAttribute.DARK
-                elif attr_name == 'light':
-                    attr = DungeonAttribute.LIGHT
-                else:
-                    continue
-                
-                # 耐性値を判定
-                if resistance_value >= 50:
-                    res = MonsterResistance.RESISTANT
-                elif resistance_value <= -30:
-                    res = MonsterResistance.VULNERABLE
-                else:
-                    res = MonsterResistance.NORMAL
-                
-                monster.resistances[attr] = res
+                attr = self._convert_attribute_name(attr_name)
+                if attr:
+                    res = self._determine_resistance_level(resistance_value)
+                    monster.resistances[attr] = res
             except Exception as e:
                 logger.warning(f"耐性設定エラー: {attr_name}={resistance_value}, {e}")
-        
-        # 特殊能力設定
+    
+    def _convert_attribute_name(self, attr_name: str) -> Optional[DungeonAttribute]:
+        """属性名をDungeonAttributeに変換"""
+        attribute_map = {
+            'physical': DungeonAttribute.PHYSICAL,
+            'fire': DungeonAttribute.FIRE,
+            'ice': DungeonAttribute.ICE,
+            'lightning': DungeonAttribute.LIGHTNING,
+            'dark': DungeonAttribute.DARK,
+            'light': DungeonAttribute.LIGHT
+        }
+        return attribute_map.get(attr_name)
+    
+    def _determine_resistance_level(self, resistance_value: int) -> MonsterResistance:
+        """耐性レベルを判定"""
+        if resistance_value >= RESISTANT_THRESHOLD:
+            return MonsterResistance.RESISTANT
+        elif resistance_value <= VULNERABLE_THRESHOLD:
+            return MonsterResistance.VULNERABLE
+        else:
+            return MonsterResistance.NORMAL
+    
+    def _setup_monster_abilities(self, monster: Monster, template: Dict[str, Any]):
+        """モンスターの特殊能力を設定"""
         for ability_data in template.get('special_abilities', []):
             try:
                 ability = MonsterAbility(
@@ -476,16 +534,13 @@ class MonsterManager:
                     name=ability_data.get('name', ''),
                     description=ability_data.get('description', ''),
                     ability_type='active',
-                    cooldown=0,
-                    usage_count=-1,
+                    cooldown=COOLDOWN_EXPIRED,
+                    usage_count=UNLIMITED_USAGE,
                     target_type='enemy'
                 )
                 monster.abilities.append(ability)
             except Exception as e:
                 logger.warning(f"特殊能力設定エラー: {ability_data}, {e}")
-        
-        logger.debug(f"モンスター作成: {monster.name} (Lv.{monster.stats.level})")
-        return monster
     
     def _convert_drops_to_loot_table(self, drops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """ドロップ情報をルートテーブルに変換"""
@@ -536,27 +591,31 @@ class MonsterManager:
         logger.debug(f"モンスターグループ作成: {len(monsters)}体")
         return monsters
     
-    def scale_monster_for_party(self, monster: Monster, party_level: int, party_size: int) -> Monster:
+    def scale_monster_for_party(self, monster: Monster, party_level: int, _party_size: int) -> Monster:
         """パーティに応じたモンスタースケーリング"""
-        # パーティレベルと現在のモンスターレベルの差を計算
         level_diff = party_level - monster.stats.level
         
-        if level_diff > 2:
-            # パーティが強すぎる場合はモンスターを強化
-            scaling_factor = 1 + (level_diff - 2) * 0.1
-            monster.stats.hit_points = int(monster.stats.hit_points * scaling_factor)
-            monster.stats.attack_bonus += level_diff // 3
-            monster.current_hp = monster.stats.hit_points
-            
-        elif level_diff < -2:
-            # パーティが弱すぎる場合はモンスターを弱体化
-            scaling_factor = 1 - (abs(level_diff) - 2) * 0.1
-            scaling_factor = max(0.5, scaling_factor)  # 最低50%まで
-            monster.stats.hit_points = int(monster.stats.hit_points * scaling_factor)
-            monster.stats.attack_bonus = max(0, monster.stats.attack_bonus - abs(level_diff) // 3)
-            monster.current_hp = monster.stats.hit_points
+        if level_diff > SCALING_LEVEL_THRESHOLD:
+            self._scale_monster_up(monster, level_diff)
+        elif level_diff < -SCALING_LEVEL_THRESHOLD:
+            self._scale_monster_down(monster, level_diff)
         
         return monster
+    
+    def _scale_monster_up(self, monster: Monster, level_diff: int):
+        """モンスターを強化"""
+        scaling_factor = MINIMUM_DAMAGE + (level_diff - SCALING_LEVEL_THRESHOLD) * SCALING_FACTOR_BASE
+        monster.stats.hit_points = int(monster.stats.hit_points * scaling_factor)
+        monster.stats.attack_bonus += level_diff // SCALING_DIVISOR
+        monster.current_hp = monster.stats.hit_points
+    
+    def _scale_monster_down(self, monster: Monster, level_diff: int):
+        """モンスターを弱体化"""
+        scaling_factor = MINIMUM_DAMAGE - (abs(level_diff) - SCALING_LEVEL_THRESHOLD) * SCALING_FACTOR_BASE
+        scaling_factor = max(MINIMUM_SCALING_FACTOR, scaling_factor)
+        monster.stats.hit_points = int(monster.stats.hit_points * scaling_factor)
+        monster.stats.attack_bonus = max(COOLDOWN_EXPIRED, monster.stats.attack_bonus - abs(level_diff) // SCALING_DIVISOR)
+        monster.current_hp = monster.stats.hit_points
 
 
 # グローバルインスタンス

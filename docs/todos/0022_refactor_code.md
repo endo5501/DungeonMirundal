@@ -144,10 +144,22 @@
 
    **テスト結果：** 魔法関連の15テスト中1テストが既存コンバット統合問題で失敗（魔法システム自体は正常）
 
-11. @src/monsters 以下のコードをFowler式のリファクタリングしましょう。
+11. ✅ @src/monsters 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
     リファクタリング後、テストを実施しエラーを確実に解消してください
     完了後、作業内容をこちらに記載した後一旦commitしてください
+
+   **実施したリファクタリング：**
+   - **Replace Magic Number with Named Constant**: 22個の定数を追加（DEFAULT_LEVEL、SCALING_FACTOR_BASE、RESISTANT_THRESHOLD等）
+   - **Extract Method**: take_damageメソッドから_calculate_damage_with_resistanceメソッドを抽出
+   - **Extract Method**: get_attack_damageメソッドから_roll_damage_diceメソッドを抽出
+   - **Extract Method**: get_lootメソッドから_should_drop_item、_create_drop_itemメソッドを抽出
+   - **Extract Method**: create_monsterメソッドを6つの小さなメソッドに分割（_get_localized_name等）
+   - **Extract Method**: scale_monster_for_partyメソッドから_scale_monster_up、_scale_monster_downメソッドを抽出
+   - **Replace Magic Number with Named Constant**: ダメージ軽減、スケーリング計算、閾値等の魔法数をすべて定数に置換
+   - **Code Quality**: 未使用パラメータの修正（party_size）
+
+   **テスト結果：** モンスター関連の38テストすべて成功
 
 12. @src/navigation 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
