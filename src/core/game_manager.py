@@ -185,7 +185,7 @@ class GameManager:
             logger.info(f"メニューアクション ({input_type.value})")
             
             # ダンジョン内ではメニュー表示
-            if self.current_location == "dungeon" and self.dungeon_renderer:
+            if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 self.dungeon_renderer._show_menu()
             # 地上部では設定画面をオーバーワールドマネージャーに委譲
             elif self.current_location == "overworld" and self.overworld_manager:
@@ -211,7 +211,7 @@ class GameManager:
             logger.info(f"アクションボタン ({input_type.value})")
             
             # ダンジョン内でのスペースキー: 3D描画復旧を試行
-            if self.current_location == "dungeon" and self.dungeon_renderer:
+            if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 logger.info("スペースキーによる3D描画手動復旧を試行します")
                 
                 try:
@@ -248,7 +248,7 @@ class GameManager:
     
     def _on_3d_stage_advance(self, action: str, pressed: bool, input_type):
         """3D描画段階進行デバッグ"""
-        if pressed and self.current_location == "dungeon" and self.dungeon_renderer:
+        if pressed and self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
             logger.info("=== 3D描画段階進行デバッグキーが押されました ===")
             
             # 現在の状態を表示
@@ -272,7 +272,7 @@ class GameManager:
     
     def _on_3d_stage_reset(self, action: str, pressed: bool, input_type):
         """3D描画緊急リセットデバッグ"""
-        if pressed and self.current_location == "dungeon" and self.dungeon_renderer:
+        if pressed and self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
             logger.info("=== 3D描画緊急リセットキーが押されました ===")
             
             # 緊急無効化を実行
@@ -289,7 +289,7 @@ class GameManager:
         """インベントリアクションの処理"""
         if pressed:
             logger.info(f"インベントリアクション ({input_type.value})")
-            if self.current_location == "dungeon" and self.dungeon_renderer:
+            if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
                     self.dungeon_renderer.ui_manager._open_inventory()
     
@@ -297,7 +297,7 @@ class GameManager:
         """魔法アクションの処理"""
         if pressed:
             logger.info(f"魔法アクション ({input_type.value})")
-            if self.current_location == "dungeon" and self.dungeon_renderer:
+            if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
                     self.dungeon_renderer.ui_manager._open_magic()
     
@@ -305,7 +305,7 @@ class GameManager:
         """装備アクションの処理"""
         if pressed:
             logger.info(f"装備アクション ({input_type.value})")
-            if self.current_location == "dungeon" and self.dungeon_renderer:
+            if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
                     self.dungeon_renderer.ui_manager._open_equipment()
     
@@ -313,7 +313,7 @@ class GameManager:
         """ステータスアクションの処理"""
         if pressed:
             logger.info(f"ステータスアクション ({input_type.value})")
-            if self.current_location == "dungeon" and self.dungeon_renderer:
+            if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
                     self.dungeon_renderer.ui_manager._open_status()
     
@@ -321,7 +321,7 @@ class GameManager:
         """キャンプアクションの処理"""
         if pressed:
             logger.info(f"キャンプアクション ({input_type.value})")
-            if self.current_location == "dungeon" and self.dungeon_renderer:
+            if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
                     self.dungeon_renderer.ui_manager._open_camp()
     
@@ -334,7 +334,7 @@ class GameManager:
     
     def _on_movement_action(self, action: str, pressed: bool, input_type):
         """移動アクションの処理"""
-        if pressed and self.current_location == "dungeon" and self.dungeon_renderer:
+        if pressed and self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
             # ダンジョンレンダラーに移動処理を委譲
             from src.core.input_manager import InputAction
             
@@ -810,92 +810,70 @@ class GameManager:
             logger.info("新規ゲームで開始します")
             return False
     
-    def load_game_state(self, slot_id: int):
-        """ゲーム状態をロードして復元する"""
-        try:
-            save_data = self.save_manager.load_game(slot_id)
-            
-            # パーティ情報を復元
-            if 'party' in save_data:
-                self.current_party = Party.from_dict(save_data['party'])
-            
-            # ゲーム状態を復元
-            if 'game_state' in save_data:
-                game_state = save_data['game_state']
-                if 'location' in game_state:
-                    self.current_location = game_state['location']
-            
-            logger.info(f"ゲーム状態をロードしました: スロット{slot_id}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"ゲーム状態のロードに失敗しました: {e}")
-            return False
+    def _create_test_character(self, name: str, is_fallback: bool = False):
+        """テスト用キャラクター作成"""
+        from src.character.character import Character, CharacterStatus
+        from src.character.stats import BaseStats
+        
+        character = Character(
+            name=name,
+            race="human",
+            character_class="fighter"
+        )
+        
+        # 基本ステータスを設定
+        if is_fallback:
+            character.base_stats = BaseStats(
+                strength=15, intelligence=10, faith=10,
+                vitality=14, agility=12, luck=8
+            )
+        else:
+            character.base_stats = BaseStats(
+                strength=16, intelligence=10, faith=10,
+                vitality=15, agility=12, luck=8
+            )
+        
+        character.status = CharacterStatus.GOOD
+        character.experience.level = 1
+        character.initialize_derived_stats()
+        character.derived_stats.current_hp = character.derived_stats.max_hp
+        character.derived_stats.current_mp = character.derived_stats.max_mp
+        
+        return character
     
     def _create_test_party(self):
         """テスト用パーティの作成"""
         try:
             from src.character.party import Party
-            from src.character.character import Character, CharacterStatus
-            from src.character.stats import BaseStats
             
-            # テスト用キャラクターを手動作成
-            test_character = Character(
-                name=config_manager.get_text("game_manager.test_character"),
-                race="human",
-                character_class="fighter"
-            )
-            
-            # 基本ステータスを設定
-            test_character.base_stats = BaseStats(
-                strength=16, intelligence=10, faith=10,
-                vitality=15, agility=12, luck=8
-            )
-            
-            # キャラクターステータスを適切に初期化
-            test_character.status = CharacterStatus.GOOD
-            test_character.experience.level = 1
-            
-            # derived_statsを初期化してHP/MPを設定
-            test_character.initialize_derived_stats()
-            test_character.derived_stats.current_hp = test_character.derived_stats.max_hp
-            test_character.derived_stats.current_mp = test_character.derived_stats.max_mp
+            # テスト用キャラクターを作成
+            character_name = config_manager.get_text("game_manager.test_character")
+            test_character = self._create_test_character(character_name)
             
             # テスト用パーティを作成
-            test_party = Party(config_manager.get_text("game_manager.test_party"))
+            party_name = config_manager.get_text("game_manager.test_party")
+            test_party = Party(party_name)
             test_party.add_character(test_character)
-            test_party.gold = 1000  # 初期ゴールド
+            test_party.gold = 1000
             
             self.set_current_party(test_party)
             logger.info("テスト用パーティを作成しました")
             
         except Exception as e:
             logger.error(f"テストパーティ作成エラー: {e}")
-            # エラーの場合でも簡単なテストパーティを作成
-            from src.character.party import Party
-            from src.character.character import Character, CharacterStatus
-            from src.character.stats import BaseStats
-            
-            fallback_character = Character(
-                name="テスト戦士",
-                race="human", 
-                character_class="fighter"
-            )
-            fallback_character.base_stats = BaseStats(
-                strength=15, intelligence=10, faith=10,
-                vitality=14, agility=12, luck=8
-            )
-            fallback_character.status = CharacterStatus.GOOD
-            fallback_character.experience.level = 1
-            fallback_character.initialize_derived_stats()
-            fallback_character.derived_stats.current_hp = fallback_character.derived_stats.max_hp
-            fallback_character.derived_stats.current_mp = fallback_character.derived_stats.max_mp
-            
-            fallback_party = Party("緊急パーティ")
-            fallback_party.add_character(fallback_character)
-            fallback_party.gold = 1000
-            self.set_current_party(fallback_party)
-            logger.info("緊急用テストパーティを作成しました")
+            self._create_fallback_party()
+    
+    def _create_fallback_party(self):
+        """緊急用パーティの作成"""
+        from src.character.party import Party
+        
+        fallback_character = self._create_test_character("テスト戦士", is_fallback=True)
+        fallback_party = Party("緊急パーティ")
+        fallback_party.add_character(fallback_character)
+        fallback_party.gold = 1000
+        
+        self.set_current_party(fallback_party)
+        logger.info("緊急用テストパーティを作成しました")
 
 
 def create_game() -> GameManager:

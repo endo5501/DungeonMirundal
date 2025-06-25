@@ -5,15 +5,22 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from src.utils.logger import logger
 
+# デフォルト設定
+DEFAULT_CONFIG_DIR = "config"
+DEFAULT_LANGUAGE = "ja"
+DEFAULT_INITIAL_GOLD = 1000
+MISSING_TEXT_PREFIX = "["
+MISSING_TEXT_SUFFIX = "]"
+
 
 class ConfigManager:
     """ゲーム設定の管理"""
     
-    def __init__(self, config_dir: str = "config"):
+    def __init__(self, config_dir: str = DEFAULT_CONFIG_DIR):
         self.config_dir = Path(config_dir)
         self._configs: Dict[str, Dict[str, Any]] = {}
         self._text_data: Dict[str, Dict[str, str]] = {}
-        self.current_language = "ja"
+        self.current_language = DEFAULT_LANGUAGE
         
     def load_config(self, config_name: str) -> Dict[str, Any]:
         """設定ファイルの読み込み"""
@@ -82,11 +89,11 @@ class ConfigManager:
                     current_data = current_data[k]
                 else:
                     logger.warning(f"テキストキーが見つかりません: {key}")
-                    return default if default is not None else f"[{key}]"
+                    return default if default is not None else f"{MISSING_TEXT_PREFIX}{key}{MISSING_TEXT_SUFFIX}"
                     
             result = str(current_data)
             # テキストに不正な文字が含まれていないかチェック
-            if '[' in result and ']' in result and result.startswith('['):
+            if self._is_invalid_text_format(result):
                 logger.error(f"不正なテキスト形式: {key} -> {result}")
                 return default if default is not None else key.split('.')[-1]
             
@@ -99,6 +106,12 @@ class ConfigManager:
         """言語の設定"""
         self.current_language = language
         logger.info(f"言語を設定しました: {language}")
+    
+    def _is_invalid_text_format(self, text: str) -> bool:
+        """テキストが不正な形式かチェック"""
+        return (MISSING_TEXT_PREFIX in text and 
+                MISSING_TEXT_SUFFIX in text and 
+                text.startswith(MISSING_TEXT_PREFIX))
     
     def reload_all(self):
         """全設定の再読み込み"""

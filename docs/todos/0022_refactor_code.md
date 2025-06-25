@@ -30,10 +30,19 @@
 
    **テスト結果：** コンバット関連の32テストすべて成功
 
-3. @src/core 以下のコードをFowler式のリファクタリングしましょう。
+3. ✅ @src/core 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
     リファクタリング後、テストを実施しエラーを確実に解消してください
     完了後、作業内容をこちらに記載した後一旦commitしてください
+
+   **実施したリファクタリング：**
+   - **Replace Type Code with Class**: 文字列状態をGameLocation/GameStateのEnumに変更
+   - **Remove Duplicated Code**: 重複するload_game_stateメソッドを削除
+   - **Extract Method**: 長い_create_test_partyを3つのメソッドに分割（_create_test_character, _create_fallback_party）
+   - **Replace Magic Number with Named Constant**: ConfigManagerで6つの定数を追加
+   - **Extract Method**: ConfigManagerに_is_invalid_text_formatメソッドを抽出
+
+   **テスト結果：** コア関連の22テストすべて成功
 
 4. @src/dungeon 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
