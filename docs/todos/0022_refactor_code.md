@@ -16,10 +16,19 @@
    
    **テスト結果：** キャラクター関連の41テストすべて成功
 
-2. @src/combat 以下のコードをFowler式のリファクタリングしましょう。
+2. ✅ @src/combat 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
     リファクタリング後、テストを実施しエラーを確実に解消してください
     完了後、作業内容をこちらに記載した後一旦commitしてください
+
+   **実施したリファクタリング：**
+   - **Replace Magic Number with Named Constant**: 戦闘定数を13個定数化（命中率、クリティカル率等）
+   - **Replace Conditional with Polymorphism**: `_execute_specific_action`をaction_mapでスッキリ
+   - **Extract Method**: 長い`_apply_spell_effect`を5つの小さなメソッドに分割
+   - **Move Method**: CombatStatsクラスに統計管理メソッドを追加（Data Classからの脱却）
+   - **Encapsulate Field**: 統計更新を専用メソッド経由に変更
+
+   **テスト結果：** コンバット関連の32テストすべて成功
 
 3. @src/core 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。

@@ -14,6 +14,20 @@ from src.magic.spells import spell_manager
 from src.items.item_usage import item_usage_manager
 from src.utils.logger import logger
 
+# 戦闘定数
+BASE_HIT_CHANCE = 0.7
+CRITICAL_HIT_CHANCE = 0.05
+CRITICAL_DAMAGE_MULTIPLIER = 1.5
+BASE_FLEE_CHANCE = 0.5
+BASE_NEGOTIATE_CHANCE = 0.2
+AGILITY_MODIFIER = 0.02
+HIT_CHANCE_MIN = 0.05
+HIT_CHANCE_MAX = 0.95
+FLEE_CHANCE_MIN = 0.1
+FLEE_CHANCE_MAX = 0.9
+NEGOTIATE_CHANCE_MIN = 0.05
+NEGOTIATE_CHANCE_MAX = 0.6
+
 
 class CombatState(Enum):
     """戦闘状態"""
@@ -67,6 +81,34 @@ class CombatStats:
     items_used: int = 0
     turns_taken: int = 0
     critical_hits: int = 0
+    
+    def add_damage_dealt(self, amount: int):
+        """与えたダメージを追加"""
+        self.total_damage_dealt += amount
+    
+    def add_damage_taken(self, amount: int):
+        """受けたダメージを追加"""
+        self.total_damage_taken += amount
+    
+    def add_spell_cast(self):
+        """魔法詠唱回数を追加"""
+        self.spells_cast += 1
+    
+    def add_item_used(self):
+        """アイテム使用回数を追加"""
+        self.items_used += 1
+    
+    def add_critical_hit(self):
+        """クリティカルヒット回数を追加"""
+        self.critical_hits += 1
+    
+    def get_average_damage_per_turn(self) -> float:
+        """ターンあたりの平均ダメージを取得"""
+        return self.total_damage_dealt / max(1, self.turns_taken)
+    
+    def get_critical_hit_rate(self) -> float:
+        """クリティカルヒット率を取得"""
+        return self.critical_hits / max(1, self.turns_taken)
 
 
 class CombatManager:
@@ -90,7 +132,7 @@ class CombatManager:
         # 戦闘設定
         self.auto_sort_dead = True
         self.show_damage_numbers = True
-        self.critical_hit_chance = 0.05  # 5%
+        self.critical_hit_chance = CRITICAL_HIT_CHANCE
         
         logger.info("CombatManager初期化完了")
     
@@ -203,26 +245,24 @@ class CombatManager:
     
     def _execute_specific_action(self, turn: CombatTurn) -> str:
         """具体的な行動実行"""
-        actor = turn.actor
-        action = turn.action
-        target = turn.target
+        action_map = {
+            CombatAction.ATTACK: self._execute_attack,
+            CombatAction.DEFEND: self._execute_defend,
+            CombatAction.CAST_SPELL: self._execute_spell,
+            CombatAction.USE_ITEM: self._execute_item_use,
+            CombatAction.FLEE: self._execute_flee,
+            CombatAction.NEGOTIATE: self._execute_negotiate,
+            CombatAction.SPECIAL_ABILITY: self._execute_special_ability,
+        }
         
-        if action == CombatAction.ATTACK:
-            return self._execute_attack(actor, target, turn)
-        elif action == CombatAction.DEFEND:
-            return self._execute_defend(actor, turn)
-        elif action == CombatAction.CAST_SPELL:
-            return self._execute_spell(actor, target, turn)
-        elif action == CombatAction.USE_ITEM:
-            return self._execute_item_use(actor, target, turn)
-        elif action == CombatAction.FLEE:
-            return self._execute_flee(actor, turn)
-        elif action == CombatAction.NEGOTIATE:
-            return self._execute_negotiate(actor, turn)
-        elif action == CombatAction.SPECIAL_ABILITY:
-            return self._execute_special_ability(actor, target, turn)
+        executor = action_map.get(turn.action)
+        if executor:
+            if turn.action in [CombatAction.DEFEND, CombatAction.FLEE, CombatAction.NEGOTIATE]:
+                return executor(turn.actor, turn)
+            else:
+                return executor(turn.actor, turn.target, turn)
         else:
-            return f"{self._get_actor_name(actor)}は何もしなかった"
+            return f"{self._get_actor_name(turn.actor)}は何もしなかった"
     
     def _execute_attack(self, actor: Union[Character, Monster], 
                        target: Optional[Union[Character, Monster]], turn: CombatTurn) -> str:
@@ -240,8 +280,7 @@ class CombatManager:
         # クリティカルヒット判定
         is_critical = random.random() < self.critical_hit_chance
         if is_critical:
-            damage = int(damage * 1.5)
-            self.party_stats.critical_hits += 1 if isinstance(actor, Character) else 0
+            damage = int(damage * CRITICAL_DAMAGE_MULTIPLIER)
         
         # ダメージ適用
         actual_damage = self._apply_damage(target, damage)
@@ -249,9 +288,11 @@ class CombatManager:
         
         # 統計更新
         if isinstance(actor, Character):
-            self.party_stats.total_damage_dealt += actual_damage
+            self.party_stats.add_damage_dealt(actual_damage)
+            if is_critical:
+                self.party_stats.add_critical_hit()
         else:
-            self.monster_stats.total_damage_dealt += actual_damage
+            self.monster_stats.add_damage_dealt(actual_damage)
         
         # 結果メッセージ
         critical_text = "クリティカル！" if is_critical else ""
@@ -291,7 +332,7 @@ class CombatManager:
         actor.use_mp(spell.mp_cost)
         
         # 統計更新
-        self.party_stats.spells_cast += 1
+        self.party_stats.add_spell_cast()
         
         return result
     
@@ -311,7 +352,7 @@ class CombatManager:
         )
         
         # 統計更新
-        self.party_stats.items_used += 1
+        self.party_stats.add_item_used()
         
         return message
     
@@ -363,8 +404,8 @@ class CombatManager:
     def _check_hit(self, attacker: Union[Character, Monster], 
                   target: Union[Character, Monster]) -> bool:
         """命中判定"""
-        # 基本命中率70%
-        base_hit_chance = 0.7
+        # 基本命中率
+        base_hit_chance = BASE_HIT_CHANCE
         
         # 攻撃者の攻撃ボーナス
         if isinstance(attacker, Character):
@@ -383,8 +424,8 @@ class CombatManager:
             target_agility = target.stats.agility
         
         # 命中率計算
-        hit_chance = base_hit_chance + (attack_bonus - armor_class + attacker_agility - target_agility) * 0.02
-        hit_chance = max(0.05, min(0.95, hit_chance))  # 5%-95%の範囲
+        hit_chance = base_hit_chance + (attack_bonus - armor_class + attacker_agility - target_agility) * AGILITY_MODIFIER
+        hit_chance = max(HIT_CHANCE_MIN, min(HIT_CHANCE_MAX, hit_chance))
         
         return random.random() < hit_chance
     
@@ -423,61 +464,64 @@ class CombatManager:
         
         return actual_damage
     
+    def _calculate_spell_value(self, caster: Character, effect: Any) -> int:
+        """魔法の効果量計算"""
+        value = effect.base_value
+        if effect.scaling_stat:
+            scaling_bonus = getattr(caster.base_stats, effect.scaling_stat, 10)
+            value += (scaling_bonus - 10) // 2
+        return max(1, value)
+    
+    def _apply_offensive_spell(self, caster: Character, spell: Any, target: Optional[Union[Character, Monster]]) -> str:
+        """攻撃系魔法適用"""
+        if target and isinstance(target, Monster):
+            damage = self._calculate_spell_value(caster, spell.effect)
+            actual_damage = target.take_damage(damage)
+            return f"{caster.name}の{spell.name}！{target.name}に{actual_damage}ダメージ！"
+        else:
+            return f"{caster.name}の{spell.name}は失敗した"
+    
+    def _apply_healing_spell(self, caster: Character, spell: Any, target: Optional[Union[Character, Monster]]) -> str:
+        """回復系魔法適用"""
+        if target and isinstance(target, Character):
+            heal_amount = self._calculate_spell_value(caster, spell.effect)
+            actual_heal = target.heal(heal_amount)
+            return f"{caster.name}の{spell.name}！{target.name}が{actual_heal}回復！"
+        else:
+            return f"{caster.name}の{spell.name}は失敗した"
+    
+    def _apply_status_spell(self, caster: Character, spell: Any, target: Optional[Union[Character, Monster]]) -> str:
+        """ステータス系魔法適用"""
+        if target:
+            effect_name = spell.effect.effect_type
+            target.add_status_effect(effect_name)
+            return f"{caster.name}の{spell.name}！{target.name}に{effect_name}効果が付与された！"
+        else:
+            return f"{caster.name}の{spell.name}は失敗した"
+    
+    def _apply_revival_spell(self, caster: Character, spell: Any, target: Optional[Union[Character, Monster]]) -> str:
+        """蘇生系魔法適用"""
+        if target and isinstance(target, Character) and not target.is_alive():
+            target.revive()
+            return f"{caster.name}の{spell.name}！{target.name}が蘇生した！"
+        else:
+            return f"{caster.name}の{spell.name}は失敗した"
+    
     def _apply_spell_effect(self, caster: Character, spell: Any, 
                            target: Optional[Union[Character, Monster]]) -> str:
         """魔法効果適用"""
-        spell_name = spell.name
-        effect = spell.effect
+        spell_type = spell.spell_type.value
         
-        # ダメージ系魔法
-        if spell.spell_type.value in ['offensive']:
-            if target and isinstance(target, Monster):
-                # 基本ダメージ + 能力値スケーリング
-                damage = effect.base_value
-                if effect.scaling_stat:
-                    scaling_bonus = getattr(caster.base_stats, effect.scaling_stat, 10)
-                    damage += (scaling_bonus - 10) // 2
-                
-                # 最小ダメージ1保証
-                damage = max(1, damage)
-                actual_damage = target.take_damage(damage)
-                return f"{caster.name}の{spell_name}！{target.name}に{actual_damage}ダメージ！"
-            else:
-                return f"{caster.name}の{spell_name}は失敗した"
-        
-        # 回復系魔法
-        elif spell.spell_type.value in ['healing']:
-            if target and isinstance(target, Character):
-                # 基本回復 + 能力値スケーリング
-                heal_amount = effect.base_value
-                if effect.scaling_stat:
-                    scaling_bonus = getattr(caster.base_stats, effect.scaling_stat, 10)
-                    heal_amount += (scaling_bonus - 10) // 2
-                
-                heal_amount = max(1, heal_amount)
-                actual_heal = target.heal(heal_amount)
-                return f"{caster.name}の{spell_name}！{target.name}が{actual_heal}回復！"
-            else:
-                return f"{caster.name}の{spell_name}は失敗した"
-        
-        # バフ・デバフ系魔法
-        elif spell.spell_type.value in ['buff', 'debuff']:
-            if target:
-                # 状態効果適用（簡易実装）
-                effect_name = effect.effect_type
-                target.add_status_effect(effect_name)
-                return f"{caster.name}の{spell_name}！{target.name}に{effect_name}効果が付与された！"
-        
-        # 蘇生系魔法
-        elif spell.spell_type.value == 'revival':
-            if target and isinstance(target, Character) and not target.is_alive:
-                target.revive()
-                return f"{caster.name}の{spell_name}！{target.name}が蘇生した！"
-            else:
-                return f"{caster.name}の{spell_name}は失敗した"
-        
-        # その他の魔法
-        return f"{caster.name}は{spell_name}を唱えた"
+        if spell_type == 'offensive':
+            return self._apply_offensive_spell(caster, spell, target)
+        elif spell_type == 'healing':
+            return self._apply_healing_spell(caster, spell, target)
+        elif spell_type in ['buff', 'debuff']:
+            return self._apply_status_spell(caster, spell, target)
+        elif spell_type == 'revival':
+            return self._apply_revival_spell(caster, spell, target)
+        else:
+            return f"{caster.name}は{spell.name}を唱えた"
     
     def _calculate_flee_chance(self) -> float:
         """逃走成功率計算"""
@@ -495,9 +539,9 @@ class CombatManager:
         
         avg_monster_agility = sum(m.stats.agility for m in living_monsters) / len(living_monsters)
         
-        # 基本逃走率50% + 敏捷性差
-        flee_chance = 0.5 + (avg_agility - avg_monster_agility) * 0.02
-        return max(0.1, min(0.9, flee_chance))
+        # 基本逃走率 + 敏捷性差
+        flee_chance = BASE_FLEE_CHANCE + (avg_agility - avg_monster_agility) * AGILITY_MODIFIER
+        return max(FLEE_CHANCE_MIN, min(FLEE_CHANCE_MAX, flee_chance))
     
     def _calculate_negotiate_chance(self) -> float:
         """交渉成功率計算"""
@@ -508,9 +552,9 @@ class CombatManager:
         
         max_intelligence = max(char.base_stats.intelligence for char in living_chars)
         
-        # 基本交渉率20% + 知力ボーナス
-        negotiate_chance = 0.2 + (max_intelligence - 10) * 0.02
-        return max(0.05, min(0.6, negotiate_chance))
+        # 基本交渉率 + 知力ボーナス
+        negotiate_chance = BASE_NEGOTIATE_CHANCE + (max_intelligence - 10) * AGILITY_MODIFIER
+        return max(NEGOTIATE_CHANCE_MIN, min(NEGOTIATE_CHANCE_MAX, negotiate_chance))
     
     def _advance_turn(self):
         """ターン進行"""
