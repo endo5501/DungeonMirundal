@@ -161,10 +161,21 @@
 
    **テスト結果：** モンスター関連の38テストすべて成功
 
-12. @src/navigation 以下のコードをFowler式のリファクタリングしましょう。
+12. ✅ @src/navigation 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
     リファクタリング後、テストを実施しエラーを確実に解消してください
     完了後、作業内容をこちらに記載した後一旦commitしてください
+
+   **実施したリファクタリング：**
+   - **Replace Magic Number with Named Constant**: 23個の定数を追加（DEFAULT_MOVEMENT_SPEED、ENCOUNTER_STEP_THRESHOLD、TRAP_AVOID_CHANCE_BASE等）
+   - **Extract Method**: move_playerメソッドを10個の小さなメソッドに分割（_validate_movement_preconditions等）
+   - **Extract Method**: _check_trapメソッドから_calculate_trap_avoid_chance、_update_trap_statistics、_get_trap_messageメソッドを抽出
+   - **Extract Method**: _check_encounterメソッドから_calculate_encounter_rate、_determine_encounter_typeメソッドを抽出
+   - **Extract Method**: get_auto_map_dataメソッドから_create_map_data_structure、_add_cell_details_to_map_dataメソッドを抽出
+   - **Replace Magic Number with Named Constant**: 移動速度、エンカウンター率、トラップ関連の魔法数をすべて定数に置換
+   - **Simplify Method**: 複雑な条件分岐を独立メソッドに分離して可読性向上
+
+   **テスト結果：** ナビゲーション関連の75テストすべて成功（5個スキップ）
 
 13. @src/overworld 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。

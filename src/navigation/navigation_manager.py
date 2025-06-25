@@ -11,6 +11,30 @@ from src.dungeon.dungeon_generator import Direction, CellType, DungeonLevel, Dun
 from src.character.party import Party
 from src.utils.logger import logger
 
+# ナビゲーションシステム定数
+DEFAULT_MOVEMENT_SPEED = 1.0
+DEFAULT_ENCOUNTER_RATE = 1.0
+DEFAULT_STEP_COUNT = 0
+DEFAULT_POSITION = (0, 0, 0)
+MAX_HISTORY_SIZE = 100
+BASE_ENCOUNTER_RATE = 0.05
+ENCOUNTER_STEP_THRESHOLD = 20
+ANIMATION_DURATION = 0.3
+DEFAULT_VISION_RANGE = 2
+SNEAK_SPEED_MULTIPLIER = 0.5
+SNEAK_ENCOUNTER_REDUCTION = 0.3
+WALK_SPEED_MULTIPLIER = 1.0
+RUN_SPEED_MULTIPLIER = 1.5
+TELEPORT_SPEED_MULTIPLIER = 0.0
+TRAP_AVOID_CHANCE_BASE = 0.1
+TRAP_AVOID_CHANCE_SNEAK = 0.3
+AGILITY_BASE_VALUE = 10
+AGILITY_BONUS_RATE = 0.01
+ENCOUNTER_SNEAK_MULTIPLIER = 0.5
+ENCOUNTER_RUN_MULTIPLIER = 1.5
+ENCOUNTER_STEP_INCREASE_RATE = 0.05
+FIRST_ELEMENT_INDEX = 0
+
 
 class MovementType(Enum):
     """移動タイプ"""
@@ -63,15 +87,15 @@ class NavigationManager:
         
         # 移動履歴
         self.movement_history: List[MovementEvent] = []
-        self.max_history_size = 100
+        self.max_history_size = MAX_HISTORY_SIZE
         
         # エンカウンター設定
-        self.base_encounter_rate = 0.05     # 基本エンカウンター率（5%）
-        self.encounter_step_threshold = 20  # エンカウンター歩数閾値
+        self.base_encounter_rate = BASE_ENCOUNTER_RATE
+        self.encounter_step_threshold = ENCOUNTER_STEP_THRESHOLD
         
         # 移動アニメーション設定
         self.animation_enabled = True
-        self.animation_duration = 0.3
+        self.animation_duration = ANIMATION_DURATION
         
         logger.info("NavigationManager初期化完了")
     
@@ -87,23 +111,12 @@ class NavigationManager:
     
     def move_player(self, direction: Direction, movement_type: MovementType = MovementType.WALK) -> MovementEvent:
         """プレイヤー移動"""
-        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
-            return MovementEvent(
-                result=MovementResult.INVALID_TARGET,
-                message="ダンジョンに入っていません",
-                old_position=(0, 0, 0),
-                new_position=(0, 0, 0)
-            )
+        # 事前チェック
+        validation_result = self._validate_movement_preconditions()
+        if validation_result:
+            return validation_result
         
         dungeon_state = self.dungeon_manager.current_dungeon
-        if not dungeon_state.player_position:
-            return MovementEvent(
-                result=MovementResult.INVALID_TARGET,
-                message="プレイヤー位置が無効です",
-                old_position=(0, 0, 0),
-                new_position=(0, 0, 0)
-            )
-        
         old_pos = dungeon_state.player_position
         old_position = (old_pos.x, old_pos.y, old_pos.level)
         
@@ -117,54 +130,118 @@ class NavigationManager:
         new_position = (new_pos.x, new_pos.y, new_pos.level)
         
         if not success:
-            # 移動失敗の原因を詳細化
-            result = self._determine_movement_failure(message)
-            return MovementEvent(
-                result=result,
-                message=message,
-                old_position=old_position,
-                new_position=old_position  # 移動していない
-            )
+            return self._create_movement_failure_event(message, old_position)
         
-        # 移動成功 - 各種チェックを実行
+        # 移動成功 - ステップカウント更新
         self.navigation_state.step_count += 1
         
-        # セルイベントをチェック
-        current_cell = self.dungeon_manager.get_current_cell()
-        if current_cell:
-            # トラップチェック
-            trap_event = self._check_trap(current_cell, movement_type)
-            if trap_event:
-                return MovementEvent(
-                    result=MovementResult.TRAP_TRIGGERED,
-                    message=trap_event,
-                    old_position=old_position,
-                    new_position=new_position,
-                    additional_data={"trap_type": current_cell.trap_type}
-                )
-            
-            # 宝箱チェック
-            if current_cell.has_treasure:
-                return MovementEvent(
-                    result=MovementResult.TREASURE_FOUND,
-                    message="宝箱を発見しました！",
-                    old_position=old_position,
-                    new_position=new_position,
-                    additional_data={"treasure_id": current_cell.treasure_id}
-                )
-            
-            # 階段チェック
-            if current_cell.cell_type in [CellType.STAIRS_UP, CellType.STAIRS_DOWN]:
-                stairs_type = "上り階段" if current_cell.cell_type == CellType.STAIRS_UP else "下り階段"
-                return MovementEvent(
-                    result=MovementResult.STAIRS_FOUND,
-                    message=f"{stairs_type}を発見しました",
-                    old_position=old_position,
-                    new_position=new_position,
-                    additional_data={"stairs_type": current_cell.cell_type.value}
-                )
+        # セルイベントチェック
+        cell_event = self._check_cell_events(old_position, new_position, movement_type)
+        if cell_event:
+            return cell_event
         
         # エンカウンターチェック
+        encounter_event = self._check_encounter_event(old_position, new_position, movement_type)
+        if encounter_event:
+            return encounter_event
+        
+        # 通常の移動成功イベント作成
+        return self._create_success_movement_event(movement_type, old_position, new_position)
+    
+    def _validate_movement_preconditions(self) -> Optional[MovementEvent]:
+        """移動の事前条件をチェック"""
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
+            return MovementEvent(
+                result=MovementResult.INVALID_TARGET,
+                message="ダンジョンに入っていません",
+                old_position=DEFAULT_POSITION,
+                new_position=DEFAULT_POSITION
+            )
+        
+        dungeon_state = self.dungeon_manager.current_dungeon
+        if not dungeon_state.player_position:
+            return MovementEvent(
+                result=MovementResult.INVALID_TARGET,
+                message="プレイヤー位置が無効です",
+                old_position=DEFAULT_POSITION,
+                new_position=DEFAULT_POSITION
+            )
+        
+        return None
+    
+    def _create_movement_failure_event(self, message: str, old_position: Tuple[int, int, int]) -> MovementEvent:
+        """移動失敗イベントを作成"""
+        result = self._determine_movement_failure(message)
+        return MovementEvent(
+            result=result,
+            message=message,
+            old_position=old_position,
+            new_position=old_position
+        )
+    
+    def _check_cell_events(self, old_position: Tuple[int, int, int], new_position: Tuple[int, int, int], movement_type: MovementType) -> Optional[MovementEvent]:
+        """セルイベントをチェック"""
+        current_cell = self.dungeon_manager.get_current_cell()
+        if not current_cell:
+            return None
+        
+        # トラップチェック
+        trap_event = self._check_trap_event(current_cell, movement_type, old_position, new_position)
+        if trap_event:
+            return trap_event
+        
+        # 宝箱チェック
+        treasure_event = self._check_treasure_event(current_cell, old_position, new_position)
+        if treasure_event:
+            return treasure_event
+        
+        # 階段チェック
+        stairs_event = self._check_stairs_event(current_cell, old_position, new_position)
+        if stairs_event:
+            return stairs_event
+        
+        return None
+    
+    def _check_trap_event(self, current_cell: DungeonCell, movement_type: MovementType, old_position: Tuple[int, int, int], new_position: Tuple[int, int, int]) -> Optional[MovementEvent]:
+        """トラップイベントをチェック"""
+        trap_event = self._check_trap(current_cell, movement_type)
+        if trap_event:
+            return MovementEvent(
+                result=MovementResult.TRAP_TRIGGERED,
+                message=trap_event,
+                old_position=old_position,
+                new_position=new_position,
+                additional_data={"trap_type": current_cell.trap_type}
+            )
+        return None
+    
+    def _check_treasure_event(self, current_cell: DungeonCell, old_position: Tuple[int, int, int], new_position: Tuple[int, int, int]) -> Optional[MovementEvent]:
+        """宝箱イベントをチェック"""
+        if current_cell.has_treasure:
+            return MovementEvent(
+                result=MovementResult.TREASURE_FOUND,
+                message="宝箱を発見しました！",
+                old_position=old_position,
+                new_position=new_position,
+                additional_data={"treasure_id": current_cell.treasure_id}
+            )
+        return None
+    
+    def _check_stairs_event(self, current_cell: DungeonCell, old_position: Tuple[int, int, int], new_position: Tuple[int, int, int]) -> Optional[MovementEvent]:
+        """階段イベントをチェック"""
+        if current_cell.cell_type in [CellType.STAIRS_UP, CellType.STAIRS_DOWN]:
+            stairs_type = "上り階段" if current_cell.cell_type == CellType.STAIRS_UP else "下り階段"
+            return MovementEvent(
+                result=MovementResult.STAIRS_FOUND,
+                message=f"{stairs_type}を発見しました",
+                old_position=old_position,
+                new_position=new_position,
+                additional_data={"stairs_type": current_cell.cell_type.value}
+            )
+        return None
+    
+    def _check_encounter_event(self, old_position: Tuple[int, int, int], new_position: Tuple[int, int, int], movement_type: MovementType) -> Optional[MovementEvent]:
+        """エンカウンターイベントをチェック"""
         encounter_check = self._check_encounter(movement_type)
         if encounter_check:
             self.navigation_state.last_encounter_step = self.navigation_state.step_count
@@ -175,8 +252,10 @@ class NavigationManager:
                 new_position=new_position,
                 additional_data={"encounter_type": encounter_check}
             )
-        
-        # 通常の移動成功
+        return None
+    
+    def _create_success_movement_event(self, movement_type: MovementType, old_position: Tuple[int, int, int], new_position: Tuple[int, int, int]) -> MovementEvent:
+        """成功した移動イベントを作成"""
         event = MovementEvent(
             result=MovementResult.SUCCESS,
             message=f"{movement_type.value}で移動しました",
@@ -277,14 +356,18 @@ class NavigationManager:
         self.navigation_state.sneak_mode = sneak
         self.navigation_state.auto_map_enabled = auto_map
         
-        if sneak:
-            self.navigation_state.movement_speed = 0.5
-            self.navigation_state.encounter_rate = 0.3  # 忍び足でエンカウンター率低下
-        else:
-            self.navigation_state.movement_speed = 1.0
-            self.navigation_state.encounter_rate = 1.0
+        self._apply_movement_speed_settings(sneak)
         
         logger.debug(f"移動モード変更: 忍び足={sneak}, オートマップ={auto_map}")
+    
+    def _apply_movement_speed_settings(self, sneak: bool):
+        """移動速度設定を適用"""
+        if sneak:
+            self.navigation_state.movement_speed = SNEAK_SPEED_MULTIPLIER
+            self.navigation_state.encounter_rate = SNEAK_ENCOUNTER_REDUCTION
+        else:
+            self.navigation_state.movement_speed = DEFAULT_MOVEMENT_SPEED
+            self.navigation_state.encounter_rate = DEFAULT_ENCOUNTER_RATE
     
     def get_movement_history(self, limit: int = 10) -> List[MovementEvent]:
         """移動履歴取得"""
@@ -305,12 +388,12 @@ class NavigationManager:
     def _get_speed_multiplier(self, movement_type: MovementType) -> float:
         """移動速度倍率取得"""
         speed_map = {
-            MovementType.WALK: 1.0,
-            MovementType.RUN: 1.5,
-            MovementType.SNEAK: 0.5,
-            MovementType.TELEPORT: 0.0  # 瞬間移動
+            MovementType.WALK: WALK_SPEED_MULTIPLIER,
+            MovementType.RUN: RUN_SPEED_MULTIPLIER,
+            MovementType.SNEAK: SNEAK_SPEED_MULTIPLIER,
+            MovementType.TELEPORT: TELEPORT_SPEED_MULTIPLIER
         }
-        return speed_map.get(movement_type, 1.0) * self.navigation_state.movement_speed
+        return speed_map.get(movement_type, DEFAULT_MOVEMENT_SPEED) * self.navigation_state.movement_speed
     
     def _determine_movement_failure(self, message: str) -> MovementResult:
         """移動失敗原因判定"""
@@ -326,8 +409,19 @@ class NavigationManager:
         if not cell.has_trap:
             return None
         
-        # 忍び足の場合はトラップ回避率向上
-        avoid_chance = 0.3 if movement_type == MovementType.SNEAK else 0.1
+        avoid_chance = self._calculate_trap_avoid_chance(movement_type)
+        
+        if random.random() < avoid_chance:
+            return None  # トラップ回避
+        
+        # トラップ発動統計更新
+        self._update_trap_statistics()
+        
+        return self._get_trap_message(cell.trap_type)
+    
+    def _calculate_trap_avoid_chance(self, movement_type: MovementType) -> float:
+        """トラップ回避率を計算"""
+        avoid_chance = TRAP_AVOID_CHANCE_SNEAK if movement_type == MovementType.SNEAK else TRAP_AVOID_CHANCE_BASE
         
         # パーティの敏捷性も考慮
         if self.current_party:
@@ -335,15 +429,17 @@ class NavigationManager:
             if living_chars:
                 avg_agility = sum(char.base_stats.agility for char in living_chars)
                 avg_agility /= len(living_chars)
-                avoid_chance += (avg_agility - 10) * 0.01  # 敏捷性10を基準に±1%
+                avoid_chance += (avg_agility - AGILITY_BASE_VALUE) * AGILITY_BONUS_RATE
         
-        if random.random() < avoid_chance:
-            return None  # トラップ回避
-        
-        # トラップ発動
+        return avoid_chance
+    
+    def _update_trap_statistics(self):
+        """トラップ統計を更新"""
         if self.dungeon_manager and self.dungeon_manager.current_dungeon:
             self.dungeon_manager.current_dungeon.traps_triggered += 1
-        
+    
+    def _get_trap_message(self, trap_type: str) -> str:
+        """トラップメッセージを取得"""
         trap_messages = {
             "poison": "毒ガストラップが発動！",
             "paralysis": "麻痺トラップが発動！",
@@ -351,7 +447,7 @@ class NavigationManager:
             "teleport": "テレポートトラップが発動！"
         }
         
-        return trap_messages.get(cell.trap_type, "トラップが発動しました！")
+        return trap_messages.get(trap_type, "トラップが発動しました！")
     
     def _check_encounter(self, movement_type: MovementType) -> Optional[str]:
         """エンカウンターチェック"""
@@ -364,30 +460,50 @@ class NavigationManager:
         if not current_level:
             return None
         
-        # 基本エンカウンター率
-        encounter_rate = current_level.encounter_rate * self.navigation_state.encounter_rate
-        
-        # 移動タイプによる調整
-        if movement_type == MovementType.SNEAK:
-            encounter_rate *= 0.5  # 忍び足で半減
-        elif movement_type == MovementType.RUN:
-            encounter_rate *= 1.5  # 走行で増加
-        
-        # 歩数による調整（一定歩数歩くとエンカウンター率上昇）
-        steps_since_encounter = self.navigation_state.step_count - self.navigation_state.last_encounter_step
-        if steps_since_encounter > self.encounter_step_threshold:
-            encounter_rate *= (1 + (steps_since_encounter - self.encounter_step_threshold) * 0.05)
+        encounter_rate = self._calculate_encounter_rate(current_level, movement_type)
         
         # エンカウンター判定
         if random.random() < encounter_rate:
             # エンカウンター発生統計更新
             dungeon_state.encounters_faced += 1
             
-            # エンカウンタータイプを決定（今後の実装用）
-            encounter_types = ["normal", "ambush", "treasure_guardian"]
-            return random.choice(encounter_types)
+            return self._determine_encounter_type()
         
         return None
+    
+    def _calculate_encounter_rate(self, current_level: DungeonLevel, movement_type: MovementType) -> float:
+        """エンカウンター率を計算"""
+        # 基本エンカウンター率
+        encounter_rate = current_level.encounter_rate * self.navigation_state.encounter_rate
+        
+        # 移動タイプによる調整
+        encounter_rate *= self._get_movement_encounter_multiplier(movement_type)
+        
+        # 歩数による調整
+        encounter_rate *= self._get_step_encounter_multiplier()
+        
+        return encounter_rate
+    
+    def _get_movement_encounter_multiplier(self, movement_type: MovementType) -> float:
+        """移動タイプによるエンカウンター率倍率を取得"""
+        if movement_type == MovementType.SNEAK:
+            return ENCOUNTER_SNEAK_MULTIPLIER
+        elif movement_type == MovementType.RUN:
+            return ENCOUNTER_RUN_MULTIPLIER
+        else:
+            return DEFAULT_MOVEMENT_SPEED
+    
+    def _get_step_encounter_multiplier(self) -> float:
+        """歩数によるエンカウンター率倍率を取得"""
+        steps_since_encounter = self.navigation_state.step_count - self.navigation_state.last_encounter_step
+        if steps_since_encounter > self.encounter_step_threshold:
+            return DEFAULT_MOVEMENT_SPEED + (steps_since_encounter - self.encounter_step_threshold) * ENCOUNTER_STEP_INCREASE_RATE
+        return DEFAULT_MOVEMENT_SPEED
+    
+    def _determine_encounter_type(self) -> str:
+        """エンカウンタータイプを決定"""
+        encounter_types = ["normal", "ambush", "treasure_guardian"]
+        return random.choice(encounter_types)
     
     def _add_to_history(self, event: MovementEvent):
         """履歴に追加"""
@@ -397,7 +513,7 @@ class NavigationManager:
         if len(self.movement_history) > self.max_history_size:
             self.movement_history.pop(0)
     
-    def get_visible_area(self, vision_range: int = 2) -> List[Tuple[int, int, DungeonCell]]:
+    def get_visible_area(self, vision_range: int = DEFAULT_VISION_RANGE) -> List[Tuple[int, int, DungeonCell]]:
         """視界エリア取得"""
         if not self.dungeon_manager:
             return []
@@ -420,15 +536,25 @@ class NavigationManager:
         # 発見済みセルの情報を収集
         discovered_cells = dungeon_state.discovered_cells.get(dungeon_state.player_position.level, [])
         
-        map_data = {
+        map_data = self._create_map_data_structure(dungeon_state, discovered_cells)
+        
+        # 発見済みセルの詳細情報を追加
+        self._add_cell_details_to_map_data(map_data, discovered_cells, current_level)
+        
+        return map_data
+    
+    def _create_map_data_structure(self, dungeon_state: DungeonState, discovered_cells: List[Tuple[int, int]]) -> Dict[str, Any]:
+        """マップデータ構造を作成"""
+        return {
             'level': dungeon_state.player_position.level,
             'player_position': (dungeon_state.player_position.x, dungeon_state.player_position.y),
             'player_facing': dungeon_state.player_position.facing.value,
             'discovered_cells': discovered_cells,
             'cell_details': {}
         }
-        
-        # 発見済みセルの詳細情報
+    
+    def _add_cell_details_to_map_data(self, map_data: Dict[str, Any], discovered_cells: List[Tuple[int, int]], current_level: DungeonLevel):
+        """マップデータにセル詳細情報を追加"""
         for x, y in discovered_cells:
             cell = current_level.get_cell(x, y)
             if cell:
@@ -438,8 +564,6 @@ class NavigationManager:
                     'has_trap': cell.has_trap,
                     'visited': cell.visited
                 }
-        
-        return map_data
 
 
 # グローバルインスタンス
