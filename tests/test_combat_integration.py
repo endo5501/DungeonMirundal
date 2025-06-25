@@ -103,26 +103,26 @@ class TestCombatMagicIntegration:
         # 戦闘開始
         self.combat_manager.start_combat(self.party, self.monsters)
         
-        # 回復魔法の情報を準備
+        # 回復魔法の情報を準備（mage用の回復魔法に変更）
         spell_data = {
-            'name_key': 'spell.heal',
+            'name_key': 'spell.magic_healing',
             'level': 1,
-            'school': 'priest',
+            'school': 'mage',
             'type': 'healing',
             'target': 'single_ally',
             'mp_cost': 2,
             'effect_type': 'heal',
             'base_value': 6,
-            'scaling_stat': 'faith'
+            'scaling_stat': 'intelligence'
         }
         
         action_data = {
-            'spell_id': 'heal'
+            'spell_id': 'magic_healing'
         }
         
         with patch.object(spell_manager, 'get_spell') as mock_get_spell:
             from src.magic.spells import Spell
-            test_spell = Spell('heal', spell_data)
+            test_spell = Spell('magic_healing', spell_data)
             mock_get_spell.return_value = test_spell
             
             # 回復魔法実行（自分をターゲットに）
@@ -138,7 +138,7 @@ class TestCombatMagicIntegration:
             print(f"Initial MP: {initial_mp}, Current MP: {self.mage.derived_stats.current_mp}")
             print(f"Spell effect base_value: {test_spell.effect.base_value}")
             print(f"Spell effect scaling_stat: {test_spell.effect.scaling_stat}")
-            print(f"Mage faith: {self.mage.base_stats.faith}")
+            print(f"Mage intelligence: {self.mage.base_stats.intelligence}")
             
             # 結果確認
             assert result == CombatResult.CONTINUE
