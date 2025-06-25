@@ -145,22 +145,6 @@ class TestTextDisplayFixes:
             assert self.guild.current_dialog.rect.width == 750
             assert self.guild.current_dialog.rect.height == 500
     
-    def test_shop_inventory_dialog_size(self):
-        """商店の在庫確認ダイアログのサイズをテスト"""
-        with patch('src.overworld.base_facility.ui_manager') as mock_ui_manager:
-            mock_ui_manager.hide_dialog = Mock()
-            mock_ui_manager.add_dialog = Mock()
-            mock_ui_manager.show_dialog = Mock()
-            
-            # モック在庫を設定
-            self.shop.inventory = []
-            
-            self.shop._show_inventory()
-            
-            # 適切なサイズで作成されることを確認
-            assert self.shop.current_dialog is not None
-            assert self.shop.current_dialog.rect.width == 700
-            assert self.shop.current_dialog.rect.height == 450
     
     def test_inn_innkeeper_dialog_size(self):
         """宿屋の主人との会話ダイアログのサイズをテスト"""

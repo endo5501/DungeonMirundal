@@ -1,12 +1,11 @@
 """商店"""
 
 import pygame
-from typing import Dict, List, Optional, Any
+from typing import List, Optional
 from src.overworld.base_facility import BaseFacility, FacilityType
-from src.character.party import Party
-from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
-from src.ui.base_ui_pygame import UIMenu, UIDialog, ui_manager
-from src.ui.selection_list_ui import ItemSelectionList, SelectionListData
+from src.items.item import Item, ItemInstance, ItemType, item_manager
+from src.ui.base_ui_pygame import UIMenu, ui_manager
+from src.ui.selection_list_ui import ItemSelectionList, CustomSelectionList, SelectionListData
 # NOTE: panda3D UI components removed - using pygame-based UI now
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -63,11 +62,6 @@ class Shop(BaseFacility):
         menu.add_menu_item(
             config_manager.get_text("shop.menu.sell_items"),
             self._show_sell_menu
-        )
-        
-        menu.add_menu_item(
-            config_manager.get_text("shop.menu.check_inventory"),
-            self._show_inventory
         )
         
         menu.add_menu_item(
@@ -303,12 +297,6 @@ class Shop(BaseFacility):
         # 成功メッセージを表示（ダイアログを閉じた時にメインメニューが自動表示される）
         self._show_success_message(success_message)
     
-    def _show_item_scrolled_list(self, items: List[Item], title: str, 
-                                on_item_selected: callable, ui_id: str):
-        """pygame UIメニューでアイテム一覧を表示（互換性のために残している）"""
-        # この関数は上記の_show_buy_menuで置き換えられるため、
-        # 互換性のために残しているが実際には使用されない
-        pass
     
     def _format_item_display_name(self, item: Item) -> str:
         """アイテム表示名をフォーマット"""
@@ -698,7 +686,7 @@ class Shop(BaseFacility):
             logger.error(f"キャラクターアイテム売却エラー: {e}")
             self._show_error_message(f"売却処理に失敗しました: {str(e)}")
     
-    def _sell_storage_item(self, slot_index, item_instance, item, sell_price, quantity):
+    def _sell_storage_item(self, slot_index, _, item, sell_price, quantity):
         """宿屋倉庫のアイテムを売却"""
         if not self.current_party:
             return
@@ -758,48 +746,6 @@ class Shop(BaseFacility):
         sell_price = max(1, item.price // 2)
         self._show_sell_confirmation(slot, item_instance, item, sell_price)
     
-    def _show_inventory(self):
-        """在庫確認を表示"""
-        inventory_text = config_manager.get_text("shop.inventory.list_title") + "\n\n"
-        
-        # カテゴリ別に在庫を表示
-        categories = {
-            ItemType.WEAPON: config_manager.get_text("shop.purchase.categories.weapons"),
-            ItemType.ARMOR: config_manager.get_text("shop.purchase.categories.armor"), 
-            ItemType.CONSUMABLE: config_manager.get_text("shop.purchase.categories.consumables"),
-            ItemType.TOOL: config_manager.get_text("shop.purchase.categories.tools")
-        }
-        
-        for item_type, category_name in categories.items():
-            inventory_text += config_manager.get_text("shop.inventory.category_header").format(category=category_name) + "\n"
-            
-            category_items = []
-            for item_id in self.inventory:
-                item = self.item_manager.get_item(item_id)
-                if item and item.item_type == item_type:
-                    category_items.append(item)
-            
-            if category_items:
-                for item in category_items:
-                    inventory_text += f"  {item.get_name()} - {item.price}G\n"
-            else:
-                inventory_text += f"  {config_manager.get_text('shop.inventory.no_stock')}\n"
-            
-            inventory_text += "\n"
-        
-        self._show_dialog(
-            "inventory_dialog",
-            config_manager.get_text("shop.inventory.title"),
-            inventory_text,
-            buttons=[
-                {
-                    'text': config_manager.get_text("menu.back"),
-                    'command': self._close_dialog
-                }
-            ],
-            width=700,  # カテゴリ別在庫リスト表示に十分な幅
-            height=450  # 複数カテゴリの在庫情報表示に十分な高さ
-        )
     
     def _talk_to_shopkeeper(self):
         """商店主人との会話"""
