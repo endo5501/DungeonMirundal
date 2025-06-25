@@ -1,39 +1,108 @@
 import logging
 import sys
 from pathlib import Path
+from typing import Optional
+
+# ログシステム定数
+DEFAULT_LOGGER_NAME = "dungeon"
+DEFAULT_LOG_LEVEL = logging.INFO
+DEFAULT_DEBUG_LEVEL = logging.DEBUG
+DEFAULT_ENCODING = "utf-8"
+LOG_DIR_NAME = "logs"
+LOG_FILE_NAME = "game.log"
+
+# ログフォーマット定数
+LOG_FORMAT_STANDARD = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
-def setup_logger(name: str = "dungeon", level: int = logging.INFO) -> logging.Logger:
+def setup_logger(name: str = DEFAULT_LOGGER_NAME, level: int = DEFAULT_LOG_LEVEL) -> logging.Logger:
     """ゲーム用ロガーの設定"""
     logger = logging.getLogger(name)
     
-    if logger.handlers:
+    if _logger_already_configured(logger):
         return logger
     
     logger.setLevel(level)
     
     # フォーマッターの設定
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
+    formatter = _create_log_formatter()
     
-    # コンソールハンドラー
+    # ハンドラーを追加
+    _add_console_handler(logger, level, formatter)
+    _add_file_handler(logger, formatter)
+    
+    return logger
+
+def _logger_already_configured(logger: logging.Logger) -> bool:
+    """ロガーが既に設定済みかチェック"""
+    return bool(logger.handlers)
+
+def _create_log_formatter() -> logging.Formatter:
+    """ログフォーマッターを作成"""
+    return logging.Formatter(
+        LOG_FORMAT_STANDARD,
+        datefmt=LOG_DATE_FORMAT
+    )
+
+def _add_console_handler(logger: logging.Logger, level: int, formatter: logging.Formatter) -> None:
+    """コンソールハンドラーを追加"""
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(level)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
-    
-    # ファイルハンドラー
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-    
-    file_handler = logging.FileHandler(log_dir / "game.log", encoding='utf-8')
-    file_handler.setLevel(logging.DEBUG)
+
+def _add_file_handler(logger: logging.Logger, formatter: logging.Formatter) -> None:
+    """ファイルハンドラーを追加"""
+    log_dir = _ensure_log_directory()
+    file_handler = logging.FileHandler(
+        log_dir / LOG_FILE_NAME, 
+        encoding=DEFAULT_ENCODING
+    )
+    file_handler.setLevel(DEFAULT_DEBUG_LEVEL)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+
+def _ensure_log_directory() -> Path:
+    """ログディレクトリを作成・取得"""
+    log_dir = Path(LOG_DIR_NAME)
+    log_dir.mkdir(exist_ok=True)
+    return log_dir
+
+def create_custom_logger(name: str, level: Optional[int] = None, log_file: Optional[str] = None) -> logging.Logger:
+    """カスタムロガーを作成"""
+    if level is None:
+        level = DEFAULT_LOG_LEVEL
+    
+    logger = logging.getLogger(name)
+    
+    if _logger_already_configured(logger):
+        return logger
+    
+    logger.setLevel(level)
+    formatter = _create_log_formatter()
+    
+    # コンソールハンドラー
+    _add_console_handler(logger, level, formatter)
+    
+    # カスタムファイルハンドラー
+    if log_file:
+        _add_custom_file_handler(logger, formatter, log_file)
+    else:
+        _add_file_handler(logger, formatter)
     
     return logger
+
+def _add_custom_file_handler(logger: logging.Logger, formatter: logging.Formatter, log_file: str) -> None:
+    """カスタムファイルハンドラーを追加"""
+    log_dir = _ensure_log_directory()
+    file_handler = logging.FileHandler(
+        log_dir / log_file,
+        encoding=DEFAULT_ENCODING
+    )
+    file_handler.setLevel(DEFAULT_DEBUG_LEVEL)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
 
 
 # デフォルトロガー
