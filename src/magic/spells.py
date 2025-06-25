@@ -8,6 +8,17 @@ import uuid
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
+# 魔法システム定数
+DEFAULT_SPELL_LEVEL = 1
+DEFAULT_COST = 100
+DEFAULT_BASE_VALUE = 0
+DEFAULT_DURATION = 0
+DEFAULT_MAX_USES = 1
+SCALING_MULTIPLIER = 2
+SCALING_DIVISOR = 3
+ZERO_USES = 0
+MINIMUM_MP_COST = 1
+
 
 class SpellSchool(Enum):
     """魔法学派"""
@@ -65,12 +76,12 @@ class Spell:
         # 基本プロパティ
         self.name_key = spell_data.get('name_key', f'spell.{spell_id}')
         self.description_key = spell_data.get('description_key', f'spell.{spell_id}_desc')
-        self.level = spell_data.get('level', 1)
+        self.level = spell_data.get('level', DEFAULT_SPELL_LEVEL)
         self.school = SpellSchool(spell_data.get('school', 'both'))
         self.spell_type = SpellType(spell_data.get('type', 'utility'))
         self.target = SpellTarget(spell_data.get('target', 'self'))
-        self.cost = spell_data.get('cost', 100)  # 習得費用
-        self.mp_cost = spell_data.get('mp_cost', max(1, self.level))  # MP消費量
+        self.cost = spell_data.get('cost', DEFAULT_COST)
+        self.mp_cost = spell_data.get('mp_cost', max(MINIMUM_MP_COST, self.level))
         
         # 効果
         self.effect = self._parse_effect(spell_data)
@@ -80,32 +91,30 @@ class Spell:
     def _parse_effect(self, data: Dict[str, Any]) -> SpellEffect:
         """効果データを解析"""
         effect_type = data.get('effect_type', 'none')
-        base_value = 0
-        scaling_stat = None
-        
-        # ダメージ系
-        if 'base_damage' in data:
-            base_value = data['base_damage']
-            scaling_stat = data.get('damage_scaling', 'intelligence')
-        # 回復系
-        elif 'base_heal' in data:
-            base_value = data['base_heal']
-            scaling_stat = data.get('heal_scaling', 'faith')
-        # その他
-        else:
-            base_value = data.get('base_value', 0)
-            scaling_stat = data.get('scaling_stat')
+        base_value, scaling_stat = self._parse_spell_values(data)
         
         return SpellEffect(
             effect_type=effect_type,
             base_value=base_value,
             scaling_stat=scaling_stat,
             element=data.get('element'),
-            duration=data.get('duration', 0),
+            duration=data.get('duration', DEFAULT_DURATION),
             stat_boosts=data.get('stat_boosts', {}),
             status_effects=data.get('status_effects', []),
             special_properties=data.get('special_properties', {})
         )
+    
+    def _parse_spell_values(self, data: Dict[str, Any]) -> Tuple[int, Optional[str]]:
+        """魔法の基本値とスケーリング能力値を解析"""
+        # ダメージ系
+        if 'base_damage' in data:
+            return data['base_damage'], data.get('damage_scaling', 'intelligence')
+        # 回復系
+        elif 'base_heal' in data:
+            return data['base_heal'], data.get('heal_scaling', 'faith')
+        # その他
+        else:
+            return data.get('base_value', DEFAULT_BASE_VALUE), data.get('scaling_stat')
     
     @property
     def name(self) -> str:
@@ -126,18 +135,26 @@ class Spell:
         class_access = spell_config.get("class_spell_access", {})
         
         class_info = class_access.get(character_class, {})
-        allowed_schools = class_info.get("allowed_schools", [])
-        allowed_types = class_info.get("allowed_types", [])
         
         # 学派チェック
-        if self.school.value not in allowed_schools:
+        if not self._check_school_access(class_info):
             return False
         
         # タイプチェック
-        if self.spell_type.value not in allowed_types:
+        if not self._check_type_access(class_info):
             return False
         
         return True
+    
+    def _check_school_access(self, class_info: Dict[str, Any]) -> bool:
+        """学派アクセス権限をチェック"""
+        allowed_schools = class_info.get("allowed_schools", [])
+        return self.school.value in allowed_schools
+    
+    def _check_type_access(self, class_info: Dict[str, Any]) -> bool:
+        """タイプアクセス権限をチェック"""
+        allowed_types = class_info.get("allowed_types", [])
+        return self.spell_type.value in allowed_types
     
     def calculate_effect_value(self, caster_stats: Dict[str, int]) -> int:
         """効果値を計算"""
@@ -146,7 +163,7 @@ class Spell:
         if self.effect.scaling_stat and self.effect.scaling_stat in caster_stats:
             scaling_value = caster_stats[self.effect.scaling_stat]
             # レベルと能力値による補正
-            modifier = (self.level * 2) + (scaling_value // 3)
+            modifier = (self.level * SCALING_MULTIPLIER) + (scaling_value // SCALING_DIVISOR)
             return base_value + modifier
         
         return base_value
@@ -255,7 +272,7 @@ class SpellBook:
             level_int = int(level)
             self.spell_slots[level_int] = []
             
-            for i in range(slot_count):
+            for _ in range(slot_count):
                 slot = SpellSlot(level=level_int, max_uses=level_int)
                 self.spell_slots[level_int].append(slot)
     
@@ -284,10 +301,30 @@ class SpellBook:
     
     def equip_spell_to_slot(self, spell_id: str, level: int, slot_index: int) -> bool:
         """スロットに魔法を装備"""
+        # 基本バリデーション
+        if not self._validate_spell_learning(spell_id):
+            return False
+        
+        if not self._validate_slot_parameters(level, slot_index):
+            return False
+        
+        slot = self.spell_slots[level][slot_index]
+        
+        # 魔法レベルチェック
+        if not self._validate_spell_level(spell_id, level):
+            return False
+        
+        return slot.equip_spell(spell_id)
+    
+    def _validate_spell_learning(self, spell_id: str) -> bool:
+        """魔法習得状態をバリデーション"""
         if spell_id not in self.learned_spells:
             logger.warning(f"未習得の魔法: {spell_id}")
             return False
-        
+        return True
+    
+    def _validate_slot_parameters(self, level: int, slot_index: int) -> bool:
+        """スロットパラメータをバリデーション"""
         if level not in self.spell_slots:
             logger.warning(f"無効なスロットレベル: {level}")
             return False
@@ -297,16 +334,16 @@ class SpellBook:
             logger.warning(f"無効なスロットインデックス: {slot_index}")
             return False
         
-        slot = level_slots[slot_index]
-        
-        # 魔法レベルとスロットレベルをチェック
+        return True
+    
+    def _validate_spell_level(self, spell_id: str, slot_level: int) -> bool:
+        """魔法レベルをバリデーション"""
         from src.magic.spells import spell_manager
         spell = spell_manager.get_spell(spell_id)
-        if spell and spell.level > level:
-            logger.warning(f"魔法レベル {spell.level} はスロットレベル {level} より高い")
+        if spell and spell.level > slot_level:
+            logger.warning(f"魔法レベル {spell.level} はスロットレベル {slot_level} より高い")
             return False
-        
-        return slot.equip_spell(spell_id)
+        return True
     
     def unequip_spell_from_slot(self, level: int, slot_index: int) -> Optional[str]:
         """スロットから魔法を解除"""
