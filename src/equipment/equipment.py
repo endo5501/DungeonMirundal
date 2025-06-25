@@ -9,6 +9,11 @@ from src.items.item import ItemInstance, Item, ItemManager, item_manager, ItemTy
 from src.character.stats import BaseStats, DerivedStats
 from src.utils.logger import logger
 
+# 装備システム定数
+MIN_CONDITION_FOR_EQUIP = 0
+DEFAULT_BONUS_VALUE = 0
+INITIAL_TOTAL_WEIGHT = 0.0
+
 
 class EquipmentSlot(Enum):
     """装備スロット"""
@@ -96,24 +101,42 @@ class Equipment:
         if not item:
             return False, "アイテムが見つかりません"
         
-        # アイテムタイプとスロットの適合性チェック
+        # 各種チェックを実行
+        slot_check = self._check_slot_compatibility(item, slot)
+        if not slot_check[0]:
+            return slot_check
+            
+        class_check = self._check_class_restriction(item, character_class)
+        if not class_check[0]:
+            return class_check
+            
+        condition_check = self._check_item_condition(item_instance)
+        if not condition_check[0]:
+            return condition_check
+        
+        return True, ""
+    
+    def _check_slot_compatibility(self, item: Item, slot: EquipmentSlot) -> Tuple[bool, str]:
+        """スロットとアイテムの適合性チェック"""
         if slot == EquipmentSlot.WEAPON and not item.is_weapon():
             return False, "武器スロットには武器のみ装備できます"
         elif slot == EquipmentSlot.ARMOR and not item.is_armor():
             return False, "防具スロットには防具のみ装備できます"
         elif slot in [EquipmentSlot.ACCESSORY_1, EquipmentSlot.ACCESSORY_2]:
-            # アクセサリスロットはアクセサリタイプのみ（今後拡張）
-            if item.item_type not in [ItemType.TREASURE]:  # 暫定的にTREASUREをアクセサリとして扱う
+            if item.item_type not in [ItemType.TREASURE]:
                 return False, "アクセサリスロットにはアクセサリのみ装備できます"
-        
-        # クラス制限チェック
+        return True, ""
+    
+    def _check_class_restriction(self, item: Item, character_class: str) -> Tuple[bool, str]:
+        """クラス制限チェック"""
         if not item.can_use(character_class):
             return False, f"クラス '{character_class}' は このアイテムを使用できません"
-        
-        # 状態チェック
-        if item_instance.condition <= 0:
+        return True, ""
+    
+    def _check_item_condition(self, item_instance: ItemInstance) -> Tuple[bool, str]:
+        """アイテム状態チェック"""
+        if item_instance.condition <= MIN_CONDITION_FOR_EQUIP:
             return False, "破損したアイテムは装備できません"
-        
         return True, ""
     
     def equip_item(self, item_instance: ItemInstance, slot: EquipmentSlot, character_class: str) -> Tuple[bool, str, Optional[ItemInstance]]:
@@ -164,46 +187,58 @@ class Equipment:
     
     def _calculate_item_bonus(self, item: Item, item_instance: ItemInstance) -> EquipmentBonus:
         """個別アイテムのボーナスを計算"""
+        bonus = self._get_basic_item_bonus(item)
+        self._apply_additional_bonuses(bonus, item)
+        self._apply_condition_modifier(bonus, item_instance.condition)
+        
+        return bonus
+    
+    def _get_basic_item_bonus(self, item: Item) -> EquipmentBonus:
+        """アイテムの基本ボーナスを取得"""
         bonus = EquipmentBonus()
         
-        # 基本ステータス
         if item.is_weapon():
             bonus.attack_power = item.get_attack_power()
         elif item.is_armor():
             bonus.defense = item.get_defense()
-        
-        # アイテムデータから追加ボーナスを取得
+            
+        return bonus
+    
+    def _apply_additional_bonuses(self, bonus: EquipmentBonus, item: Item):
+        """追加ボーナスを適用"""
         item_bonuses = item.item_data.get('bonuses', {})
-        bonus.strength += item_bonuses.get('strength', 0)
-        bonus.agility += item_bonuses.get('agility', 0)
-        bonus.intelligence += item_bonuses.get('intelligence', 0)
-        bonus.faith += item_bonuses.get('faith', 0)
-        bonus.luck += item_bonuses.get('luck', 0)
-        bonus.magic_power += item_bonuses.get('magic_power', 0)
-        bonus.magic_resistance += item_bonuses.get('magic_resistance', 0)
-        
-        # 状態による補正
-        condition_modifier = item_instance.condition
+        bonus.strength += item_bonuses.get('strength', DEFAULT_BONUS_VALUE)
+        bonus.agility += item_bonuses.get('agility', DEFAULT_BONUS_VALUE)
+        bonus.intelligence += item_bonuses.get('intelligence', DEFAULT_BONUS_VALUE)
+        bonus.faith += item_bonuses.get('faith', DEFAULT_BONUS_VALUE)
+        bonus.luck += item_bonuses.get('luck', DEFAULT_BONUS_VALUE)
+        bonus.magic_power += item_bonuses.get('magic_power', DEFAULT_BONUS_VALUE)
+        bonus.magic_resistance += item_bonuses.get('magic_resistance', DEFAULT_BONUS_VALUE)
+    
+    def _apply_condition_modifier(self, bonus: EquipmentBonus, condition_modifier: float):
+        """状態による補正を適用"""
         bonus.attack_power = int(bonus.attack_power * condition_modifier)
         bonus.defense = int(bonus.defense * condition_modifier)
         bonus.magic_power = int(bonus.magic_power * condition_modifier)
         bonus.magic_resistance = int(bonus.magic_resistance * condition_modifier)
-        
-        # エンチャントによるボーナス（今後実装）
-        # for enchantment in item_instance.enchantments:
-        #     bonus = bonus + calculate_enchantment_bonus(enchantment)
-        
-        return bonus
     
     def get_total_weight(self) -> float:
         """装備の総重量を取得"""
-        total_weight = 0.0
+        total_weight = INITIAL_TOTAL_WEIGHT
+        
         for item_instance in self.equipped_items.values():
-            if item_instance:
-                item = self.item_manager.get_item(item_instance.item_id)
-                if item:
-                    total_weight += item.weight
+            weight = self._get_item_weight(item_instance)
+            total_weight += weight
+            
         return total_weight
+    
+    def _get_item_weight(self, item_instance: Optional[ItemInstance]) -> float:
+        """個別アイテムの重量を取得"""
+        if not item_instance:
+            return INITIAL_TOTAL_WEIGHT
+            
+        item = self.item_manager.get_item(item_instance.item_id)
+        return item.weight if item else INITIAL_TOTAL_WEIGHT
     
     def get_equipment_summary(self) -> Dict[str, Any]:
         """装備要約を取得"""

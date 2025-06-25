@@ -85,10 +85,19 @@
 
    **テスト結果：** エンカウンター関連の23テストすべて成功
 
-7. @src/equipment 以下のコードをFowler式のリファクタリングしましょう。
+7. ✅ @src/equipment 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
     リファクタリング後、テストを実施しエラーを確実に解消してください
     完了後、作業内容をこちらに記載した後一旦commitしてください
+
+   **実施したリファクタリング：**
+   - **Replace Magic Number with Named Constant**: 3個の定数を追加（MIN_CONDITION_FOR_EQUIP、DEFAULT_BONUS_VALUE、INITIAL_TOTAL_WEIGHT）
+   - **Extract Method**: _calculate_item_bonusメソッドを3つの小さなメソッドに分割（_get_basic_item_bonus、_apply_additional_bonuses、_apply_condition_modifier）
+   - **Extract Method**: can_equip_itemメソッドから検証ロジックを分離（_check_slot_compatibility、_check_class_restriction、_check_item_condition）
+   - **Extract Method**: get_total_weightメソッドから_get_item_weightメソッドを抽出
+   - **Replace Magic Number with Named Constant**: ボーナス値や重量の初期値をすべて定数に置換
+
+   **テスト結果：** 装備関連の30テストすべて成功
 
 8. @src/inventory 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
