@@ -177,10 +177,20 @@
 
    **テスト結果：** ナビゲーション関連の75テストすべて成功（5個スキップ）
 
-13. @src/overworld 以下のコードをFowler式のリファクタリングしましょう。
+13. ✅ @src/overworld 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
     リファクタリング後、テストを実施しエラーを確実に解消してください
     完了後、作業内容をこちらに記載した後一旦commitしてください
+
+   **実施したリファクタリング：**
+   - **Replace Magic Number with Named Constant**: 25個の定数を追加（MAX_SAVE_SLOTS、DIALOG_IDS、UI位置・サイズ定数等）
+   - **Extract Method**: 長い_auto_recoveryメソッドから_recover_character、_show_recovery_messageメソッドを抽出
+   - **Extract Method**: _enter_facilityメソッドから_hide_menus_for_facility_entry、_hide_main_menu_for_facility、_hide_settings_menu_for_facilityメソッドを抽出
+   - **Extract Method**: overworld_manager_pygame.pyの_get_save_slotsメソッドから_create_sample_slot_dataメソッドを抽出
+   - **Replace Magic Number with Named Constant**: UIボタン配置、ダイアログサイズ、フォントサイズ等の魔法数をすべて定数に置換
+   - **Code Quality**: base_facility.pyにDEFAULT_ACTIVE_STATE定数追加（テストエラー修正）
+
+   **テスト結果：** overworld関連の26テストすべて成功
 
 14. @src/rendering 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。

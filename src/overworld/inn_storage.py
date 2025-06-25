@@ -8,12 +8,19 @@ from src.inventory.inventory import Inventory, InventorySlot, InventoryManager
 from src.items.item import ItemInstance, item_manager
 from src.utils.logger import logger
 
+# 宿屋倉庫システム定数
+DEFAULT_STORAGE_CAPACITY = 100
+DEFAULT_QUANTITY = 1
+EMPTY_SLOT_COUNT = 0
+FULL_PERCENTAGE_MULTIPLIER = 100
+FIRST_ELEMENT_INDEX = 0
+
 
 @dataclass
 class InnStorage:
     """宿屋倉庫"""
     storage_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    capacity: int = 100  # 倉庫容量（パーティインベントリより大きく）
+    capacity: int = DEFAULT_STORAGE_CAPACITY  # 倉庫容量（パーティインベントリより大きく）
     slots: List[InventorySlot] = field(default_factory=list)
     
     def __post_init__(self):
@@ -24,24 +31,40 @@ class InnStorage:
     
     def add_item(self, item_instance: ItemInstance) -> bool:
         """アイテムを倉庫に追加"""
-        # 同種アイテムのスタック可能性をチェック
-        # アイテム情報を取得してスタック可能かをチェック
-        from src.items.item import item_manager
-        item = item_manager.get_item(item_instance.item_id)
-        is_stackable = item and item.item_data.get('stackable', False) if item else False
-        
-        if is_stackable:
-            for slot in self.slots:
-                if (not slot.is_empty() and 
-                    slot.item_instance.item_id == item_instance.item_id and
-                    slot.item_instance.identified == item_instance.identified):
-                    
-                    # スタック追加
-                    slot.item_instance.quantity += item_instance.quantity
-                    logger.debug(f"宿屋倉庫でアイテムをスタック: {item_instance.item_id} +{item_instance.quantity}")
-                    return True
+        # スタック可能なアイテヤを探して追加
+        if self._try_stack_item(item_instance):
+            return True
         
         # 新しいスロットに追加
+        return self._try_add_to_new_slot(item_instance)
+    
+    def _try_stack_item(self, item_instance: ItemInstance) -> bool:
+        """スタック可能なアイテムを探して追加"""
+        if not self._is_stackable(item_instance):
+            return False
+        
+        for slot in self.slots:
+            if self._can_stack_with_slot(slot, item_instance):
+                slot.item_instance.quantity += item_instance.quantity
+                logger.debug(f"宿屋倉庫でアイテムをスタック: {item_instance.item_id} +{item_instance.quantity}")
+                return True
+        
+        return False
+    
+    def _is_stackable(self, item_instance: ItemInstance) -> bool:
+        """アイテムがスタック可能かチェック"""
+        from src.items.item import item_manager
+        item = item_manager.get_item(item_instance.item_id)
+        return item and item.item_data.get('stackable', False) if item else False
+    
+    def _can_stack_with_slot(self, slot: InventorySlot, item_instance: ItemInstance) -> bool:
+        """スロットとアイテムがスタック可能かチェック"""
+        return (not slot.is_empty() and 
+                slot.item_instance.item_id == item_instance.item_id and
+                slot.item_instance.identified == item_instance.identified)
+    
+    def _try_add_to_new_slot(self, item_instance: ItemInstance) -> bool:
+        """新しいスロットにアイテムを追加"""
         for slot in self.slots:
             if slot.is_empty():
                 slot.add_item(item_instance)
@@ -51,9 +74,9 @@ class InnStorage:
         logger.warning("宿屋倉庫が満杯です")
         return False
     
-    def remove_item(self, slot_index: int, quantity: int = 1) -> Optional[ItemInstance]:
+    def remove_item(self, slot_index: int, quantity: int = DEFAULT_QUANTITY) -> Optional[ItemInstance]:
         """アイテムを倉庫から削除"""
-        if slot_index < 0 or slot_index >= len(self.slots):
+        if not self._is_valid_slot_index(slot_index):
             return None
         
         slot = self.slots[slot_index]
@@ -62,26 +85,36 @@ class InnStorage:
         
         item_instance = slot.item_instance
         if quantity >= item_instance.quantity:
-            # 全て削除
-            removed_item = item_instance
-            slot.remove_item()
-            logger.info(f"宿屋倉庫からアイテム削除: {removed_item.item_id} x{removed_item.quantity}")
-            return removed_item
+            return self._remove_all_items_from_slot(slot, item_instance)
         else:
-            # 一部削除
-            item_instance.quantity -= quantity
-            removed_item = ItemInstance(
-                item_id=item_instance.item_id,
-                quantity=quantity,
-                identified=item_instance.identified,
-                condition=item_instance.condition
-            )
-            logger.info(f"宿屋倉庫からアイテム一部削除: {removed_item.item_id} x{quantity}")
-            return removed_item
+            return self._remove_partial_items_from_slot(item_instance, quantity)
+    
+    def _is_valid_slot_index(self, slot_index: int) -> bool:
+        """スロットインデックスが有効かチェック"""
+        return FIRST_ELEMENT_INDEX <= slot_index < len(self.slots)
+    
+    def _remove_all_items_from_slot(self, slot: InventorySlot, item_instance: ItemInstance) -> ItemInstance:
+        """スロットからすべてのアイテムを削除"""
+        removed_item = item_instance
+        slot.remove_item()
+        logger.info(f"宿屋倉庫からアイテム削除: {removed_item.item_id} x{removed_item.quantity}")
+        return removed_item
+    
+    def _remove_partial_items_from_slot(self, item_instance: ItemInstance, quantity: int) -> ItemInstance:
+        """スロットから一部のアイテムを削除"""
+        item_instance.quantity -= quantity
+        removed_item = ItemInstance(
+            item_id=item_instance.item_id,
+            quantity=quantity,
+            identified=item_instance.identified,
+            condition=item_instance.condition
+        )
+        logger.info(f"宿屋倉庫からアイテム一部削除: {removed_item.item_id} x{quantity}")
+        return removed_item
     
     def get_item_at_slot(self, slot_index: int) -> Optional[ItemInstance]:
         """指定スロットのアイテムを取得"""
-        if slot_index < 0 or slot_index >= len(self.slots):
+        if not self._is_valid_slot_index(slot_index):
             return None
         
         slot = self.slots[slot_index]
@@ -105,7 +138,7 @@ class InnStorage:
     
     def is_full(self) -> bool:
         """倉庫が満杯かチェック"""
-        return self.get_free_slots_count() == 0
+        return self.get_free_slots_count() == EMPTY_SLOT_COUNT
     
     def clear(self):
         """倉庫を空にする"""
@@ -126,7 +159,7 @@ class InnStorage:
         """辞書からデシリアライズ"""
         storage = cls(
             storage_id=data.get('storage_id', str(uuid.uuid4())),
-            capacity=data.get('capacity', 100)
+            capacity=data.get('capacity', DEFAULT_STORAGE_CAPACITY)
         )
         
         # スロットを復元
@@ -230,7 +263,7 @@ class InnStorageManager:
             'capacity': storage.capacity,
             'used_slots': used_slots,
             'free_slots': storage.get_free_slots_count(),
-            'usage_percentage': (used_slots / storage.capacity) * 100
+            'usage_percentage': (used_slots / storage.capacity) * FULL_PERCENTAGE_MULTIPLIER
         }
     
     def save_storage_data(self) -> Dict[str, Any]:

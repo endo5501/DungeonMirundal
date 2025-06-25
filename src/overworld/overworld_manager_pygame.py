@@ -10,6 +10,33 @@ from src.ui.character_status_bar import CharacterStatusBar, create_character_sta
 from src.utils.logger import logger
 from src.core.config_manager import config_manager
 
+# Pygame地上部システム定数
+MAIN_MENU_BUTTON_WIDTH = 200
+MAIN_MENU_BUTTON_HEIGHT = 50
+MAIN_MENU_LEFT_COLUMN_X = 150
+MAIN_MENU_RIGHT_COLUMN_X = 450
+MAIN_MENU_BUTTON_SPACING = 70
+MAIN_MENU_START_Y = 200
+SETTINGS_BUTTON_X = 250
+SETTINGS_BUTTON_WIDTH = 300
+SETTINGS_BUTTON_HEIGHT = 50
+SETTINGS_BUTTON_SPACING = 70
+SETTINGS_START_Y = 200
+DUNGEON_SELECTION_RECT_X = 100
+DUNGEON_SELECTION_RECT_Y = 100
+DUNGEON_SELECTION_RECT_WIDTH = 600
+DUNGEON_SELECTION_RECT_HEIGHT = 500
+DIALOG_BUTTON_WIDTH = 100
+DIALOG_BUTTON_HEIGHT = 40
+DIALOG_BUTTON_MARGIN = 60
+MAX_PARTY_MEMBERS_DISPLAY = 5
+MAX_SAVE_SLOTS = 5
+SAVE_SLOT_RANGE_START = 1
+SAVE_SLOT_RANGE_END = 6
+JAPANESE_FONT_SIZE = 24
+TITLE_Y_OFFSET = 80
+HELP_Y_OFFSET = 120
+
 
 class OverworldManager:
     """地上部管理クラス（Pygame版）"""
@@ -98,28 +125,28 @@ class OverworldManager:
         
         # 6つの施設ボタンを作成（2列3行レイアウト）
         # 左列
-        guild_button = UIButton("guild", "冒険者ギルド", 150, 200, 200, 50)
+        guild_button = UIButton("guild", "冒険者ギルド", MAIN_MENU_LEFT_COLUMN_X, MAIN_MENU_START_Y, MAIN_MENU_BUTTON_WIDTH, MAIN_MENU_BUTTON_HEIGHT)
         guild_button.on_click = self._on_guild
         self.main_menu.add_element(guild_button)
         
-        inn_button = UIButton("inn", "宿屋", 150, 270, 200, 50)
+        inn_button = UIButton("inn", "宿屋", MAIN_MENU_LEFT_COLUMN_X, MAIN_MENU_START_Y + MAIN_MENU_BUTTON_SPACING, MAIN_MENU_BUTTON_WIDTH, MAIN_MENU_BUTTON_HEIGHT)
         inn_button.on_click = self._on_inn
         self.main_menu.add_element(inn_button)
         
-        shop_button = UIButton("shop", "商店", 150, 340, 200, 50)
+        shop_button = UIButton("shop", "商店", MAIN_MENU_LEFT_COLUMN_X, MAIN_MENU_START_Y + MAIN_MENU_BUTTON_SPACING * 2, MAIN_MENU_BUTTON_WIDTH, MAIN_MENU_BUTTON_HEIGHT)
         shop_button.on_click = self._on_shop
         self.main_menu.add_element(shop_button)
         
         # 右列
-        temple_button = UIButton("temple", "教会", 450, 200, 200, 50)
+        temple_button = UIButton("temple", "教会", MAIN_MENU_RIGHT_COLUMN_X, MAIN_MENU_START_Y, MAIN_MENU_BUTTON_WIDTH, MAIN_MENU_BUTTON_HEIGHT)
         temple_button.on_click = self._on_temple
         self.main_menu.add_element(temple_button)
         
-        magic_guild_button = UIButton("magic_guild", "魔術師ギルド", 450, 270, 200, 50)
+        magic_guild_button = UIButton("magic_guild", "魔術師ギルド", MAIN_MENU_RIGHT_COLUMN_X, MAIN_MENU_START_Y + MAIN_MENU_BUTTON_SPACING, MAIN_MENU_BUTTON_WIDTH, MAIN_MENU_BUTTON_HEIGHT)
         magic_guild_button.on_click = self._on_magic_guild
         self.main_menu.add_element(magic_guild_button)
         
-        dungeon_button = UIButton("enter_dungeon", "ダンジョン入口", 450, 340, 200, 50)
+        dungeon_button = UIButton("enter_dungeon", "ダンジョン入口", MAIN_MENU_RIGHT_COLUMN_X, MAIN_MENU_START_Y + MAIN_MENU_BUTTON_SPACING * 2, MAIN_MENU_BUTTON_WIDTH, MAIN_MENU_BUTTON_HEIGHT)
         dungeon_button.on_click = self._on_enter_dungeon
         self.main_menu.add_element(dungeon_button)
         
@@ -194,7 +221,7 @@ class OverworldManager:
             self.ui_manager.hide_menu(self.main_menu.menu_id)
         
         # UISelectionListを使用したダンジョン選択
-        list_rect = pygame.Rect(100, 100, 600, 500)
+        list_rect = pygame.Rect(DUNGEON_SELECTION_RECT_X, DUNGEON_SELECTION_RECT_Y, DUNGEON_SELECTION_RECT_WIDTH, DUNGEON_SELECTION_RECT_HEIGHT)
         
         self.dungeon_selection_list = CustomSelectionList(
             relative_rect=list_rect,
@@ -665,8 +692,17 @@ class OverworldManager:
         # 現在は仮のデータを返す
         import datetime
         
-        return [
-            {
+        slots = []
+        for slot_id in range(SAVE_SLOT_RANGE_START, SAVE_SLOT_RANGE_END):
+            slot_data = self._create_sample_slot_data(slot_id)
+            slots.append(slot_data)
+        
+        return slots
+    
+    def _create_sample_slot_data(self, slot_id: int) -> dict:
+        """サンプルスロットデータを作成"""
+        if slot_id == 1:
+            return {
                 "slot_id": 1,
                 "is_used": True,
                 "save_time": "2025-06-23 10:30:00",
@@ -675,18 +711,9 @@ class OverworldManager:
                 "location": "地上・冒険者ギルド",
                 "party_level": 5,
                 "gold": 1500
-            },
-            {
-                "slot_id": 2,
-                "is_used": False,
-                "save_time": None,
-                "party_name": None,
-                "play_time": None,
-                "location": None,
-                "party_level": None,
-                "gold": None
-            },
-            {
+            }
+        elif slot_id == 3:
+            return {
                 "slot_id": 3,
                 "is_used": True,
                 "save_time": "2025-06-22 18:45:30",
@@ -695,19 +722,10 @@ class OverworldManager:
                 "location": "地上・商店",
                 "party_level": 3,
                 "gold": 800
-            },
-            {
-                "slot_id": 4,
-                "is_used": False,
-                "save_time": None,
-                "party_name": None,
-                "play_time": None,
-                "location": None,
-                "party_level": None,
-                "gold": None
-            },
-            {
-                "slot_id": 5,
+            }
+        else:
+            return {
+                "slot_id": slot_id,
                 "is_used": False,
                 "save_time": None,
                 "party_name": None,
@@ -716,7 +734,6 @@ class OverworldManager:
                 "party_level": None,
                 "gold": None
             }
-        ]
     
     def _format_save_slot_info(self, slot):
         """セーブスロット情報をフォーマット"""

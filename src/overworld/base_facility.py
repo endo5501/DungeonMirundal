@@ -12,6 +12,9 @@ from src.ui.dialog_template import DialogTemplate, DialogType
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
+# 施設システム定数
+DEFAULT_ACTIVE_STATE = False
+
 
 class FacilityType(Enum):
     """施設タイプ"""
@@ -39,7 +42,7 @@ class BaseFacility(ABC):
         self.facility_id = facility_id
         self.facility_type = facility_type
         self.name_key = name_key
-        self.is_active = False
+        self.is_active = DEFAULT_ACTIVE_STATE
         self.current_party: Optional[Party] = None
         
         # 新しいメニューシステム
@@ -123,24 +126,9 @@ class BaseFacility(ABC):
     def _show_main_menu_new(self):
         """新しいメニューシステムでメインメニューを表示"""
         try:
-            menu_title = self.get_name()
-            main_menu = UIMenu(f"{self.facility_id}_main_menu", menu_title)
-            
-            # 施設固有のメニュー項目を追加
-            self._setup_menu_items(main_menu)
-            
-            # 共通メニュー項目（出る）
-            main_menu.add_menu_item(
-                config_manager.get_text("menu.exit"),
-                self._exit_facility
-            )
-            
-            # メニュースタックにプッシュ
-            self.menu_stack_manager.push_menu(
-                main_menu, 
-                MenuType.FACILITY_MAIN,
-                {'facility_id': self.facility_id}
-            )
+            main_menu = self._create_main_menu()
+            self._add_common_menu_items(main_menu)
+            self._push_main_menu_to_stack(main_menu)
             
             logger.info(f"新システムで施設メインメニューを表示: {self.facility_id}")
             
@@ -149,10 +137,34 @@ class BaseFacility(ABC):
             # フォールバックとして旧システムを使用
             self._show_main_menu_legacy()
     
+    def _create_main_menu(self) -> UIMenu:
+        """メインメニューを作成"""
+        menu_title = self.get_name()
+        main_menu = UIMenu(f"{self.facility_id}_main_menu", menu_title)
+        
+        # 施設固有のメニュー項目を追加
+        self._setup_menu_items(main_menu)
+        
+        return main_menu
+    
+    def _add_common_menu_items(self, menu: UIMenu):
+        """共通メニュー項目を追加"""
+        menu.add_menu_item(
+            config_manager.get_text("menu.exit"),
+            self._exit_facility
+        )
+    
+    def _push_main_menu_to_stack(self, menu: UIMenu):
+        """メインメニューをスタックにプッシュ"""
+        self.menu_stack_manager.push_menu(
+            menu, 
+            MenuType.FACILITY_MAIN,
+            {'facility_id': self.facility_id}
+        )
+    
     def _show_main_menu_legacy(self):
         """旧メニューシステムでメインメニューを表示（後方互換性）"""
-        if self.main_menu:
-            ui_manager.hide_menu(self.main_menu.menu_id)
+        self._cleanup_legacy_menu()
         
         menu_title = self.get_name()
         self.main_menu = UIMenu(f"{self.facility_id}_main_menu", menu_title)
@@ -161,13 +173,15 @@ class BaseFacility(ABC):
         self._setup_menu_items(self.main_menu)
         
         # 共通メニュー項目（出る）
-        self.main_menu.add_menu_item(
-            config_manager.get_text("menu.exit"),
-            self._exit_facility
-        )
+        self._add_common_menu_items(self.main_menu)
         
         ui_manager.add_menu(self.main_menu)
         ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+    
+    def _cleanup_legacy_menu(self):
+        """旧メニューのクリーンアップ"""
+        if self.main_menu:
+            ui_manager.hide_menu(self.main_menu.menu_id)
     
     def _exit_facility(self):
         """施設から出る（UI用）"""
@@ -259,6 +273,54 @@ class BaseFacility(ABC):
         
         ui_manager.add_dialog(self.current_dialog)
         ui_manager.show_dialog(self.current_dialog.dialog_id)
+    
+    def _calculate_dialog_width(self, message: str) -> int:
+        """メッセージの長さに基づいてダイアログ幅を計算"""
+        message_length = len(message) if message else 0
+        if message_length > MESSAGE_LENGTH_THRESHOLD_LARGE:
+            return DEFAULT_DIALOG_WIDTH_LARGE
+        elif message_length > MESSAGE_LENGTH_THRESHOLD_SMALL:
+            return DEFAULT_DIALOG_WIDTH_MEDIUM
+        else:
+            return DEFAULT_DIALOG_WIDTH_SMALL
+    
+    def _calculate_dialog_height(self, message: str) -> int:
+        """メッセージの行数に基づいてダイアログ高さを計算"""
+        line_count = message.count('\n') + 1 if message else 1
+        if line_count > LINE_COUNT_THRESHOLD_LARGE:
+            return DEFAULT_DIALOG_HEIGHT_LARGE
+        elif line_count > LINE_COUNT_THRESHOLD_MEDIUM:
+            return DEFAULT_DIALOG_HEIGHT_MEDIUM
+        else:
+            return max(DEFAULT_DIALOG_HEIGHT_SMALL, line_count * BASE_HEIGHT_PER_LINE + DIALOG_BASE_HEIGHT)
+    
+    def _add_dialog_buttons(self, dialog_id: str, buttons: List[Dict[str, Any]]):
+        """ダイアログにボタンを追加"""
+        for i, button_data in enumerate(buttons):
+            from src.ui.base_ui_pygame import UIButton
+            
+            button_x, button_y = self._calculate_button_position(i)
+            
+            button = UIButton(
+                f"{dialog_id}_button_{i}", 
+                button_data['text'],
+                x=button_x, 
+                y=button_y, 
+                width=STANDARD_BUTTON_WIDTH, 
+                height=STANDARD_BUTTON_HEIGHT
+            )
+            button.on_click = button_data['command']
+            self.current_dialog.add_element(button)
+    
+    def _calculate_button_position(self, button_index: int) -> tuple:
+        """ボタンの位置を計算"""
+        dialog_bottom = self.current_dialog.rect.y + self.current_dialog.rect.height
+        button_x = (self.current_dialog.rect.x + 
+                   self.current_dialog.rect.width - 
+                   BUTTON_RIGHT_MARGIN - 
+                   (button_index * BUTTON_SPACING))
+        button_y = dialog_bottom - BUTTON_BOTTOM_MARGIN
+        return button_x, button_y
     
     def _close_dialog(self):
         """ダイアログを閉じる"""
@@ -556,43 +618,54 @@ class BaseFacility(ABC):
     def _back_to_main_menu_legacy(self) -> bool:
         """旧システム用：メインメニューに戻る"""
         try:
-            # 現在のサブメニューを全て非表示にする
-            possible_menus = [
-                "adventure_prep_menu",
-                "new_item_mgmt_menu", 
-                "character_item_menu",
-                "spell_mgmt_menu",
-                "prayer_mgmt_menu",
-                "character_spell_menu",
-                "character_prayer_menu",
-                "party_equipment_menu",
-                # 施設固有のメニューID（派生クラスでオーバーライド可能）
-                f"{self.facility_id}_submenu"
-            ]
-            
-            # 派生クラスで追加のメニューIDがある場合
-            if hasattr(self, '_get_additional_menu_ids'):
-                possible_menus.extend(self._get_additional_menu_ids())
-            
+            possible_menus = self._get_possible_menu_ids()
             ui_mgr = self._get_effective_ui_manager()
+            
             if ui_mgr:
-                for menu_id in possible_menus:
-                    try:
-                        ui_mgr.hide_menu(menu_id)
-                    except:
-                        pass  # メニューが存在しない場合は無視
-                
-                # メインメニューを表示
-                if self.main_menu:
-                    ui_mgr.show_menu(self.main_menu.menu_id, modal=True)
-                    logger.info("旧システムでメインメニューに戻りました")
-                    return True
+                self._hide_all_submenus(ui_mgr, possible_menus)
+                return self._show_main_menu_if_available(ui_mgr)
             
             return False
             
         except Exception as e:
             logger.error(f"メインメニュー復帰エラー: {e}")
             return False
+    
+    def _get_possible_menu_ids(self) -> List[str]:
+        """閉じる必要があるメニューID一覧を取得"""
+        possible_menus = [
+            "adventure_prep_menu",
+            "new_item_mgmt_menu", 
+            "character_item_menu",
+            "spell_mgmt_menu",
+            "prayer_mgmt_menu",
+            "character_spell_menu",
+            "character_prayer_menu",
+            "party_equipment_menu",
+            f"{self.facility_id}_submenu"
+        ]
+        
+        # 派生クラスで追加のメニューIDがある場合
+        if hasattr(self, '_get_additional_menu_ids'):
+            possible_menus.extend(self._get_additional_menu_ids())
+        
+        return possible_menus
+    
+    def _hide_all_submenus(self, ui_mgr, menu_ids: List[str]):
+        """すべてのサブメニューを非表示にする"""
+        for menu_id in menu_ids:
+            try:
+                ui_mgr.hide_menu(menu_id)
+            except:
+                pass  # メニューが存在しない場合は無視
+    
+    def _show_main_menu_if_available(self, ui_mgr) -> bool:
+        """メインメニューが利用可能な場合は表示する"""
+        if self.main_menu:
+            ui_mgr.show_menu(self.main_menu.menu_id, modal=True)
+            logger.info("旧システムでメインメニューに戻りました")
+            return True
+        return False
     
     def back_to_facility_main(self) -> bool:
         """施設メインメニューに戻る（新システム）"""
@@ -713,6 +786,21 @@ class FacilityManager:
         """現在の施設から出る"""
         logger.info(f"退出処理開始: current_facility={self.current_facility}")
         
+        # 前提条件チェック
+        if not self._validate_exit_conditions():
+            return False
+        
+        facility = self.facilities[self.current_facility]
+        logger.info(f"施設のexit()を呼び出し: {self.current_facility}")
+        
+        if facility.exit():
+            return self._handle_successful_exit()
+        else:
+            logger.error(f"施設のexit()がFalseを返しました: {self.current_facility}")
+            return False
+    
+    def _validate_exit_conditions(self) -> bool:
+        """退出条件をバリデーション"""
         if not self.current_facility:
             logger.warning("current_facilityが設定されていません")
             return False
@@ -721,25 +809,21 @@ class FacilityManager:
             logger.error(f"施設が見つかりません: {self.current_facility}")
             return False
         
-        facility = self.facilities[self.current_facility]
-        logger.info(f"施設のexit()を呼び出し: {self.current_facility}")
+        return True
+    
+    def _handle_successful_exit(self) -> bool:
+        """成功した退出処理"""
+        logger.info(f"施設退出成功: {self.current_facility}")
+        self.current_facility = None
         
-        if facility.exit():
-            logger.info(f"施設退出成功: {self.current_facility}")
-            self.current_facility = None
-            
-            # 施設退場コールバックを呼び出し
-            if self.on_facility_exit_callback:
-                logger.info("退場コールバックを実行")
-                self.on_facility_exit_callback()
-            else:
-                logger.warning("退場コールバックが設定されていません")
-            
-            return True
+        # 施設退場コールバックを呼び出し
+        if self.on_facility_exit_callback:
+            logger.info("退場コールバックを実行")
+            self.on_facility_exit_callback()
         else:
-            logger.error(f"施設のexit()がFalseを返しました: {self.current_facility}")
+            logger.warning("退場コールバックが設定されていません")
         
-        return False
+        return True
     
     def get_current_facility(self) -> Optional[BaseFacility]:
         """現在の施設を取得"""

@@ -12,6 +12,36 @@ from src.core.config_manager import config_manager
 from src.core.save_manager import save_manager
 from src.utils.logger import logger
 
+# 地上部システム定数
+MAX_SAVE_SLOTS = 5
+SAVE_SLOT_RANGE_START = 1
+SAVE_SLOT_RANGE_END = 6
+MAX_DISPLAY_CHARACTERS = 3
+MAX_DISPLAY_ITEMS = 5
+DEFAULT_DIALOG_WIDTH_SMALL = 500
+DEFAULT_DIALOG_WIDTH_MEDIUM = 600
+DEFAULT_DIALOG_WIDTH_LARGE = 700
+DEFAULT_DIALOG_HEIGHT_MIN = 300
+DEFAULT_DIALOG_HEIGHT_MAX = 600
+DIALOG_LINE_HEIGHT = 25
+DIALOG_MARGIN = 80
+SCREEN_WIDTH_DEFAULT = 1024
+SCREEN_HEIGHT_DEFAULT = 768
+BUTTON_WIDTH_DEFAULT = 100
+BUTTON_HEIGHT_DEFAULT = 40
+BUTTON_MARGIN = 60
+TEXT_LENGTH_THRESHOLD_SMALL = 150
+TEXT_LENGTH_THRESHOLD_LARGE = 300
+HP_MP_FULL_RECOVERY = 1.0
+DIALOG_CENTER_DIVISOR = 2
+FIRST_ELEMENT_INDEX = 0
+EMPTY_RECOVERY_COUNT = 0
+
+# ダイアログID定数
+DIALOG_ID_INFO = "overworld_info_dialog"
+DIALOG_ID_CONFIRM = "overworld_confirm_dialog"
+DIALOG_IDS_ALL = [DIALOG_ID_INFO, DIALOG_ID_CONFIRM]
+
 
 class OverworldLocation(Enum):
     """地上部の場所"""
@@ -104,32 +134,41 @@ class OverworldManager:
         recovered_characters = []
         
         for character in self.current_party.get_all_characters():
-            # HP・MP全回復
-            old_hp = character.derived_stats.current_hp
-            old_mp = character.derived_stats.current_mp
-            
-            character.derived_stats.current_hp = character.derived_stats.max_hp
-            character.derived_stats.current_mp = character.derived_stats.max_mp
-            
-            # 状態異常解除（死亡・灰化以外）
-            old_status = character.status
-            if character.status not in [CharacterStatus.DEAD, CharacterStatus.ASHES]:
-                character.status = CharacterStatus.GOOD
-            
-            # 回復したキャラクターを記録
-            if (old_hp < character.derived_stats.max_hp or 
-                old_mp < character.derived_stats.max_mp or 
-                old_status != character.status):
+            character_recovered = self._recover_character(character)
+            if character_recovered:
                 recovered_characters.append(character.name)
         
         # TODO: Phase 4で魔法使用回数もリセット予定
         
         if recovered_characters:
-            recovery_message = f"地上部に戻りました！\n{', '.join(recovered_characters)} が回復しました。"
-            self._show_info_dialog("自動回復", recovery_message)
-            logger.info(f"自動回復実行: {len(recovered_characters)} 人のキャラクターが回復")
+            self._show_recovery_message(recovered_characters)
         
         logger.info("地上部帰還時の自動回復を実行しました")
+    
+    def _recover_character(self, character) -> bool:
+        """キャラクターを回復し、回復したかどうかを返す"""
+        # HP・MP全回復
+        old_hp = character.derived_stats.current_hp
+        old_mp = character.derived_stats.current_mp
+        
+        character.derived_stats.current_hp = character.derived_stats.max_hp
+        character.derived_stats.current_mp = character.derived_stats.max_mp
+        
+        # 状態異常解除（死亡・灰化以外）
+        old_status = character.status
+        if character.status not in [CharacterStatus.DEAD, CharacterStatus.ASHES]:
+            character.status = CharacterStatus.GOOD
+        
+        # 回復したかどうかを判定
+        return (old_hp < character.derived_stats.max_hp or 
+                old_mp < character.derived_stats.max_mp or 
+                old_status != character.status)
+    
+    def _show_recovery_message(self, recovered_characters: List[str]):
+        """回復メッセージを表示"""
+        recovery_message = f"地上部に戻りました！\n{', '.join(recovered_characters)} が回復しました。"
+        self._show_info_dialog("自動回復", recovery_message)
+        logger.info(f"自動回復実行: {len(recovered_characters)} 人のキャラクターが回復")
     
     def _setup_input_handling(self):
         """入力処理のセットアップ"""
@@ -247,32 +286,41 @@ class OverworldManager:
         success = self.facility_manager.enter_facility(facility_id, self.current_party)
         
         if success:
-            # 施設メニューが表示されるので、地上部メニューを隠す
-            # メニューの状態を記録してから隠す
-            self.main_menu_was_visible = False
-            self.settings_menu_was_visible = False
-            
-            if self.main_menu:
-                try:
-                    # 現在表示されているかどうかを記録
-                    self.main_menu_was_visible = True
-                    ui_manager.hide_menu(self.main_menu.menu_id)
-                    logger.debug(f"メインメニューを隠しました: {self.main_menu.menu_id}")
-                except Exception as hide_error:
-                    logger.warning(f"メインメニューの非表示処理でエラー: {hide_error}")
-            
-            # 設定メニューがアクティブな場合も隠す
-            if self.settings_menu_active and self.location_menu:
-                try:
-                    self.settings_menu_was_visible = True
-                    ui_manager.hide_menu(self.location_menu.menu_id)
-                    logger.debug(f"設定メニューを隠しました: {self.location_menu.menu_id}")
-                except Exception as hide_error:
-                    logger.warning(f"設定メニューの非表示処理でエラー: {hide_error}")
-            
+            self._hide_menus_for_facility_entry()
             logger.info(f"施設に入りました: {facility_id} (main_menu_was_visible: {self.main_menu_was_visible}, settings_menu_was_visible: {self.settings_menu_was_visible})")
         else:
             self._show_error_dialog("エラー", f"施設 '{facility_id}' に入れませんでした。")
+    
+    def _hide_menus_for_facility_entry(self):
+        """施設入場時のメニュー隠し処理"""
+        # メニューの状態を記録してから隠す
+        self.main_menu_was_visible = False
+        self.settings_menu_was_visible = False
+        
+        self._hide_main_menu_for_facility()
+        self._hide_settings_menu_for_facility()
+    
+    def _hide_main_menu_for_facility(self):
+        """施設入場時のメインメニュー隠し処理"""
+        if self.main_menu:
+            try:
+                # 現在表示されているかどうかを記録
+                self.main_menu_was_visible = True
+                ui_manager.hide_menu(self.main_menu.menu_id)
+                logger.debug(f"メインメニューを隠しました: {self.main_menu.menu_id}")
+            except Exception as hide_error:
+                logger.warning(f"メインメニューの非表示処理でエラー: {hide_error}")
+    
+    def _hide_settings_menu_for_facility(self):
+        """施設入場時の設定メニュー隠し処理"""
+        # 設定メニューがアクティブな場合も隠す
+        if self.settings_menu_active and self.location_menu:
+            try:
+                self.settings_menu_was_visible = True
+                ui_manager.hide_menu(self.location_menu.menu_id)
+                logger.debug(f"設定メニューを隠しました: {self.location_menu.menu_id}")
+            except Exception as hide_error:
+                logger.warning(f"設定メニューの非表示処理でエラー: {hide_error}")
     
     def _back_to_main_menu(self):
         """メインメニューに戻る"""
@@ -366,7 +414,7 @@ class OverworldManager:
         # メンバー一覧を作成
         member_list = "\n".join([
             f"{char.name} Lv.{char.experience.level}\n({char.get_race_name()}/{char.get_class_name()})\n[{char.status.value}]"
-            for char in characters[:3]  # 最大3人まで表示
+            for char in characters[:MAX_DISPLAY_CHARACTERS]  # 最大表示人数まで表示
         ])
         
         # タイルデータを作成
@@ -445,7 +493,7 @@ class OverworldManager:
                 personal_inventory = character.get_personal_inventory()
                 if personal_inventory and hasattr(personal_inventory, 'slots') and personal_inventory.slots:
                     items = []
-                    for slot in personal_inventory.slots[:5]:  # 最大5つまで表示
+                    for slot in personal_inventory.slots[:MAX_DISPLAY_ITEMS]:  # 最大表示アイテム数まで表示
                         if hasattr(slot, 'is_empty') and not slot.is_empty():
                             item_instance = slot.item_instance
                             if item_instance:
@@ -528,8 +576,8 @@ class OverworldManager:
         # セーブスロット選択メニューを作成
         save_menu = UIMenu("save_slot_menu", "セーブスロット選択")
         
-        # 5つのセーブスロットを表示
-        for slot_id in range(1, 6):
+        # セーブスロットを表示
+        for slot_id in range(SAVE_SLOT_RANGE_START, SAVE_SLOT_RANGE_END):
             if slot_id in save_slot_info:
                 slot = save_slot_info[slot_id]
                 slot_text = f"スロット {slot_id}: {slot.name} (Lv.{slot.party_level}) [{slot.last_saved.strftime('%m/%d %H:%M')}]"
@@ -732,7 +780,7 @@ class OverworldManager:
     def _show_info_dialog(self, title: str, message: str):
         """情報ダイアログの表示"""
         dialog = UIDialog(
-            "overworld_info_dialog",
+            DIALOG_ID_INFO,
             title,
             message,
             buttons=[
@@ -756,7 +804,7 @@ class OverworldManager:
         config_manager.reload_all()
         
         dialog = UIDialog(
-            "overworld_confirm_dialog",
+            DIALOG_ID_CONFIRM,
             config_manager.get_text("common.confirm"),
             message,
             buttons=[
@@ -777,7 +825,7 @@ class OverworldManager:
     def _close_dialog(self):
         """ダイアログを閉じる"""
         # 現在表示中のダイアログを探して閉じる
-        for dialog_id in ["overworld_info_dialog", "overworld_confirm_dialog"]:
+        for dialog_id in DIALOG_IDS_ALL:
             ui_manager.hide_dialog(dialog_id)
     
     def _cleanup_ui(self):
