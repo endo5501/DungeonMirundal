@@ -8,6 +8,14 @@ import uuid
 from src.items.item import ItemInstance, Item, ItemManager, item_manager
 from src.utils.logger import logger
 
+# インベントリシステム定数
+DEFAULT_CHARACTER_SLOTS = 10
+DEFAULT_PARTY_SLOTS = 50
+MINIMUM_REMOVE_QUANTITY = 1
+INITIAL_TOTAL_WEIGHT = 0.0
+INITIAL_TOTAL_VALUE = 0
+DEFAULT_SORT_ORDER = 'zzz'
+
 
 class InventorySlotType(Enum):
     """インベントリスロットタイプ"""
@@ -68,7 +76,7 @@ class InventorySlot:
             return removed_item
         else:
             # 一部削除
-            if quantity <= 0:
+            if quantity < MINIMUM_REMOVE_QUANTITY:
                 return None
             
             # 新しいインスタンスを作成
@@ -111,7 +119,7 @@ class InventorySlot:
 class Inventory:
     """インベントリクラス"""
     
-    def __init__(self, owner_id: str, inventory_type: InventorySlotType, max_slots: int = 10):
+    def __init__(self, owner_id: str, inventory_type: InventorySlotType, max_slots: int = DEFAULT_CHARACTER_SLOTS):
         self.owner_id = owner_id
         self.inventory_type = inventory_type
         self.max_slots = max_slots
@@ -126,15 +134,15 @@ class Inventory:
     
     def get_empty_slot_count(self) -> int:
         """空きスロット数を取得"""
-        return sum(1 for slot in self.slots if slot.is_empty())
+        return sum(MINIMUM_REMOVE_QUANTITY for slot in self.slots if slot.is_empty())
     
     def get_used_slot_count(self) -> int:
         """使用中スロット数を取得"""
-        return sum(1 for slot in self.slots if not slot.is_empty())
+        return sum(MINIMUM_REMOVE_QUANTITY for slot in self.slots if not slot.is_empty())
     
     def is_full(self) -> bool:
         """インベントリが満杯かどうか"""
-        return self.get_empty_slot_count() == 0
+        return self.get_empty_slot_count() == INITIAL_TOTAL_VALUE
     
     def find_empty_slot(self) -> Optional[int]:
         """空きスロットのインデックスを取得"""
@@ -187,7 +195,7 @@ class Inventory:
         
         return removed_item
     
-    def remove_item_by_id(self, item_id: str, quantity: int = 1) -> Optional[ItemInstance]:
+    def remove_item_by_id(self, item_id: str, quantity: int = MINIMUM_REMOVE_QUANTITY) -> Optional[ItemInstance]:
         """アイテムIDで指定してアイテムを削除"""
         for i, slot in enumerate(self.slots):
             if (not slot.is_empty() and 
@@ -197,7 +205,7 @@ class Inventory:
         
         return None
     
-    def has_item(self, item_id: str, quantity: int = 1) -> bool:
+    def has_item(self, item_id: str, quantity: int = MINIMUM_REMOVE_QUANTITY) -> bool:
         """指定したアイテムを指定数量持っているかチェック"""
         total_quantity = 0
         for slot in self.slots:
@@ -259,13 +267,7 @@ class Inventory:
                 slot.item_instance = None
         
         # ソート（アイテムタイプ→ID順）
-        def sort_key(item_instance):
-            item = self.item_manager.get_item(item_instance.item_id)
-            if item:
-                return (item.item_type.value, item.item_id)
-            return ('zzz', item_instance.item_id)
-        
-        items.sort(key=sort_key)
+        items.sort(key=self._get_sort_key)
         
         # 再配置
         for i, item_instance in enumerate(items):
@@ -274,25 +276,54 @@ class Inventory:
         
         logger.debug("インベントリをソートしました")
     
+    def _get_sort_key(self, item_instance: ItemInstance) -> Tuple[str, str]:
+        """ソートキーを取得"""
+        item = self.item_manager.get_item(item_instance.item_id)
+        if item:
+            return (item.item_type.value, item.item_id)
+        return (DEFAULT_SORT_ORDER, item_instance.item_id)
+    
     def get_total_weight(self) -> float:
         """総重量を取得"""
-        total_weight = 0.0
+        total_weight = INITIAL_TOTAL_WEIGHT
+        
         for slot in self.slots:
-            if not slot.is_empty():
-                item = self.item_manager.get_item(slot.item_instance.item_id)
-                if item:
-                    total_weight += item.weight * slot.item_instance.quantity
+            weight = self._calculate_slot_weight(slot)
+            total_weight += weight
+            
         return total_weight
+    
+    def _calculate_slot_weight(self, slot: InventorySlot) -> float:
+        """スロットの重量を計算"""
+        if slot.is_empty():
+            return INITIAL_TOTAL_WEIGHT
+            
+        item = self.item_manager.get_item(slot.item_instance.item_id)
+        if not item:
+            return INITIAL_TOTAL_WEIGHT
+            
+        return item.weight * slot.item_instance.quantity
     
     def get_total_value(self) -> int:
         """総価値を取得"""
-        total_value = 0
+        total_value = INITIAL_TOTAL_VALUE
+        
         for slot in self.slots:
-            if not slot.is_empty():
-                item = self.item_manager.get_item(slot.item_instance.item_id)
-                if item:
-                    total_value += item.price * slot.item_instance.quantity
+            value = self._calculate_slot_value(slot)
+            total_value += value
+            
         return total_value
+    
+    def _calculate_slot_value(self, slot: InventorySlot) -> int:
+        """スロットの価値を計算"""
+        if slot.is_empty():
+            return INITIAL_TOTAL_VALUE
+            
+        item = self.item_manager.get_item(slot.item_instance.item_id)
+        if not item:
+            return INITIAL_TOTAL_VALUE
+            
+        return item.price * slot.item_instance.quantity
     
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式でシリアライズ"""
@@ -309,7 +340,7 @@ class Inventory:
         inventory = cls(
             owner_id=data.get('owner_id', ''),
             inventory_type=InventorySlotType(data.get('inventory_type', 'character')),
-            max_slots=data.get('max_slots', 10)
+            max_slots=data.get('max_slots', DEFAULT_CHARACTER_SLOTS)
         )
         
         # スロットデータを復元
@@ -339,7 +370,7 @@ class InventoryManager:
         inventory = Inventory(
             owner_id=character_id,
             inventory_type=InventorySlotType.CHARACTER,
-            max_slots=10
+            max_slots=DEFAULT_CHARACTER_SLOTS
         )
         self.character_inventories[character_id] = inventory
         logger.info(f"キャラクターインベントリを作成: {character_id}")
@@ -350,7 +381,7 @@ class InventoryManager:
         self.party_inventory = Inventory(
             owner_id=party_id,
             inventory_type=InventorySlotType.PARTY,
-            max_slots=50  # パーティは大容量
+            max_slots=DEFAULT_PARTY_SLOTS
         )
         logger.info(f"パーティインベントリを作成: {party_id}")
         return self.party_inventory

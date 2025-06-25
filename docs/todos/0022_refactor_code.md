@@ -99,10 +99,20 @@
 
    **テスト結果：** 装備関連の30テストすべて成功
 
-8. @src/inventory 以下のコードをFowler式のリファクタリングしましょう。
+8. ✅ @src/inventory 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
     リファクタリング後、テストを実施しエラーを確実に解消してください
     完了後、作業内容をこちらに記載した後一旦commitしてください
+
+   **実施したリファクタリング：**
+   - **Replace Magic Number with Named Constant**: 6個の定数を追加（DEFAULT_CHARACTER_SLOTS、DEFAULT_PARTY_SLOTS、MINIMUM_REMOVE_QUANTITY等）
+   - **Extract Method**: get_total_weightメソッドから_calculate_slot_weightメソッドを抽出
+   - **Extract Method**: get_total_valueメソッドから_calculate_slot_valueメソッドを抽出
+   - **Extract Method**: sort_itemsメソッドから_get_sort_keyメソッドを抽出
+   - **Replace Magic Number with Named Constant**: スロット数、数量、初期値等の魔法数をすべて定数に置換
+   - **Simplify Method**: スロット計算ロジックを独立メソッドに分離して可読性向上
+
+   **テスト結果：** インベントリ関連の24テストすべて成功
 
 9. @src/items 以下のコードをFowler式のリファクタリングしましょう。
     明らかに使用されていない処理(特にPanda3D用コード)やファイルは削除しましょう。
