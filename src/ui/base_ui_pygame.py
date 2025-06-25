@@ -663,6 +663,24 @@ class UIManager:
             if dialog_id in self.modal_stack:
                 self.modal_stack.remove(dialog_id)
     
+    def hide_all(self):
+        """すべてのモーダル要素（ダイアログ・メニュー）を非表示"""
+        # モーダルスタックの要素をすべて非表示にする
+        for modal_id in self.modal_stack.copy():  # コピーを作成して安全にイテレート
+            if modal_id in self.dialogs:
+                self.hide_dialog(modal_id)
+            elif modal_id in self.menus:
+                self.hide_menu(modal_id)
+        
+        # すべての通常要素も非表示にする
+        for element in self.elements.values():
+            element.hide()
+        
+        # モーダルスタックをクリア
+        self.modal_stack.clear()
+        
+        logger.debug("すべてのUI要素を非表示にしました")
+    
     def handle_event(self, event: pygame.event.Event) -> bool:
         """イベント処理（モーダルスタックを考慮）"""
         # pygame-guiイベント処理

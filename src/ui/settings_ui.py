@@ -151,8 +151,14 @@ class SettingsUI:
             self._close_settings_ui
         )
         
-        ui_manager.add_menu(settings_menu)
-        ui_manager.show_menu(settings_menu.menu_id, modal=True)
+        try:
+            if ui_manager is not None:
+                ui_manager.add_menu(settings_menu)
+                ui_manager.show_menu(settings_menu.menu_id, modal=True)
+            else:
+                logger.error("ui_managerが初期化されていないため、メニューを表示できません")
+        except Exception as e:
+            logger.error(f"メニュー表示中にエラーが発生しました: {e}")
         self.is_open = True
         
         logger.info("設定メニューを表示")
@@ -235,8 +241,14 @@ class SettingsUI:
             self._back_to_main_settings
         )
         
-        ui_manager.add_menu(gameplay_menu)
-        ui_manager.show_menu(gameplay_menu.menu_id, modal=True)
+        try:
+            if ui_manager is not None:
+                ui_manager.add_menu(gameplay_menu)
+                ui_manager.show_menu(gameplay_menu.menu_id, modal=True)
+            else:
+                logger.error("ui_managerが初期化されていないため、ゲームプレイ設定メニューを表示できません")
+        except Exception as e:
+            logger.error(f"ゲームプレイ設定メニュー表示中にエラーが発生しました: {e}")
     
     def _show_controls_settings(self):
         """操作設定を表示"""
@@ -287,8 +299,14 @@ class SettingsUI:
             self._back_to_main_settings
         )
         
-        ui_manager.add_menu(controls_menu)
-        ui_manager.show_menu(controls_menu.menu_id, modal=True)
+        try:
+            if ui_manager is not None:
+                ui_manager.add_menu(controls_menu)
+                ui_manager.show_menu(controls_menu.menu_id, modal=True)
+            else:
+                logger.error("ui_managerが初期化されていないため、コントロール設定メニューを表示できません")
+        except Exception as e:
+            logger.error(f"コントロール設定メニュー表示中にエラーが発生しました: {e}")
     
     def _show_audio_settings(self):
         """音声設定を表示"""
@@ -332,8 +350,14 @@ class SettingsUI:
             self._back_to_main_settings
         )
         
-        ui_manager.add_menu(audio_menu)
-        ui_manager.show_menu(audio_menu.menu_id, modal=True)
+        try:
+            if ui_manager is not None:
+                ui_manager.add_menu(audio_menu)
+                ui_manager.show_menu(audio_menu.menu_id, modal=True)
+            else:
+                logger.error("ui_managerが初期化されていないため、音声設定メニューを表示できません")
+        except Exception as e:
+            logger.error(f"音声設定メニュー表示中にエラーが発生しました: {e}")
     
     def _show_graphics_settings(self):
         """表示設定を表示"""
@@ -385,8 +409,14 @@ class SettingsUI:
             self._back_to_main_settings
         )
         
-        ui_manager.add_menu(graphics_menu)
-        ui_manager.show_menu(graphics_menu.menu_id, modal=True)
+        try:
+            if ui_manager is not None:
+                ui_manager.add_menu(graphics_menu)
+                ui_manager.show_menu(graphics_menu.menu_id, modal=True)
+            else:
+                logger.error("ui_managerが初期化されていないため、グラフィック設定メニューを表示できません")
+        except Exception as e:
+            logger.error(f"グラフィック設定メニュー表示中にエラーが発生しました: {e}")
     
     def _show_accessibility_settings(self):
         """アクセシビリティ設定を表示"""
@@ -441,8 +471,14 @@ class SettingsUI:
             self._back_to_main_settings
         )
         
-        ui_manager.add_menu(accessibility_menu)
-        ui_manager.show_menu(accessibility_menu.menu_id, modal=True)
+        try:
+            if ui_manager is not None:
+                ui_manager.add_menu(accessibility_menu)
+                ui_manager.show_menu(accessibility_menu.menu_id, modal=True)
+            else:
+                logger.error("ui_managerが初期化されていないため、アクセシビリティ設定メニューを表示できません")
+        except Exception as e:
+            logger.error(f"アクセシビリティ設定メニュー表示中にエラーが発生しました: {e}")
     
     def _show_keybind_settings(self):
         """キーバインド設定を表示"""
@@ -480,8 +516,14 @@ class SettingsUI:
             self._show_controls_settings
         )
         
-        ui_manager.add_menu(keybind_menu)
-        ui_manager.show_menu(keybind_menu.menu_id, modal=True)
+        try:
+            if ui_manager is not None:
+                ui_manager.add_menu(keybind_menu)
+                ui_manager.show_menu(keybind_menu.menu_id, modal=True)
+            else:
+                logger.error("ui_managerが初期化されていないため、キーバインド設定メニューを表示できません")
+        except Exception as e:
+            logger.error(f"キーバインド設定メニュー表示中にエラーが発生しました: {e}")
     
     def _get_setting_value(self, key: str) -> Any:
         """設定値を取得（保留中の変更を優先）"""
@@ -533,8 +575,14 @@ class SettingsUI:
         cancel_button.on_click = self._close_dialog
         dialog.add_element(cancel_button)
         
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
+        try:
+            if ui_manager is not None:
+                ui_manager.add_dialog(dialog)
+                ui_manager.show_dialog(dialog.dialog_id)
+            else:
+                logger.error("ui_managerが初期化されていないため、ダイアログを表示できません")
+        except Exception as e:
+            logger.error(f"ダイアログ表示中にエラーが発生しました: {e}")
     
     def _reset_keybinds(self):
         """キーバインドを初期化"""
@@ -561,8 +609,14 @@ class SettingsUI:
         no_button.on_click = self._close_dialog
         dialog.add_element(no_button)
         
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
+        try:
+            if ui_manager is not None:
+                ui_manager.add_dialog(dialog)
+                ui_manager.show_dialog(dialog.dialog_id)
+            else:
+                logger.error("ui_managerが初期化されていないため、ダイアログを表示できません")
+        except Exception as e:
+            logger.error(f"ダイアログ表示中にエラーが発生しました: {e}")
     
     def _execute_keybind_reset(self):
         """キーバインド初期化を実行"""
@@ -680,8 +734,14 @@ class SettingsUI:
         no_button.on_click = self._close_dialog
         dialog.add_element(no_button)
         
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
+        try:
+            if ui_manager is not None:
+                ui_manager.add_dialog(dialog)
+                ui_manager.show_dialog(dialog.dialog_id)
+            else:
+                logger.error("ui_managerが初期化されていないため、ダイアログを表示できません")
+        except Exception as e:
+            logger.error(f"ダイアログ表示中にエラーが発生しました: {e}")
     
     def _reset_all_settings(self):
         """すべての設定を初期化"""
@@ -709,9 +769,10 @@ class SettingsUI:
     def hide(self):
         """設定UIを非表示"""
         try:
-            ui_manager.hide_menu("settings_main")
-        except:
-            pass
+            if ui_manager is not None:
+                ui_manager.hide_menu("settings_main")
+        except Exception as e:
+            logger.warning(f"設定UI非表示処理でエラーが発生しました: {e}")
         self.is_open = False
         logger.debug("設定UIを非表示にしました")
     
@@ -763,8 +824,14 @@ class SettingsUI:
             back_button.on_click = self._close_dialog
             dialog.add_element(back_button)
             
-            ui_manager.register_element(dialog)
-            ui_manager.show_element(dialog.element_id, modal=True)
+            try:
+                if ui_manager is not None:
+                    ui_manager.register_element(dialog)
+                    ui_manager.show_element(dialog.element_id, modal=True)
+                else:
+                    logger.error("ui_managerが初期化されていないため、ダイアログ要素を表示できません")
+            except Exception as e:
+                logger.error(f"ダイアログ要素表示中にエラーが発生しました: {e}")
         else:
             self._actually_close()
     
@@ -786,7 +853,13 @@ class SettingsUI:
     
     def _close_dialog(self):
         """ダイアログを閉じる"""
-        ui_manager.hide_all()
+        try:
+            if ui_manager is not None:
+                ui_manager.hide_all()
+            else:
+                logger.warning("ui_managerが初期化されていません")
+        except Exception as e:
+            logger.error(f"ダイアログを閉じる際にエラーが発生しました: {e}")
     
     def _show_message(self, message: str):
         """メッセージを表示"""
@@ -804,8 +877,14 @@ class SettingsUI:
         ok_button.on_click = self._close_dialog
         dialog.add_element(ok_button)
         
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
+        try:
+            if ui_manager is not None:
+                ui_manager.add_dialog(dialog)
+                ui_manager.show_dialog(dialog.dialog_id)
+            else:
+                logger.error("ui_managerが初期化されていないため、ダイアログを表示できません")
+        except Exception as e:
+            logger.error(f"ダイアログ表示中にエラーが発生しました: {e}")
     
     def _show_new_game_confirmation(self):
         """新規ゲーム開始の確認"""
@@ -831,8 +910,14 @@ class SettingsUI:
         cancel_button.on_click = self._close_dialog
         dialog.add_element(cancel_button)
         
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
+        try:
+            if ui_manager is not None:
+                ui_manager.add_dialog(dialog)
+                ui_manager.show_dialog(dialog.dialog_id)
+            else:
+                logger.error("ui_managerが初期化されていないため、ダイアログを表示できません")
+        except Exception as e:
+            logger.error(f"ダイアログ表示中にエラーが発生しました: {e}")
     
     def _show_final_new_game_confirmation(self):
         """新規ゲーム開始の最終確認"""
@@ -859,8 +944,14 @@ class SettingsUI:
         cancel_button.on_click = self._close_dialog
         dialog.add_element(cancel_button)
         
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
+        try:
+            if ui_manager is not None:
+                ui_manager.add_dialog(dialog)
+                ui_manager.show_dialog(dialog.dialog_id)
+            else:
+                logger.error("ui_managerが初期化されていないため、ダイアログを表示できません")
+        except Exception as e:
+            logger.error(f"ダイアログ表示中にエラーが発生しました: {e}")
     
     def _execute_new_game(self):
         """新規ゲームを実行"""
