@@ -12,6 +12,7 @@ from src.rendering.dungeon_renderer_pygame import DungeonRendererPygame
 from src.ui.dungeon_ui_pygame import create_pygame_dungeon_ui
 from src.utils.logger import logger
 from src.utils.constants import *
+from src.utils.constants import GameLocation
 
 
 class GameManager:
@@ -29,7 +30,7 @@ class GameManager:
         # ゲーム状態
         self.game_state = "startup"
         self.paused = False
-        self.current_location = "overworld"  # "overworld" or "dungeon"
+        self.current_location = GameLocation.OVERWORLD  # GameLocation.OVERWORLD or GameLocation.DUNGEON
         
         # マネージャーの初期化（名前衝突を避ける）
         self.game_config = config_manager
@@ -189,7 +190,7 @@ class GameManager:
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 self.dungeon_renderer._show_menu()
             # 地上部では設定画面をオーバーワールドマネージャーに委譲
-            elif self.current_location == "overworld" and self.overworld_manager:
+            elif self.current_location == GameLocation.OVERWORLD and self.overworld_manager:
                 # オーバーワールドマネージャーが独自にESCキーを処理するため、
                 # ここでは何もしない（重複処理を避ける）
                 pass
@@ -238,7 +239,7 @@ class GameManager:
                     logger.error(f"手動復旧中にエラー: {e}")
             
             # 地上部では既存の処理
-            elif self.current_location == "overworld":
+            elif self.current_location == GameLocation.OVERWORLD:
                 logger.info("地上部でのアクションボタン")
     
     def _on_debug_toggle(self, action: str, pressed: bool, input_type):
@@ -457,8 +458,16 @@ class GameManager:
                 # 成功した場合のみ地上部を退場
                 self.overworld_manager.exit_overworld()
                 
-                self.current_location = "dungeon"
+                self.current_location = GameLocation.DUNGEON
                 self.set_game_state("dungeon_exploration")
+                
+                # ダンジョンUIマネージャーにダンジョン状態を設定（小地図の初期化）
+                if self.dungeon_renderer and hasattr(self.dungeon_renderer, 'dungeon_ui_manager'):
+                    if self.dungeon_renderer.dungeon_ui_manager:
+                        current_dungeon = self.dungeon_manager.current_dungeon
+                        if current_dungeon:
+                            logger.info("ダンジョンUIマネージャーにダンジョン状態を設定")
+                            self.dungeon_renderer.dungeon_ui_manager.set_dungeon_state(current_dungeon)
                 
                 # ダンジョンレンダラーで自動復旧試行
                 if self.dungeon_renderer:
@@ -510,15 +519,15 @@ class GameManager:
         logger.info("地上部へ遷移開始")
         
         # ダンジョンを退場（ダンジョンにいる場合のみ）
-        if self.current_location == "dungeon":
+        if self.current_location == GameLocation.DUNGEON:
             self.dungeon_manager.exit_dungeon()
         
         # 地上部に入場（自動回復付き）
-        from_dungeon = (self.current_location == "dungeon")
+        from_dungeon = (self.current_location == GameLocation.DUNGEON)
         success = self.overworld_manager.enter_overworld(self.current_party, from_dungeon)
         
         if success:
-            self.current_location = "overworld"
+            self.current_location = GameLocation.OVERWORLD
             self.set_game_state("overworld_exploration")
             logger.info("地上部への遷移が完了しました")
             return True
@@ -547,9 +556,9 @@ class GameManager:
         """ゲーム状態の保存"""
         try:
             # 現在の場所に応じてセーブ
-            if self.current_location == "overworld":
+            if self.current_location == GameLocation.OVERWORLD:
                 success = self.overworld_manager.save_overworld_state(slot_id)
-            elif self.current_location == "dungeon":
+            elif self.current_location == GameLocation.DUNGEON:
                 success = self.dungeon_manager.save_dungeon(slot_id)
             else:
                 logger.error(f"未知の場所: {self.current_location}")
@@ -586,7 +595,7 @@ class GameManager:
                 logger.error("ゲーム状態データが見つかりません")
                 return False
             
-            location = state_data.get('current_location', 'overworld')
+            location = state_data.get('current_location', GameLocation.OVERWORLD)
             game_state = state_data.get('game_state', 'overworld_exploration')
             party_id = state_data.get('party_id')
             
@@ -599,11 +608,11 @@ class GameManager:
                     self.set_current_party(party)
             
             # 場所に応じて読み込み
-            if location == "overworld":
+            if location == GameLocation.OVERWORLD:
                 success = self.overworld_manager.load_overworld_state(slot_id)
                 if success and self.current_party:
                     self.overworld_manager.enter_overworld(self.current_party)
-            elif location == "dungeon":
+            elif location == GameLocation.DUNGEON:
                 success = self.dungeon_manager.load_dungeon(slot_id)
                 if success and self.current_party:
                     # ダンジョン状態を復元
@@ -693,8 +702,13 @@ class GameManager:
                         ui_handled = self.ui_manager.handle_event(event)
                     
                     # オーバーワールドマネージャーでイベント処理
-                    if not ui_handled and self.current_location == "overworld" and self.overworld_manager:
+                    if not ui_handled and self.current_location == GameLocation.OVERWORLD and self.overworld_manager:
                         ui_handled = self.overworld_manager.handle_event(event)
+                    
+                    # ダンジョンUIマネージャーでイベント処理
+                    if not ui_handled and self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
+                        if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
+                            ui_handled = self.dungeon_renderer.ui_manager.handle_input(event)
                     
                     # UIで処理されなかった場合のみ入力マネージャーに送信
                     if not ui_handled and hasattr(self, 'input_manager'):
@@ -728,10 +742,10 @@ class GameManager:
     
     def _render_current_state(self):
         """現在の状態に応じた描画"""
-        if self.current_location == "overworld" and self.overworld_manager:
+        if self.current_location == GameLocation.OVERWORLD and self.overworld_manager:
             # 地上部の描画
             self.overworld_manager.render(self.screen)
-        elif self.current_location == "dungeon" and self.dungeon_renderer and self.dungeon_manager:
+        elif self.current_location == GameLocation.DUNGEON and self.dungeon_renderer and self.dungeon_manager:
             # ダンジョンの描画
             current_dungeon = self.dungeon_manager.current_dungeon
             if current_dungeon and current_dungeon.player_position:
