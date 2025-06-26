@@ -1,8 +1,23 @@
-# TODO - 完了
+# TODO
+
+## Phase 1
 
 ダンジョンに周辺マップを表示するUIを追加する
 
-## 実装完了
+## Phase 2
+
+試しましたが、"M"を押しても小地図は表示されず、以下のエラーログが表示されました
+```
+dungeon - ERROR - アクションコールバックエラー magic: name 'GameLocation' is not defined
+```
+WASDキーを入力しても、同様のエラーが発生する
+```
+dungeon - ERROR - アクションコールバックエラー turn_left: name 'GameLocation' is not defined
+```
+
+# 状況
+
+## Phase1:実装完了
 
 ✅ **小地図UI機能の実装が完了しました**
 
