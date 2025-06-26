@@ -43,7 +43,7 @@ class RaycastConfig:
 @dataclass
 class WallRenderConfig:
     """壁描画設定"""
-    height: int = 64
+    height: int = 16
     distance_scale: float = 50.0
     render_width: int = 1  # 滑らかな描画のため幅を1に
     min_height: int = 1
@@ -53,7 +53,7 @@ class WallRenderConfig:
     
     # 視線角度設定
     ceiling_ratio: float = 0.3  # 天井の比率
-    wall_position_ratio: float = 0.25  # 壁の位置（利用可能領域の割合）
+    wall_position_ratio: float = 0.1  # 壁の位置（利用可能領域の割合）
     
     # 色調整設定
     corner_brightness_multiplier: float = 1.3  # 角部分の明度倍率
