@@ -20,6 +20,17 @@
 ## Bugs history
 
 
+### 修正済み (2025-06-26)
+
+* [x] 地上マップでキャラクターの画像や名前が地上マップの背景に隠れて表示されない
+  - 修正内容: キャラクターステータスバーをUIマネージャーの管理下に追加
+  - 問題: ステータスバーがUIマネージャーのelementsに追加されておらず、render順序が不適切だった
+  - 修正箇所: 
+    - overworld_manager_pygame.py: _initialize_character_status_barでui_manager.add_element()を追加
+    - overworld_manager_pygame.py: render()メソッドから直接描画を削除
+  - テスト: test_character_status_bar_fix.pyで修正を確認
+  - 詳細: docs/fixed/0003_overworld_status_bar_rendering.md
+
 ### 修正済み (2025-06-24)
 
 * [x] ダンジョンへ遷移したあと、現在位置・レベル・コンパスの基本UIと操作ガイドUI以外灰色となり何も表示されない

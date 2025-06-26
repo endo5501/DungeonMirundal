@@ -580,6 +580,10 @@ class OverworldManager:
             # キャラクターステータスバーを作成
             self.character_status_bar = create_character_status_bar(screen_width, screen_height)
             
+            # UIマネージャーに追加（常に表示される要素として）
+            if self.ui_manager and self.character_status_bar:
+                self.ui_manager.add_element(self.character_status_bar)
+            
             # 現在のパーティが設定されている場合は設定
             if self.current_party:
                 self.character_status_bar.set_party(self.current_party)
@@ -1046,12 +1050,8 @@ class OverworldManager:
                         info_rect = info_text.get_rect(center=(screen.get_width()//2, 120))
                         screen.blit(info_text, info_rect)
         
-        # キャラクターステータスバーを描画
-        if self.character_status_bar:
-            try:
-                self.character_status_bar.render(screen, font)
-            except Exception as e:
-                logger.warning(f"キャラクターステータスバー描画エラー: {e}")
+        # キャラクターステータスバーの描画はUIマネージャーが行うため、ここでは描画しない
+        # （UIマネージャーのelementsに追加済み）
     
     def _handle_escape_from_menu_stack(self) -> bool:
         """MenuStackManagerからのESCキー処理コールバック"""
