@@ -6,6 +6,7 @@ import pygame
 
 from src.ui.base_ui_pygame import UIElement, UIButton, UIText, UIMenu, UIState, ui_manager
 from src.ui.character_status_bar import CharacterStatusBar, create_character_status_bar
+from src.ui.small_map_ui_pygame import SmallMapUI
 from src.character.party import Party
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -50,6 +51,10 @@ class DungeonUIManagerPygame:
         # キャラクターステータスバー
         self.character_status_bar: Optional[CharacterStatusBar] = None
         self._initialize_character_status_bar()
+        
+        # 小地図UI
+        self.small_map_ui: Optional[SmallMapUI] = None
+        self.dungeon_state = None
         
         # コールバック
         self.callbacks: Dict[str, Callable] = {}
@@ -117,6 +122,21 @@ class DungeonUIManagerPygame:
         self.callbacks[action] = callback
         logger.debug(f"コールバックを設定: {action}")
     
+    def set_dungeon_state(self, dungeon_state):
+        """ダンジョン状態を設定"""
+        self.dungeon_state = dungeon_state
+        
+        # 小地図UIを初期化/更新
+        if dungeon_state:
+            if self.small_map_ui is None:
+                # フォントマネージャーのモック（必要に応じて実装）
+                font_manager = type('MockFontManager', (), {})()
+                self.small_map_ui = SmallMapUI(self.screen, font_manager, dungeon_state)
+            else:
+                self.small_map_ui.update_dungeon_state(dungeon_state)
+        
+        logger.debug("ダンジョン状態を設定しました")
+    
     def _initialize_character_status_bar(self):
         """キャラクターステータスバーを初期化"""
         try:
@@ -155,6 +175,11 @@ class DungeonUIManagerPygame:
     
     def handle_input(self, event) -> bool:
         """入力処理"""
+        # 小地図のイベント処理（メニューが開いていなくても処理）
+        if self.small_map_ui:
+            if self.small_map_ui.handle_event(event):
+                return True
+        
         if not self.is_menu_open:
             return False
         
@@ -246,6 +271,13 @@ class DungeonUIManagerPygame:
                 self.character_status_bar.render(self.screen, self.font_medium)
             except Exception as e:
                 logger.warning(f"ダンジョン用キャラクターステータスバー描画エラー: {e}")
+        
+        # 小地図を描画
+        if self.small_map_ui:
+            try:
+                self.small_map_ui.render()
+            except Exception as e:
+                logger.warning(f"小地図UI描画エラー: {e}")
     
     def update(self):
         """UI更新"""
