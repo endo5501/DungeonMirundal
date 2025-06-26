@@ -363,14 +363,20 @@ class DungeonRendererPygame:
     
     def _check_wall_collision(self, cell: DungeonCell, local_x: float, local_y: float) -> bool:
         """セル内での壁との衝突をチェック"""
-        # セルの境界での壁チェック
-        if local_x <= 0.1 and cell.walls.get(Direction.WEST, False):
+        # より狭い境界での壁チェック（0.05で判定）
+        threshold = 0.05
+        
+        # 西の壁
+        if local_x <= threshold and cell.walls.get(Direction.WEST, False):
             return True
-        if local_x >= 0.9 and cell.walls.get(Direction.EAST, False):
+        # 東の壁    
+        if local_x >= (1.0 - threshold) and cell.walls.get(Direction.EAST, False):
             return True
-        if local_y <= 0.1 and cell.walls.get(Direction.NORTH, False):
+        # 北の壁
+        if local_y <= threshold and cell.walls.get(Direction.NORTH, False):
             return True
-        if local_y >= 0.9 and cell.walls.get(Direction.SOUTH, False):
+        # 南の壁
+        if local_y >= (1.0 - threshold) and cell.walls.get(Direction.SOUTH, False):
             return True
         
         return False
@@ -656,7 +662,8 @@ class DungeonRendererPygame:
     
     def _get_ray_start_position(self, player_pos: PlayerPosition) -> tuple:
         """レイの開始位置を取得"""
-        return float(player_pos.x), float(player_pos.y)
+        # プレイヤーをセルの中央に配置してレイキャスティングを開始
+        return float(player_pos.x) + 0.5, float(player_pos.y) + 0.5
     
     def _advance_ray(self, ray_x: float, ray_y: float, dx: float, dy: float, distance: float) -> tuple:
         """レイを前進させる"""
