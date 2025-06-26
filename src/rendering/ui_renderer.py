@@ -74,9 +74,14 @@ class UIRenderer:
         # ヘルプテキスト
         self._render_help_text()
         
-        # キャラクターステータスバー
+        # ダンジョンUIマネージャーのオーバーレイ（ステータスバー、小地図等）
         if dungeon_ui_manager:
             try:
+                # ダンジョン状態を更新して小地図を最新状態にする
+                if hasattr(dungeon_ui_manager, 'set_dungeon_state'):
+                    dungeon_ui_manager.set_dungeon_state(dungeon_state)
+                
+                # オーバーレイを描画（ステータスバーと小地図を含む）
                 dungeon_ui_manager.render_overlay()
             except Exception as e:
                 logger.warning(f"ダンジョンステータスバー描画エラー: {e}")

@@ -113,10 +113,14 @@ class SmallMapUI(UIElement):
             for y in range(player_y - half_range, player_y + half_range + 1):
                 cell = level_data.cells.get((x, y))
                 if cell:
-                    # 探索済みまたは訪問済みのセルのみ表示
+                    # 全てのセルを表示（デバッグ用）または探索システムが実装されていない場合
+                    # 実装では探索済みまたは訪問済みのセルのみを表示するべき
                     if hasattr(cell, 'discovered') and cell.discovered:
                         visible_cells.append(cell)
                     elif hasattr(cell, 'visited') and cell.visited:
+                        visible_cells.append(cell)
+                    else:
+                        # 探索システムが未実装の場合は、プレイヤー周辺のセルを表示
                         visible_cells.append(cell)
         
         return visible_cells
@@ -249,6 +253,9 @@ class SmallMapUI(UIElement):
         # 境界線を描画
         pygame.draw.rect(self.map_surface, MAP_BORDER_COLOR, self.map_surface.get_rect(), 2)
         
+        # デバッグ情報：描画可能セルの数を確認
+        visible_cells = self.get_visible_cells()
+        
         # 探索済みセルを描画
         self.draw_explored_cells()
         
@@ -257,6 +264,13 @@ class SmallMapUI(UIElement):
         
         # プレイヤーマーカーを描画
         self.draw_player_marker()
+        
+        # デバッグ情報をマップに表示
+        if hasattr(pygame, 'font') and pygame.font.get_init():
+            debug_font = pygame.font.SysFont(None, 14)
+            debug_text = f"Cells: {len(visible_cells)}"
+            debug_surface = debug_font.render(debug_text, True, (255, 255, 255))
+            self.map_surface.blit(debug_surface, (5, 5))
         
         # メインスクリーンに描画
         self.screen.blit(self.map_surface, self.map_rect)

@@ -130,6 +130,18 @@ class DungeonRendererPygame:
             # UI描画（簡易版）
             self.ui_renderer.render_basic_ui(player_position, level)
             
+            # ダンジョンUIマネージャーのオーバーレイ（小地図等）も描画
+            if self.dungeon_ui_manager:
+                try:
+                    # ダンジョン状態を構築
+                    if self.dungeon_manager and self.dungeon_manager.current_dungeon:
+                        dungeon_state = self.dungeon_manager.current_dungeon
+                        if hasattr(self.dungeon_ui_manager, 'set_dungeon_state'):
+                            self.dungeon_ui_manager.set_dungeon_state(dungeon_state)
+                        self.dungeon_ui_manager.render_overlay()
+                except Exception as e:
+                    logger.warning(f"直接描画でのオーバーレイエラー: {e}")
+            
             # 画面更新
             pygame.display.flip()
             return True

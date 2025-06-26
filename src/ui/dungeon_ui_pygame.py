@@ -125,7 +125,7 @@ class DungeonUIManagerPygame:
     def set_dungeon_state(self, dungeon_state):
         """ダンジョン状態を設定"""
         self.dungeon_state = dungeon_state
-        logger.info(f"Setting dungeon state: {dungeon_state}")
+        logger.debug(f"Setting dungeon state: player at ({dungeon_state.player_position.x}, {dungeon_state.player_position.y})" if dungeon_state.player_position else "No player position")
         
         # 小地図UIを初期化/更新
         if dungeon_state:
@@ -136,10 +136,10 @@ class DungeonUIManagerPygame:
                 self.small_map_ui = SmallMapUI(self.screen, font_manager, dungeon_state)
                 logger.info(f"SmallMapUI created - visibility: {self.small_map_ui.is_visible}")
             else:
-                logger.info("Updating existing SmallMapUI")
+                # 既存の小地図UIを更新
                 self.small_map_ui.update_dungeon_state(dungeon_state)
         
-        logger.info("ダンジョン状態を設定しました")
+        logger.debug("ダンジョン状態を設定しました")
     
     def _initialize_character_status_bar(self):
         """キャラクターステータスバーを初期化"""
@@ -279,7 +279,11 @@ class DungeonUIManagerPygame:
         # 小地図を描画
         if self.small_map_ui:
             try:
-                self.small_map_ui.render()
+                if self.small_map_ui.is_visible:
+                    self.small_map_ui.render()
+                    logger.debug("小地図を描画しました")
+                else:
+                    logger.debug("小地図は非表示状態です")
             except Exception as e:
                 logger.warning(f"小地図UI描画エラー: {e}")
     

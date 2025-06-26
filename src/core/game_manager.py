@@ -707,8 +707,8 @@ class GameManager:
                     
                     # ダンジョンUIマネージャーでイベント処理
                     if not ui_handled and self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
-                        if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
-                            ui_handled = self.dungeon_renderer.ui_manager.handle_input(event)
+                        if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
+                            ui_handled = self.dungeon_renderer.dungeon_ui_manager.handle_input(event)
                     
                     # UIで処理されなかった場合のみ入力マネージャーに送信
                     if not ui_handled and hasattr(self, 'input_manager'):
@@ -756,6 +756,16 @@ class GameManager:
                         current_dungeon.player_position,
                         current_level
                     )
+                    
+                    # ダンジョンUIマネージャーの追加描画（小地図等）
+                    if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
+                        try:
+                            # ダンジョン状態を最新に更新
+                            self.dungeon_renderer.dungeon_ui_manager.set_dungeon_state(current_dungeon)
+                            # オーバーレイを描画
+                            self.dungeon_renderer.dungeon_ui_manager.render_overlay()
+                        except Exception as e:
+                            logger.warning(f"メインループでのダンジョンUI描画エラー: {e}")
         else:
             # スタートアップ画面
             self._render_startup_screen()
