@@ -61,3 +61,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 関連資料
 - [Pygame Documentation](https://www.pygame.org/docs/)
+
+## Gemini CLI 連携ガイド
+
+### 目的
+ユーザーが **「Geminiと相談しながら進めて」** (または同義語)と指示した場合、または非常に困難なタスクに出会った際、Claude は以降のタスクを **Gemini CLI** と協調しながら進める。
+Gemini から得た回答はそのまま提示し、Claude 自身の解説・統合も付け加えることで、両エージェントの知見を融合する。
+
+---
+
+### トリガー
+- 正規表現: `/Gemini.*相談しながら/`
+- 例:
+- 「Geminiと相談しながら進めて」
+- 「この件、Geminiと話しつつやりましょう」
+
+---
+
+### 基本フロー
+1. **PROMPT 生成**
+Claude はユーザーの要件を 1 つのテキストにまとめ、環境変数 `$PROMPT` に格納する。
+
+2. **Gemini CLI 呼び出し**
+```bash
+gemini <<EOF
+$PROMPT
+EOF
