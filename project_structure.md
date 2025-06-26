@@ -1,99 +1,137 @@
-# プロジェクト構造設計
+# プロジェクト構造
 
-## ディレクトリ構成
+このドキュメントは、Wizardry風ダンジョン探索RPGプロジェクトのディレクトリ構造と技術スタックについて説明します。
+
+## ディレクトリ構造
+
+プロジェクトは以下のディレクトリ構造で構成されています。
 
 ```
-dungeon/
-├── main.py                 # エントリーポイント
-├── config/                 # 設定ファイル
-│   ├── game_config.yaml   # ゲーム設定
-│   ├── characters.yaml    # キャラクター定義
-│   ├── items.yaml         # アイテム定義
-│   ├── monsters.yaml      # モンスター定義
-│   ├── spells.yaml        # 魔術・祈祷定義
-│   └── text/              # 多言語対応テキスト
-│       ├── ja.yaml        # 日本語
-│       └── en.yaml        # 英語
-├── src/                   # ソースコード
-│   ├── core/              # コア機能
-│   │   ├── __init__.py
-│   │   ├── game_manager.py
-│   │   ├── config_manager.py
-│   │   ├── save_manager.py
-│   │   └── input_manager.py
-│   ├── character/         # キャラクター関連
-│   │   ├── __init__.py
-│   │   ├── character.py
-│   │   ├── party.py
-│   │   └── stats.py
-│   ├── ui/                # UI関連
-│   │   ├── __init__.py
-│   │   ├── base_ui.py
-│   │   ├── menu.py
-│   │   ├── inventory.py
-│   │   └── dialog.py
-│   ├── overworld/         # 地上部
-│   │   ├── __init__.py
-│   │   ├── facilities/
-│   │   │   ├── __init__.py
-│   │   │   ├── guild.py
-│   │   │   ├── inn.py
-│   │   │   ├── shop.py
-│   │   │   ├── temple.py
-│   │   │   └── magic_guild.py
-│   │   └── overworld_manager.py
-│   ├── dungeon/           # ダンジョン関連
-│   │   ├── __init__.py
-│   │   ├── dungeon_generator.py
-│   │   ├── dungeon_renderer.py
-│   │   ├── navigation.py
-│   │   └── encounters.py
-│   ├── combat/            # 戦闘システム
-│   │   ├── __init__.py
-│   │   ├── combat_manager.py
-│   │   ├── monster.py
-│   │   └── battle_ui.py
-│   ├── items/             # アイテムシステム
-│   │   ├── __init__.py
-│   │   ├── item.py
-│   │   ├── inventory.py
-│   │   └── equipment.py
-│   └── utils/             # ユーティリティ
-│       ├── __init__.py
-│       ├── constants.py
-│       ├── helpers.py
-│       └── logger.py
-├── assets/                # リソース
-│   ├── models/           # 3Dモデル
-│   ├── textures/         # テクスチャ
-│   ├── sounds/           # サウンド
-│   └── ui/               # UI画像
-├── saves/                # セーブデータ
-├── tests/                # テストファイル
-├── docs/                 # 開発計画・TODO管理
-│   ├── phase1_todos.md
-│   ├── phase2_todos.md
-│   ├── phase3_todos.md
-│   ├── phase4_todos.md
-│   └── phase5_todos.md
-├── pyproject.toml
-├── CLAUDE.md
-└── README.md
+/
+├── assets/         # ゲーム内で使用する静的リソース
+├── config/         # ゲームの各種設定ファイル (YAML/JSON)
+├── data/           # モンスターデータなどのゲームデータ
+├── docs/           # 開発関連ドキュメント
+├── logs/           # アプリケーションのログファイル
+├── main.py         # エントリーポイント
+├── saves/          # ゲームのセーブデータ
+├── src/            # アプリケーションのソースコード
+└── tests/          # テストコード
 ```
 
-## 設計方針
+### `src` - ソースコード
 
-### モジュール分離
-- 各機能を独立したモジュールとして設計
-- 依存関係を最小限に抑制
-- テスト容易性を重視
+ゲームのコアロジックはすべて`src`ディレクトリ内にあります。
 
-### 設定外部化
-- ハードコーディング禁止
-- YAML形式での設定管理
-- 多言語対応のテキスト分離
+- `src/core/`: ゲーム全体の管理（ゲームマネージャー、設定管理、セーブ機能、入力管理）
+- `src/character/`: プレイヤーキャラクターの作成、ステータス、パーティ管理
+- `src/combat/`: ターンベースの戦闘システム
+- `src/dungeon/`: ダンジョンの生成、マップ管理、探索ロジック
+- `src/overworld/`: 街や城など、ダンジョン外の施設に関するロジック（ギルド、宿屋、商店、教会等）
+- `src/items/`: アイテムの定義、インベントリ管理
+- `src/monsters/`: モンスターの定義、AI、エンカウント管理
+- `src/magic/`: 魔法の定義、効果、学習システム
+- `src/rendering/`: Pygameを使用した一人称視点の疑似3D描画エンジン（レイキャスト、壁面描画、カメラシステム）
+- `src/ui/`: メニュー、ダイアログ、HUDなどのユーザーインターフェース（Pygame実装）
+- `src/effects/`: 状態異常（毒、麻痺など）の効果と管理
+- `src/equipment/`: 武器や防具などの装備システム
+- `src/navigation/`: メニュー画面やゲームシーン間の遷移を管理
 
-### データ管理
-- キャラクター、アイテム、モンスター等の定義は外部ファイル
-- セーブデータの構造化
-- 設定変更の動的反映
+### `config` - 設定ファイル
+
+ゲームの動作を定義する設定ファイルが格納されています。主にYAML/JSON形式で記述されています。
+
+- `characters.yaml`: キャラクターの職業や種族の設定
+- `items.yaml`: アイテムのデータ
+- `monsters.yaml`: モンスターのステータスや行動パターン
+- `dungeons.yaml`: ダンジョンの構造やイベント
+- `game_config.yaml`: ゲーム全体の基本設定
+- `input_settings.yaml`: 入力設定
+- `ui_theme.json`: UIテーマ設定
+- `user_settings.yaml`: ユーザー設定
+- `text/`: 多言語対応テキストファイル
+  - `ja.yaml`: 日本語
+  - `en.yaml`: 英語
+
+### `assets` - アセット
+
+ゲームで使用する画像、音声、モデルなどのリソースファイルです。
+
+- `assets/textures/`: 壁や床などのテクスチャ
+- `assets/sounds/`: 効果音やBGM
+- `assets/ui/`: UI用の画像素材
+- `assets/models/`: 3Dモデル（将来的な拡張用）
+
+### `tests` - テストスイート
+
+包括的なテストファイルが配置されており、一部は機能別に整理されています。
+
+**機能別ディレクトリ**:
+- `tests/rendering/`: レンダリングエンジンの特定テスト（ちらつき修正等）
+- `tests/ui/`: UI要素の詳細テスト（ステータスバー、小マップ等）
+
+**個別テストファイル**:
+- コア機能: `test_config_manager.py`、`test_save_manager.py`
+- キャラクター: `test_character.py`、`test_inventory.py`、`test_equipment.py`
+- 戦闘システム: `test_combat_manager.py`、`test_combat_integration.py`
+- ダンジョン: `test_dungeon_manager.py`、`test_encounter_manager.py`
+- ナビゲーション: `test_navigation_manager.py`、`test_menu_architecture_integration.py`
+- 特定問題修正: 各バグ修正に対応したテストファイル群
+
+### `docs` - 開発管理
+
+体系的な開発計画とバグ管理が行われています。
+
+- `phase1_todos.md` ～ `phase6_todos.md`: 6段階の開発計画
+- `bugs.md`: バグ管理
+- `fixed/`: 修正済みの問題
+- `todos/`: 未解決の課題
+- 仕様書類（魔法仕様、メニュー構造等）
+
+### その他のディレクトリ
+
+- `data/`: モンスターデータなど、設定とは異なる永続的なゲームデータを格納
+- `saves/`: プレイヤーの進捗を保存するセーブファイル
+- `logs/`: デバッグやエラー追跡のためのログファイル
+
+## 技術スタック
+
+- **プログラミング言語:** Python 3.x
+- **フレームワーク/ライブラリ:** Pygame (描画、入力処理)
+- **パッケージ管理:** uv
+- **テスト:** pytest
+- **設定ファイル形式:** YAML, JSON
+
+## ゲームの主な特徴
+
+- **Wizardry風のゲームシステム:** 古典的なDRPGの要素を取り入れた、挑戦的なゲームプレイ
+- **一人称視点の疑似3Dダンジョン:** Pygameで実装された、レトロな雰囲気の3Dグラフィックス
+- **高いカスタマイズ性:** YAMLファイルを編集することで、アイテム、モンスター、ダンジョンなどを容易に変更可能
+- **モジュール分離設計:** 各機能が独立したモジュールとして設計され、テスト容易性を重視
+- **外部ファイル管理:** ハードコーディングを避け、設定やデータは外部ファイルで管理
+
+## 開発方針
+
+### 設計思想
+
+- **外部ファイル管理**: テキスト、キャラクター、アイテム、モンスター等はすべて外部ファイルで管理
+- **多言語化対応**: 翻訳ファイルの差し替えによる多言語化
+- **モジュール分離**: コンポーネントの独立性を重視した構造
+- **ハッシュベース生成**: ダンジョンの構造や難易度をハッシュ値で決定
+
+### テスト駆動開発
+
+- 原則としてテスト駆動開発（TDD）で進める
+- 期待される入出力に基づき、まずテストを作成
+- テストが通過してからコミット
+- 修正完了後はまとめてコミット（コミットメッセージは英語）
+
+### 開発計画
+
+- **総開発期間**: 14週間（6フェーズ）
+- **Phase 1**: 基盤構築（Pygame環境）
+- **Phase 2**: コア機能（キャラクター・UI）
+- **Phase 3**: 地上部（施設システム）
+- **Phase 4**: 装備・魔法システム
+- **Phase 5**: ダンジョン（Wizardry風1人称探索・戦闘）
+- **Phase 6**: 統合・最適化
