@@ -101,20 +101,43 @@ class CharacterSlot:
         current_hp = self.character.derived_stats.current_hp
         max_hp = self.character.derived_stats.max_hp
         
-        # HPテキスト
-        hp_text = f"{current_hp}/{max_hp}"
+        # HPテキスト - スラッシュ文字の問題を回避するため、個別にレンダリング
         try:
-            hp_surface = font.render(hp_text, True, self.text_color)
-            screen.blit(hp_surface, (self.hp_x, self.hp_y))
+            # 現在HPをレンダリング
+            current_hp_text = str(current_hp)
+            current_hp_surface = font.render(current_hp_text, True, self.text_color)
+            screen.blit(current_hp_surface, (self.hp_x, self.hp_y))
+            
+            # スラッシュをレンダリング
+            slash_x = self.hp_x + current_hp_surface.get_width()
+            slash_surface = font.render("/", True, self.text_color)
+            screen.blit(slash_surface, (slash_x, self.hp_y))
+            
+            # 最大HPをレンダリング
+            max_hp_text = str(max_hp)
+            max_hp_x = slash_x + slash_surface.get_width()
+            max_hp_surface = font.render(max_hp_text, True, self.text_color)
+            screen.blit(max_hp_surface, (max_hp_x, self.hp_y))
+            
+            # HPバーの位置計算用に全体の幅を保持
+            total_width = current_hp_surface.get_width() + slash_surface.get_width() + max_hp_surface.get_width()
+            
         except Exception as e:
             logger.warning(f"HP表示エラー: {e}")
-            hp_surface = font.render("?/?", True, self.text_color)
-            screen.blit(hp_surface, (self.hp_x, self.hp_y))
+            # フォールバック：シンプルな表示
+            try:
+                fallback_text = f"{current_hp}-{max_hp}"
+                fallback_surface = font.render(fallback_text, True, self.text_color)
+                screen.blit(fallback_surface, (self.hp_x, self.hp_y))
+                total_width = fallback_surface.get_width()
+            except:
+                # 最終フォールバック
+                total_width = 50
         
         # HPバー
         bar_width = 80
         bar_height = 8
-        bar_x = self.hp_x + hp_surface.get_width() + 10
+        bar_x = self.hp_x + total_width + 10
         bar_y = self.hp_y + 5
         
         # 背景バー
@@ -174,21 +197,20 @@ class CharacterStatusBar(UIElement):
             from src.ui.font_manager_pygame import font_manager
             self.font = font_manager.get_japanese_font(16)
             if self.font:
+                # フォントをキャッシュして再初期化を防ぐ
+                self._cached_font = self.font
                 return
         except Exception as e:
             logger.warning(f"フォントマネージャーの取得に失敗: {e}")
         
         try:
-            # システムフォントで日本語フォントを試す
-            self.font = pygame.font.SysFont('notosanscjk,noto,ipagothic,takao,hiragino,meiryo,msgothic', 16)
+            # フォールバック：デフォルトフォント（安定性優先）
+            self.font = pygame.font.Font(None, 16)
+            self._cached_font = self.font
         except Exception as e:
-            logger.warning(f"システムフォントの取得に失敗: {e}")
-            try:
-                # フォールバック：デフォルトフォント
-                self.font = pygame.font.Font(None, 16)
-            except Exception as e:
-                logger.error(f"デフォルトフォントの取得に失敗: {e}")
-                self.font = None
+            logger.error(f"デフォルトフォントの取得に失敗: {e}")
+            self.font = None
+            self._cached_font = None
     
     def set_party(self, party: Optional[Party]):
         """パーティを設定してキャラクター情報を更新"""
@@ -215,10 +237,18 @@ class CharacterStatusBar(UIElement):
         if self.state != UIState.VISIBLE:
             return
         
-        # フォントを決定
-        use_font = font if font else self.font
+        # フォントを決定（安定性のためキャッシュを優先）
+        if hasattr(self, '_cached_font') and self._cached_font:
+            use_font = self._cached_font
+        else:
+            use_font = font if font else self.font
+            
         if not use_font:
-            return
+            # フォントがない場合は再初期化を試みる
+            self._initialize_font()
+            use_font = self.font
+            if not use_font:
+                return
         
         # 各スロットを描画
         for slot in self.slots:

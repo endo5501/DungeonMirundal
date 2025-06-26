@@ -590,6 +590,7 @@ class UIManager:
         self.elements: Dict[str, UIElement] = {}
         self.menus: Dict[str, UIMenu] = {}
         self.dialogs: Dict[str, UIDialog] = {}
+        self.persistent_elements: Dict[str, UIElement] = {}  # 常に最前面に表示される要素
         self.modal_stack: List[str] = []  # モーダル要素のスタック
         
         # pygame-gui マネージャー（テーマファイル付き）
@@ -639,6 +640,10 @@ class UIManager:
         """要素を追加"""
         self.elements[element.element_id] = element
     
+    def add_persistent_element(self, element: UIElement):
+        """永続要素を追加（常に最前面に表示）"""
+        self.persistent_elements[element.element_id] = element
+    
     def register_element(self, element):
         """要素を登録（互換性のため）"""
         if hasattr(element, 'element_id'):
@@ -652,6 +657,8 @@ class UIManager:
         """要素を表示（互換性のため）"""
         if element_id in self.elements:
             self.elements[element_id].show()
+        elif element_id in self.persistent_elements:
+            self.persistent_elements[element_id].show()
         elif element_id in self.menus:
             self.show_menu(element_id, modal)
         elif element_id in self.dialogs:
@@ -661,6 +668,8 @@ class UIManager:
         """要素を非表示（互換性のため）"""
         if element_id in self.elements:
             self.elements[element_id].hide()
+        elif element_id in self.persistent_elements:
+            self.persistent_elements[element_id].hide()
         elif element_id in self.menus:
             self.hide_menu(element_id)
         elif element_id in self.dialogs:
@@ -670,6 +679,8 @@ class UIManager:
         """要素の登録を解除（互換性のため）"""
         if element_id in self.elements:
             del self.elements[element_id]
+        elif element_id in self.persistent_elements:
+            del self.persistent_elements[element_id]
         elif element_id in self.menus:
             del self.menus[element_id]
         elif element_id in self.dialogs:
@@ -755,6 +766,11 @@ class UIManager:
             if element.handle_event(event):
                 return True
         
+        # 永続要素処理
+        for element in self.persistent_elements.values():
+            if element.handle_event(event):
+                return True
+        
         return False
     
     def update(self, time_delta: float):
@@ -771,12 +787,16 @@ class UIManager:
         for menu in self.menus.values():
             menu.render(self.screen, self.default_font)
         
-        # ダイアログの描画（最前面）
+        # ダイアログの描画
         for dialog in self.dialogs.values():
             dialog.render(self.screen, self.default_font)
         
         # pygame-gui要素の描画
         self.pygame_gui_manager.draw_ui(self.screen)
+        
+        # 永続要素の描画（最前面）
+        for element in self.persistent_elements.values():
+            element.render(self.screen, self.default_font)
 
 
 # グローバルインスタンス（互換性のため）

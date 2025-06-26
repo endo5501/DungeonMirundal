@@ -580,9 +580,9 @@ class OverworldManager:
             # キャラクターステータスバーを作成
             self.character_status_bar = create_character_status_bar(screen_width, screen_height)
             
-            # UIマネージャーに追加（常に表示される要素として）
+            # UIマネージャーに追加（最前面に表示される永続要素として）
             if self.ui_manager and self.character_status_bar:
-                self.ui_manager.add_element(self.character_status_bar)
+                self.ui_manager.add_persistent_element(self.character_status_bar)
             
             # 現在のパーティが設定されている場合は設定
             if self.current_party:

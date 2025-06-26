@@ -59,17 +59,33 @@ class DungeonUIManagerPygame:
         # コールバック
         self.callbacks: Dict[str, Callable] = {}
         
-        # フォント初期化（日本語対応）
+        # フォント初期化（安定性を重視）
         try:
-            # 日本語対応フォントを使用
-            self.font_small = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', 18)
-            self.font_medium = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', 24)
-            self.font_large = pygame.font.SysFont('notosanscjk,hiragino,meiryo,msgothic', 36)
-        except:
+            # フォントマネージャーから取得を試行
+            from src.ui.font_manager_pygame import font_manager
+            self.font_small = font_manager.get_japanese_font(18)
+            self.font_medium = font_manager.get_japanese_font(24)
+            self.font_large = font_manager.get_japanese_font(36)
+            
+            # フォールバック
+            if not self.font_small:
+                self.font_small = font_manager.get_default_font()
+            if not self.font_medium:
+                self.font_medium = font_manager.get_default_font()
+            if not self.font_large:
+                self.font_large = font_manager.get_default_font()
+        except Exception as e:
+            logger.warning(f"フォントマネージャーエラー: {e}")
             # フォールバック：システムデフォルト
-            self.font_small = pygame.font.SysFont(None, 18)
-            self.font_medium = pygame.font.SysFont(None, 24)
-            self.font_large = pygame.font.SysFont(None, 36)
+            try:
+                self.font_small = pygame.font.Font(None, 18)
+                self.font_medium = pygame.font.Font(None, 24)
+                self.font_large = pygame.font.Font(None, 36)
+            except:
+                # 最終フォールバック
+                self.font_small = pygame.font.SysFont(None, 18)
+                self.font_medium = pygame.font.SysFont(None, 24)
+                self.font_large = pygame.font.SysFont(None, 36)
         
         # 色設定
         self.colors = {
@@ -146,6 +162,10 @@ class DungeonUIManagerPygame:
         try:
             # キャラクターステータスバーを作成
             self.character_status_bar = create_character_status_bar(self.screen_width, self.screen_height)
+            
+            # 安定した描画のため強制的に表示状態にする
+            if self.character_status_bar:
+                self.character_status_bar.show()
             
             # 現在のパーティが設定されている場合は設定
             if self.current_party:
@@ -269,14 +289,7 @@ class DungeonUIManagerPygame:
     
     def render_overlay(self):
         """オーバーレイUI（ステータスバー等）を描画"""
-        # キャラクターステータスバーを描画
-        if self.character_status_bar:
-            try:
-                self.character_status_bar.render(self.screen, self.font_medium)
-            except Exception as e:
-                logger.warning(f"ダンジョン用キャラクターステータスバー描画エラー: {e}")
-        
-        # 小地図を描画
+        # 小地図を最初に描画（背景層）
         if self.small_map_ui:
             try:
                 if self.small_map_ui.is_visible:
@@ -286,6 +299,14 @@ class DungeonUIManagerPygame:
                     logger.debug("小地図は非表示状態です")
             except Exception as e:
                 logger.warning(f"小地図UI描画エラー: {e}")
+        
+        # キャラクターステータスバーを最後に描画（最前面層）
+        if self.character_status_bar:
+            try:
+                # ステータスバー自体のフォントを使用（安定性向上）
+                self.character_status_bar.render(self.screen, None)
+            except Exception as e:
+                logger.warning(f"ダンジョン用キャラクターステータスバー描画エラー: {e}")
     
     def update(self):
         """UI更新"""

@@ -142,8 +142,8 @@ class DungeonRendererPygame:
                 except Exception as e:
                     logger.warning(f"直接描画でのオーバーレイエラー: {e}")
             
-            # 画面更新
-            pygame.display.flip()
+            # 画面更新はGameManagerに任せる
+            # pygame.display.flip()  # コメントアウト：重複を避ける
             return True
             
         except Exception as e:
@@ -172,8 +172,8 @@ class DungeonRendererPygame:
             # UI要素を描画
             self.ui_renderer.render_game_ui(dungeon_state, self.dungeon_ui_manager)
             
-            # 画面更新
-            pygame.display.flip()
+            # 画面更新はGameManagerに任せる
+            # pygame.display.flip()  # コメントアウト：重複を避ける
             
             logger.debug(f"ダンジョンレベル{current_level.level}を描画しました")
             return True
