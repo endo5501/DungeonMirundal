@@ -4,25 +4,24 @@
 ダンジョンの周辺マップを表示するUIコンポーネント
 """
 
-from typing import Dict, List, Tuple, Optional
+from typing import List, Tuple
 import pygame
-import math
 
-from src.ui.base_ui_pygame import UIElement, DEFAULT_BACKGROUND_COLOR, DEFAULT_BORDER_COLOR
-from src.dungeon.dungeon_manager import DungeonState, PlayerPosition
+from src.ui.base_ui_pygame import UIElement
+from src.dungeon.dungeon_manager import DungeonState
 from src.dungeon.dungeon_generator import DungeonCell, CellType, Direction
-from src.utils.logger import logger
 
 
 # 小地図UI定数
 SMALL_MAP_WIDTH = 180
 SMALL_MAP_HEIGHT = 180
 SMALL_MAP_MARGIN = 10
-CELL_SIZE = 3
-MIN_CELL_SIZE = 2
-MAX_CELL_SIZE = 8
-PLAYER_MARKER_SIZE = 6
-DIRECTION_MARKER_LENGTH = 8
+CELL_SIZE = 12  # より大きなセルサイズで見やすく
+MIN_CELL_SIZE = 8
+MAX_CELL_SIZE = 16
+PLAYER_MARKER_SIZE = 10  # プレイヤーマーカーを大きく
+DIRECTION_MARKER_LENGTH = 16  # 向きマーカーも長く
+MAP_VIEW_RANGE = 7  # プレイヤー周辺7x7の範囲を表示
 
 # 色定義
 MAP_BACKGROUND_COLOR = (20, 20, 30)
@@ -69,61 +68,32 @@ class SmallMapUI(UIElement):
         # マップスケール計算
         self._calculate_map_scale()
         
-        logger.debug(f"SmallMapUI initialized at ({x}, {y})")
     
     def _calculate_map_scale(self):
-        """マップのスケールを計算"""
+        """マップのスケールを計算（固定サイズの周辺マップ用）"""
         if not self.dungeon_state.player_position:
             self.cell_size = CELL_SIZE
             self.map_offset_x = 0
             self.map_offset_y = 0
             return
         
-        current_level = self.dungeon_state.player_position.level
-        if current_level not in self.dungeon_state.levels:
-            self.cell_size = CELL_SIZE
-            self.map_offset_x = 0
-            self.map_offset_y = 0
-            return
+        # 固定サイズの周辺マップとして設計
+        self.cell_size = CELL_SIZE
         
-        level_data = self.dungeon_state.levels[current_level]
+        # プレイヤー位置を中心にした固定範囲のマップ
+        player_x = self.dungeon_state.player_position.x
+        player_y = self.dungeon_state.player_position.y
         
-        # 探索済みエリアの範囲を計算
-        explored_cells = self.get_visible_cells()
-        if not explored_cells:
-            self.cell_size = CELL_SIZE
-            self.map_offset_x = 0
-            self.map_offset_y = 0
-            return
+        # マップの中央にプレイヤーを配置するためのオフセット計算
+        map_center_x = SMALL_MAP_WIDTH // 2
+        map_center_y = SMALL_MAP_HEIGHT // 2
         
-        min_x = min(cell.x for cell in explored_cells)
-        max_x = max(cell.x for cell in explored_cells)
-        min_y = min(cell.y for cell in explored_cells)
-        max_y = max(cell.y for cell in explored_cells)
-        
-        # 必要な範囲を計算
-        area_width = max_x - min_x + 1
-        area_height = max_y - min_y + 1
-        
-        # スケールを計算（余白を考慮）
-        padding = 10
-        available_width = SMALL_MAP_WIDTH - padding * 2
-        available_height = SMALL_MAP_HEIGHT - padding * 2
-        
-        scale_x = available_width / area_width if area_width > 0 else CELL_SIZE
-        scale_y = available_height / area_height if area_height > 0 else CELL_SIZE
-        
-        self.cell_size = max(MIN_CELL_SIZE, min(MAX_CELL_SIZE, int(min(scale_x, scale_y))))
-        
-        # 中央に配置するためのオフセット
-        map_width = area_width * self.cell_size
-        map_height = area_height * self.cell_size
-        
-        self.map_offset_x = (SMALL_MAP_WIDTH - map_width) // 2 - min_x * self.cell_size
-        self.map_offset_y = (SMALL_MAP_HEIGHT - map_height) // 2 - min_y * self.cell_size
+        # プレイヤーをマップ中央に配置するためのオフセット
+        self.map_offset_x = map_center_x - (player_x * self.cell_size) - (self.cell_size // 2)
+        self.map_offset_y = map_center_y - (player_y * self.cell_size) - (self.cell_size // 2)
     
     def get_visible_cells(self) -> List[DungeonCell]:
-        """表示可能な（探索済み）セルを取得"""
+        """表示可能な（探索済み）セルを取得（プレイヤー周辺の範囲のみ）"""
         if not self.dungeon_state.player_position:
             return []
         
@@ -134,11 +104,20 @@ class SmallMapUI(UIElement):
         level_data = self.dungeon_state.levels[current_level]
         visible_cells = []
         
-        for cell in level_data.cells.values():
-            if hasattr(cell, 'discovered') and cell.discovered:
-                visible_cells.append(cell)
-            elif hasattr(cell, 'visited') and cell.visited:
-                visible_cells.append(cell)
+        # プレイヤー位置を中心とした範囲を計算
+        player_x = self.dungeon_state.player_position.x
+        player_y = self.dungeon_state.player_position.y
+        half_range = MAP_VIEW_RANGE // 2
+        
+        for x in range(player_x - half_range, player_x + half_range + 1):
+            for y in range(player_y - half_range, player_y + half_range + 1):
+                cell = level_data.cells.get((x, y))
+                if cell:
+                    # 探索済みまたは訪問済みのセルのみ表示
+                    if hasattr(cell, 'discovered') and cell.discovered:
+                        visible_cells.append(cell)
+                    elif hasattr(cell, 'visited') and cell.visited:
+                        visible_cells.append(cell)
         
         return visible_cells
     
@@ -251,17 +230,18 @@ class SmallMapUI(UIElement):
         """ダンジョン状態を更新"""
         self.dungeon_state = new_state
         self._calculate_map_scale()
-        logger.debug("SmallMapUI dungeon state updated")
     
     def toggle_visibility(self):
         """表示の切り替え"""
         self.is_visible = not self.is_visible
-        logger.debug(f"SmallMapUI visibility toggled: {self.is_visible}")
     
     def render(self):
         """小地図を描画"""
         if not self.is_visible:
             return
+        
+        # プレイヤー移動に追従するため、毎フレームマップスケールを再計算
+        self._calculate_map_scale()
         
         # 背景をクリア
         self.map_surface.fill(MAP_BACKGROUND_COLOR)

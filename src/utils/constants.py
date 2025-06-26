@@ -97,3 +97,9 @@ CONFIG_DIR = "config"
 SAVE_DIR = "saves"
 ASSET_DIR = "assets"
 LOG_DIR = "logs"
+
+# ゲームロケーション定義
+class GameLocation:
+    """ゲーム内の場所を表す定数"""
+    OVERWORLD = "overworld"
+    DUNGEON = "dungeon"

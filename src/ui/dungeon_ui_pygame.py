@@ -125,17 +125,21 @@ class DungeonUIManagerPygame:
     def set_dungeon_state(self, dungeon_state):
         """ダンジョン状態を設定"""
         self.dungeon_state = dungeon_state
+        logger.info(f"Setting dungeon state: {dungeon_state}")
         
         # 小地図UIを初期化/更新
         if dungeon_state:
             if self.small_map_ui is None:
+                logger.info("Creating new SmallMapUI instance")
                 # フォントマネージャーのモック（必要に応じて実装）
                 font_manager = type('MockFontManager', (), {})()
                 self.small_map_ui = SmallMapUI(self.screen, font_manager, dungeon_state)
+                logger.info(f"SmallMapUI created - visibility: {self.small_map_ui.is_visible}")
             else:
+                logger.info("Updating existing SmallMapUI")
                 self.small_map_ui.update_dungeon_state(dungeon_state)
         
-        logger.debug("ダンジョン状態を設定しました")
+        logger.info("ダンジョン状態を設定しました")
     
     def _initialize_character_status_bar(self):
         """キャラクターステータスバーを初期化"""
@@ -289,7 +293,7 @@ class DungeonUIManagerPygame:
         # 現在は何もしない（将来的にパーティHPなどを表示）
         pass
     
-    def update_location(self, location_info: str):
+    def update_location(self, location_info: str):  # noqa: ARG002
         """位置情報更新（簡易版）"""
         # 現在は何もしない（位置情報は別途描画）
         pass
