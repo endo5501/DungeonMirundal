@@ -120,11 +120,12 @@ class DungeonRendererPygame:
         if not self.screen:
             return False
         
-        # 画面クリア
-        self.screen.fill((0, 0, 0))
-        
         # 疑似3D描画
         try:
+            # 床と天井を先に描画（背景クリアの役割も担う）
+            self.wall_renderer.render_floor_and_ceiling()
+            
+            # 壁面描画
             self._render_walls_raycast(level, player_position)
             
             # UI描画（簡易版）
@@ -157,9 +158,6 @@ class DungeonRendererPygame:
             return False
         
         try:
-            # 画面をクリア
-            self.screen.fill(self.config.colors.black)
-            
             # カメラ位置更新
             self.update_camera_position(dungeon_state.player_position)
             
@@ -169,7 +167,7 @@ class DungeonRendererPygame:
                 logger.error(f"レベル{dungeon_state.player_position.level}が見つかりません")
                 return False
             
-            # 疑似3D描画を実行
+            # 疑似3D描画を実行（背景クリアも含む）
             self._render_pseudo_3d(current_level, dungeon_state.player_position)
             
             # UI要素を描画
@@ -191,7 +189,7 @@ class DungeonRendererPygame:
     
     def _render_pseudo_3d(self, level: DungeonLevel, player_pos: PlayerPosition):
         """疑似3D描画（レイキャスティング風）"""
-        # 床と天井を描画
+        # 床と天井を先に描画（これが背景クリアの役割も担う）
         self.wall_renderer.render_floor_and_ceiling()
         
         # 壁面をレイキャスティングで描画
@@ -208,10 +206,10 @@ class DungeonRendererPygame:
         
         for ray_index in range(ray_count):
             ray_angle = self.camera.calculate_ray_angle(ray_index, ray_count, self.config.camera.fov_radians)
-            distance, hit_wall = self.raycast_engine.cast_ray(level, player_pos, ray_start, ray_angle)
+            distance, hit_wall, wall_type = self.raycast_engine.cast_ray(level, player_pos, ray_start, ray_angle)
             
             if hit_wall:
-                self.wall_renderer.render_wall_column(ray_index, distance)
+                self.wall_renderer.render_wall_column(ray_index, distance, wall_type or "face", ray_count)
     
     def ensure_initial_render(self, dungeon_state: DungeonState) -> bool:
         """初期レンダリングを確実に実行"""

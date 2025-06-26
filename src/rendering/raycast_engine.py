@@ -16,7 +16,7 @@ class RaycastEngine:
         self.config = config or RaycastConfig()
     
     def cast_ray(self, level: DungeonLevel, player_pos: PlayerPosition, 
-                 ray_start: Tuple[float, float], angle: float) -> Tuple[float, bool]:
+                 ray_start: Tuple[float, float], angle: float) -> Tuple[float, bool, Optional[str]]:
         """レイキャスティング実行"""
         # レイの方向ベクトル
         dx = math.cos(angle)
@@ -30,15 +30,16 @@ class RaycastEngine:
             ray_x, ray_y, distance = self._advance_ray(ray_x, ray_y, dx, dy, distance)
             
             if self._is_ray_out_of_bounds(ray_x, ray_y, level):
-                return distance, True
+                return distance, True, None
             
             grid_x, grid_y = int(ray_x), int(ray_y)
             cell = level.get_cell(grid_x, grid_y)
             
-            if self._is_wall_hit(cell, ray_x - grid_x, ray_y - grid_y):
-                return distance, True
+            wall_type = self._get_wall_hit_type(cell, ray_x - grid_x, ray_y - grid_y)
+            if wall_type:
+                return distance, True, wall_type
         
-        return 10.0, False  # view_distance
+        return 10.0, False, None  # view_distance
     
     def _advance_ray(self, ray_x: float, ray_y: float, dx: float, dy: float, distance: float) -> Tuple[float, float, float]:
         """レイを前進させる"""
@@ -51,24 +52,37 @@ class RaycastEngine:
         """レイが範囲外かチェック"""
         return ray_x < 0 or ray_x >= level.width or ray_y < 0 or ray_y >= level.height
     
-    def _is_wall_hit(self, cell: Optional[DungeonCell], local_x: float, local_y: float) -> bool:
-        """壁にヒットしたかチェック"""
+    def _get_wall_hit_type(self, cell: Optional[DungeonCell], local_x: float, local_y: float) -> Optional[str]:
+        """壁にヒットした場合の壁タイプを取得"""
         if not cell or cell.cell_type == CellType.WALL:
-            return True
-        return self._check_wall_collision(cell, local_x, local_y)
+            return "solid"
+        return self._check_wall_collision_type(cell, local_x, local_y)
     
-    def _check_wall_collision(self, cell: DungeonCell, local_x: float, local_y: float) -> bool:
-        """セル内での壁との衝突をチェック"""
+    def _check_wall_collision_type(self, cell: DungeonCell, local_x: float, local_y: float) -> Optional[str]:
+        """セル内での壁との衝突をチェックし、壁タイプを返す"""
         threshold = self.config.wall_collision_threshold
         
-        # 各方向の壁をチェック
-        if local_x <= threshold and cell.walls.get(Direction.WEST, False):
-            return True
-        if local_x >= (1.0 - threshold) and cell.walls.get(Direction.EAST, False):
-            return True
-        if local_y <= threshold and cell.walls.get(Direction.NORTH, False):
-            return True
-        if local_y >= (1.0 - threshold) and cell.walls.get(Direction.SOUTH, False):
-            return True
+        # 角のチェック（より高い優先度）
+        corner_threshold = threshold * 2
         
-        return False
+        # 角の判定
+        if ((local_x <= corner_threshold or local_x >= (1.0 - corner_threshold)) and 
+            (local_y <= corner_threshold or local_y >= (1.0 - corner_threshold))):
+            # 実際に角に壁があるかチェック
+            if ((local_x <= corner_threshold and cell.walls.get(Direction.WEST, False)) or
+                (local_x >= (1.0 - corner_threshold) and cell.walls.get(Direction.EAST, False)) or
+                (local_y <= corner_threshold and cell.walls.get(Direction.NORTH, False)) or
+                (local_y >= (1.0 - corner_threshold) and cell.walls.get(Direction.SOUTH, False))):
+                return "corner"
+        
+        # 通常の壁面チェック
+        if local_x <= threshold and cell.walls.get(Direction.WEST, False):
+            return "face"
+        if local_x >= (1.0 - threshold) and cell.walls.get(Direction.EAST, False):
+            return "face"
+        if local_y <= threshold and cell.walls.get(Direction.NORTH, False):
+            return "face"
+        if local_y >= (1.0 - threshold) and cell.walls.get(Direction.SOUTH, False):
+            return "face"
+        
+        return None

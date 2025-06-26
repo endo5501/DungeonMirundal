@@ -59,5 +59,11 @@ class Camera:
         return (float(player_pos.x) + 0.5, float(player_pos.y) + 0.5)
     
     def calculate_ray_angle(self, ray_index: int, ray_count: int, fov_radians: float) -> float:
-        """レイの角度を計算"""
-        return self.state.angle + (ray_index - ray_count // 2) * fov_radians / ray_count
+        """レイの角度を計算（魚眼効果補正付き）"""
+        # 正規化された位置 (-1.0 to 1.0)
+        normalized_pos = (ray_index - ray_count // 2) / (ray_count // 2)
+        
+        # タンジェント補正でより自然な広角視野を実現
+        angle_offset = math.atan(normalized_pos * math.tan(fov_radians / 2))
+        
+        return self.state.angle + angle_offset

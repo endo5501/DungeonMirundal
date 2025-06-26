@@ -104,15 +104,17 @@ class TestRefactoredRenderer:
         
         print("レイキャスト結果:")
         for i, angle in enumerate(test_angles):
-            distance, hit_wall = renderer.raycast_engine.cast_ray(
+            distance, hit_wall, wall_type = renderer.raycast_engine.cast_ray(
                 current_level, player_pos, ray_start, angle
             )
             direction_name = ["東", "南", "西", "北"][i]
-            print(f"{direction_name}: 距離={distance:.3f}, 壁ヒット={hit_wall}")
+            print(f"{direction_name}: 距離={distance:.3f}, 壁ヒット={hit_wall}, 壁タイプ={wall_type}")
             
             # 基本的な妥当性チェック
             assert distance > 0, f"{direction_name}の距離が無効です"
             assert isinstance(hit_wall, bool), f"{direction_name}の壁ヒット判定が無効です"
+            if hit_wall:
+                assert wall_type in ["face", "corner", "solid"], f"{direction_name}の壁タイプが無効です: {wall_type}"
         
         print("レイキャストエンジンテスト成功")
     

@@ -19,7 +19,7 @@ class ScreenConfig:
 @dataclass
 class CameraConfig:
     """カメラ設定"""
-    fov: float = 75
+    fov: float = 90  # 75度から90度に拡大して横方向の視野を広げる
     view_distance: float = 10.0
     
     @property
@@ -30,8 +30,8 @@ class CameraConfig:
 @dataclass
 class RaycastConfig:
     """レイキャスティング設定"""
-    step_size: float = 0.1
-    resolution_divisor: int = 2
+    step_size: float = 0.05  # より細かいステップで滑らかに
+    resolution_divisor: int = 1  # 解像度を上げて滑らかに
     wall_collision_threshold: float = 0.05
     
     def calculate_ray_count(self, screen_width: int) -> int:
@@ -43,7 +43,7 @@ class WallRenderConfig:
     """壁描画設定"""
     height: int = 64
     distance_scale: float = 50.0
-    render_width: int = 2
+    render_width: int = 1  # 滑らかな描画のため幅を1に
     min_height: int = 1
     min_distance: float = 0.5
     brightness_min: float = 0.3
