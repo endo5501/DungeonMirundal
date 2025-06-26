@@ -16,7 +16,7 @@ from src.dungeon.dungeon_generator import DungeonCell, CellType, Direction
 SMALL_MAP_WIDTH = 180
 SMALL_MAP_HEIGHT = 180
 SMALL_MAP_MARGIN = 10
-CELL_SIZE = 12  # より大きなセルサイズで見やすく
+CELL_SIZE = 20  # より大きなセルサイズで見やすく
 MIN_CELL_SIZE = 8
 MAX_CELL_SIZE = 16
 PLAYER_MARKER_SIZE = 10  # プレイヤーマーカーを大きく
