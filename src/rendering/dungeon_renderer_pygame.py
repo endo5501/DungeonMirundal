@@ -1,11 +1,10 @@
 """リファクタリング済みダンジョン疑似3D描画システム（Pygame完全実装版）"""
 
-from typing import Optional
 from enum import Enum
 import pygame
 
 from src.dungeon.dungeon_manager import DungeonManager, DungeonState, PlayerPosition
-from src.dungeon.dungeon_generator import DungeonLevel, Direction
+from src.dungeon.dungeon_generator import DungeonLevel
 from src.character.party import Party
 from src.utils.logger import logger
 from src.rendering.renderer_config import RendererConfig
@@ -151,7 +150,7 @@ class DungeonRendererPygame:
             logger.error(f"直接描画エラー: {e}")
             return False
     
-    def render_dungeon(self, dungeon_state: DungeonState, force_render: bool = False) -> bool:
+    def render_dungeon(self, dungeon_state: DungeonState, force_render: bool = False) -> bool:  # noqa: ARG002
         """ダンジョンを描画（Pygame版）"""
         if not dungeon_state.player_position:
             logger.error("プレイヤー位置が設定されていません")
@@ -209,7 +208,8 @@ class DungeonRendererPygame:
             distance, hit_wall, wall_type = self.raycast_engine.cast_ray(level, player_pos, ray_start, ray_angle)
             
             if hit_wall:
-                self.wall_renderer.render_wall_column(ray_index, distance, wall_type or "face", ray_count)
+                from src.rendering.wall_renderer import WallType
+                self.wall_renderer.render_wall_column(ray_index, distance, wall_type or WallType.FACE.value, ray_count)
     
     def ensure_initial_render(self, dungeon_state: DungeonState) -> bool:
         """初期レンダリングを確実に実行"""

@@ -33,6 +33,8 @@ class RaycastConfig:
     step_size: float = 0.05  # より細かいステップで滑らかに
     resolution_divisor: int = 1  # 解像度を上げて滑らかに
     wall_collision_threshold: float = 0.05
+    view_distance: float = 10.0  # レイキャスティングの最大距離
+    corner_threshold_multiplier: float = 2.0  # 角検出の閾値倍率
     
     def calculate_ray_count(self, screen_width: int) -> int:
         return screen_width // self.resolution_divisor
@@ -48,6 +50,20 @@ class WallRenderConfig:
     min_distance: float = 0.5
     brightness_min: float = 0.3
     brightness_max: float = 1.0
+    
+    # 視線角度設定
+    ceiling_ratio: float = 0.3  # 天井の比率
+    wall_position_ratio: float = 0.25  # 壁の位置（利用可能領域の割合）
+    
+    # 色調整設定
+    corner_brightness_multiplier: float = 1.3  # 角部分の明度倍率
+    solid_wall_brightness_multiplier: float = 0.8  # ソリッドウォールの明度倍率
+    
+    # 魚眼効果補正設定
+    fisheye_correction_factor: float = 0.3  # エッジでの歪み補正係数
+    
+    # 表示距離設定
+    view_distance: float = 10.0  # 描画での最大表示距離
 
 
 @dataclass

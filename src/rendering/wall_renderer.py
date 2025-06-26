@@ -2,8 +2,16 @@
 
 import pygame
 from typing import Tuple
+from enum import Enum
 
 from src.rendering.renderer_config import WallRenderConfig, ColorConfig
+
+
+class WallType(Enum):
+    """壁タイプ定義"""
+    FACE = "face"
+    CORNER = "corner" 
+    SOLID = "solid"
 
 
 class WallRenderer:
@@ -17,7 +25,7 @@ class WallRenderer:
         self.screen_width = screen.get_width()
         self.screen_height = screen.get_height()
     
-    def render_wall_column(self, ray_index: int, distance: float, wall_type: str = "face", ray_count: int = None):
+    def render_wall_column(self, ray_index: int, distance: float, wall_type: str = WallType.FACE.value, ray_count: int = None):
         """壁の縦線を描画"""
         # 広角補正のための距離調整
         corrected_distance = self._apply_fisheye_correction(distance, ray_index, ray_count) if ray_count else distance
@@ -32,8 +40,8 @@ class WallRenderer:
     
     def render_floor_and_ceiling(self):
         """床と天井を描画"""
-        # 視線を下向きに調整（天井30%、床70%で地面がより見やすく）
-        ceiling_height = int(self.screen_height * 0.3)
+        # 設定から天井比率を取得
+        ceiling_height = int(self.screen_height * self.wall_config.ceiling_ratio)
         floor_height = self.screen_height - ceiling_height
         
         # 床（下部）
@@ -52,31 +60,35 @@ class WallRenderer:
     
     def _calculate_wall_position(self, wall_height: int) -> int:
         """壁の描画位置（上端）を計算"""
-        # 視線を下向きに調整：壁を上寄りに配置して床がより見えるようにする
-        ceiling_height = int(self.screen_height * 0.3)
+        # 設定から天井比率と壁位置比率を取得
+        ceiling_height = int(self.screen_height * self.wall_config.ceiling_ratio)
         available_height = self.screen_height - ceiling_height
         
-        # 壁の中心を上寄りに調整（available_heightの25%の位置に配置）
-        # これにより視線がより下向きになり、床がよく見える
-        wall_center = ceiling_height + int(available_height * 0.25)
+        # 設定から壁の位置比率を取得
+        wall_center = ceiling_height + int(available_height * self.wall_config.wall_position_ratio)
         return wall_center - (wall_height // 2)
     
-    def _calculate_wall_color(self, distance: float, wall_type: str = "face") -> Tuple[int, int, int]:
+    def _calculate_wall_color(self, distance: float, wall_type: str = WallType.FACE.value) -> Tuple[int, int, int]:
         """距離と壁タイプに基づいて壁の色を計算"""
-        brightness = max(self.wall_config.brightness_min, 
-                        self.wall_config.brightness_max - distance / 10.0)  # view_distance
-        
-        # 壁タイプに応じて基本色を変更
-        if wall_type == "corner":
-            # 角部分はより明るく（視認性向上）
-            base_color = tuple(min(255, int(c * 1.3)) for c in self.color_config.wall)
-        elif wall_type == "solid":
-            # ソリッドウォールは少し暗く
-            base_color = tuple(int(c * 0.8) for c in self.color_config.wall)
-        else:  # "face"
-            base_color = self.color_config.wall
-        
+        brightness = self._calculate_brightness(distance)
+        base_color = self._get_base_color_for_wall_type(wall_type)
         return tuple(int(c * brightness) for c in base_color)
+    
+    def _calculate_brightness(self, distance: float) -> float:
+        """距離に基づいて明度を計算"""
+        return max(self.wall_config.brightness_min, 
+                  self.wall_config.brightness_max - distance / self.wall_config.view_distance)
+    
+    def _get_base_color_for_wall_type(self, wall_type: str) -> Tuple[int, int, int]:
+        """壁タイプに基づいて基本色を取得"""
+        if wall_type == WallType.CORNER.value:
+            multiplier = self.wall_config.corner_brightness_multiplier
+            return tuple(min(255, int(c * multiplier)) for c in self.color_config.wall)
+        elif wall_type == WallType.SOLID.value:
+            multiplier = self.wall_config.solid_wall_brightness_multiplier
+            return tuple(int(c * multiplier) for c in self.color_config.wall)
+        else:  # WallType.FACE.value
+            return self.color_config.wall
     
     def _apply_fisheye_correction(self, distance: float, ray_index: int, ray_count: int) -> float:
         """魚眼効果補正を適用"""
@@ -87,7 +99,7 @@ class WallRenderer:
         center = ray_count // 2
         angle_from_center = abs(ray_index - center) / center
         
-        # コサイン補正でエッジでの歪みを軽減
-        correction_factor = 1.0 / (1.0 + angle_from_center * 0.3)
+        # 設定から補正係数を取得
+        correction_factor = 1.0 / (1.0 + angle_from_center * self.wall_config.fisheye_correction_factor)
         
         return distance * correction_factor
