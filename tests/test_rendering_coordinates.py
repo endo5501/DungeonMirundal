@@ -20,18 +20,9 @@ class TestRenderingCoordinates:
         """方向と角度のマッピングを検証"""
         print("=== 方向と角度のマッピング ===")
         
-        # 定数を確認
-        from src.rendering.dungeon_renderer_pygame import (
-            DIRECTION_ANGLE_NORTH, DIRECTION_ANGLE_EAST, 
-            DIRECTION_ANGLE_SOUTH, DIRECTION_ANGLE_WEST
-        )
-        
-        direction_angles = {
-            Direction.NORTH: DIRECTION_ANGLE_NORTH,
-            Direction.EAST: DIRECTION_ANGLE_EAST,
-            Direction.SOUTH: DIRECTION_ANGLE_SOUTH,
-            Direction.WEST: DIRECTION_ANGLE_WEST
-        }
+        # レンダラーのカメラから方向マッピングを取得
+        renderer = DungeonRendererPygame()
+        direction_angles = renderer.camera._direction_angles
         
         print("定義済み角度:")
         for direction, angle in direction_angles.items():
@@ -39,11 +30,11 @@ class TestRenderingCoordinates:
             print(f"{direction.value}: {angle:.3f} rad ({degrees:.1f}°)")
         
         # レンダラーのメソッドと一致するか確認
-        renderer = DungeonRendererPygame()
+        # (既に上で作成済み)
         
         print("\nレンダラーの変換結果:")
         for direction in Direction:
-            angle = renderer._get_direction_angle(direction)
+            angle = renderer.camera._direction_angles.get(direction, 0)
             degrees = math.degrees(angle)
             print(f"{direction.value}: {angle:.3f} rad ({degrees:.1f}°)")
         
@@ -57,7 +48,7 @@ class TestRenderingCoordinates:
         
         print("\n期待される角度との比較:")
         for direction, expected_degrees in expected.items():
-            actual_angle = renderer._get_direction_angle(direction)
+            actual_angle = renderer.camera._direction_angles.get(direction, 0)
             actual_degrees = math.degrees(actual_angle)
             print(f"{direction.value}: 期待値 {expected_degrees}°, 実際 {actual_degrees:.1f}°")
     
@@ -78,12 +69,23 @@ class TestRenderingCoordinates:
         player_pos = dungeon_manager.current_dungeon.player_position
         print(f"プレイヤー位置: ({player_pos.x}, {player_pos.y})")
         
-        # レンダラーでレイの開始位置を取得
+        # レンダラーでカメラ位置を確認
         renderer = DungeonRendererPygame()
-        ray_start_x, ray_start_y = renderer._get_ray_start_position(player_pos)
+        renderer.update_camera_position(player_pos)
         
-        print(f"レイ開始位置: ({ray_start_x}, {ray_start_y})")
-        print(f"座標の一致: {ray_start_x == float(player_pos.x) and ray_start_y == float(player_pos.y)}")
+        camera_x = renderer.camera.state.x
+        camera_y = renderer.camera.state.y
+        print(f"カメラ位置: ({camera_x}, {camera_y})")
+        
+        # カメラ位置はプレイヤー位置と同期されるべき
+        print(f"位置同期: カメラ({camera_x}, {camera_y}) vs プレイヤー({player_pos.x}, {player_pos.y})")
+        
+        # レイキャスティングシステムの確認
+        print(f"レイキャスティングエンジン: {renderer.raycast_engine is not None}")
+        
+        # レイキャスティングの基本的な動作テスト
+        ray_start = renderer.camera.get_ray_start_position(player_pos)
+        print(f"レイ開始位置（カメラから）: {ray_start}")
     
     def test_coordinate_system_consistency(self):
         """座標系の一貫性をテスト"""
@@ -102,7 +104,7 @@ class TestRenderingCoordinates:
         
         print("\nレンダラーの角度変換（cos, sin値）:")
         for direction in Direction:
-            angle = renderer._get_direction_angle(direction)
+            angle = renderer.camera._direction_angles.get(direction, 0)
             cos_val = math.cos(angle)
             sin_val = math.sin(angle)
             print(f"{direction.value}: cos={cos_val:.3f}, sin={sin_val:.3f}")
@@ -114,7 +116,7 @@ class TestRenderingCoordinates:
             dx_gen, dy_gen = generator._direction_to_delta(direction)
             
             # レンダラーの三角関数値
-            angle = renderer._get_direction_angle(direction)
+            angle = renderer.camera._direction_angles.get(direction, 0)
             dx_render = math.cos(angle)
             dy_render = math.sin(angle)
             
@@ -148,22 +150,22 @@ class TestRenderingCoordinates:
         # カメラ位置を更新
         renderer.update_camera_position(player_pos)
         
-        print(f"カメラ位置: ({renderer.camera_x}, {renderer.camera_y})")
-        print(f"カメラ角度: {math.degrees(renderer.camera_angle):.1f}°")
+        print(f"カメラ位置: ({renderer.camera.state.x}, {renderer.camera.state.y})")
+        print(f"カメラ角度: {math.degrees(renderer.camera.state.angle):.1f}°")
         
         # 同期チェック
-        pos_match = (renderer.camera_x == player_pos.x and renderer.camera_y == player_pos.y)
-        expected_angle = renderer._get_direction_angle(player_pos.facing)
-        angle_match = abs(renderer.camera_angle - expected_angle) < 0.001
+        pos_match = (renderer.camera.state.x == player_pos.x and renderer.camera.state.y == player_pos.y)
+        expected_angle = renderer.camera._direction_angles.get(player_pos.facing, 0)
+        angle_match = abs(renderer.camera.state.angle - expected_angle) < 0.001
         
         print(f"位置同期: {pos_match}")
         print(f"角度同期: {angle_match}")
         
         if not pos_match:
-            print(f"位置不一致: プレイヤー({player_pos.x}, {player_pos.y}) vs カメラ({renderer.camera_x}, {renderer.camera_y})")
+            print(f"位置不一致: プレイヤー({player_pos.x}, {player_pos.y}) vs カメラ({renderer.camera.state.x}, {renderer.camera.state.y})")
         
         if not angle_match:
-            print(f"角度不一致: 期待値{math.degrees(expected_angle):.1f}° vs 実際{math.degrees(renderer.camera_angle):.1f}°")
+            print(f"角度不一致: 期待値{math.degrees(expected_angle):.1f}° vs 実際{math.degrees(renderer.camera.state.angle):.1f}°")
 
 
 if __name__ == "__main__":

@@ -143,8 +143,6 @@ class TestDungeonViewDebug:
         assert len(successful_moves) > 0, "どの方向にも移動できません。プレイヤーが壁に囲まれています。"
         
         print(f"移動可能な方向: {[dir.value for dir in successful_moves]}")
-        
-        return current_level, player_pos, movement_results
     
     def test_dungeon_boundary_check(self):
         """ダンジョンの境界チェック"""

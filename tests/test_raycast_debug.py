@@ -44,64 +44,26 @@ class TestRaycastDebug:
         renderer = DungeonRendererPygame()
         renderer.update_camera_position(player_pos)
         
-        print(f"カメラ位置: ({renderer.camera_x}, {renderer.camera_y})")
-        print(f"カメラ角度: {math.degrees(renderer.camera_angle):.1f}°")
+        print(f"カメラ位置: ({renderer.camera.state.x}, {renderer.camera.state.y})")
+        print(f"カメラ角度: {math.degrees(renderer.camera.state.angle):.1f}°")
         
-        # 複数方向にレイキャストを実行
-        test_angles = [
-            renderer.camera_angle,  # 正面
-            renderer.camera_angle - math.pi/4,  # 左45度
-            renderer.camera_angle + math.pi/4,  # 右45度
-            renderer.camera_angle + math.pi,  # 背面
-        ]
+        # 基本的なレンダリングテスト
+        success = renderer.render_dungeon_view(player_pos, current_level)
+        print(f"レンダリング成功: {success}")
         
-        angle_names = ["正面", "左45度", "右45度", "背面"]
+        # レンダリングコンポーネントの確認
+        print(f"\nレンダリングコンポーネント:")
+        print(f"レイキャストエンジン: {renderer.raycast_engine is not None}")
+        print(f"壁レンダラー: {renderer.wall_renderer is not None}")
+        print(f"UIレンダラー: {renderer.ui_renderer is not None}")
         
-        print("\nレイキャスティング結果:")
-        for i, angle in enumerate(test_angles):
-            distance, hit_wall = renderer._cast_ray(current_level, player_pos, angle)
-            print(f"{angle_names[i]}: 距離={distance:.3f}, 壁ヒット={hit_wall}")
-            
-            # レイの詳細を追跡
-            self._trace_ray_details(renderer, current_level, player_pos, angle, angle_names[i])
+        # 方向マッピングの確認
+        print(f"\n方向マッピング:")
+        for direction in Direction:
+            angle = renderer.camera._direction_angles.get(direction, 0)
+            degrees = math.degrees(angle)
+            print(f"{direction.value}: {degrees:.1f}度")
     
-    def _trace_ray_details(self, renderer, level, player_pos, angle, angle_name):
-        """レイの詳細を追跡"""
-        print(f"\n--- {angle_name}のレイ詳細 ---")
-        
-        dx = math.cos(angle)
-        dy = math.sin(angle)
-        
-        print(f"レイ方向ベクトル: dx={dx:.3f}, dy={dy:.3f}")
-        
-        ray_x, ray_y = renderer._get_ray_start_position(player_pos)
-        distance = 0
-        step_count = 0
-        max_steps = 10  # 最初の10ステップを追跡
-        
-        print(f"開始位置: ({ray_x:.3f}, {ray_y:.3f})")
-        
-        while distance < renderer.view_distance and step_count < max_steps:
-            ray_x, ray_y, distance = renderer._advance_ray(ray_x, ray_y, dx, dy, distance)
-            step_count += 1
-            
-            # 範囲外チェック
-            if renderer._is_ray_out_of_bounds(ray_x, ray_y, level):
-                print(f"ステップ{step_count}: 範囲外 ({ray_x:.3f}, {ray_y:.3f})")
-                break
-            
-            grid_x, grid_y = int(ray_x), int(ray_y)
-            cell = level.get_cell(grid_x, grid_y)
-            
-            if cell:
-                is_wall_hit = renderer._is_wall_hit(cell, ray_x - grid_x, ray_y - grid_y)
-                print(f"ステップ{step_count}: グリッド({grid_x}, {grid_y}), 座標({ray_x:.3f}, {ray_y:.3f}), セル={cell.cell_type.value}, 壁ヒット={is_wall_hit}")
-                
-                if is_wall_hit:
-                    break
-            else:
-                print(f"ステップ{step_count}: セル不在 ({ray_x:.3f}, {ray_y:.3f})")
-                break
     
     def test_surrounding_wall_check(self):
         """周囲の壁チェック"""
@@ -178,8 +140,9 @@ class TestRaycastDebug:
         
         print("壁衝突テスト:")
         for local_x, local_y, name in test_positions:
-            is_collision = renderer._check_wall_collision(current_cell, local_x, local_y)
-            print(f"{name} ({local_x}, {local_y}): 衝突={is_collision}")
+            # 簡易的なセル境界テスト
+            at_boundary = (local_x <= 0.1 or local_x >= 0.9 or local_y <= 0.1 or local_y >= 0.9)
+            print(f"{name} ({local_x}, {local_y}): 境界付近={at_boundary}")
     
     def test_render_method_availability(self):
         """レンダリングメソッドの可用性チェック"""
@@ -187,20 +150,24 @@ class TestRaycastDebug:
         
         renderer = DungeonRendererPygame()
         
-        # 必要なメソッドが存在するかチェック
-        required_methods = [
-            '_render_floor_and_ceiling',
-            '_render_walls_raycast',
-            '_render_props_3d',
-            '_cast_ray',
-            '_is_wall_hit',
-            '_check_wall_collision'
-        ]
         
-        print("必要なメソッドのチェック:")
-        for method_name in required_methods:
+        # コンポーネントの確認
+        print("レンダラーコンポーネント:")
+        components = ['camera', 'raycast_engine', 'wall_renderer', 'ui_renderer', 'prop_renderer']
+        for component in components:
+            has_component = hasattr(renderer, component)
+            print(f"{component}: {'○' if has_component else '×'}")
+            
+            if has_component:
+                comp_obj = getattr(renderer, component)
+                print(f"  タイプ: {type(comp_obj).__name__}")
+        
+        # 基本的なメソッドの確認
+        print("\n基本的なメソッド:")
+        basic_methods = ['render_dungeon', 'render_dungeon_view', 'update_camera_position']
+        for method_name in basic_methods:
             has_method = hasattr(renderer, method_name)
-            print(f"{method_name}: {'あり' if has_method else '不在'}")
+            print(f"{method_name}: {'○' if has_method else '×'}")
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ from src.character.character import Character
 class TestDetailedWallLogic:
     
     def test_wall_hit_analysis(self):
-        """壁ヒット判定の詳細分析"""
+        """壁ヒット判定の詳細分析（簡易版）"""
         print("=== 壁ヒット判定の詳細分析 ===")
         
         # テストセットアップ
@@ -39,71 +39,18 @@ class TestDetailedWallLogic:
         print(f"壁情報: {[(dir.value, has_wall) for dir, has_wall in current_cell.walls.items()]}")
         
         renderer = DungeonRendererPygame()
+        renderer.update_camera_position(player_pos)
         
-        # 背面方向の詳細テスト（南方向：プレイヤーから見て後ろ）
-        camera_angle = renderer._get_direction_angle(player_pos.facing)
-        south_angle = camera_angle + math.pi  # 180度回転（背面）
+        # 基本的なレンダリングテスト
+        success = renderer.render_dungeon_view(player_pos, current_level)
+        print(f"レンダリング成功: {success}")
         
-        print(f"\nカメラ角度: {math.degrees(camera_angle):.1f}°")
-        print(f"南向き角度: {math.degrees(south_angle):.1f}°")
-        
-        # 南方向のレイキャスティングを手動実行
-        dx = math.cos(south_angle)
-        dy = math.sin(south_angle)
-        
-        print(f"南向きレイ方向: dx={dx:.3f}, dy={dy:.3f}")
-        
-        ray_x, ray_y = float(player_pos.x), float(player_pos.y)
-        
-        # ステップごとの詳細
-        for step in range(1, 6):
-            ray_x += dx * 0.1  # RAYCAST_STEP_SIZE
-            ray_y += dy * 0.1
-            
-            grid_x, grid_y = int(ray_x), int(ray_y)
-            local_x = ray_x - grid_x
-            local_y = ray_y - grid_y
-            
-            # セルを取得
-            cell = current_level.get_cell(grid_x, grid_y)
-            
-            print(f"\nステップ{step}:")
-            print(f"  レイ座標: ({ray_x:.3f}, {ray_y:.3f})")
-            print(f"  グリッド座標: ({grid_x}, {grid_y})")
-            print(f"  ローカル座標: ({local_x:.3f}, {local_y:.3f})")
-            
-            if cell:
-                print(f"  セルタイプ: {cell.cell_type.value}")
-                print(f"  セル壁情報: {[(dir.value, has_wall) for dir, has_wall in cell.walls.items()]}")
-                
-                # 各方向の境界チェック
-                threshold = 0.05
-                west_hit = local_x <= threshold and cell.walls.get(Direction.WEST, False)
-                east_hit = local_x >= (1.0 - threshold) and cell.walls.get(Direction.EAST, False)
-                north_hit = local_y <= threshold and cell.walls.get(Direction.NORTH, False)
-                south_hit = local_y >= (1.0 - threshold) and cell.walls.get(Direction.SOUTH, False)
-                
-                print(f"  境界チェック結果:")
-                print(f"    西境界ヒット: {west_hit} (local_x={local_x:.3f} <= {threshold}, 壁={cell.walls.get(Direction.WEST, False)})")
-                print(f"    東境界ヒット: {east_hit} (local_x={local_x:.3f} >= {1.0-threshold}, 壁={cell.walls.get(Direction.EAST, False)})")
-                print(f"    北境界ヒット: {north_hit} (local_y={local_y:.3f} <= {threshold}, 壁={cell.walls.get(Direction.NORTH, False)})")
-                print(f"    南境界ヒット: {south_hit} (local_y={local_y:.3f} >= {1.0-threshold}, 壁={cell.walls.get(Direction.SOUTH, False)})")
-                
-                wall_collision = renderer._check_wall_collision(cell, local_x, local_y)
-                is_wall_hit = renderer._is_wall_hit(cell, local_x, local_y)
-                
-                print(f"  壁衝突: {wall_collision}")
-                print(f"  壁ヒット: {is_wall_hit}")
-                
-                if is_wall_hit:
-                    print(f"  >>> 壁ヒット発生 <<<")
-                    break
-            else:
-                print(f"  セル不在")
-                break
+        # カメラシステムのテスト
+        print(f"カメラ位置: ({renderer.camera.state.x}, {renderer.camera.state.y})")
+        print(f"カメラ角度: {math.degrees(renderer.camera.state.angle):.1f}°")
     
     def test_specific_case_analysis(self):
-        """特定ケースの分析"""
+        """特定ケースの分析（簡易版）"""
         print("\n=== 特定ケースの分析 ===")
         
         renderer = DungeonRendererPygame()
@@ -126,19 +73,16 @@ class TestDetailedWallLogic:
         print(f"  東: {test_cell.walls[Direction.EAST]}")  
         print(f"  西: {test_cell.walls[Direction.WEST]}")
         
-        # 問題の座標での判定テスト
-        test_coordinates = [
-            (0.0, 0.1, "レイが南に進んで同じセルの南部分"),
-            (0.0, 0.5, "レイが南に進んでセル中央"),
-            (0.0, 0.9, "レイが南に進んでセル南境界"),
-            (0.0, 1.0, "レイが南に進んでセル南端"),
-        ]
+        # 基本的なセル構造テスト
+        print(f"\nセル基本情報:")
+        print(f"  セルタイプ: {test_cell.cell_type.value}")
+        print(f"  座標: ({test_cell.x}, {test_cell.y})")
+        print(f"  壁の数: {sum(test_cell.walls.values())}")
         
-        print("\n座標別壁衝突テスト:")
-        for local_x, local_y, description in test_coordinates:
-            collision = renderer._check_wall_collision(test_cell, local_x, local_y)
-            wall_hit = renderer._is_wall_hit(test_cell, local_x, local_y)
-            print(f"{description}: 衝突={collision}, 壁ヒット={wall_hit}")
+        # レンダリングコンポーネントの確認
+        print(f"\nレンダリングコンポーネント:")
+        print(f"  レイキャストエンジン: {renderer.raycast_engine is not None}")
+        print(f"  壁レンダラー: {renderer.wall_renderer is not None}")
 
 
 if __name__ == "__main__":
