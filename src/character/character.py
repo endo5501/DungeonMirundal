@@ -95,6 +95,30 @@ class Character:
         if not self.name:
             self.name = f"Character_{self.character_id[:8]}"
     
+    def initialize_derived_stats(self):
+        """派生統計値を初期化"""
+        if not hasattr(self, 'derived_stats') or self.derived_stats is None:
+            from src.character.stats import StatGenerator
+            
+            # 設定データの読み込み
+            char_config = config_manager.load_config("characters")
+            races_config = char_config.get("races", {})
+            classes_config = char_config.get("classes", {})
+            
+            race_config = races_config.get(self.race, {})
+            class_config = classes_config.get(self.character_class, {})
+            
+            # 派生統計値の計算
+            self.derived_stats = StatGenerator.calculate_derived_stats(
+                self.base_stats, self.experience.level, class_config, race_config
+            )
+            
+            # HPとMPを最大値に設定
+            self.derived_stats.current_hp = self.derived_stats.max_hp
+            self.derived_stats.current_mp = self.derived_stats.max_mp
+            
+            logger.debug(f"派生統計値を初期化しました: {self.name}")
+    
     def initialize_inventory(self):
         """インベントリを初期化（遅延初期化）"""
         if not self._inventory_initialized:
