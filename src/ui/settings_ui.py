@@ -817,6 +817,13 @@ class SettingsUI:
     def _back_to_main_settings(self):
         """メイン設定に戻る"""
         self.current_category = None
+        # 現在のメニューを隠す
+        try:
+            if ui_manager is not None:
+                ui_manager.hide_all()
+        except Exception as e:
+            logger.warning(f"メニューを隠す際にエラーが発生しました: {e}")
+        # メイン設定メニューを再表示
         self.show_settings_menu()
     
     def _close_settings_ui(self):
@@ -853,8 +860,8 @@ class SettingsUI:
             
             try:
                 if ui_manager is not None:
-                    ui_manager.register_element(dialog)
-                    ui_manager.show_element(dialog.element_id, modal=True)
+                    ui_manager.add_dialog(dialog)
+                    ui_manager.show_dialog(dialog.dialog_id)
                 else:
                     logger.error("ui_managerが初期化されていないため、ダイアログ要素を表示できません")
             except Exception as e:
