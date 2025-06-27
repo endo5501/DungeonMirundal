@@ -39,7 +39,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **魔術・祈祷**: スロット装備による魔法システム
 
 ### 開発方針
-- テスト駆動開発（TDD）を採用
+- t-wada式のテスト駆動開発（TDD）を採用
 - テストファースト、実装は後
 - テストが通過してからコミット
 - 修正完了後はまとめてコミット（コミットメッセージは英語）
