@@ -49,6 +49,9 @@ class BaseFacility(ABC):
         self.menu_stack_manager: Optional[MenuStackManager] = None
         self.dialog_template: Optional[DialogTemplate] = None
         
+        # 旧システム互換用（削除予定）
+        self.current_dialog: Optional[UIDialog] = None
+        
         logger.info(f"施設を初期化しました: {facility_id} ({facility_type.value})")
     
     def initialize_menu_system(self, ui_manager) -> None:

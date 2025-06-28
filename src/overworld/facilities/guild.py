@@ -80,18 +80,22 @@ class AdventurersGuild(BaseFacility):
         self.created_characters.append(character)
         
         # 成功メッセージ（ダイアログが閉じられた後、_close_dialogでメインメニューが自動表示される）
-        self._show_success_message(config_manager.get_text("guild.messages.character_created").format(name=character.name))
+        # 新しいメニューシステムを使用
+        self.show_success_dialog(
+            config_manager.get_text("common.info"),
+            config_manager.get_text("guild.messages.character_created").format(name=character.name)
+        )
         
         logger.info(config_manager.get_text("guild.messages.new_character_created").format(name=character.name))
     
     def _on_character_creation_cancelled(self):
         """キャラクター作成キャンセル時のコールバック"""
         # メインメニューを再表示（menu_stack_managerを使用）
-        if self.menu_stack_manager and self.menu_stack_manager.get_current_menu():
-            current_menu = self.menu_stack_manager.get_current_menu()
+        if self.menu_stack_manager and self.menu_stack_manager.peek_current_menu():
+            current_menu_entry = self.menu_stack_manager.peek_current_menu()
             ui_mgr = self._get_effective_ui_manager()
             if ui_mgr:
-                ui_mgr.show_menu(current_menu.menu_id, modal=True)
+                ui_mgr.show_menu(current_menu_entry.menu.menu_id, modal=True)
         
         logger.info(config_manager.get_text("guild.messages.character_creation_cancelled"))
     
