@@ -63,9 +63,9 @@ class AdventurersGuild(BaseFacility):
     def _show_character_creation(self):
         """キャラクター作成ウィザードを表示"""
         # メインメニューを隠す（menu_stack_managerを使用）
-        if self.menu_stack_manager and self.menu_stack_manager.get_current_menu():
-            current_menu = self.menu_stack_manager.get_current_menu()
-            self._hide_menu_safe(current_menu.menu_id)
+        if self.menu_stack_manager and self.menu_stack_manager.peek_current_menu():
+            current_menu_entry = self.menu_stack_manager.peek_current_menu()
+            self._hide_menu_safe(current_menu_entry.menu.menu_id)
         
         # キャラクター作成ウィザードを起動
         wizard = CharacterCreationWizard(callback=self._on_character_created)
