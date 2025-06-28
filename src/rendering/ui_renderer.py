@@ -25,17 +25,32 @@ class UIRenderer:
     
     def _init_fonts(self):
         """フォント初期化"""
+        # 利用可能なシステムフォントを取得
+        available_fonts = pygame.font.get_fonts()
+        japanese_font_candidates = ['noto', 'notosans', 'ipagothic', 'takao', 'dejavu']
+        
+        # 利用可能な日本語フォントを探す
+        selected_font = None
+        for font_name in japanese_font_candidates:
+            if font_name in available_fonts:
+                selected_font = font_name
+                break
+        
         try:
-            # 日本語対応フォント
-            font_names = 'notosanscjk,hiragino,meiryo,msgothic'
-            self.font_small = pygame.font.SysFont(font_names, self.ui_config.font_size_small)
-            self.font_medium = pygame.font.SysFont(font_names, self.ui_config.font_size_medium)
-            self.font_large = pygame.font.SysFont(font_names, self.ui_config.font_size_large)
+            if selected_font:
+                self.font_small = pygame.font.SysFont(selected_font, self.ui_config.font_size_small)
+                self.font_medium = pygame.font.SysFont(selected_font, self.ui_config.font_size_medium)
+                self.font_large = pygame.font.SysFont(selected_font, self.ui_config.font_size_large)
+            else:
+                # フォールバック：Pygameデフォルト
+                self.font_small = pygame.font.Font(None, self.ui_config.font_size_small)
+                self.font_medium = pygame.font.Font(None, self.ui_config.font_size_medium)
+                self.font_large = pygame.font.Font(None, self.ui_config.font_size_large)
         except:
-            # フォールバック
-            self.font_small = pygame.font.SysFont(None, self.ui_config.font_size_small)
-            self.font_medium = pygame.font.SysFont(None, self.ui_config.font_size_medium)
-            self.font_large = pygame.font.SysFont(None, self.ui_config.font_size_large)
+            # 最終フォールバック
+            self.font_small = pygame.font.Font(None, self.ui_config.font_size_small)
+            self.font_medium = pygame.font.Font(None, self.ui_config.font_size_medium)
+            self.font_large = pygame.font.Font(None, self.ui_config.font_size_large)
     
     def render_basic_ui(self, player_position: PlayerPosition, level: DungeonLevel):
         """基本UI描画"""

@@ -19,6 +19,9 @@ class TestBattleUIWindow:
     def setup_method(self):
         """各テストメソッドの前に実行される"""
         pygame.init()
+        # ヘッドレス環境でのウィンドウサイズ警告を回避
+        import os
+        os.environ['SDL_VIDEODRIVER'] = 'dummy'
         pygame.display.set_mode((1, 1), pygame.NOFRAME)
     
     def teardown_method(self):

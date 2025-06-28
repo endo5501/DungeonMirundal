@@ -995,10 +995,20 @@ class OverworldManager:
                 font = font_manager.get_default_font()
         except Exception as e:
             logger.warning(f"フォントマネージャーの取得に失敗: {e}")
-            try:
-                # システムフォントで日本語フォントを試す
-                font = pygame.font.SysFont('notosanscjk,noto,ipagothic,takao,hiragino,meiryo,msgothic', 24)
-            except:
+            # 利用可能なシステムフォントから日本語対応フォントを安全に取得
+            available_fonts = pygame.font.get_fonts()
+            japanese_font_candidates = ['noto', 'notosans', 'ipagothic', 'takao', 'dejavu']
+            
+            font = None
+            for font_name in japanese_font_candidates:
+                if font_name in available_fonts:
+                    try:
+                        font = pygame.font.SysFont(font_name, 24)
+                        break
+                    except:
+                        continue
+            
+            if not font:
                 font = pygame.font.Font(None, 24)
         
         if font:

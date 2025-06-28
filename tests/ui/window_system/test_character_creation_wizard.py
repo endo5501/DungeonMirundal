@@ -20,6 +20,10 @@ class TestCharacterCreationWizard:
         """各テストメソッドの前に実行される"""
         pygame.init()
         pygame.display.set_mode((1, 1), pygame.NOFRAME)
+        
+        # pygame_guiフォント警告を最小化（テスト環境）
+        import warnings
+        warnings.filterwarnings("ignore", category=UserWarning, module="pygame_gui")
     
     def teardown_method(self):
         """各テストメソッドの後に実行される"""

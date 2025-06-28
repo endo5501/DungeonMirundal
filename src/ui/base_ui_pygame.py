@@ -87,6 +87,33 @@ def _try_add_word_to_line(word: str, current_line: str, lines: List[str], font: 
         return word
 
 
+def _get_available_japanese_font(size: int = DEFAULT_FONT_SIZE) -> Optional[pygame.font.Font]:
+    """利用可能な日本語フォントを安全に取得"""
+    # 利用可能なシステムフォントを取得
+    available_fonts = pygame.font.get_fonts()
+    
+    # 日本語対応フォントの優先順位リスト（実際にシステムにあるもののみ）
+    japanese_font_candidates = [
+        'noto', 'notosans', 'ipagothic', 'ipamincho', 
+        'takao', 'takaogothic', 'takaomincho',
+        'dejavu', 'dejavusans'  # フォールバック
+    ]
+    
+    # 利用可能なフォントから最初に見つかったものを使用
+    for font_name in japanese_font_candidates:
+        if font_name in available_fonts:
+            try:
+                return pygame.font.SysFont(font_name, size)
+            except:
+                continue
+    
+    # どれも見つからない場合はPygameのデフォルトを使用
+    try:
+        return pygame.font.Font(None, size)
+    except:
+        return None
+
+
 class UIState(Enum):
     """UI状態"""
     HIDDEN = "hidden"
@@ -236,14 +263,10 @@ class UIText(UIElement):
                     use_font = font_manager.get_default_font()
             except Exception as e:
                 logger.warning(f"フォントマネージャーの取得に失敗: {e}")
-                try:
-                    # システムフォントで日本語フォントを試す
-                    use_font = pygame.font.SysFont('notosanscjk,noto,ipagothic,takao,hiragino,meiryo,msgothic', DEFAULT_FONT_SIZE)
-                except:
-                    try:
-                        use_font = pygame.font.Font(None, DEFAULT_FONT_SIZE)
-                    except:
-                        return  # フォントが取得できない場合は描画しない
+                # 利用可能な日本語フォントを安全に取得
+                use_font = _get_available_japanese_font(DEFAULT_FONT_SIZE)
+                if not use_font:
+                    return  # フォントが取得できない場合は描画しない
         
         # テキストをレンダリング
         try:
@@ -303,14 +326,10 @@ class UIButton(UIElement):
                         use_font = font_manager.get_default_font()
                 except Exception as e:
                     logger.warning(f"フォントマネージャーの取得に失敗: {e}")
-                    try:
-                        # システムフォントで日本語フォントを試す
-                        use_font = pygame.font.SysFont('notosanscjk,noto,ipagothic,takao,hiragino,meiryo,msgothic', 24)
-                    except:
-                        try:
-                            use_font = pygame.font.Font(None, 24)
-                        except:
-                            return  # フォントが取得できない場合は描画しない
+                    # 利用可能な日本語フォントを安全に取得
+                    use_font = _get_available_japanese_font(24)
+                    if not use_font:
+                        return  # フォントが取得できない場合は描画しない
             
             # テキストをレンダリング（折り返し対応）
             try:
@@ -449,10 +468,9 @@ class UIMenu:
                     use_font = font_manager.get_default_font()
             except Exception as e:
                 logger.warning(f"フォントマネージャーの取得に失敗: {e}")
-                try:
-                    # システムフォントで日本語フォントを試す
-                    use_font = pygame.font.SysFont('notosanscjk,noto,ipagothic,takao,hiragino,meiryo,msgothic', 24)
-                except:
+                # 利用可能な日本語フォントを安全に取得
+                use_font = _get_available_japanese_font(24)
+                if not use_font:
                     use_font = pygame.font.Font(None, 24)
         
         # 背景描画（半透明）
@@ -523,10 +541,9 @@ class UIDialog(UIMenu):
                     use_font = font_manager.get_default_font()
             except Exception as e:
                 logger.warning(f"フォントマネージャーの取得に失敗: {e}")
-                try:
-                    # システムフォントで日本語フォントを試す
-                    use_font = pygame.font.SysFont('notosanscjk,noto,ipagothic,takao,hiragino,meiryo,msgothic', 24)
-                except:
+                # 利用可能な日本語フォントを安全に取得
+                use_font = _get_available_japanese_font(24)
+                if not use_font:
                     use_font = pygame.font.Font(None, 24)
         
         # ダイアログ背景
