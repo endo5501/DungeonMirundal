@@ -6,9 +6,9 @@ from enum import Enum
 import pygame
 
 from src.character.party import Party
-from src.ui.base_ui_pygame import UIElement, UIMenu, UIDialog, ui_manager
+from src.ui.base_ui_pygame import UIMenu, ui_manager
 from src.ui.menu_stack_manager import MenuStackManager, MenuType
-from src.ui.dialog_template import DialogTemplate, DialogType
+from src.ui.dialog_template import DialogTemplate
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
@@ -49,8 +49,6 @@ class BaseFacility(ABC):
         self.menu_stack_manager: Optional[MenuStackManager] = None
         self.dialog_template: Optional[DialogTemplate] = None
         
-        # 旧システム互換用（削除予定）
-        self.current_dialog: Optional[UIDialog] = None
         
         logger.info(f"施設を初期化しました: {facility_id} ({facility_type.value})")
     
@@ -179,203 +177,45 @@ class BaseFacility(ABC):
     
     def _show_dialog(self, dialog_id: str, title: str, message: str, buttons: List[Dict[str, Any]] = None,
                      width: int = None, height: int = None):
-        """ダイアログの表示"""
-        # ui_managerがNoneの場合は安全にスキップ
-        if ui_manager is None:
-            logger.warning(f"ui_managerがNoneのため、ダイアログ表示をスキップ: {dialog_id}")
-            return
-            
-        if self.current_dialog:
-            ui_manager.hide_dialog(self.current_dialog.dialog_id)
-        
-        # テキスト量に応じたデフォルトサイズを設定
-        if width is None:
-            # メッセージの長さに基づいて幅を決定
-            message_length = len(message) if message else 0
-            if message_length > 200:
-                width = 700
-            elif message_length > 100:
-                width = 600
-            else:
-                width = 500
-        
-        if height is None:
-            # メッセージの行数に基づいて高さを決定
-            line_count = message.count('\n') + 1 if message else 1
-            if line_count > 15:
-                height = 500
-            elif line_count > 10:
-                height = 400
-            else:
-                height = max(300, line_count * 25 + 150)  # 基本高さ + テキスト分
-        
-        # UIDialogを適切なサイズで作成
-        self.current_dialog = UIDialog(dialog_id, title, message, width=width, height=height)
-        
-        # ボタンがある場合は手動で追加
+        """ダイアログの表示（新システムへのプロキシ）"""
+        # ボタンデータの変換
         if buttons:
-            for i, button_data in enumerate(buttons):
-                from src.ui.base_ui_pygame import UIButton
-                # ボタンの位置を計算（ダイアログの下部に配置）
-                dialog_bottom = self.current_dialog.rect.y + self.current_dialog.rect.height
-                button_x = self.current_dialog.rect.x + self.current_dialog.rect.width - 120 - (i * 130)  # 右から配置
-                button_y = dialog_bottom - 50  # ダイアログの下部余白内に配置
-                
-                button = UIButton(f"{dialog_id}_button_{i}", button_data['text'], 
-                                x=button_x, y=button_y, width=100, height=30)
-                button.on_click = button_data['command']
-                self.current_dialog.add_element(button)
-        
-        ui_manager.add_dialog(self.current_dialog)
-        ui_manager.show_dialog(self.current_dialog.dialog_id)
-    
-    def _calculate_dialog_width(self, message: str) -> int:
-        """メッセージの長さに基づいてダイアログ幅を計算"""
-        message_length = len(message) if message else 0
-        if message_length > MESSAGE_LENGTH_THRESHOLD_LARGE:
-            return DEFAULT_DIALOG_WIDTH_LARGE
-        elif message_length > MESSAGE_LENGTH_THRESHOLD_SMALL:
-            return DEFAULT_DIALOG_WIDTH_MEDIUM
+            # 最初のボタンをon_closeとして使用
+            on_close = buttons[0]['command'] if buttons else None
+            self.show_information_dialog(title, message, on_close)
         else:
-            return DEFAULT_DIALOG_WIDTH_SMALL
-    
-    def _calculate_dialog_height(self, message: str) -> int:
-        """メッセージの行数に基づいてダイアログ高さを計算"""
-        line_count = message.count('\n') + 1 if message else 1
-        if line_count > LINE_COUNT_THRESHOLD_LARGE:
-            return DEFAULT_DIALOG_HEIGHT_LARGE
-        elif line_count > LINE_COUNT_THRESHOLD_MEDIUM:
-            return DEFAULT_DIALOG_HEIGHT_MEDIUM
-        else:
-            return max(DEFAULT_DIALOG_HEIGHT_SMALL, line_count * BASE_HEIGHT_PER_LINE + DIALOG_BASE_HEIGHT)
-    
-    def _add_dialog_buttons(self, dialog_id: str, buttons: List[Dict[str, Any]]):
-        """ダイアログにボタンを追加"""
-        for i, button_data in enumerate(buttons):
-            from src.ui.base_ui_pygame import UIButton
-            
-            button_x, button_y = self._calculate_button_position(i)
-            
-            button = UIButton(
-                f"{dialog_id}_button_{i}", 
-                button_data['text'],
-                x=button_x, 
-                y=button_y, 
-                width=STANDARD_BUTTON_WIDTH, 
-                height=STANDARD_BUTTON_HEIGHT
-            )
-            button.on_click = button_data['command']
-            self.current_dialog.add_element(button)
-    
-    def _calculate_button_position(self, button_index: int) -> tuple:
-        """ボタンの位置を計算"""
-        dialog_bottom = self.current_dialog.rect.y + self.current_dialog.rect.height
-        button_x = (self.current_dialog.rect.x + 
-                   self.current_dialog.rect.width - 
-                   BUTTON_RIGHT_MARGIN - 
-                   (button_index * BUTTON_SPACING))
-        button_y = dialog_bottom - BUTTON_BOTTOM_MARGIN
-        return button_x, button_y
+            self.show_information_dialog(title, message)
     
     def _close_dialog(self):
-        """ダイアログを閉じる"""
-        if self.current_dialog and ui_manager:
-            ui_manager.hide_dialog(self.current_dialog.dialog_id)
-            self.current_dialog = None
-            
-            # ダイアログを閉じた後、メインメニューを再表示
-            if self.menu_stack_manager:
-                self.menu_stack_manager.back_to_facility_main()
-        elif self.current_dialog:
-            # ui_managerがNoneの場合は最低限の処理のみ実行
-            logger.warning("ui_managerがNoneのため、ダイアログクリーンアップをスキップします")
-            self.current_dialog = None
+        """ダイアログを閉じる（新システムへのプロキシ）"""
+        # 新システムではダイアログは自動的に閉じられるため、特別な処理は不要
+        # メインメニューに戻る処理のみ実行
+        if self.menu_stack_manager:
+            self.menu_stack_manager.back_to_facility_main()
     
-    def _show_welcome_message(self):
-        """入場時のウェルカムメッセージを表示"""
-        welcome_message = self._get_welcome_message()
-        
-        self._show_dialog(
-            f"{self.facility_id}_welcome",
-            self.get_name(),
-            welcome_message,
-            buttons=[
-                {
-                    'text': config_manager.get_text("common.ok"),
-                    'command': self._on_welcome_ok
-                }
-            ]
-        )
-    
-    def _on_welcome_ok(self):
-        """ウェルカムメッセージのOKボタンが押された時の処理"""
-        self._close_dialog()
-        # ウェルカムメッセージを閉じた後にメインメニューを表示
-        self._show_main_menu()
-    
-    def _get_welcome_message(self) -> str:
-        """施設のウェルカムメッセージを取得（サブクラスでオーバーライド可能）"""
-        return f"{self.get_name()}へようこそ！"
     
     def _show_success_message(self, message: str):
-        """成功メッセージの表示"""
-        self._show_dialog(
-            f"{self.facility_id}_success",
+        """成功メッセージの表示（新システムへのプロキシ）"""
+        self.show_success_dialog(
             config_manager.get_text("common.info"),
-            message,
-            buttons=[
-                {
-                    'text': config_manager.get_text("common.ok"),
-                    'command': self._close_dialog
-                }
-            ]
+            message
         )
     
     def _show_error_message(self, message: str):
-        """エラーメッセージの表示"""
-        self._show_dialog(
-            f"{self.facility_id}_error",
+        """エラーメッセージの表示（新システムへのプロキシ）"""
+        self.show_error_dialog(
             config_manager.get_text("common.error"),
-            message,
-            buttons=[
-                {
-                    'text': config_manager.get_text("common.ok"),
-                    'command': self._close_dialog
-                }
-            ]
+            message
         )
     
     def _show_confirmation(self, message: str, on_confirm: Callable, on_cancel: Callable = None):
-        """確認ダイアログの表示"""
-        if self.use_new_menu_system and self.dialog_template:
-            # 新システムを使用
-            dialog = self.dialog_template.create_confirmation_dialog(
-                f"{self.facility_id}_confirm",
-                config_manager.get_text("common.confirm"),
-                message,
-                on_confirm,
-                on_cancel
-            )
-            self.dialog_template.show_dialog(dialog)
-        else:
-            # 旧システムを使用
-            buttons = [
-                {
-                    'text': config_manager.get_text("common.yes"),
-                    'command': lambda: (self._close_dialog(), on_confirm())
-                },
-                {
-                    'text': config_manager.get_text("common.no"),
-                    'command': lambda: (self._close_dialog(), on_cancel() if on_cancel else None)
-                }
-            ]
-            
-            self._show_dialog(
-                f"{self.facility_id}_confirm",
-                config_manager.get_text("common.confirm"),
-                message,
-                buttons
-            )
+        """確認ダイアログの表示（新システムへのプロキシ）"""
+        self.show_confirmation_dialog(
+            config_manager.get_text("common.confirm"),
+            message,
+            on_confirm,
+            on_cancel
+        )
     
     # === 新しいメニューシステム用メソッド ===
     
