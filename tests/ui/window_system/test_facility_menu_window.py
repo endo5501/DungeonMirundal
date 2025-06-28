@@ -21,6 +21,24 @@ class TestFacilityMenuWindow:
         pygame.init()
         pygame.display.set_mode((1, 1), pygame.NOFRAME)
     
+    def _create_mock_party(self, member_count=3, gold=1000, max_hp=300, current_hp=250, **kwargs):
+        """完全なMockパーティを作成（HTML Mock警告を防ぐ）"""
+        mock_party = Mock()
+        mock_party.get_member_count.return_value = member_count
+        mock_party.get_gold.return_value = gold
+        mock_party.get_total_max_hp.return_value = max_hp
+        mock_party.get_total_current_hp.return_value = current_hp
+        
+        # 追加の属性があれば設定
+        for key, value in kwargs.items():
+            # 特定のメソッド名の場合は関数として設定
+            if key.startswith('has_') or key.startswith('get_') or key.startswith('is_'):
+                setattr(mock_party, key, Mock(return_value=value))
+            else:
+                setattr(mock_party, key, Mock(return_value=value) if callable(value) else value)
+        
+        return mock_party
+    
     def teardown_method(self):
         """各テストメソッドの後に実行される"""
         pygame.quit()
@@ -31,7 +49,7 @@ class TestFacilityMenuWindow:
         facility_config = {
             'facility_type': 'guild',
             'facility_name': '冒険者ギルド',
-            'party': Mock(),
+            'party': self._create_mock_party(),
             'menu_items': [
                 {'id': 'create_character', 'label': 'キャラクター作成'},
                 {'id': 'party_formation', 'label': 'パーティ編成'},
@@ -66,7 +84,7 @@ class TestFacilityMenuWindow:
         facility_config = {
             'facility_type': 'inn',
             'facility_name': '宿屋「安らぎの夜」',
-            'party': Mock(),
+            'party': self._create_mock_party(),
             'menu_items': [
                 {'id': 'adventure_prep', 'label': '冒険の準備'},
                 {'id': 'party_status', 'label': 'パーティ状況'},
@@ -88,7 +106,7 @@ class TestFacilityMenuWindow:
         facility_config = {
             'facility_type': 'shop',
             'facility_name': '武具店',
-            'party': Mock(),
+            'party': self._create_mock_party(),
             'menu_items': [
                 {'id': 'buy_items', 'label': 'アイテム購入'},
                 {'id': 'sell_items', 'label': 'アイテム売却'},
@@ -116,7 +134,7 @@ class TestFacilityMenuWindow:
         facility_config = {
             'facility_type': 'guild',
             'facility_name': '冒険者ギルド',
-            'party': Mock(),
+            'party': self._create_mock_party(),
             'menu_items': [
                 {'id': 'create_character', 'label': 'キャラクター作成'},
                 {'id': 'party_formation', 'label': 'パーティ編成'},
@@ -145,7 +163,7 @@ class TestFacilityMenuWindow:
         facility_config = {
             'facility_type': 'temple',
             'facility_name': '神殿',
-            'party': Mock(),
+            'party': self._create_mock_party(),
             'menu_items': [
                 {'id': 'heal_party', 'label': 'パーティ回復'},
                 {'id': 'resurrection', 'label': '蘇生サービス'},
@@ -179,7 +197,7 @@ class TestFacilityMenuWindow:
         facility_config = {
             'facility_type': 'guild',
             'facility_name': '冒険者ギルド',
-            'party': Mock(),
+            'party': self._create_mock_party(),
             'menu_items': [
                 {'id': 'create_character', 'label': 'キャラクター作成'},
                 {'id': 'exit', 'label': '出る'}
@@ -205,7 +223,7 @@ class TestFacilityMenuWindow:
         facility_config = {
             'facility_type': 'inn',
             'facility_name': '宿屋',
-            'party': Mock(),
+            'party': self._create_mock_party(),
             'menu_items': [
                 {'id': 'rest', 'label': '休息'},
                 {'id': 'exit', 'label': '出る'}
@@ -228,9 +246,7 @@ class TestFacilityMenuWindow:
     def test_facility_menu_displays_party_information(self):
         """パーティ情報が表示されることを確認"""
         # Given: パーティ情報を持つ施設メニュー
-        mock_party = Mock()
-        mock_party.get_member_count.return_value = 3
-        mock_party.get_gold.return_value = 1500
+        mock_party = self._create_mock_party(member_count=3, gold=1500, max_hp=300, current_hp=250)
         
         facility_config = {
             'facility_type': 'shop',
@@ -253,8 +269,10 @@ class TestFacilityMenuWindow:
     def test_facility_menu_supports_conditional_menu_items(self):
         """条件付きメニュー項目の表示が動作することを確認"""
         # Given: 条件付きメニュー項目を含む施設設定
-        mock_party = Mock()
-        mock_party.has_dead_members.return_value = True
+        mock_party = self._create_mock_party(
+            member_count=4, gold=2000, max_hp=400, current_hp=320,
+            has_dead_members=True
+        )
         
         facility_config = {
             'facility_type': 'temple',
@@ -277,8 +295,7 @@ class TestFacilityMenuWindow:
     def test_facility_menu_handles_disabled_menu_items(self):
         """無効化されたメニュー項目の処理が動作することを確認"""
         # Given: 無効化されたメニュー項目を含む施設設定
-        mock_party = Mock()
-        mock_party.get_gold.return_value = 50  # 少額
+        mock_party = self._create_mock_party(member_count=2, gold=50, max_hp=200, current_hp=180)
         
         facility_config = {
             'facility_type': 'shop',
@@ -306,7 +323,7 @@ class TestFacilityMenuWindow:
         facility_config = {
             'facility_type': 'guild',
             'facility_name': '冒険者ギルド',
-            'party': Mock(),
+            'party': self._create_mock_party(),
             'menu_items': [
                 {'id': 'character_menu', 'label': 'キャラクター管理', 'type': 'submenu'},
                 {'id': 'party_menu', 'label': 'パーティ管理', 'type': 'submenu'},
@@ -334,7 +351,7 @@ class TestFacilityMenuWindow:
         facility_config = {
             'facility_type': 'inn',
             'facility_name': '宿屋',
-            'party': Mock(),
+            'party': self._create_mock_party(),
             'menu_items': [
                 {'id': 'rest', 'label': '休息'},
                 {'id': 'storage', 'label': '倉庫'},
@@ -364,7 +381,7 @@ class TestFacilityMenuWindow:
         facility_config = {
             'facility_type': 'shop',
             'facility_name': '商店',
-            'party': Mock(),
+            'party': self._create_mock_party(),
             'menu_items': [
                 {'id': 'buy', 'label': '購入'},
                 {'id': 'sell', 'label': '売却'},
@@ -396,7 +413,7 @@ class TestFacilityMenuWindow:
         facility_config = {
             'facility_type': 'guild',
             'facility_name': '冒険者ギルド',
-            'party': Mock(),
+            'party': self._create_mock_party(),
             'menu_items': [
                 {'id': 'create_character', 'label': 'キャラクター作成'},
                 {'id': 'exit', 'label': '出る'}

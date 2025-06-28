@@ -341,6 +341,8 @@ class TestBattleUIWindow:
         mock_character.name = 'ヒーロー'
         mock_character.hp = 100
         mock_character.max_hp = 100
+        mock_character.mp = 50
+        mock_character.max_mp = 50
         mock_character.status_effects = [
             Mock(name='毒', duration=3, effect_type='poison'),
             Mock(name='力強化', duration=5, effect_type='buff')
