@@ -411,7 +411,7 @@ class TestComprehensiveMenuNavigation:
             if not facility:
                 return False
             
-            if facility.use_new_menu_system and facility.menu_stack_manager:
+            if facility.menu_stack_manager:
                 return facility.menu_stack_manager.back_to_facility_main()
             
             return True
@@ -445,7 +445,7 @@ class TestComprehensiveMenuNavigation:
         # 実装では、現在表示されているメニューに戻るボタンがあるかをチェック
         # モックテストでは、適切にメソッドが呼ばれているかを確認
         facility = facility_manager.get_current_facility()
-        if facility and facility.use_new_menu_system:
+        if facility and facility.menu_stack_manager:
             return facility.menu_stack_manager is not None
         return True
     
@@ -453,7 +453,7 @@ class TestComprehensiveMenuNavigation:
         """戻るボタンを押す"""
         try:
             facility = facility_manager.get_current_facility()
-            if facility and facility.use_new_menu_system:
+            if facility and facility.menu_stack_manager:
                 return facility.back_to_previous_menu()
             return True
         except Exception as e:

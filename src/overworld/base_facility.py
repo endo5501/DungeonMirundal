@@ -45,34 +45,21 @@ class BaseFacility(ABC):
         self.is_active = DEFAULT_ACTIVE_STATE
         self.current_party: Optional[Party] = None
         
-        # 新しいメニューシステム
+        # メニューシステム
         self.menu_stack_manager: Optional[MenuStackManager] = None
         self.dialog_template: Optional[DialogTemplate] = None
-        
-        # 旧UIシステム（後方互換性のため）
-        self.main_menu: Optional[UIMenu] = None
-        self.current_dialog: Optional[UIDialog] = None
-        
-        # 新システム有効化フラグ
-        self.use_new_menu_system = False
         
         logger.info(f"施設を初期化しました: {facility_id} ({facility_type.value})")
     
     def initialize_menu_system(self, ui_manager) -> None:
-        """新しいメニューシステムを初期化"""
-        try:
-            self.menu_stack_manager = MenuStackManager(ui_manager)
-            self.dialog_template = DialogTemplate(self.menu_stack_manager)
-            self.use_new_menu_system = True
-            
-            # ESCキー処理のコールバック設定
-            self.menu_stack_manager.on_escape_pressed = self._handle_escape_key
-            
-            logger.info(f"施設 {self.facility_id} の新メニューシステムを初期化しました")
-            
-        except Exception as e:
-            logger.error(f"メニューシステム初期化エラー: {e}")
-            self.use_new_menu_system = False
+        """メニューシステムを初期化"""
+        self.menu_stack_manager = MenuStackManager(ui_manager)
+        self.dialog_template = DialogTemplate(self.menu_stack_manager)
+        
+        # ESCキー処理のコールバック設定
+        self.menu_stack_manager.on_escape_pressed = self._handle_escape_key
+        
+        logger.info(f"施設 {self.facility_id} のメニューシステムを初期化しました")
     
     def get_name(self) -> str:
         """施設名を取得"""
@@ -116,12 +103,7 @@ class BaseFacility(ABC):
     
     def _show_main_menu(self):
         """メインメニューの表示"""
-        if self.use_new_menu_system and self.menu_stack_manager:
-            # 新システムを使用
-            self._show_main_menu_new()
-        else:
-            # 旧システムを使用（後方互換性）
-            self._show_main_menu_legacy()
+        self._show_main_menu_new()
     
     def _show_main_menu_new(self):
         """新しいメニューシステムでメインメニューを表示"""
@@ -133,9 +115,8 @@ class BaseFacility(ABC):
             logger.info(f"新システムで施設メインメニューを表示: {self.facility_id}")
             
         except Exception as e:
-            logger.error(f"新メニューシステム表示エラー: {e}")
-            # フォールバックとして旧システムを使用
-            self._show_main_menu_legacy()
+            logger.error(f"メニューシステム表示エラー: {e}")
+            raise
     
     def _create_main_menu(self) -> UIMenu:
         """メインメニューを作成"""
@@ -162,26 +143,7 @@ class BaseFacility(ABC):
             {'facility_id': self.facility_id}
         )
     
-    def _show_main_menu_legacy(self):
-        """旧メニューシステムでメインメニューを表示（後方互換性）"""
-        self._cleanup_legacy_menu()
-        
-        menu_title = self.get_name()
-        self.main_menu = UIMenu(f"{self.facility_id}_main_menu", menu_title)
-        
-        # 施設固有のメニュー項目を追加
-        self._setup_menu_items(self.main_menu)
-        
-        # 共通メニュー項目（出る）
-        self._add_common_menu_items(self.main_menu)
-        
-        ui_manager.add_menu(self.main_menu)
-        ui_manager.show_menu(self.main_menu.menu_id, modal=True)
     
-    def _cleanup_legacy_menu(self):
-        """旧メニューのクリーンアップ"""
-        if self.main_menu:
-            ui_manager.hide_menu(self.main_menu.menu_id)
     
     def _exit_facility(self):
         """施設から出る（UI用）"""
@@ -201,21 +163,11 @@ class BaseFacility(ABC):
     def _cleanup_ui(self):
         """UI要素のクリーンアップ"""
         try:
-            # 新システムのクリーンアップ
-            if self.use_new_menu_system:
-                if self.menu_stack_manager:
-                    self.menu_stack_manager.clear_stack()
-                if self.dialog_template:
-                    self.dialog_template.cleanup_all_dialogs()
-            
-            # 旧システムのクリーンアップ
-            if self.main_menu:
-                ui_manager.hide_menu(self.main_menu.menu_id)
-                self.main_menu = None
-            
-            if self.current_dialog:
-                ui_manager.hide_dialog(self.current_dialog.dialog_id)
-                self.current_dialog = None
+            # メニューシステムのクリーンアップ
+            if self.menu_stack_manager:
+                self.menu_stack_manager.clear_stack()
+            if self.dialog_template:
+                self.dialog_template.cleanup_all_dialogs()
                 
             logger.debug(f"施設 {self.facility_id} のUIをクリーンアップしました")
             
@@ -425,11 +377,7 @@ class BaseFacility(ABC):
     # === 新しいメニューシステム用メソッド ===
     
     def show_submenu(self, menu: UIMenu, context: Dict[str, Any] = None) -> bool:
-        """サブメニューを表示（新システム）"""
-        if not self.use_new_menu_system or not self.menu_stack_manager:
-            logger.warning("新メニューシステムが利用できません")
-            return False
-        
+        """サブメニューを表示"""
         try:
             self.menu_stack_manager.push_menu(
                 menu, 
@@ -444,11 +392,7 @@ class BaseFacility(ABC):
     def show_information_dialog(self, title: str, message: str, 
                               on_close: Optional[Callable] = None, 
                               buttons: Optional[List[Dict]] = None) -> bool:
-        """情報ダイアログを表示（新システム）"""
-        if not self.use_new_menu_system or not self.dialog_template:
-            logger.warning("新ダイアログシステムが利用できません")
-            return False
-        
+        """情報ダイアログを表示"""
         try:
             # buttonsパラメータは現在未実装なので無視
             dialog = self.dialog_template.create_information_dialog(
@@ -464,9 +408,17 @@ class BaseFacility(ABC):
     
     def show_error_dialog(self, title: str, message: str,
                          on_close: Optional[Callable] = None) -> bool:
-        """エラーダイアログを表示（新システム）"""
-        if not self.use_new_menu_system or not self.dialog_template:
-            logger.warning("新ダイアログシステムが利用できません")
+        """エラーダイアログを表示"""
+        try:
+            dialog = self.dialog_template.create_error_dialog(
+                f"{self.facility_id}_error_{pygame.time.get_ticks()}",
+                title,
+                message,
+                on_close
+            )
+            return self.dialog_template.show_dialog(dialog)
+        except Exception as e:
+            logger.error(f"エラーダイアログ表示エラー: {e}")
             # ダイアログ表示に失敗してもコールバックは実行
             if on_close:
                 on_close()
@@ -494,14 +446,7 @@ class BaseFacility(ABC):
     
     def show_success_dialog(self, title: str, message: str,
                           on_close: Optional[Callable] = None) -> bool:
-        """成功ダイアログを表示（新システム）"""
-        if not self.use_new_menu_system or not self.dialog_template:
-            logger.warning("新ダイアログシステムが利用できません")
-            # ダイアログ表示に失敗してもコールバックは実行
-            if on_close:
-                on_close()
-            return False
-        
+        """成功ダイアログを表示"""
         try:
             dialog = self.dialog_template.create_success_dialog(
                 f"{self.facility_id}_success_{pygame.time.get_ticks()}",
@@ -525,11 +470,7 @@ class BaseFacility(ABC):
     def show_confirmation_dialog(self, title: str, message: str,
                                on_confirm: Optional[Callable] = None,
                                on_cancel: Optional[Callable] = None) -> bool:
-        """確認ダイアログを表示（新システム）"""
-        if not self.use_new_menu_system or not self.dialog_template:
-            logger.warning("新ダイアログシステムが利用できません")
-            return False
-        
+        """確認ダイアログを表示"""
         try:
             dialog = self.dialog_template.create_confirmation_dialog(
                 f"{self.facility_id}_confirm_{pygame.time.get_ticks()}",
@@ -547,11 +488,7 @@ class BaseFacility(ABC):
                             selections: List[Dict[str, Any]],
                             on_select: Optional[Callable] = None,
                             on_cancel: Optional[Callable] = None) -> bool:
-        """選択ダイアログを表示（新システム）"""
-        if not self.use_new_menu_system or not self.dialog_template:
-            logger.warning("新ダイアログシステムが利用できません")
-            return False
-        
+        """選択ダイアログを表示"""
         try:
             dialog = self.dialog_template.create_selection_dialog(
                 f"{self.facility_id}_selection_{pygame.time.get_ticks()}",
@@ -608,70 +545,15 @@ class BaseFacility(ABC):
             logger.error(f"メニュー表示エラー: {e}")
     
     def back_to_previous_menu(self) -> bool:
-        """前のメニューに戻る（新システム対応、旧システムフォールバック）"""
-        if self.use_new_menu_system and self.menu_stack_manager:
-            return self.menu_stack_manager.back_to_previous()
-        else:
-            # 旧システム用のフォールバック処理
-            return self._back_to_main_menu_legacy()
+        """前のメニューに戻る"""
+        return self.menu_stack_manager.back_to_previous()
     
-    def _back_to_main_menu_legacy(self) -> bool:
-        """旧システム用：メインメニューに戻る"""
-        try:
-            possible_menus = self._get_possible_menu_ids()
-            ui_mgr = self._get_effective_ui_manager()
-            
-            if ui_mgr:
-                self._hide_all_submenus(ui_mgr, possible_menus)
-                return self._show_main_menu_if_available(ui_mgr)
-            
-            return False
-            
-        except Exception as e:
-            logger.error(f"メインメニュー復帰エラー: {e}")
-            return False
     
-    def _get_possible_menu_ids(self) -> List[str]:
-        """閉じる必要があるメニューID一覧を取得"""
-        possible_menus = [
-            "adventure_prep_menu",
-            "new_item_mgmt_menu", 
-            "character_item_menu",
-            "spell_mgmt_menu",
-            "prayer_mgmt_menu",
-            "character_spell_menu",
-            "character_prayer_menu",
-            "party_equipment_menu",
-            f"{self.facility_id}_submenu"
-        ]
-        
-        # 派生クラスで追加のメニューIDがある場合
-        if hasattr(self, '_get_additional_menu_ids'):
-            possible_menus.extend(self._get_additional_menu_ids())
-        
-        return possible_menus
     
-    def _hide_all_submenus(self, ui_mgr, menu_ids: List[str]):
-        """すべてのサブメニューを非表示にする"""
-        for menu_id in menu_ids:
-            try:
-                ui_mgr.hide_menu(menu_id)
-            except:
-                pass  # メニューが存在しない場合は無視
     
-    def _show_main_menu_if_available(self, ui_mgr) -> bool:
-        """メインメニューが利用可能な場合は表示する"""
-        if self.main_menu:
-            ui_mgr.show_menu(self.main_menu.menu_id, modal=True)
-            logger.info("旧システムでメインメニューに戻りました")
-            return True
-        return False
     
     def back_to_facility_main(self) -> bool:
-        """施設メインメニューに戻る（新システム）"""
-        if not self.use_new_menu_system or not self.menu_stack_manager:
-            return False
-        
+        """施設メインメニューに戻る"""
         return self.menu_stack_manager.back_to_facility_main()
     
     def _handle_escape_key(self) -> bool:

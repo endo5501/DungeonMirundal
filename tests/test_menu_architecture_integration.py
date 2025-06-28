@@ -93,8 +93,7 @@ class TestMenuArchitectureIntegration:
         # 新メニューシステムを初期化
         test_facility.initialize_menu_system(self.ui_manager)
         
-        # 新システムが有効化されていることを確認
-        assert test_facility.use_new_menu_system is True
+        # メニューシステムが初期化されていることを確認
         assert test_facility.menu_stack_manager is not None
         assert test_facility.dialog_template is not None
         
@@ -118,8 +117,9 @@ class TestMenuArchitectureIntegration:
         # _talk_to_innkeeper を呼び出して、エラーなく実行されることを確認
         try:
             inn._talk_to_innkeeper()
-            # 新システムが使用されていることを確認
-            assert inn.use_new_menu_system is True
+            # メニューシステムが初期化されていることを確認
+            assert inn.menu_stack_manager is not None
+            assert inn.dialog_template is not None
         except Exception as e:
             # ダイアログ表示時のエラーは許容（UIマネージャーがモックのため）
             if "add_dialog" not in str(e):
@@ -216,8 +216,9 @@ class TestSpecificBugFixes:
         inn.initialize_menu_system(self.ui_manager)
         inn.current_party = Mock(spec=Party)
         
-        # 新システムでは自動的に戻るボタンが付加されることを確認
-        assert inn.use_new_menu_system is True
+        # メニューシステムでは自動的に戻るボタンが付加されることを確認
+        assert inn.menu_stack_manager is not None
+        assert inn.dialog_template is not None
         
         # show_information_dialog メソッドが利用可能であることを確認
         assert hasattr(inn, 'show_information_dialog')

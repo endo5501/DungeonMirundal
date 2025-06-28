@@ -88,32 +88,20 @@ class Inn(BaseFacility):
         import random
         title, message = random.choice(messages)
         
-        if self.use_new_menu_system and self.dialog_template:
-            self.show_information_dialog(
-                f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
-                message,
-                buttons=[{"text": "戻る", "callback": None}]
-            )
-        else:
-            self.show_information_dialog(
-                f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
-                message
-            )
+        self.show_information_dialog(
+            f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
+            message,
+            buttons=[{"text": "戻る", "callback": None}]
+        )
     
     def _show_travel_info(self):
         """旅の情報を表示"""
         travel_info = config_manager.get_text("inn.travel_info.content")
-        if self.use_new_menu_system and self.dialog_template:
-            self.show_information_dialog(
-                config_manager.get_text("inn.travel_info.title"),
-                travel_info,
-                buttons=[{"text": "戻る", "callback": None}]
-            )
-        else:
-            self.show_information_dialog(
-                config_manager.get_text("inn.travel_info.title"),
-                travel_info
-            )
+        self.show_information_dialog(
+            config_manager.get_text("inn.travel_info.title"),
+            travel_info,
+            buttons=[{"text": "戻る", "callback": None}]
+        )
     
     def _show_tavern_rumors(self):
         """酒場の噂話を表示"""
@@ -133,17 +121,11 @@ class Inn(BaseFacility):
         import random
         title, rumor = random.choice(rumors)
         
-        if self.use_new_menu_system and self.dialog_template:
-            self.show_information_dialog(
-                f"{config_manager.get_text('inn.rumors.title')} - {title}",
-                rumor,
-                buttons=[{"text": "戻る", "callback": None}]
-            )
-        else:
-            self.show_information_dialog(
-                f"{config_manager.get_text('inn.rumors.title')} - {title}",
-                rumor
-            )
+        self.show_information_dialog(
+            f"{config_manager.get_text('inn.rumors.title')} - {title}",
+            rumor,
+            buttons=[{"text": "戻る", "callback": None}]
+        )
     
     # === パーティ管理 ===
     
@@ -315,10 +297,7 @@ class Inn(BaseFacility):
             else:
                 status_text += "倉庫は空です。"
             
-            if self.use_new_menu_system and self.dialog_template:
-                self.show_information_dialog("宿屋倉庫の状況", status_text, buttons=[{"text": "戻る", "callback": None}])
-            else:
-                self.show_information_dialog("宿屋倉庫の状況", status_text)
+            self.show_information_dialog("宿屋倉庫の状況", status_text, buttons=[{"text": "戻る", "callback": None}])
             
         except Exception as e:
             logger.error(f"倉庫状況表示エラー: {e}")
@@ -505,34 +484,26 @@ class Inn(BaseFacility):
                 spell_name = spell.get_name() if spell else spell_id
                 message = f"{spell_name}をレベル{level}スロット{slot_index + 1}に装備しました。"
                 
-                if self.use_new_menu_system and self.dialog_template:
-                    self.show_information_dialog(
-                        "装備成功",
-                        message,
-                        buttons=[{
-                            "text": "OK",
-                            "callback": lambda: self._show_character_spell_slot_detail(character)
-                        }]
-                    )
-                else:
-                    self.show_information_dialog("装備成功", message)
-                    self._show_character_spell_slot_detail(character)
+                self.show_information_dialog(
+                    "装備成功",
+                    message,
+                    buttons=[{
+                        "text": "OK",
+                        "callback": lambda: self._show_character_spell_slot_detail(character)
+                    }]
+                )
             else:
                 # 失敗メッセージを表示
                 message = "魔法の装備に失敗しました。\n\n原因：\n・魔法レベルがスロットレベルより高い\n・魔法を習得していない\n・無効なスロット"
                 
-                if self.use_new_menu_system and self.dialog_template:
-                    self.show_information_dialog(
-                        "装備失敗",
-                        message,
-                        buttons=[{
-                            "text": "OK",
-                            "callback": lambda: self._show_character_spell_slot_detail(character)
-                        }]
-                    )
-                else:
-                    self.show_information_dialog("装備失敗", message)
-                    self._show_character_spell_slot_detail(character)
+                self.show_information_dialog(
+                    "装備失敗",
+                    message,
+                    buttons=[{
+                        "text": "OK",
+                        "callback": lambda: self._show_character_spell_slot_detail(character)
+                    }]
+                )
                     
         except Exception as e:
             logger.error(f"魔法装備エラー: {e}")
@@ -570,14 +541,11 @@ class Inn(BaseFacility):
                 
                 status_text += "\n"
             
-            if self.use_new_menu_system and self.dialog_template:
-                self.show_information_dialog(
-                    "魔法スロット状況",
-                    status_text,
-                    buttons=[{"text": "戻る", "callback": None}]
-                )
-            else:
-                self.show_information_dialog("魔法スロット状況", status_text)
+            self.show_information_dialog(
+                "魔法スロット状況",
+                status_text,
+                buttons=[{"text": "戻る", "callback": None}]
+            )
                 
         except Exception as e:
             logger.error(f"スロット状況表示エラー: {e}")

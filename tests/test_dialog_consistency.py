@@ -358,7 +358,7 @@ class TestFacilityDialogConsistency:
             
             try:
                 # 新システムが有効な場合の戻るボタン確認
-                if facility.use_new_menu_system and facility.dialog_template:
+                if facility.dialog_template:
                     # 情報ダイアログを作成して戻るボタンの存在確認
                     dialog = facility.dialog_template.create_information_dialog(
                         f"test_{facility_id}",
