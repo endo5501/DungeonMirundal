@@ -32,12 +32,12 @@ class InventoryUI:
         self.selected_slot: Optional[int] = None
         self.transfer_source: Optional[Tuple[Inventory, int]] = None
         
-        logger.info("InventoryUIを初期化しました")
+        logger.info(config_manager.get_text("inventory_ui.initialized"))
     
     def set_party(self, party: Party):
         """パーティを設定"""
         self.current_party = party
-        logger.debug(f"パーティを設定: {party.name}")
+        logger.debug(config_manager.get_text("inventory_ui.party_set").format(party_name=party.name))
     
     def show_party_inventory_menu(self, party: Party):
         """パーティインベントリメニューを表示"""
@@ -53,7 +53,7 @@ class InventoryUI:
         
         # 各キャラクターのインベントリ
         for character in party.get_all_characters():
-            char_info = f"{character.name}のアイテム"
+            char_info = config_manager.get_text("inventory_ui.character_items").format(character_name=character.name)
             main_menu.add_menu_item(
                 char_info,
                 self._show_character_inventory,
@@ -74,7 +74,7 @@ class InventoryUI:
         ui_manager.register_element(main_menu)
         ui_manager.show_element(main_menu.element_id, modal=True)
         
-        logger.info("パーティインベントリメニューを表示")
+        logger.info(config_manager.get_text("inventory_ui.party_inventory_menu_displayed"))
     
     def _show_party_shared_inventory(self):
         """パーティ共有インベントリを表示"""

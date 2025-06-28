@@ -38,12 +38,12 @@ class MagicUI:
         # 魔法マネージャー
         self.spell_manager = spell_manager
         
-        logger.info("MagicUIを初期化しました")
+        logger.info(config_manager.get_text("magic_ui.initialized"))
     
     def set_party(self, party: Party):
         """パーティを設定"""
         self.current_party = party
-        logger.debug(f"パーティを設定: {party.name}")
+        logger.debug(config_manager.get_text("magic_ui.party_set").format(party_name=party.name))
     
     def show_party_magic_menu(self, party: Party):
         """パーティ魔法メニューを表示"""
@@ -59,7 +59,11 @@ class MagicUI:
             learned_count = summary['learned_count']
             equipped_slots = summary['equipped_slots']
             
-            char_info = f"{character.name} (習得:{learned_count} 装備:{equipped_slots})"
+            char_info = config_manager.get_text("magic_ui.character_magic_info").format(
+                character_name=character.name,
+                learned_count=learned_count,
+                equipped_slots=equipped_slots
+            )
             main_menu.add_menu_item(
                 char_info,
                 self._show_character_magic,
@@ -68,13 +72,13 @@ class MagicUI:
         
         # パーティ魔法統計
         main_menu.add_menu_item(
-            "パーティ魔法統計",
+            config_manager.get_text("magic_ui.party_magic_stats"),
             self._show_party_magic_stats
         )
         
         # 魔法習得（地上部でのみ）
         main_menu.add_menu_item(
-            "魔法習得（宿屋・ギルド）",
+            config_manager.get_text("magic_ui.magic_learning"),
             self._show_spell_learning_info
         )
         
@@ -601,7 +605,7 @@ class MagicUI:
         
         dialog = UIDialog(
             "party_magic_stats",
-            "パーティ魔法統計",
+            config_manager.get_text("magic_ui.party_magic_stats"),
             stats_text,
             buttons=[
                 {"text": "閉じる", "command": self._close_dialog}

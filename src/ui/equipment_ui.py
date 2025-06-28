@@ -35,12 +35,12 @@ class EquipmentUI:
         self.is_open = False
         self.callback_on_close: Optional[Callable] = None
         
-        logger.info("EquipmentUIを初期化しました")
+        logger.info(config_manager.get_text("equipment_ui.initialized"))
     
     def set_party(self, party: Party):
         """パーティを設定"""
         self.current_party = party
-        logger.debug(f"パーティを設定: {party.name}")
+        logger.debug(config_manager.get_text("equipment_ui.party_set").format(party_name=party.name))
     
     def show_party_equipment_menu(self, party: Party):
         """パーティ装備メニューを表示"""
@@ -77,14 +77,14 @@ class EquipmentUI:
         ui_manager.show_element(main_menu.element_id, modal=True)
         self.is_open = True
         
-        logger.info("パーティ装備メニューを表示")
+        logger.info(config_manager.get_text("equipment_ui.party_equipment_menu_displayed"))
     
     def _show_character_equipment(self, character: Character):
         """キャラクター装備画面を表示"""
         self.current_character = character
         self.current_equipment = character.get_equipment()
         
-        equipment_menu = UIMenu("character_equipment", f"{character.name}の装備")
+        equipment_menu = UIMenu("character_equipment", config_manager.get_text("equipment_ui.character_equipment_title").format(character_name=character.name))
         
         # 装備スロット表示
         for slot in EquipmentSlot:

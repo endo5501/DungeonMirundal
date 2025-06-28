@@ -54,11 +54,11 @@ class AdventurersGuild(BaseFacility):
     
     def _on_enter(self):
         """ギルド入場時の処理"""
-        logger.info("冒険者ギルドに入りました")
+        logger.info(config_manager.get_text("app_log.entered_guild"))
     
     def _on_exit(self):
         """ギルド退場時の処理"""
-        logger.info("冒険者ギルドから出ました")
+        logger.info(config_manager.get_text("app_log.left_guild"))
     
     def _show_character_creation(self):
         """キャラクター作成ウィザードを表示"""
@@ -75,14 +75,14 @@ class AdventurersGuild(BaseFacility):
     
     def _on_character_created(self, character: Character):
         """キャラクター作成完了時のコールバック"""
-        logger.info(f"キャラクター作成完了コールバック開始: {character.name}")
+        logger.info(config_manager.get_text("guild.messages.character_creation_completed").format(name=character.name))
         
         self.created_characters.append(character)
         
         # 成功メッセージ（ダイアログが閉じられた後、_close_dialogでメインメニューが自動表示される）
         self._show_success_message(config_manager.get_text("guild.messages.character_created").format(name=character.name))
         
-        logger.info(f"新しいキャラクターを作成: {character.name}")
+        logger.info(config_manager.get_text("guild.messages.new_character_created").format(name=character.name))
     
     def _on_character_creation_cancelled(self):
         """キャラクター作成キャンセル時のコールバック"""
@@ -93,7 +93,7 @@ class AdventurersGuild(BaseFacility):
             if ui_mgr:
                 ui_mgr.show_menu(current_menu.menu_id, modal=True)
         
-        logger.info("キャラクター作成がキャンセルされ、ギルドメインメニューに戻りました")
+        logger.info(config_manager.get_text("guild.messages.character_creation_cancelled"))
     
     def _show_party_formation(self):
         """パーティ編成画面を表示"""
@@ -244,7 +244,7 @@ class AdventurersGuild(BaseFacility):
     def _add_character_to_party(self, character: Character):
         """パーティにキャラクターを追加"""
         if not self.current_party:
-            logger.warning("パーティが設定されていないため、キャラクターを追加できません")
+            logger.warning(config_manager.get_text("guild.messages.party_not_set_warning"))
             self._show_error_message(self.config_manager.get_text("errors.no_party_set"))
             return
         
@@ -252,11 +252,11 @@ class AdventurersGuild(BaseFacility):
             success = self.current_party.add_character(character)
             
             if success:
-                self._show_success_message(f"{character.name} をパーティに追加しました")
+                self._show_success_message(config_manager.get_text("guild.messages.character_added_success").format(name=character.name))
                 # 追加後はメインメニューに戻る - すべてのサブメニューを閉じる
                 self._close_all_submenus_and_return_to_main()
             else:
-                self._show_error_message("キャラクターの追加に失敗しました")
+                self._show_error_message(config_manager.get_text("guild.messages.character_add_failed"))
                 
         except Exception as e:
             logger.error(f"キャラクター追加処理でエラーが発生しました: {e}")
@@ -314,7 +314,7 @@ class AdventurersGuild(BaseFacility):
             self._show_dialog(
                 "character_remove_success",
                 "キャラクター削除完了",
-                f"{character.name} をパーティから削除しました",
+                config_manager.get_text("guild.messages.character_remove_success").format(name=character.name),
                 buttons=[
                     {
                         'text': config_manager.get_text("common.ok"),
@@ -323,11 +323,11 @@ class AdventurersGuild(BaseFacility):
                 ]
             )
         else:
-            self._show_error_message("キャラクターの削除に失敗しました")
+            self._show_error_message(config_manager.get_text("guild.messages.character_remove_failed"))
     
     def _show_position_menu(self):
         """位置変更メニュー"""
-        position_menu = UIMenu("position_menu", "位置変更")
+        position_menu = UIMenu("position_menu", config_manager.get_text("guild.party_formation.position_change_title"))
         
         party_chars = list(self.current_party.characters.values())
         
@@ -390,8 +390,8 @@ class AdventurersGuild(BaseFacility):
         if success:
             self._show_dialog(
                 "position_change_success",
-                "位置変更完了",
-                f"{character.name} を移動しました",
+                config_manager.get_text("guild.party_formation.position_change_title"),
+                config_manager.get_text("guild.messages.character_position_changed").format(name=character.name, position=""),
                 buttons=[
                     {
                         'text': config_manager.get_text("common.ok"),
@@ -400,7 +400,7 @@ class AdventurersGuild(BaseFacility):
                 ]
             )
         else:
-            self._show_error_message("位置の変更に失敗しました")
+            self._show_error_message(config_manager.get_text("guild.messages.character_position_change_failed"))
     
     def _show_character_list(self):
         """キャラクター一覧表示"""

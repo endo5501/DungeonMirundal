@@ -33,16 +33,16 @@ class Inn(BaseFacility):
     
     def _setup_menu_items(self, menu: UIMenu):
         """宿屋固有のメニュー項目を設定"""
-        menu.add_menu_item("冒険の準備", self._show_adventure_preparation)
-        menu.add_menu_item("アイテム預かり", self._show_item_organization)
-        menu.add_menu_item("宿屋の主人と話す", self._talk_to_innkeeper)
-        menu.add_menu_item("旅の情報を聞く", self._show_travel_info)
-        menu.add_menu_item("酒場の噂話", self._show_tavern_rumors)
-        menu.add_menu_item("パーティ名を変更", self._change_party_name)
+        menu.add_menu_item(config_manager.get_text("inn_menu.adventure_preparation"), self._show_adventure_preparation)
+        menu.add_menu_item(config_manager.get_text("inn_menu.item_storage"), self._show_item_organization)
+        menu.add_menu_item(config_manager.get_text("inn_menu.talk_innkeeper"), self._talk_to_innkeeper)
+        menu.add_menu_item(config_manager.get_text("inn_menu.travel_info"), self._show_travel_info)
+        menu.add_menu_item(config_manager.get_text("inn_menu.tavern_rumors"), self._show_tavern_rumors)
+        menu.add_menu_item(config_manager.get_text("inn_menu.change_party_name"), self._change_party_name)
     
     def _on_enter(self):
         """宿屋入場時の処理"""
-        logger.info("宿屋に入りました")
+        logger.info(config_manager.get_text("app_log.entered_inn"))
     
     def _on_exit(self):
         """宿屋退場時の処理"""

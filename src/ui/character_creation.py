@@ -106,7 +106,7 @@ class CharacterCreationWizard:
         except:
             pass
         
-        logger.info("キャラクター作成を開始しました")
+        logger.info(config_manager.get_text("character_creation.wizard_started"))
     
     def _show_step(self):
         """現在のステップを表示"""
@@ -152,7 +152,7 @@ class CharacterCreationWizard:
             ui_manager.add_dialog(dialog)
             ui_manager.show_dialog(dialog.dialog_id)
         else:
-            logger.warning("ui_managerが利用できないため、ダイアログ表示をスキップしました")
+            logger.warning(config_manager.get_text("character_creation.ui_manager_unavailable"))
     
     def _on_name_confirmed(self, name: str):
         """名前入力確認時の処理"""
@@ -180,7 +180,7 @@ class CharacterCreationWizard:
                 ui_manager.dialogs is not None and 
                 dialog_id in ui_manager.dialogs):
                 del ui_manager.dialogs[dialog_id]
-                logger.info(f"名前入力ダイアログ {dialog_id} を完全に削除しました")
+                logger.info(config_manager.get_text("character_creation.name_dialog_removed").format(dialog_id=dialog_id))
             
             self.current_ui = None
         
@@ -200,7 +200,7 @@ class CharacterCreationWizard:
                 ui_manager.dialogs is not None and 
                 dialog_id in ui_manager.dialogs):
                 del ui_manager.dialogs[dialog_id]
-                logger.info(f"名前入力ダイアログ {dialog_id} を完全に削除しました（キャンセル）")
+                logger.info(config_manager.get_text("character_creation.name_dialog_cancelled").format(dialog_id=dialog_id))
             
             self.current_ui = None
         
@@ -208,13 +208,13 @@ class CharacterCreationWizard:
         if self.on_cancel:
             self.on_cancel()
         
-        logger.info("キャラクター作成がキャンセルされました")
+        logger.info(config_manager.get_text("character_creation.creation_cancelled"))
     
     def _default_cancel_handler(self):
         """デフォルトのキャンセル処理"""
         # ウィザードを適切に閉じる
         self._close_wizard()
-        logger.info("キャラクター作成をキャンセルしました（デフォルト処理）")
+        logger.info(config_manager.get_text("character_creation.creation_cancelled_default"))
     
     def _show_race_selection(self):
         """種族選択ステップ"""

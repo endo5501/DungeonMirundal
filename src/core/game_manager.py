@@ -129,9 +129,9 @@ class GameManager:
             self.input_manager.bind_key_direct("equal", self._on_3d_stage_advance)  # +キー
             # Numpad -: 3D描画緊急リセット  
             self.input_manager.bind_key_direct("minus", self._on_3d_stage_reset)   # -キー
-            logger.info("3D描画段階テスト用デバッグキーを設定しました (+/- キー)")
+            logger.info(self.game_config.get_text("app_log.debug_key_setup"))
         except Exception as e:
-            logger.warning(f"デバッグキー設定に失敗: {e}")
+            logger.warning(self.game_config.get_text("app_log.debug_key_setup_failed").format(error=e))
         
         # ゲーム機能のバインド
         self.input_manager.bind_action(InputAction.INVENTORY.value, self._on_inventory_action)
@@ -158,11 +158,11 @@ class GameManager:
         try:
             from src.ui.font_manager_pygame import font_manager
             if font_manager.default_font:
-                logger.info("日本語フォントシステムを初期化しました")
+                logger.info(self.game_config.get_text("app_log.font_system_initialized"))
             else:
-                logger.warning("日本語フォントの初期化に失敗しました")
+                logger.warning(self.game_config.get_text("app_log.font_system_failed"))
         except Exception as e:
-            logger.error(f"フォントシステム初期化エラー: {e}")
+            logger.error(self.game_config.get_text("app_log.font_system_error").format(error=e))
     
     def _setup_debug_info(self):
         """デバッグ情報の設定"""
@@ -184,7 +184,7 @@ class GameManager:
     def _on_menu_action(self, action: str, pressed: bool, input_type):
         """メニューアクションの処理"""
         if pressed:
-            logger.info(f"メニューアクション ({input_type.value})")
+            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.menu_action"), input_type=input_type.value))
             
             # ダンジョン内ではメニュー表示
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
@@ -200,58 +200,59 @@ class GameManager:
     def _on_confirm_action(self, action: str, pressed: bool, input_type):
         """確認アクションの処理"""
         if pressed:
-            logger.info(f"確認アクション ({input_type.value})")
+            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.confirm_action"), input_type=input_type.value))
     
     def _on_cancel_action(self, action: str, pressed: bool, input_type):
         """キャンセルアクションの処理"""
         if pressed:
-            logger.info(f"キャンセルアクション ({input_type.value})")
+            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.cancel_action"), input_type=input_type.value))
     
     def _on_action_action(self, action: str, pressed: bool, input_type):
         """アクションボタンの処理"""
         if pressed:
-            logger.info(f"アクションボタン ({input_type.value})")
+            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.action_button"), input_type=input_type.value))
             
             # ダンジョン内でのスペースキー: 3D描画復旧を試行
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
-                logger.info("スペースキーによる3D描画手動復旧を試行します")
+                logger.info(self.game_config.get_text("app_log.3d_manual_recovery_attempt"))
                 
                 try:
                     if hasattr(self.dungeon_renderer, 'manual_recovery_attempt'):
                         recovery_success = self.dungeon_renderer.manual_recovery_attempt()
                         
                         if recovery_success:
-                            logger.info("手動復旧が成功しました")
+                            logger.info(self.game_config.get_text("app_log.3d_manual_recovery_success"))
                             # UI更新
                             try:
                                 self.dungeon_renderer.update_ui()
                             except Exception as ui_error:
-                                logger.warning(f"UI更新中にエラー: {ui_error}")
+                                logger.warning(self.game_config.get_text("app_log.ui_update_error").format(error=ui_error))
                         else:
-                            logger.warning("手動復旧に失敗しました")
+                            logger.warning(self.game_config.get_text("app_log.3d_manual_recovery_failed"))
                     else:
                         # フォールバック: 旧システムとの互換性
-                        logger.info("旧システム互換モード: インベントリを開きます")
+                        logger.info(self.game_config.get_text("app_log.legacy_compatibility_mode"))
                         if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
                             self.dungeon_renderer.ui_manager._open_inventory()
                             
                 except Exception as e:
-                    logger.error(f"手動復旧中にエラー: {e}")
+                    logger.error(self.game_config.get_text("app_log.3d_recovery_error").format(error=e))
             
             # 地上部では既存の処理
             elif self.current_location == GameLocation.OVERWORLD:
-                logger.info("地上部でのアクションボタン")
+                logger.info(self.game_config.get_text("app_log.overworld_action_button"))
     
     def _on_debug_toggle(self, action: str, pressed: bool, input_type):
         """デバッグ切り替えの処理"""
         if pressed:
             self.debug_enabled = not self.debug_enabled
-            logger.info(f"デバッグモード切り替え: {'有効' if self.debug_enabled else '無効'}")
+            status = self.game_config.get_text("app_log.debug_enabled") if self.debug_enabled else self.game_config.get_text("app_log.debug_disabled")
+            logger.info(self.game_config.get_text("app_log.debug_mode_toggle_status").format(status=status))
     
     def _on_3d_stage_advance(self, action: str, pressed: bool, input_type):
         """3D描画段階進行デバッグ"""
         if pressed and self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
-            logger.info("=== 3D描画段階進行デバッグキーが押されました ===")
+            logger.info(self.game_config.get_text("app_log.3d_stage_advance_debug"))
             
             # 現在の状態を表示
             self.dungeon_renderer.log_current_status()
@@ -260,7 +261,7 @@ class GameManager:
             success = self.dungeon_renderer.manual_advance_next_stage()
             
             if success:
-                logger.info("段階進行が成功しました")
+                logger.info(self.game_config.get_text("app_log.3d_stage_advance_success"))
                 # 進行後の状態も表示
                 self.dungeon_renderer.log_current_status()
                 
@@ -268,29 +269,29 @@ class GameManager:
                 try:
                     self.dungeon_renderer.update_ui()
                 except Exception as e:
-                    logger.warning(f"UI更新中にエラー: {e}")
+                    logger.warning(self.game_config.get_text("app_log.ui_update_error").format(error=e))
             else:
-                logger.info("段階進行が失敗、または既に最終段階です")
+                logger.info(self.game_config.get_text("app_log.3d_stage_advance_failed"))
     
     def _on_3d_stage_reset(self, action: str, pressed: bool, input_type):
         """3D描画緊急リセットデバッグ"""
         if pressed and self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
-            logger.info("=== 3D描画緊急リセットキーが押されました ===")
+            logger.info(self.game_config.get_text("app_log.3d_emergency_reset_debug"))
             
             # 緊急無効化を実行
             self.dungeon_renderer.emergency_disable()
-            logger.info("3D描画システムを緊急リセットしました")
+            logger.info(self.game_config.get_text("app_log.3d_emergency_reset_complete"))
     
     def _on_pause_action(self, action: str, pressed: bool, input_type):
         """ポーズアクションの処理"""
         if pressed:
-            logger.info(f"ポーズアクション ({input_type.value})")
+            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.pause_action"), input_type=input_type.value))
             self.toggle_pause()
     
     def _on_inventory_action(self, action: str, pressed: bool, input_type):
         """インベントリアクションの処理"""
         if pressed:
-            logger.info(f"インベントリアクション ({input_type.value})")
+            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.inventory_action"), input_type=input_type.value))
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
                     self.dungeon_renderer.ui_manager._open_inventory()
@@ -298,7 +299,7 @@ class GameManager:
     def _on_magic_action(self, action: str, pressed: bool, input_type):
         """魔法アクションの処理"""
         if pressed:
-            logger.info(f"魔法アクション ({input_type.value})")
+            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.magic_action"), input_type=input_type.value))
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
                     self.dungeon_renderer.ui_manager._open_magic()
@@ -306,7 +307,7 @@ class GameManager:
     def _on_equipment_action(self, action: str, pressed: bool, input_type):
         """装備アクションの処理"""
         if pressed:
-            logger.info(f"装備アクション ({input_type.value})")
+            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.equipment_action"), input_type=input_type.value))
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
                     self.dungeon_renderer.ui_manager._open_equipment()
@@ -314,7 +315,7 @@ class GameManager:
     def _on_status_action(self, action: str, pressed: bool, input_type):
         """ステータスアクションの処理"""
         if pressed:
-            logger.info(f"ステータスアクション ({input_type.value})")
+            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.status_action"), input_type=input_type.value))
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
                     self.dungeon_renderer.ui_manager._open_status()
@@ -322,7 +323,7 @@ class GameManager:
     def _on_camp_action(self, action: str, pressed: bool, input_type):
         """キャンプアクションの処理"""
         if pressed:
-            logger.info(f"キャンプアクション ({input_type.value})")
+            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.camp_action"), input_type=input_type.value))
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
                     self.dungeon_renderer.ui_manager._open_camp()
@@ -330,7 +331,7 @@ class GameManager:
     def _on_help_action(self, action: str, pressed: bool, input_type):
         """ヘルプアクションの処理"""
         if pressed:
-            logger.info(f"ヘルプアクション ({input_type.value})")
+            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.help_action"), input_type=input_type.value))
             from src.ui.help_ui import help_ui
             help_ui.show_help_menu()
     
@@ -357,9 +358,9 @@ class GameManager:
         """ポーズの切り替え"""
         self.paused = not self.paused
         if self.paused:
-            logger.info("ゲームを一時停止しました")
+            logger.info(self.game_config.get_text("app_log.game_paused"))
         else:
-            logger.info("ゲームを再開しました")
+            logger.info(self.game_config.get_text("app_log.game_resumed"))
     
     def _setup_transition_system(self):
         """遷移システムの初期化"""
@@ -374,9 +375,9 @@ class GameManager:
             self.overworld_manager.set_enter_dungeon_callback(self.transition_to_dungeon)
             self.overworld_manager.set_exit_game_callback(self.exit_game)
             self.overworld_manager.set_input_manager(self.input_manager)
-            logger.info("地上部マネージャーを初期化しました")
+            logger.info(self.game_config.get_text("app_log.overworld_manager_initialized"))
         except Exception as e:
-            logger.error(f"地上部マネージャー初期化エラー: {e}")
+            logger.error(self.game_config.get_text("app_log.overworld_manager_error").format(error=e))
             # エラーの場合は None に設定
             self.overworld_manager = None
         
@@ -399,20 +400,20 @@ class GameManager:
                 dungeon_ui_manager.set_party(self.current_party)
             
             if self.dungeon_renderer.enabled:
-                logger.info("ダンジョンレンダラーを初期化しました")
+                logger.info(self.game_config.get_text("app_log.dungeon_renderer_initialized"))
             else:
-                logger.info("ダンジョンレンダラーを初期化しました（無効化状態）")
+                logger.info(self.game_config.get_text("app_log.dungeon_renderer_disabled"))
         except Exception as e:
-            logger.error(f"ダンジョンレンダラー初期化エラー: {e}")
+            logger.error(self.game_config.get_text("app_log.dungeon_renderer_error").format(error=e))
             self.dungeon_renderer = None
         
-        logger.info("遷移システムを初期化しました")
+        logger.info(self.game_config.get_text("app_log.transition_system_initialized"))
     
     def set_game_state(self, state: str):
         """ゲーム状態の設定"""
         old_state = self.game_state
         self.game_state = state
-        logger.info(f"ゲーム状態変更: {old_state} -> {state}")
+        logger.info(self.game_config.get_text("app_log.game_state_changed").format(old_state=old_state, new_state=state))
     
     def set_current_party(self, party: Party):
         """現在のパーティを設定"""
@@ -426,7 +427,7 @@ class GameManager:
             if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
                 self.dungeon_renderer.dungeon_ui_manager.set_party(party)
         
-        logger.info(f"パーティを設定: {party.name} ({len(party.get_living_characters())}人)")
+        logger.info(self.game_config.get_text("app_log.party_set").format(name=party.name, count=len(party.get_living_characters())))
     
     def get_current_party(self) -> Party:
         """現在のパーティを取得"""
@@ -435,14 +436,14 @@ class GameManager:
     def transition_to_dungeon(self, dungeon_id: str = "main_dungeon"):
         """ダンジョンへの遷移"""
         if not self.current_party:
-            logger.error("パーティが設定されていません")
-            raise Exception("パーティが設定されていません")
+            logger.error(self.game_config.get_text("game_manager.party_error_no_party"))
+            raise Exception(self.game_config.get_text("game_manager.party_error_no_party"))
         
         if not self.current_party.get_living_characters():
-            logger.error("生存しているパーティメンバーがいません")
-            raise Exception("生存しているパーティメンバーがいません")
+            logger.error(self.game_config.get_text("game_manager.party_error_no_living"))
+            raise Exception(self.game_config.get_text("game_manager.party_error_no_living"))
         
-        logger.info(f"ダンジョン '{dungeon_id}' への遷移開始")
+        logger.info(self.game_config.get_text("game_manager.dungeon_transition_start").format(dungeon_id=dungeon_id))
         
         try:
             # ダンジョンが存在しない場合は作成
@@ -466,7 +467,7 @@ class GameManager:
                     if self.dungeon_renderer.dungeon_ui_manager:
                         current_dungeon = self.dungeon_manager.current_dungeon
                         if current_dungeon:
-                            logger.info("ダンジョンUIマネージャーにダンジョン状態を設定")
+                            logger.info(self.game_config.get_text("game_manager.dungeon_ui_set"))
                             self.dungeon_renderer.dungeon_ui_manager.set_dungeon_state(current_dungeon)
                 
                 # ダンジョンレンダラーで自動復旧試行
@@ -474,7 +475,7 @@ class GameManager:
                     current_dungeon = self.dungeon_manager.current_dungeon
                     if current_dungeon:
                         try:
-                            logger.info("3D描画の自動復旧を試行します")
+                            logger.info(self.game_config.get_text("game_manager.3d_auto_recovery_attempt"))
                             
                             # 自動復旧を試行
                             if hasattr(self.dungeon_renderer, 'auto_recover'):
@@ -484,39 +485,39 @@ class GameManager:
                                 recovery_success = self.dungeon_renderer.enabled
                             
                             if recovery_success:
-                                logger.info("3D描画の自動復旧が成功しました")
+                                logger.info(self.game_config.get_text("game_manager.3d_auto_recovery_success"))
                                 # UI更新も安全に実行
                                 try:
                                     self.dungeon_renderer.update_ui()
                                 except Exception as ui_error:
-                                    logger.warning(f"UI更新中にエラー: {ui_error}")
+                                    logger.warning(self.game_config.get_text("app_log.ui_update_error").format(error=ui_error))
                             else:
-                                logger.warning("3D描画の自動復旧に失敗しました - 手動復旧が必要です")
-                                logger.info("ダンジョン内でスペースキーを押すか、+/-キーで手動復旧を試行してください")
+                                logger.warning(self.game_config.get_text("game_manager.3d_auto_recovery_failed"))
+                                logger.info(self.game_config.get_text("game_manager.3d_manual_recovery_hint"))
                                 
                         except Exception as render_error:
-                            logger.error(f"3D描画復旧中にエラーが発生しました: {render_error}")
-                            logger.info("手動復旧が必要です - ダンジョン内でスペースキーを押してください")
+                            logger.error(self.game_config.get_text("game_manager.3d_render_error").format(error=render_error))
+                            logger.info(self.game_config.get_text("game_manager.3d_render_manual_required"))
                             # エラーが発生してもゲーム継続
                 
-                logger.info("ダンジョンへの遷移が完了しました")
+                logger.info(self.game_config.get_text("game_manager.dungeon_transition_complete"))
                 return True
             else:
-                logger.error("ダンジョンへの遷移に失敗しました")
-                raise Exception("ダンジョンマネージャーでの入場処理に失敗しました")
+                logger.error(self.game_config.get_text("game_manager.dungeon_transition_failed"))
+                raise Exception(self.game_config.get_text("game_manager.dungeon_manager_enter_failed"))
                 
         except Exception as e:
-            logger.error(f"ダンジョン遷移中にエラーが発生しました: {e}")
+            logger.error(self.game_config.get_text("game_manager.dungeon_transition_error").format(error=e))
             # 地上部の状態は保持されているため、エラーを再発生させて上位に処理を委ねる
             raise e
     
     def transition_to_overworld(self):
         """地上部への遷移"""
         if not self.current_party:
-            logger.error("パーティが設定されていません")
+            logger.error(self.game_config.get_text("game_manager.party_error_no_party"))
             return False
         
-        logger.info("地上部へ遷移開始")
+        logger.info(self.game_config.get_text("game_manager.overworld_transition_start"))
         
         # ダンジョンを退場（ダンジョンにいる場合のみ）
         if self.current_location == GameLocation.DUNGEON:
@@ -529,10 +530,10 @@ class GameManager:
         if success:
             self.current_location = GameLocation.OVERWORLD
             self.set_game_state("overworld_exploration")
-            logger.info("地上部への遷移が完了しました")
+            logger.info(self.game_config.get_text("game_manager.overworld_transition_complete"))
             return True
         else:
-            logger.error("地上部への遷移に失敗しました")
+            logger.error(self.game_config.get_text("game_manager.overworld_transition_failed"))
             return False
     
     def _generate_dungeon_seed(self, dungeon_id: str) -> str:
@@ -549,7 +550,7 @@ class GameManager:
             # 基本シードをベースに一意なシードを生成
             return f"{seed_base}_seed"
         except Exception as e:
-            logger.warning(f"ダンジョン設定の読み込みに失敗: {e}")
+            logger.warning(self.game_config.get_text("game_manager.dungeon_config_load_failed").format(error=e))
             return f"{dungeon_id}_default_seed"
     
     def save_game_state(self, slot_id: str) -> bool:
@@ -561,7 +562,7 @@ class GameManager:
             elif self.current_location == GameLocation.DUNGEON:
                 success = self.dungeon_manager.save_dungeon(slot_id)
             else:
-                logger.error(f"未知の場所: {self.current_location}")
+                logger.error(self.game_config.get_text("game_manager.unknown_location").format(location=self.current_location))
                 return False
             
             if success:
@@ -575,13 +576,13 @@ class GameManager:
                 from src.core.save_manager import save_manager
                 save_manager.save_additional_data(slot_id, 'game_state', state_data)
                 
-                logger.info(f"ゲーム状態を保存しました（場所: {self.current_location}）")
+                logger.info(self.game_config.get_text("game_manager.game_state_save_success").format(location=self.current_location))
                 return True
             else:
                 return False
                 
         except Exception as e:
-            logger.error(f"ゲーム状態保存エラー: {e}")
+            logger.error(self.game_config.get_text("game_manager.game_state_save_error").format(error=e))
             return False
     
     def load_game_state(self, slot_id: str) -> bool:
@@ -592,7 +593,7 @@ class GameManager:
             # 統合状態情報を読み込み
             state_data = save_manager.load_additional_data(slot_id, 'game_state')
             if not state_data:
-                logger.error("ゲーム状態データが見つかりません")
+                logger.error(self.game_config.get_text("game_manager.game_state_data_not_found"))
                 return False
             
             location = state_data.get('current_location', GameLocation.OVERWORLD)
@@ -618,19 +619,19 @@ class GameManager:
                     # ダンジョン状態を復元
                     pass
             else:
-                logger.error(f"未知の場所: {location}")
+                logger.error(self.game_config.get_text("game_manager.unknown_location").format(location=location))
                 return False
             
             if success:
                 self.current_location = location
                 self.set_game_state(game_state)
-                logger.info(f"ゲーム状態を読み込みました（場所: {location}）")
+                logger.info(self.game_config.get_text("game_manager.game_state_load_success").format(location=location))
                 return True
             else:
                 return False
                 
         except Exception as e:
-            logger.error(f"ゲーム状態読み込みエラー: {e}")
+            logger.error(self.game_config.get_text("game_manager.game_state_load_error").format(error=e))
             return False
     
     def get_text(self, key: str) -> str:
@@ -644,10 +645,10 @@ class GameManager:
                 bindings_data = self.input_manager.save_bindings()
                 # save_configが未実装のため、一時的にコメントアウト
                 # self.game_config.save_config("input_settings", bindings_data)
-                logger.info("入力設定を保存しました")
+                logger.info(self.game_config.get_text("game_manager.input_settings_saved"))
                 return True
         except Exception as e:
-            logger.error(f"入力設定保存エラー: {e}")
+            logger.error(self.game_config.get_text("game_manager.input_settings_save_error").format(error=e))
         return False
     
     def get_input_manager(self):
@@ -656,7 +657,7 @@ class GameManager:
     
     def exit_game(self):
         """ゲーム終了処理"""
-        logger.info("ゲーム終了処理を開始します")
+        logger.info(self.game_config.get_text("game_manager.exit_game_start"))
         
         # リソースのクリーンアップ
         self.cleanup()
@@ -667,7 +668,7 @@ class GameManager:
     
     def cleanup(self):
         """リソースのクリーンアップ"""
-        logger.info("GameManagerをクリーンアップしています")
+        logger.info(self.game_config.get_text("game_manager.cleanup_start"))
         
         # 入力設定を自動保存
         self.save_input_settings()
@@ -679,7 +680,7 @@ class GameManager:
         
     def run_game(self):
         """ゲームの実行"""
-        logger.info("ゲームを開始します")
+        logger.info(self.game_config.get_text("game_manager.game_start"))
         
         # 初回起動処理
         self._initialize_game_flow()
@@ -765,7 +766,7 @@ class GameManager:
                             # オーバーレイを描画
                             self.dungeon_renderer.dungeon_ui_manager.render_overlay()
                         except Exception as e:
-                            logger.warning(f"メインループでのダンジョンUI描画エラー: {e}")
+                            logger.warning(self.game_config.get_text("game_manager.dungeon_ui_render_error").format(error=e))
         else:
             # スタートアップ画面
             self._render_startup_screen()
@@ -820,19 +821,19 @@ class GameManager:
             if save_data:
                 # パーティ情報を復元
                 self.set_current_party(save_data.party)
-                logger.info(f"パーティを復元しました: {self.current_party.name}")
+                logger.info(self.game_config.get_text("game_manager.party_restored").format(name=self.current_party.name))
                 
                 # ゲーム状態を復元
                 if save_data.game_state and 'location' in save_data.game_state:
                     self.current_location = save_data.game_state['location']
-                    logger.info(f"現在位置を復元しました: {self.current_location}")
+                    logger.info(self.game_config.get_text("game_manager.location_restored").format(location=self.current_location))
             
-            logger.info("自動ロードが成功しました")
+            logger.info(self.game_config.get_text("game_manager.auto_load_success"))
             return True
             
         except Exception as e:
-            logger.error(f"自動ロード中にエラーが発生しました: {e}")
-            logger.info("新規ゲームで開始します")
+            logger.error(self.game_config.get_text("game_manager.auto_load_failed").format(error=e))
+            logger.info(self.game_config.get_text("game_manager.new_game_start"))
             return False
     
     def _create_test_character(self, name: str, is_fallback: bool = False):
@@ -882,26 +883,26 @@ class GameManager:
             test_party.gold = 1000
             
             self.set_current_party(test_party)
-            logger.info("テスト用パーティを作成しました")
+            logger.info(self.game_config.get_text("game_manager.test_party_created"))
             
         except Exception as e:
-            logger.error(f"テストパーティ作成エラー: {e}")
+            logger.error(self.game_config.get_text("game_manager.test_party_error").format(error=e))
             self._create_fallback_party()
     
     def _create_fallback_party(self):
         """緊急用パーティの作成"""
         from src.character.party import Party
         
-        fallback_character = self._create_test_character("テスト戦士", is_fallback=True)
-        fallback_party = Party("緊急パーティ")
+        fallback_character = self._create_test_character(self.game_config.get_text("game_manager.test_character_fallback"), is_fallback=True)
+        fallback_party = Party(self.game_config.get_text("game_manager.fallback_party_name"))
         fallback_party.add_character(fallback_character)
         fallback_party.gold = 1000
         
         self.set_current_party(fallback_party)
-        logger.info("緊急用テストパーティを作成しました")
+        logger.info(self.game_config.get_text("game_manager.fallback_party_created"))
 
 
 def create_game() -> GameManager:
     """ゲームインスタンスの作成"""
-    logger.info("新しいゲームインスタンスを作成します")
+    logger.info(config_manager.get_text("game_manager.new_game_instance"))
     return GameManager()

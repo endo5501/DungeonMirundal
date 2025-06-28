@@ -27,7 +27,7 @@ class DungeonUIManagerPygame:
     """ダンジョンUI管理クラス（Pygame版）"""
     
     def __init__(self, screen=None):
-        logger.info("DungeonUIManagerPygame 初期化開始")
+        logger.info(config_manager.get_text("dungeon_ui.manager_init_start"))
         
         # Pygame初期化
         if not pygame.get_init():
@@ -75,7 +75,7 @@ class DungeonUIManagerPygame:
             if not self.font_large:
                 self.font_large = font_manager.get_default_font()
         except Exception as e:
-            logger.warning(f"フォントマネージャーエラー: {e}")
+            logger.warning(config_manager.get_text("dungeon_ui.font_manager_error").format(error=e))
             # フォールバック：システムデフォルト
             try:
                 self.font_small = pygame.font.Font(None, 18)
@@ -121,7 +121,7 @@ class DungeonUIManagerPygame:
         
         self.selected_menu_index = 0
         
-        logger.info("DungeonUIManagerPygame 初期化完了")
+        logger.info(config_manager.get_text("dungeon_ui.manager_init_complete"))
     
     def set_party(self, party: Party):
         """パーティを設定"""
@@ -131,12 +131,12 @@ class DungeonUIManagerPygame:
         if self.character_status_bar:
             self.character_status_bar.set_party(party)
         
-        logger.info(f"パーティ{party.name}を設定しました")
+        logger.info(config_manager.get_text("dungeon_ui.party_set").format(party_name=party.name))
     
     def set_callback(self, action: str, callback: Callable):
         """コールバックを設定"""
         self.callbacks[action] = callback
-        logger.debug(f"コールバックを設定: {action}")
+        logger.debug(config_manager.get_text("dungeon_ui.callback_set").format(action=action))
     
     def set_dungeon_state(self, dungeon_state):
         """ダンジョン状態を設定"""
@@ -155,7 +155,7 @@ class DungeonUIManagerPygame:
                 # 既存の小地図UIを更新
                 self.small_map_ui.update_dungeon_state(dungeon_state)
         
-        logger.debug("ダンジョン状態を設定しました")
+        logger.debug(config_manager.get_text("dungeon_ui.dungeon_state_set"))
     
     def _initialize_character_status_bar(self):
         """キャラクターステータスバーを初期化"""
@@ -171,10 +171,10 @@ class DungeonUIManagerPygame:
             if self.current_party:
                 self.character_status_bar.set_party(self.current_party)
             
-            logger.info("ダンジョン用キャラクターステータスバーを初期化しました")
+            logger.info(config_manager.get_text("dungeon_ui.character_status_bar_init"))
             
         except Exception as e:
-            logger.error(f"ダンジョン用キャラクターステータスバー初期化エラー: {e}")
+            logger.error(config_manager.get_text("dungeon_ui.character_status_bar_error").format(error=e))
             self.character_status_bar = None
     
     def toggle_main_menu(self):
@@ -189,13 +189,13 @@ class DungeonUIManagerPygame:
         self.is_menu_open = True
         self.current_menu_type = DungeonMenuType.MAIN
         self.selected_menu_index = 0
-        logger.info("ダンジョンメインメニューを表示")
+        logger.info(config_manager.get_text("dungeon_ui.main_menu_shown"))
     
     def close_menu(self):
         """メニューを閉じる"""
         self.is_menu_open = False
         self.current_menu_type = None
-        logger.info("ダンジョンメニューを閉じました")
+        logger.info(config_manager.get_text("dungeon_ui.menu_closed"))
     
     def handle_input(self, event) -> bool:
         """入力処理"""

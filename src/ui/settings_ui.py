@@ -53,7 +53,7 @@ class SettingsUI:
         self.current_settings = self._load_current_settings()
         self.pending_changes = {}
         
-        logger.info("SettingsUIを初期化しました")
+        logger.info(config_manager.get_text("settings_ui.initialized"))
     
     def _load_current_settings(self) -> Dict[str, Any]:
         """現在の設定を読み込み"""
@@ -68,7 +68,7 @@ class SettingsUI:
             else:
                 return self._load_fallback_settings()
         except Exception as e:
-            logger.warning(f"設定読み込みエラー: {e}")
+            logger.warning(config_manager.get_text("settings_ui.config_load_error").format(error=e))
             # デフォルト設定を返す
             return self._get_default_settings()
     
@@ -183,12 +183,12 @@ class SettingsUI:
                 ui_manager.add_menu(settings_menu)
                 ui_manager.show_menu(settings_menu.menu_id, modal=True)
             else:
-                logger.error("ui_managerが初期化されていないため、メニューを表示できません")
+                logger.error(config_manager.get_text("settings_ui.ui_manager_not_initialized"))
         except Exception as e:
-            logger.error(f"メニュー表示中にエラーが発生しました: {e}")
+            logger.error(config_manager.get_text("settings_ui.menu_display_error").format(error=e))
         self.is_open = True
         
-        logger.info("設定メニューを表示")
+        logger.info(config_manager.get_text("settings_ui.menu_displayed"))
     
     def _show_category_settings(self, category: SettingsCategory):
         """カテゴリ別設定を表示"""

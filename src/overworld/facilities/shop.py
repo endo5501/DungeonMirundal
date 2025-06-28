@@ -126,7 +126,7 @@ class Shop(BaseFacility):
                 available_items.append(item)
         
         if not available_items:
-            self._show_error_message(config_manager.get_text("shop.purchase.no_stock").format(category="全アイテム"))
+            self._show_error_message(config_manager.get_text("shop.purchase.no_stock").format(category=config_manager.get_text("shop.messages.all_items")))
             return
         
         # UISelectionListを使用
@@ -134,7 +134,7 @@ class Shop(BaseFacility):
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
         if not self._check_pygame_gui_manager():
-            self._show_error_message("購入メニューの表示に失敗しました。")
+            self._show_error_message(config_manager.get_text("shop.messages.buy_menu_display_failed"))
             return
         
         self.item_selection_list = ItemSelectionList(
@@ -291,12 +291,12 @@ class Shop(BaseFacility):
         if not success:
             # 宿屋倉庫が満杯の場合の処理
             self.current_party.gold += item.price  # ゴールドを戻す
-            self._show_error_message("宿屋の倉庫が満杯です。倉庫を整理してください。")
+            self._show_error_message(config_manager.get_text("errors.inn_storage_full"))
             return
         
-        success_message = f"{item.get_name()}を購入し、宿屋の倉庫に搬入しました。\n残りゴールド: {self.current_party.gold}G"
+        success_message = config_manager.get_text("shop.messages.item_purchased_to_storage").format(item_name=item.get_name(), gold=self.current_party.gold)
         
-        logger.info(f"アイテム購入: {item.item_id} ({item.price}G)")
+        logger.info(config_manager.get_text("shop.messages.item_purchase_log").format(item_id=item.item_id, price=item.price))
         
         # 購入一覧画面（サブメニュー）を閉じる
         ui_manager.hide_menu("shop_buy_menu")
@@ -344,11 +344,7 @@ class Shop(BaseFacility):
             self._show_dialog(
                 "no_items_dialog",
                 config_manager.get_text("shop.sell.title"),
-                "売却可能なアイテムがありません。\\n\\n"
-                "キャラクターが所持しているアイテムまたは\\n"
-                "宿屋倉庫のアイテムを売却できます。\\n\\n"
-                "※アイテムは鑑定済みで価格が設定されている\\n"
-                "必要があります。",
+                config_manager.get_text("shop.messages.no_sellable_items_detailed"),
                 buttons=[
                     {
                         'text': config_manager.get_text("menu.back"),
@@ -411,12 +407,12 @@ class Shop(BaseFacility):
         self.sell_source_selection_list = CustomSelectionList(
             relative_rect=list_rect,
             manager=ui_manager.pygame_gui_manager,
-            title="売却元選択"
+            title=config_manager.get_text("shop.messages.sell_source_selection_title")
         )
         
         # キャラクター別売却項目を追加
         for char_name, items in character_items.items():
-            display_text = f"{char_name} の所持品 ({len(items)}個)"
+            display_text = config_manager.get_text("shop.messages.character_items_format").format(char_name=char_name, count=len(items))
             source_data = SelectionListData(
                 display_text=display_text,
                 data=("character", items, char_name),
@@ -426,7 +422,7 @@ class Shop(BaseFacility):
         
         # 宿屋倉庫売却項目を追加
         if storage_items:
-            display_text = f"宿屋倉庫 ({len(storage_items)}個)"
+            display_text = config_manager.get_text("shop.messages.inn_storage_format").format(count=len(storage_items))
             source_data = SelectionListData(
                 display_text=display_text,
                 data=("storage", storage_items),
@@ -462,13 +458,13 @@ class Shop(BaseFacility):
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
         if not self._check_pygame_gui_manager():
-            self._show_error_message("売却メニューの表示に失敗しました。")
+            self._show_error_message(config_manager.get_text("shop.messages.sell_menu_display_failed"))
             return
         
         self.character_sell_list = ItemSelectionList(
             relative_rect=list_rect,
             manager=ui_manager.pygame_gui_manager,
-            title=f"{char_name} のアイテム売却"
+            title=config_manager.get_text("shop.messages.character_sell_title").format(char_name=char_name)
         )
         
         # アイテムを追加
@@ -491,13 +487,13 @@ class Shop(BaseFacility):
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
         if not self._check_pygame_gui_manager():
-            self._show_error_message("売却メニューの表示に失敗しました。")
+            self._show_error_message(config_manager.get_text("shop.messages.sell_menu_display_failed"))
             return
         
         self.storage_sell_list = ItemSelectionList(
             relative_rect=list_rect,
             manager=ui_manager.pygame_gui_manager,
-            title="宿屋倉庫アイテム売却"
+            title=config_manager.get_text("shop.messages.inn_storage_sell_title")
         )
         
         # アイテムを追加
@@ -542,7 +538,7 @@ class Shop(BaseFacility):
     
     def _show_character_sellable_items(self, items, char_name):
         """キャラクター所持アイテム売却メニュー"""
-        char_sell_menu = UIMenu("character_sell_menu", f"{char_name} のアイテム売却")
+        char_sell_menu = UIMenu("character_sell_menu", config_manager.get_text("shop.messages.character_sell_title").format(char_name=char_name))
         
         for character, index, item_instance, item in items:
             display_name = self._format_sellable_item_display_name(item_instance, item)
@@ -561,7 +557,7 @@ class Shop(BaseFacility):
     
     def _show_storage_sellable_items(self, items):
         """宿屋倉庫アイテム売却メニュー"""
-        storage_sell_menu = UIMenu("storage_sell_menu", "宿屋倉庫アイテム売却")
+        storage_sell_menu = UIMenu("storage_sell_menu", config_manager.get_text("shop.messages.inn_storage_sell_title"))
         
         for index, item_instance, item in items:
             display_name = self._format_sellable_item_display_name(item_instance, item)
@@ -590,8 +586,8 @@ class Shop(BaseFacility):
     
     def _show_sell_confirmation_for_character_item(self, character, slot_index, item_instance, item, sell_price):
         """キャラクターアイテム売却確認ダイアログ"""
-        details = f"【{item.get_name()}の売却】\\n\\n"
-        details += f"所持者: {character.name}\\n"
+        details = config_manager.get_text("shop.messages.sell_confirmation_character_title").format(item_name=item.get_name()) + "\\n\\n"
+        details += config_manager.get_text("shop.messages.sell_confirmation_character_owner").format(character_name=character.name) + "\\n"
         details += f"{config_manager.get_text('shop.purchase.description_label')}: {item.get_description()}\\n"
         details += f"{config_manager.get_text('shop.sell.purchase_price_label')}: {item.price}G\\n"
         details += f"{config_manager.get_text('shop.sell.sell_price_label')}: {sell_price}G\\n"
@@ -602,14 +598,14 @@ class Shop(BaseFacility):
         
         details += f"\\n{config_manager.get_text('shop.sell.current_gold_label')}: {self.current_party.gold}G\\n"
         details += f"{config_manager.get_text('shop.sell.after_sell_label')}: {self.current_party.gold + (sell_price * item_instance.quantity)}G\\n"
-        details += f"\\n売却しますか？"
+        details += "\\n" + config_manager.get_text("shop.messages.sell_confirmation_question")
         
         # コンテキストを保存（戻るボタン用）
         self._current_character_for_sell = character
         
         self._show_dialog(
             "character_item_sell_confirm_dialog",
-            f"{item.get_name()}の売却確認",
+            config_manager.get_text("shop.messages.sell_confirmation_title").format(item_name=item.get_name()),
             details,
             buttons=[
                 {
@@ -625,8 +621,8 @@ class Shop(BaseFacility):
     
     def _show_sell_confirmation_for_storage_item(self, slot_index, item_instance, item, sell_price):
         """宿屋倉庫アイテム売却確認ダイアログ"""
-        details = f"【{item.get_name()}の売却】\\n\\n"
-        details += f"所持場所: 宿屋倉庫\\n"
+        details = config_manager.get_text("shop.messages.sell_confirmation_inn_title").format(item_name=item.get_name()) + "\\n\\n"
+        details += config_manager.get_text("shop.messages.sell_confirmation_inn_location") + "\\n"
         details += f"{config_manager.get_text('shop.purchase.description_label')}: {item.get_description()}\\n"
         details += f"{config_manager.get_text('shop.sell.purchase_price_label')}: {item.price}G\\n"
         details += f"{config_manager.get_text('shop.sell.sell_price_label')}: {sell_price}G\\n"
@@ -637,11 +633,11 @@ class Shop(BaseFacility):
         
         details += f"\\n{config_manager.get_text('shop.sell.current_gold_label')}: {self.current_party.gold}G\\n"
         details += f"{config_manager.get_text('shop.sell.after_sell_label')}: {self.current_party.gold + (sell_price * item_instance.quantity)}G\\n"
-        details += f"\\n売却しますか？"
+        details += "\\n" + config_manager.get_text("shop.messages.sell_confirmation_question")
         
         self._show_dialog(
             "storage_item_sell_confirm_dialog",
-            f"{item.get_name()}の売却確認",
+            config_manager.get_text("shop.messages.sell_confirmation_title").format(item_name=item.get_name()),
             details,
             buttons=[
                 {
@@ -680,18 +676,27 @@ class Shop(BaseFacility):
                 self.current_party.gold += total_price
                 
                 # 成功メッセージ
-                success_message = f"{character.name}が{item.get_name()}x{quantity}を売却しました。\\n\\n"
-                success_message += f"売却金額: {total_price}G\\n"
-                success_message += f"残りゴールド: {self.current_party.gold}G"
+                success_message = config_manager.get_text("shop.messages.character_sell_success").format(
+                    character_name=character.name,
+                    item_name=item.get_name(),
+                    quantity=quantity,
+                    total_price=total_price,
+                    gold=self.current_party.gold
+                )
                 
                 self._show_success_message(success_message)
-                logger.info(f"キャラクターアイテム売却: {character.name} - {item.item_id} x{quantity} ({total_price}G)")
+                logger.info(config_manager.get_text("shop.messages.character_sell_log").format(
+                    character_name=character.name,
+                    item_id=item.item_id,
+                    quantity=quantity,
+                    total_price=total_price
+                ))
             else:
-                self._show_error_message("アイテムの売却に失敗しました")
+                self._show_error_message(config_manager.get_text("shop.messages.character_sell_failed"))
                 
         except Exception as e:
             logger.error(f"キャラクターアイテム売却エラー: {e}")
-            self._show_error_message(f"売却処理に失敗しました: {str(e)}")
+            self._show_error_message(config_manager.get_text("shop.messages.character_sell_error").format(error=str(e)))
     
     def _sell_storage_item(self, slot_index, _, item, sell_price, quantity):
         """宿屋倉庫のアイテムを売却"""
@@ -713,18 +718,25 @@ class Shop(BaseFacility):
                 self.current_party.gold += total_price
                 
                 # 成功メッセージ
-                success_message = f"宿屋倉庫から{item.get_name()}x{quantity}を売却しました。\\n\\n"
-                success_message += f"売却金額: {total_price}G\\n"
-                success_message += f"残りゴールド: {self.current_party.gold}G"
+                success_message = config_manager.get_text("shop.messages.inn_storage_sell_success").format(
+                    item_name=item.get_name(),
+                    quantity=quantity,
+                    total_price=total_price,
+                    gold=self.current_party.gold
+                )
                 
                 self._show_success_message(success_message)
-                logger.info(f"宿屋倉庫アイテム売却: {item.item_id} x{quantity} ({total_price}G)")
+                logger.info(config_manager.get_text("shop.messages.inn_storage_sell_log").format(
+                    item_id=item.item_id,
+                    quantity=quantity,
+                    total_price=total_price
+                ))
             else:
-                self._show_error_message("アイテムの売却に失敗しました")
+                self._show_error_message(config_manager.get_text("shop.messages.inn_storage_sell_failed"))
                 
         except Exception as e:
             logger.error(f"宿屋倉庫アイテム売却エラー: {e}")
-            self._show_error_message(f"売却処理に失敗しました: {str(e)}")
+            self._show_error_message(config_manager.get_text("shop.messages.inn_storage_sell_error").format(error=str(e)))
     
     
     def _format_sellable_item_display_name(self, item_instance, item: Item) -> str:
@@ -744,7 +756,7 @@ class Shop(BaseFacility):
             item_info += f" x{item_instance.quantity}"
         item_info += f" - {sell_price}G"
         if item_instance.quantity > 1:
-            item_info += f" (各{sell_price}G)"
+            item_info += config_manager.get_text("shop.messages.item_price_format").format(price=sell_price)
         
         return item_info
     
@@ -816,13 +828,13 @@ class Shop(BaseFacility):
         """在庫にアイテムを追加"""
         if item_id not in self.inventory:
             self.inventory.append(item_id)
-            logger.info(f"商店在庫に追加: {item_id}")
+            logger.info(config_manager.get_text("shop.messages.shop_inventory_added").format(item_id=item_id))
     
     def remove_item_from_inventory(self, item_id: str):
         """在庫からアイテムを削除"""
         if item_id in self.inventory:
             self.inventory.remove(item_id)
-            logger.info(f"商店在庫から削除: {item_id}")
+            logger.info(config_manager.get_text("shop.messages.shop_inventory_removed").format(item_id=item_id))
     
     def _show_sell_confirmation(self, slot, item_instance: ItemInstance, item: Item, sell_price: int):
         """売却確認ダイアログを表示"""
@@ -938,7 +950,11 @@ class Shop(BaseFacility):
                                                       price=total_price, 
                                                       gold=self.current_party.gold)
         
-        logger.info(f"アイテム売却: {item.item_id} x{quantity} ({total_price}G)")
+        logger.info(config_manager.get_text("shop.messages.item_sell_log").format(
+            item_id=item.item_id, 
+            quantity=quantity, 
+            total_price=total_price
+        ))
         
         # 売却一覧画面（サブメニュー）を閉じる
         ui_manager.hide_menu("shop_sell_menu")

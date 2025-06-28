@@ -38,7 +38,7 @@ class FontManager:
             for path in font_paths:
                 if os.path.exists(path):
                     japanese_font_path = path
-                    logger.info(f"フォントを発見: {path}")
+                    logger.info(config_manager.get_text("font_manager.font_found").format(path=path))
                     break
             
             if japanese_font_path:
@@ -55,20 +55,20 @@ class FontManager:
                             self.default_font = font
                             self.fonts['default'] = font
                     
-                    logger.info(f"日本語フォントをロードしました: {japanese_font_path}")
+                    logger.info(config_manager.get_text("font_manager.japanese_font_loaded").format(path=japanese_font_path))
                     
                 except Exception as e:
-                    logger.warning(f"日本語フォントのロードに失敗: {e}")
+                    logger.warning(config_manager.get_text("font_manager.japanese_font_load_failed").format(error=e))
                     self._load_fallback_fonts()
             else:
-                logger.warning("日本語フォントが見つかりません")
+                logger.warning(config_manager.get_text("font_manager.japanese_font_not_found"))
                 self._load_fallback_fonts()
                 
             # システムフォントも追加
             self._load_system_fonts()
             
         except Exception as e:
-            logger.error(f"フォント初期化エラー: {e}")
+            logger.error(config_manager.get_text("font_manager.font_init_error").format(error=e))
             self._load_fallback_fonts()
     
     def _load_fallback_fonts(self):
@@ -85,7 +85,7 @@ class FontManager:
                     self.default_font = font
                     self.fonts['default'] = font
             
-            logger.info("フォールバックフォントをロードしました")
+            logger.info(config_manager.get_text("font_manager.fallback_font_loaded"))
             
         except Exception as e:
             logger.error(f"フォールバックフォントのロードに失敗: {e}")
