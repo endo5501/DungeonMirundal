@@ -41,6 +41,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 開発方針
 - t-wada式のテスト駆動開発（TDD）を採用
 - テストファースト、実装は後
+- Fowler式リファクタリングを実施
 - テストが通過してからコミット
 - 修正完了後はまとめてコミット（コミットメッセージは英語）
 

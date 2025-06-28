@@ -12,7 +12,7 @@ high_contrast: false
 keyboard_enabled: true
 language: en
 large_text: false
-master_volume: 1.0
+master_volume: 0.9
 message_speed: normal
 music_volume: 0.8
 mute_on_focus_loss: true

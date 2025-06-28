@@ -201,9 +201,17 @@ class WindowManager:
         Args:
             window: 破棄するウィンドウ
         """
+        # 子ウィンドウを先に破棄（カスケード削除）
+        children_to_destroy = [w for w in self.window_registry.values() if w.parent == window]
+        for child in children_to_destroy:
+            self.destroy_window(child)
+        
         # レジストリから削除
         if window.window_id in self.window_registry:
             del self.window_registry[window.window_id]
+        
+        # ウィンドウスタックから削除
+        self.window_stack.remove_window(window)
         
         # イベントリスナーをクリーンアップ
         self.event_router.cleanup_window_listeners(window.window_id)
