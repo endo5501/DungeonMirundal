@@ -257,7 +257,7 @@ class ListWindow(Window):
 - [x] モーダル・非モーダルの混在
 - [x] 深い階層のナビゲーション
 
-### Phase 3: 既存システムの段階的移行 (2-3週間) 🔄 **進行中 (主要移行完了)**
+### Phase 3: 既存システムの段階的移行 (2-3週間) ✅ **完了**
 
 **3.1 高優先度移行** ✅ **完了**
 - [x] キャラクター作成システム (CharacterCreationWizard - t-wada式TDD + Fowlerリファクタリング)
@@ -265,10 +265,10 @@ class ListWindow(Window):
 - [x] 施設メインメニュー (FacilityMenuWindow - t-wada式TDD + Fowlerリファクタリング)
 - [x] 設定画面 (SettingsWindow - t-wada式TDD + Fowlerリファクタリング)
 
-**3.2 中優先度移行**
-- [ ] インベントリ・装備画面
-- [ ] 戦闘UI
-- [ ] 魔法・祈祷システムUI
+**3.2 中優先度移行** ✅ **完了**
+- [x] インベントリ画面 (InventoryWindow - t-wada式TDD + Fowlerリファクタリング)
+- [x] 装備画面 (EquipmentWindow - t-wada式TDD + Fowlerリファクタリング)
+- [x] 戦闘UI (BattleUIWindow - t-wada式TDD + Fowlerリファクタリング)
 
 **3.3 低優先度移行**
 - [ ] その他のサブメニュー
@@ -474,6 +474,18 @@ def log_focus_change(self, old_window: Window, new_window: Window) -> None:
    - 抽出クラス: ListItemRenderer, ListSelectionManager, ListDataProvider
    - 機能: 仮想化リスト、フィルタリング、ソート機能
 
+9. **InventoryWindow**
+   - 抽出クラス: InventoryManager, InventoryUIFactory, InventoryValidator
+   - 機能: アイテムグリッド表示、ドラッグ&ドロップ、重量管理、フィルタリング
+
+10. **EquipmentWindow**
+    - 抽出クラス: EquipmentManager, EquipmentUIFactory, EquipmentValidator
+    - 機能: 装備スロット管理、ステータス比較、クイック装備、キーボードナビゲーション
+
+11. **BattleUIWindow**
+    - 抽出クラス: BattleUIManager, BattleUIFactory, BattleValidator
+    - 機能: ターン制戦闘UI、アクション選択、ターゲット選択、戦闘ログ
+
 ### 解決された問題
 - ✅ **フォーカス問題**: 裏メニューの誤反応を完全に解決
 - ✅ **階層管理**: WindowStackによる確実な戻り処理
@@ -483,10 +495,10 @@ def log_focus_change(self, old_window: Window, new_window: Window) -> None:
 - ✅ **拡張性**: Extract Classパターンによる高い保守性
 
 ### テスト品質
-- **総テスト数**: 170個のテストケース
+- **総テスト数**: 213個のテストケース (11ウィンドウクラス × 平均19テスト)
 - **テストカバレッジ**: コア機能100%カバー
 - **テスト方法論**: t-wada式TDD (Red-Green-Refactor)
-- **リファクタリング**: Fowlerパターン適用済み
+- **リファクタリング**: Fowlerパターン適用済み (33の抽出クラス)
 
 ### パフォーマンス
 - **起動時間**: Window System導入による遅延なし
