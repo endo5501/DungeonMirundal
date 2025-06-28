@@ -372,6 +372,20 @@ app_log:
   entered_inn: "宿屋に入りました"
   left_inn: "宿屋から出ました"
   inventory_initialized: "インベントリを初期化: {owner_id} ({type}, {slots}スロット)"
+  item_organization_error: "アイテム整理画面表示エラー: {error}"
+  item_organization_display_failed: "アイテム整理画面の表示に失敗しました"
+  storage_status_display_error: "倉庫状況表示エラー: {error}"
+  storage_status_display_failed: "倉庫状況の表示に失敗しました"
+  spell_equipment_error: "魔法装備エラー: {error}"
+  spell_equipment_display_failed: "魔法装備メニューの表示に失敗しました"
+  party_name_change_cancelled: "パーティ名変更がキャンセルされました"
+  party_name_changed: "パーティ名を変更: {old_name} → {new_name}"
+  invalid_name_error_title: "無効な名前"
+  invalid_name_error_message: "入力された名前は無効です"
+  name_change_complete_title: "名前変更完了"
+  name_change_complete_message: "パーティ名を「{old_name}」から「{new_name}」に変更しました。"
+  no_party_error_title: "エラー"
+  no_party_error_message: "パーティが設定されていません"
 
 # ゲーム管理
 game_manager:
@@ -855,6 +869,11 @@ magic_ui:
   character_magic_info: "{character_name} (習得:{learned_count} 装備:{equipped_slots})"
   party_magic_stats: "パーティ魔法統計"
   magic_learning: "魔法習得（宿屋・ギルド）"
+  party_magic_menu_displayed: "パーティ魔法メニューを表示"
+  no_mp_users: "魔法を使用できるキャラクターがいません"
+  party_not_set: "パーティが設定されていません"
+  magic_ui_hidden: "魔法UIを非表示にしました"
+  magic_ui_destroyed: "MagicUIを破棄しました"
 
 # フォントマネージャー
 font_manager:
@@ -864,6 +883,10 @@ font_manager:
   japanese_font_not_found: "日本語フォントが見つかりません"
   font_init_error: "フォント初期化エラー: {error}"
   fallback_font_loaded: "フォールバックフォントをロードしました"
+  fallback_font_load_failed: "フォールバックフォントのロードに失敗: {error}"
+  system_font_load_failed: "システムフォントのロードに失敗: {error}"
+  system_font_loaded: "システムフォントをロード: {font_name}"
+  text_rendering_error: "テキストレンダリングエラー: {error}"
 
 # 宿屋メニュー
 inn_menu:

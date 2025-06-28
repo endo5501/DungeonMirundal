@@ -47,7 +47,7 @@ class Inn(BaseFacility):
     def _on_exit(self):
         """宿屋退場時の処理"""
         self._cleanup_all_ui()
-        logger.info("宿屋から出ました")
+        logger.info(config_manager.get_text("app_log.left_inn"))
     
     def _cleanup_all_ui(self):
         """全てのUI要素をクリーンアップ"""
@@ -132,7 +132,7 @@ class Inn(BaseFacility):
     def _change_party_name(self):
         """パーティ名変更機能"""
         if not self.current_party:
-            self.show_error_dialog("エラー", "パーティが設定されていません")
+            self.show_error_dialog(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
             return
         
         current_name = self.current_party.name if self.current_party.name else "無名のパーティ"
@@ -155,7 +155,7 @@ class Inn(BaseFacility):
         validated_name = self._validate_party_name(new_name)
         
         if not validated_name:
-            self.show_error_dialog("無効な名前", "入力された名前は無効です")
+            self.show_error_dialog(config_manager.get_text("app_log.invalid_name_error_title"), config_manager.get_text("app_log.invalid_name_error_message"))
             return
         
         old_name = self.current_party.name
@@ -163,15 +163,15 @@ class Inn(BaseFacility):
         
         ui_manager.hide_menu("party_name_input_dialog")
         
-        success_message = f"パーティ名を「{old_name}」から「{validated_name}」に変更しました。"
-        self.show_success_dialog("名前変更完了", success_message)
+        success_message = config_manager.get_text("app_log.name_change_complete_message").format(old_name=old_name, new_name=validated_name)
+        self.show_success_dialog(config_manager.get_text("app_log.name_change_complete_title"), success_message)
         
-        logger.info(f"パーティ名を変更: {old_name} → {validated_name}")
+        logger.info(config_manager.get_text("app_log.party_name_changed").format(old_name=old_name, new_name=validated_name))
     
     def _on_party_name_cancelled(self):
         """パーティ名変更キャンセル時の処理"""
         ui_manager.hide_menu("party_name_input_dialog")
-        logger.info("パーティ名変更がキャンセルされました")
+        logger.info(config_manager.get_text("app_log.party_name_change_cancelled"))
     
     def _validate_party_name(self, name: str) -> str:
         """パーティ名のバリデーションと正規化"""
@@ -211,7 +211,7 @@ class Inn(BaseFacility):
     def _show_adventure_preparation(self):
         """冒険の準備メニューを表示"""
         if not self.current_party:
-            self.show_error_dialog("エラー", "パーティが設定されていません")
+            self.show_error_dialog(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
             return
         
         prep_menu = UIMenu("adventure_prep_menu", "冒険の準備")
@@ -250,8 +250,8 @@ class Inn(BaseFacility):
             self._show_new_item_organization_menu()
             
         except Exception as e:
-            logger.error(f"アイテム整理画面表示エラー: {e}")
-            self.show_error_dialog("エラー", "アイテム整理画面の表示に失敗しました")
+            logger.error(config_manager.get_text("app_log.item_organization_error").format(error=e))
+            self.show_error_dialog(config_manager.get_text("common.error"), config_manager.get_text("app_log.item_organization_display_failed"))
     
     def _show_new_item_organization_menu(self):
         """新しいアイテム整理メニューを表示"""
@@ -300,8 +300,8 @@ class Inn(BaseFacility):
             self.show_information_dialog("宿屋倉庫の状況", status_text, buttons=[{"text": "戻る", "callback": None}])
             
         except Exception as e:
-            logger.error(f"倉庫状況表示エラー: {e}")
-            self.show_error_dialog("エラー", "倉庫状況の表示に失敗しました")
+            logger.error(config_manager.get_text("app_log.storage_status_display_error").format(error=e))
+            self.show_error_dialog(config_manager.get_text("common.error"), config_manager.get_text("app_log.storage_status_display_failed"))
     
     def _show_character_item_management(self, character):
         """キャラクターアイテム管理メニューを表示"""
@@ -456,8 +456,8 @@ class Inn(BaseFacility):
             self.show_submenu(equip_menu, {'character': character})
             
         except Exception as e:
-            logger.error(f"魔法装備メニュー表示エラー: {e}")
-            self.show_error_dialog("エラー", "魔法装備メニューの表示に失敗しました")
+            logger.error(config_manager.get_text("app_log.spell_equipment_error").format(error=e))
+            self.show_error_dialog(config_manager.get_text("common.error"), config_manager.get_text("app_log.spell_equipment_display_failed"))
     
     def _show_spell_status(self, character):
         """魔術状況表示（実装予定）"""

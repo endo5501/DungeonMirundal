@@ -91,7 +91,7 @@ class MagicUI:
         ui_manager.show_element(main_menu.element_id, modal=True)
         self.is_open = True
         
-        logger.info("パーティ魔法メニューを表示")
+        logger.info(config_manager.get_text("magic_ui.party_magic_menu_displayed"))
     
     def _show_character_magic(self, character: Character):
         """キャラクター魔法画面を表示"""
@@ -713,7 +713,7 @@ class MagicUI:
         if self.current_party:
             self.show_party_magic_menu(self.current_party)
         else:
-            logger.warning("パーティが設定されていません")
+            logger.warning(config_manager.get_text("magic_ui.party_not_set"))
     
     def hide(self):
         """魔法UIを非表示"""
@@ -722,7 +722,7 @@ class MagicUI:
         except:
             pass
         self.is_open = False
-        logger.debug("魔法UIを非表示にしました")
+        logger.debug(config_manager.get_text("magic_ui.magic_ui_hidden"))
     
     def destroy(self):
         """魔法UIを破棄"""
@@ -732,7 +732,7 @@ class MagicUI:
         self.current_spellbook = None
         self.selected_level = None
         self.selected_slot_index = None
-        logger.debug("MagicUIを破棄しました")
+        logger.debug(config_manager.get_text("magic_ui.magic_ui_destroyed"))
     
     def set_close_callback(self, callback: Callable):
         """閉じるコールバックを設定"""

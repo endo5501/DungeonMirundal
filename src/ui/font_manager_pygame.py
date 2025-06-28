@@ -5,6 +5,7 @@ from typing import Optional, Dict
 import pygame
 
 from src.utils.logger import logger
+from src.core.config_manager import config_manager
 
 class FontManager:
     """フォント管理クラス（Pygame版）"""
