@@ -59,11 +59,12 @@ class TestMenuWindow:
         menu_window = MenuWindow('main_menu', menu_config)
         menu_window.create()
         
-        # Then: 設定通りのボタンが作成される
-        assert len(menu_window.buttons) == 3
+        # Then: 設定通りのボタン + 戻るボタンが作成される
+        assert len(menu_window.buttons) == 4  # 元の3つ + 戻るボタン
         assert menu_window.buttons[0].action == 'start_game'
         assert menu_window.buttons[1].action == 'open_settings'
         assert menu_window.buttons[2].action == 'exit_game'
+        assert menu_window.buttons[3].action == 'window_back'  # 戻るボタン
     
     def test_menu_window_handles_button_click_events(self):
         """ボタンクリックイベントが正しく処理されることを確認"""
@@ -145,8 +146,8 @@ class TestMenuWindow:
         
         menu_window.handle_event(up_event)
         
-        # Then: 最後のボタンに循環する
-        assert menu_window.selected_button_index == 2
+        # Then: 最後のボタン（戻るボタン）に循環する
+        assert menu_window.selected_button_index == 3  # 元の3つ + 戻るボタン
         
         # When: 最後のボタンで下キーを押す（下端）
         down_event = Mock()
@@ -273,3 +274,114 @@ class TestMenuWindow:
         # Then: UI要素が削除される
         assert len(menu_window.buttons) == 0
         assert menu_window.ui_manager is None
+    
+    def test_menu_window_automatically_adds_back_button(self):
+        """MenuWindowが自動的に戻るボタンを追加することを確認"""
+        # Given: 戻るボタンを明示的に含まないメニュー設定
+        menu_config = {
+            'title': 'Test Menu',
+            'buttons': [
+                {'id': 'btn1', 'text': 'Button 1', 'action': 'action1'},
+                {'id': 'btn2', 'text': 'Button 2', 'action': 'action2'}
+            ]
+        }
+        
+        # When: MenuWindowを作成し、UI要素を作成
+        menu_window = MenuWindow('test_menu', menu_config)
+        menu_window.create()
+        
+        # Then: 戻るボタンが自動的に追加される
+        assert len(menu_window.buttons) == 3  # 元の2つ + 戻るボタン
+        back_button = menu_window.buttons[-1]
+        assert back_button.id == 'back'
+        assert back_button.text == '戻る'
+        assert back_button.action == 'window_back'
+    
+    def test_menu_window_back_button_not_added_to_root_menu(self):
+        """ルートメニューには戻るボタンが追加されないことを確認"""
+        # Given: ルートメニューとして指定された設定
+        menu_config = {
+            'title': 'Root Menu',
+            'buttons': [
+                {'id': 'btn1', 'text': 'Button 1', 'action': 'action1'}
+            ],
+            'is_root': True
+        }
+        
+        # When: MenuWindowを作成し、UI要素を作成
+        menu_window = MenuWindow('root_menu', menu_config)
+        menu_window.create()
+        
+        # Then: 戻るボタンは追加されない
+        assert len(menu_window.buttons) == 1
+        assert menu_window.buttons[0].id == 'btn1'
+    
+    def test_menu_window_back_button_sends_window_back_action(self):
+        """戻るボタンが押されたときにwindow_backアクションが送信されることを確認"""
+        # Given: 戻るボタンが自動追加されたメニュー
+        menu_config = {
+            'title': 'Test Menu',
+            'buttons': [
+                {'id': 'btn1', 'text': 'Button 1', 'action': 'action1'}
+            ]
+        }
+        menu_window = MenuWindow('test_menu', menu_config)
+        menu_window.create()
+        
+        # 戻るボタンのUI要素を取得
+        back_button = menu_window.buttons[-1]
+        
+        # When: 戻るボタンがクリックされる
+        mock_event = Mock()
+        mock_event.type = pygame_gui.UI_BUTTON_PRESSED
+        mock_event.ui_element = back_button.ui_element
+        
+        with patch.object(menu_window, 'send_message') as mock_send:
+            result = menu_window.handle_event(mock_event)
+        
+        # Then: window_backアクションが送信される
+        assert result is True
+        mock_send.assert_called_once_with('menu_action', {'action': 'window_back', 'button_id': 'back'})
+    
+    def test_menu_window_escape_key_triggers_back_action(self):
+        """ESCキーが押されたときに戻るアクションが実行されることを確認"""
+        # Given: メニューウィンドウ
+        menu_config = {
+            'title': 'Test Menu',
+            'buttons': [
+                {'id': 'btn1', 'text': 'Button 1', 'action': 'action1'}
+            ]
+        }
+        menu_window = MenuWindow('test_menu', menu_config)
+        menu_window.create()
+        
+        # When: ESCキーが押される
+        esc_event = Mock()
+        esc_event.type = pygame.KEYDOWN
+        esc_event.key = pygame.K_ESCAPE
+        
+        with patch.object(menu_window, 'send_message') as mock_send:
+            result = menu_window.handle_event(esc_event)
+        
+        # Then: window_backアクションが送信される
+        assert result is True
+        mock_send.assert_called_once_with('menu_action', {'action': 'window_back', 'button_id': 'escape'})
+    
+    def test_menu_window_custom_back_button_text(self):
+        """カスタムの戻るボタンテキストが使用できることを確認"""
+        # Given: カスタム戻るボタンテキストを含む設定
+        menu_config = {
+            'title': 'Test Menu',
+            'buttons': [
+                {'id': 'btn1', 'text': 'Button 1', 'action': 'action1'}
+            ],
+            'back_button_text': 'メインメニューに戻る'
+        }
+        
+        # When: MenuWindowを作成
+        menu_window = MenuWindow('test_menu', menu_config)
+        menu_window.create()
+        
+        # Then: カスタムテキストが使用される
+        back_button = menu_window.buttons[-1]
+        assert back_button.text == 'メインメニューに戻る'

@@ -11,17 +11,9 @@ from dataclasses import dataclass
 
 from .window import Window
 from .menu_layout import MenuLayout, LayoutConfig
+from .back_button_manager import BackButtonManager
+from .menu_button import MenuButton
 from src.utils.logger import logger
-
-
-@dataclass
-class MenuButton:
-    """メニューボタンの情報"""
-    id: str
-    text: str
-    action: str
-    ui_element: Optional[pygame_gui.elements.UIButton] = None
-    style: Optional[Dict[str, Any]] = None
 
 
 class MenuWindow(Window):
@@ -57,6 +49,9 @@ class MenuWindow(Window):
         
         # レイアウト計算器
         self.layout = MenuLayout()
+        
+        # 戻るボタンマネージャー
+        self.back_button_manager = BackButtonManager(menu_config)
         
         logger.debug(f"MenuWindowを初期化: {window_id}")
     
@@ -115,11 +110,16 @@ class MenuWindow(Window):
     
     def _create_buttons(self) -> None:
         """ボタンを作成"""
-        button_count = len(self.menu_config['buttons'])
-        has_title = 'title' in self.menu_config
-        button_rects = self.layout.calculate_button_rects(self.rect, button_count, has_title)
+        # 元のボタン + 戻るボタン（必要な場合）の総数
+        original_buttons = self.menu_config['buttons']
+        additional_count = self.back_button_manager.get_additional_button_count()
+        total_button_count = len(original_buttons) + additional_count
         
-        for i, button_config in enumerate(self.menu_config['buttons']):
+        has_title = 'title' in self.menu_config
+        button_rects = self.layout.calculate_button_rects(self.rect, total_button_count, has_title)
+        
+        # 元のボタンを作成
+        for i, button_config in enumerate(original_buttons):
             button_rect = button_rects[i]
             
             # pygame-guiボタンを作成
@@ -140,6 +140,17 @@ class MenuWindow(Window):
             )
             
             self.buttons.append(menu_button)
+        
+        # 戻るボタンを追加（必要な場合）
+        if additional_count > 0:
+            back_button = self.back_button_manager.create_back_button(
+                button_rects[len(original_buttons)],
+                self.ui_manager,
+                self.panel,
+                self.style
+            )
+            if back_button:
+                self.buttons.append(back_button)
         
         logger.debug(f"MenuWindow ボタンを作成: {len(self.buttons)}個")
     
@@ -164,6 +175,9 @@ class MenuWindow(Window):
                 return True
             elif event.key == pygame.K_RETURN:
                 self._activate_selected_button()
+                return True
+            elif event.key == pygame.K_ESCAPE:
+                self._handle_escape_key()
                 return True
         
         # ボタンクリック処理
@@ -206,6 +220,10 @@ class MenuWindow(Window):
         }
         self.send_message('menu_action', message_data)
         logger.debug(f"メニューアクション実行: {button.action}")
+    
+    def _handle_escape_key(self) -> None:
+        """ESCキーが押されたときの処理"""
+        self.back_button_manager.handle_escape_key(self.send_message)
     
     def set_enabled(self, enabled: bool) -> None:
         """メニューの有効/無効を設定"""
