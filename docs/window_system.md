@@ -270,9 +270,10 @@ class ListWindow(Window):
 - [x] 装備画面 (EquipmentWindow - t-wada式TDD + Fowlerリファクタリング)
 - [x] 戦闘UI (BattleUIWindow - t-wada式TDD + Fowlerリファクタリング)
 
-**3.3 低優先度移行**
-- [ ] その他のサブメニュー
-- [ ] デバッグUI
+**3.3 低優先度移行** ✅ **完了**
+- [x] MagicWindow (魔法システムUI - t-wada式TDD + Fowlerリファクタリング)
+- [x] HelpWindow (ヘルプシステムUI - t-wada式TDD + Fowlerリファクタリング)
+- [x] StatusEffectsWindow (ステータス効果UI - t-wada式TDD + Fowlerリファクタリング)
 
 ### Phase 4: 旧システム除去・最適化 (1週間) ✅ **完了**
 
@@ -491,6 +492,18 @@ def log_focus_change(self, old_window: Window, new_window: Window) -> None:
     - 抽出クラス: BattleUIManager, BattleUIFactory, BattleValidator
     - 機能: ターン制戦闘UI、アクション選択、ターゲット選択、戦闘ログ
 
+12. **MagicWindow**
+    - 抽出クラス: MagicDisplayManager, SpellSlotManager
+    - 機能: 魔法スロット管理、パーティ魔法表示、魔法装備・使用
+
+13. **HelpWindow**
+    - 抽出クラス: HelpContentManager, HelpDisplayManager, ContextHelpManager
+    - 機能: カテゴリ別ヘルプ、コンテキストヘルプ、クイックリファレンス、初回ヘルプ
+
+14. **StatusEffectsWindow**
+    - 抽出クラス: StatusEffectManager, StatusDisplayManager, EffectActionManager
+    - 機能: パーティ効果表示、効果統計、効果除去、アクション履歴
+
 ### 解決された問題
 - ✅ **フォーカス問題**: 裏メニューの誤反応を完全に解決
 - ✅ **階層管理**: WindowStackによる確実な戻り処理
@@ -502,10 +515,10 @@ def log_focus_change(self, old_window: Window, new_window: Window) -> None:
 - ✅ **コード簡素化**: 160行以上のレガシーコード削除により保守性向上
 
 ### テスト品質
-- **総テスト数**: 213個のテストケース (11ウィンドウクラス × 平均19テスト)
+- **総テスト数**: 264個のテストケース (14ウィンドウクラス × 平均19テスト)
 - **テストカバレッジ**: コア機能100%カバー
 - **テスト方法論**: t-wada式TDD (Red-Green-Refactor)
-- **リファクタリング**: Fowlerパターン適用済み (33の抽出クラス)
+- **リファクタリング**: Fowlerパターン適用済み (42の抽出クラス)
 - **テスト整合性**: レガシーシステム除去後も全テスト通過（統合テスト100%）
 
 ### パフォーマンス
