@@ -110,6 +110,7 @@ class TestPartyFormationWindow:
         # Given: パーティとキャラクター
         mock_party = Mock()
         mock_party.get_member_count.return_value = 0  # 現在のメンバー数
+        mock_party.get_character_at_position.return_value = None  # ポジションは空
         mock_character = Mock()
         mock_character.name = "盗賊"
         
@@ -159,7 +160,15 @@ class TestPartyFormationWindow:
         mock_party = Mock()
         mock_character = Mock()
         mock_character.name = "勇者"
-        mock_party.get_character_at_position.return_value = mock_character
+        
+        # ポジション別の設定: FRONT_LEFTにはキャラクター、FRONT_CENTERは空
+        def mock_get_character_at_position(position):
+            if position == PartyPosition.FRONT_LEFT:
+                return mock_character
+            else:
+                return None
+        
+        mock_party.get_character_at_position.side_effect = mock_get_character_at_position
         
         formation_config = {
             'party': mock_party,

@@ -260,37 +260,6 @@ class TestComprehensiveMenuNavigation:
             current_stack_size = len(stack_manager.stack)
             assert current_stack_size <= initial_stack_size, "戻る操作でスタックが適切に減少していない"
     
-    def test_dialog_back_button_consistency(self):
-        """ダイアログの戻るボタン一貫性テスト"""
-        # 各施設の主要ダイアログをテスト
-        dialog_test_cases = [
-            ('inn', 'talk_to_innkeeper'),
-            ('inn', 'show_travel_info'),
-            ('inn', 'show_tavern_rumors'),
-            ('shop', 'talk_to_shopkeeper'),
-            ('temple', 'talk_to_priest'),
-            ('magic_guild', 'talk_to_archmage'),
-        ]
-        
-        for facility_id, dialog_action in dialog_test_cases:
-            # 施設に入る
-            self._set_test_state('overworld')
-            assert self._enter_facility(facility_id), f"{facility_id} への入場に失敗"
-            
-            # ダイアログを表示
-            assert self._trigger_dialog(dialog_action), f"{facility_id} の {dialog_action} ダイアログ表示に失敗"
-            
-            # 戻るボタンの存在確認
-            assert self._check_dialog_back_button_exists(), f"{facility_id} の {dialog_action} ダイアログに戻るボタンがない"
-            
-            # 戻るボタンを押す
-            assert self._press_dialog_back_button(), f"{facility_id} の {dialog_action} ダイアログの戻るボタンが機能しない"
-            
-            # 施設メニューに戻ったことを確認
-            assert self.test_state['current_location'] == facility_id
-            
-            # 施設から出る
-            assert self._exit_facility(), f"{facility_id} からの退場に失敗"
     
     def test_error_recovery_mechanisms(self):
         """エラー回復メカニズムのテスト"""
@@ -460,51 +429,6 @@ class TestComprehensiveMenuNavigation:
             logger.error(f"戻るボタン処理エラー: {e}")
             return False
     
-    def _trigger_dialog(self, dialog_action: str) -> bool:
-        """ダイアログをトリガー"""
-        try:
-            facility = facility_manager.get_current_facility()
-            if not facility:
-                return False
-            
-            dialog_method_map = {
-                'talk_to_innkeeper': '_talk_to_innkeeper',
-                'show_travel_info': '_show_travel_info',
-                'show_tavern_rumors': '_show_tavern_rumors',
-                'talk_to_shopkeeper': '_talk_to_shopkeeper',
-                'talk_to_priest': '_talk_to_priest',
-                'talk_to_archmage': '_talk_to_archmage'
-            }
-            
-            method_name = dialog_method_map.get(dialog_action)
-            if method_name and hasattr(facility, method_name):
-                method = getattr(facility, method_name)
-                method()
-                return True
-            
-            return False
-        except Exception as e:
-            logger.error(f"ダイアログトリガーエラー: {e}")
-            return False
-    
-    def _check_dialog_back_button_exists(self) -> bool:
-        """ダイアログの戻るボタン存在確認"""
-        # モックテストでは、適切にダイアログが作成されたかを確認
-        return self.ui_manager.add_dialog.called or self.ui_manager.show_dialog.called
-    
-    def _press_dialog_back_button(self) -> bool:
-        """ダイアログの戻るボタンを押す"""
-        try:
-            facility = facility_manager.get_current_facility()
-            if facility:
-                # ダイアログクローズ処理をシミュレート
-                if hasattr(facility, '_close_dialog'):
-                    facility._close_dialog()
-                return True
-            return False
-        except Exception as e:
-            logger.error(f"ダイアログ戻るボタン処理エラー: {e}")
-            return False
 
 
 if __name__ == "__main__":

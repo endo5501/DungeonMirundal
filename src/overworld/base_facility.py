@@ -281,8 +281,8 @@ class BaseFacility(ABC):
             self.current_dialog = None
             
             # ダイアログを閉じた後、メインメニューを再表示
-            if self.main_menu and ui_manager:
-                ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+            if self.menu_stack_manager:
+                self.menu_stack_manager.back_to_facility_main()
         elif self.current_dialog:
             # ui_managerがNoneの場合は最低限の処理のみ実行
             logger.warning("ui_managerがNoneのため、ダイアログクリーンアップをスキップします")

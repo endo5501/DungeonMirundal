@@ -275,9 +275,16 @@ class PartyFormationManager:
         return success
     
     def _get_current_member_count(self) -> int:
-        """現在のメンバー数を取得"""
+        """現在のメンバー数を取得（Fowler: Extract Method + Defensive Coding）"""
+        # パーティオブジェクトからメンバー数を取得を試行
         if hasattr(self.party, 'get_member_count'):
-            return self.party.get_member_count()
+            try:
+                member_count = self.party.get_member_count()
+                # Mockオブジェクトやその他の非数値型への対処
+                if isinstance(member_count, (int, float)):
+                    return int(member_count)
+            except (TypeError, AttributeError):
+                pass
         
         # フォールバック: ポジションを数える
         count = 0

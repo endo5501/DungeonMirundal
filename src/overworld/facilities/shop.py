@@ -796,8 +796,10 @@ class Shop(BaseFacility):
     def _show_submenu(self, submenu: UIMenu):
         """サブメニューを表示"""
         # メインメニューを隠す
-        if self.main_menu:
-            ui_manager.hide_menu(self.main_menu.menu_id)
+        if self.menu_stack_manager:
+            current_entry = self.menu_stack_manager.peek_current_menu()
+            if current_entry:
+                ui_manager.hide_menu(current_entry.menu.menu_id)
         
         ui_manager.add_menu(submenu)
         ui_manager.show_menu(submenu.menu_id, modal=True)
@@ -807,8 +809,8 @@ class Shop(BaseFacility):
         ui_manager.hide_menu(submenu.menu_id)
         
         
-        if self.main_menu:
-            ui_manager.show_menu(self.main_menu.menu_id)
+        if self.menu_stack_manager:
+            self.menu_stack_manager.back_to_facility_main()
     
     def add_item_to_inventory(self, item_id: str):
         """在庫にアイテムを追加"""

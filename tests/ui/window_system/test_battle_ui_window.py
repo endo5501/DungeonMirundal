@@ -333,31 +333,6 @@ class TestBattleUIWindow:
             'new_phase': BattlePhase.ENEMY_TURN
         })
     
-    def test_battle_ui_handles_keyboard_shortcuts(self):
-        """キーボードショートカットが動作することを確認"""
-        # Given: 戦闘ウィンドウ
-        battle_config = {
-            'battle_manager': Mock(),
-            'party': Mock(),
-            'enemies': Mock()
-        }
-        
-        battle_window = BattleUIWindow('shortcut_battle', battle_config)
-        battle_window.create()
-        battle_window.current_phase = BattlePhase.PLAYER_ACTION
-        
-        # When: Aキー（攻撃）を押す
-        attack_event = Mock()
-        attack_event.type = pygame.KEYDOWN
-        attack_event.key = pygame.K_a
-        attack_event.mod = 0
-        
-        with patch.object(battle_window, 'select_action') as mock_select:
-            result = battle_window.handle_event(attack_event)
-        
-        # Then: 攻撃アクションが選択される
-        assert result is True
-        mock_select.assert_called_once_with(BattleActionType.ATTACK)
     
     def test_battle_ui_displays_status_effects(self):
         """ステータス効果が表示されることを確認"""

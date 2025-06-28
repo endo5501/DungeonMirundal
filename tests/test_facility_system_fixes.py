@@ -114,6 +114,9 @@ class TestFacilitySystemFixes:
                 
                 guild = AdventurersGuild()
                 
+                # メニューシステムを初期化
+                guild.initialize_menu_system(mock_ui_manager)
+                
                 # パーティで入場
                 result = guild.enter(self.party)
                 
@@ -144,6 +147,9 @@ class TestFacilitySystemFixes:
                 mock_ui_manager.hide_dialog = Mock()
                 
                 guild = AdventurersGuild()
+                
+                # メニューシステムを初期化
+                guild.initialize_menu_system(mock_ui_manager)
                 
                 # 入場してから退場
                 guild.enter(self.party)
@@ -244,6 +250,10 @@ class TestFacilitySystemFixes:
                 
                 manager = FacilityManager()
                 guild = AdventurersGuild()
+                
+                # メニューシステムを初期化
+                guild.initialize_menu_system(mock_ui_manager)
+                
                 manager.register_facility(guild)
                 
                 # 施設に入場

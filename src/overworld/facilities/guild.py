@@ -62,9 +62,10 @@ class AdventurersGuild(BaseFacility):
     
     def _show_character_creation(self):
         """キャラクター作成ウィザードを表示"""
-        # メインメニューを隠す
-        if self.main_menu:
-            self._hide_menu_safe(self.main_menu.menu_id)
+        # メインメニューを隠す（menu_stack_managerを使用）
+        if self.menu_stack_manager and self.menu_stack_manager.get_current_menu():
+            current_menu = self.menu_stack_manager.get_current_menu()
+            self._hide_menu_safe(current_menu.menu_id)
         
         # キャラクター作成ウィザードを起動
         wizard = CharacterCreationWizard(callback=self._on_character_created)
@@ -85,11 +86,12 @@ class AdventurersGuild(BaseFacility):
     
     def _on_character_creation_cancelled(self):
         """キャラクター作成キャンセル時のコールバック"""
-        # メインメニューを再表示
-        if self.main_menu:
+        # メインメニューを再表示（menu_stack_managerを使用）
+        if self.menu_stack_manager and self.menu_stack_manager.get_current_menu():
+            current_menu = self.menu_stack_manager.get_current_menu()
             ui_mgr = self._get_effective_ui_manager()
             if ui_mgr:
-                ui_mgr.show_menu(self.main_menu.menu_id, modal=True)
+                ui_mgr.show_menu(current_menu.menu_id, modal=True)
         
         logger.info("キャラクター作成がキャンセルされ、ギルドメインメニューに戻りました")
     
@@ -141,8 +143,10 @@ class AdventurersGuild(BaseFacility):
         )
         
         # メインメニューを隠して編成メニューを表示
-        if self.main_menu:
-            self._hide_menu_safe(self.main_menu.menu_id)
+        if self.menu_stack_manager:
+            current_entry = self.menu_stack_manager.peek_current_menu()
+            if current_entry:
+                self._hide_menu_safe(current_entry.menu.menu_id)
         
         self._show_menu_safe(formation_menu, modal=True)
     
@@ -632,10 +636,8 @@ class AdventurersGuild(BaseFacility):
     def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
         """サブメニューからメインメニューに戻る"""
         self._hide_menu_safe(submenu.menu_id)
-        if self.main_menu:
-            ui_mgr = self._get_effective_ui_manager()
-            if ui_mgr:
-                ui_mgr.show_menu(self.main_menu.menu_id, modal=True)
+        if self.menu_stack_manager:
+            self.menu_stack_manager.back_to_facility_main()
     
     def _back_to_main_menu_fallback(self):
         """フォールバック: 直接メインメニューに戻る"""
@@ -653,10 +655,8 @@ class AdventurersGuild(BaseFacility):
                 
         
         # メインメニューを表示
-        if self.main_menu:
-            ui_mgr = self._get_effective_ui_manager()
-            if ui_mgr:
-                ui_mgr.show_menu(self.main_menu.menu_id, modal=True)
+        if self.menu_stack_manager:
+            self.menu_stack_manager.back_to_facility_main()
     
     def _close_all_submenus_and_return_to_main(self):
         """すべてのサブメニューを閉じてメインメニューに戻る"""
@@ -672,10 +672,8 @@ class AdventurersGuild(BaseFacility):
             except Exception as fallback_error:
                 logger.error(f"フォールバック処理でもエラーが発生しました: {fallback_error}")
                 # 最後の手段：基本的なメインメニュー表示
-                if self.main_menu:
+                if self.menu_stack_manager:
                     try:
-                        ui_mgr = self._get_effective_ui_manager()
-                        if ui_mgr:
-                            ui_mgr.show_menu(self.main_menu.menu_id, modal=True)
+                        self.menu_stack_manager.back_to_facility_main()
                     except Exception:
                         pass  # 最後の手段が失敗しても続行
