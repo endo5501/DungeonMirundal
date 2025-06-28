@@ -7,8 +7,12 @@ Window System 動作確認スクリプト
 import pygame
 import pygame_gui
 import sys
+import os
+# プロジェクトルートをパスに追加
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 from src.ui.window_system import WindowManager, Window
-from src.ui.window_system.simple_test_window import SimpleSimpleTestWindow
+from simple_test_window import SimpleTestWindow
 
 
 def main():

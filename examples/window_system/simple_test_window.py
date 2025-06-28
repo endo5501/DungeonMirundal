@@ -8,7 +8,12 @@ import pygame
 import pygame_gui
 from typing import Optional
 
-from .window import Window
+import sys
+import os
+# プロジェクトルートをパスに追加
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+from src.ui.window_system.window import Window
 
 
 class SimpleTestWindow(Window):
