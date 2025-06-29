@@ -18,6 +18,7 @@ from .list_window import ListWindow
 from .list_types import ListItem, ListColumn, SelectionMode, SortOrder
 from .settings_window import SettingsWindow
 from .settings_types import SettingsField, SettingsTab, SettingsCategory, SettingsFieldType
+from .overworld_main_window import OverworldMainWindow, OverworldMenuType
 
 __all__ = [
     'WindowManager',
@@ -44,5 +45,7 @@ __all__ = [
     'SettingsField',
     'SettingsTab',
     'SettingsCategory',
-    'SettingsFieldType'
+    'SettingsFieldType',
+    'OverworldMainWindow',
+    'OverworldMenuType'
 ]
