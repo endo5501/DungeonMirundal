@@ -246,7 +246,21 @@ class OverworldManager:
 - `docs/window_system.md`: WindowSystem設計書
 
 ## 作業ログ
-- 2025-06-29: 初期調査完了、移行計画策定
-- TODO: 詳細実装計画の作成
-- TODO: テストケース設計
-- TODO: 段階的移行の実施
+
+### 2025-06-29: Phase 1 - overworld_manager.py WindowManager統合完了 ✅
+- **TDDアプローチ実装**: test_overworld_manager_window_migration.py作成
+- **WindowManager統合**: WindowManager.get_instance()プロパティ追加
+- **新メソッド実装**:
+  - `_show_main_menu_window()`: WindowManagerベースメニュー表示
+  - `_create_main_menu_config()`: 施設・ダンジョンメニュー設定
+  - `handle_main_menu_message()`: FacilityMenuWindowスタイルメッセージ処理
+  - `handle_escape_key()`: ESCキー処理WindowManager対応
+  - `_create_settings_menu_config()`: SettingsWindow形式設定
+  - `_show_settings_menu_window()`: 設定メニュー統合
+- **レガシー併用**: ImportErrorフォールバック機能で段階的移行
+- **テスト全通過**: 12項目テスト完了、統合確認済み
+
+### 次回予定
+- Phase 2: overworld_manager_pygame.py統合
+- Phase 3: base_facility.py最終移行
+- Phase 4: menu_stack_manager.py役割見直し

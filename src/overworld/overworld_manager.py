@@ -7,7 +7,12 @@ from src.character.party import Party
 from src.character.character import Character, CharacterStatus
 from src.overworld.base_facility import BaseFacility, FacilityManager, facility_manager
 from src.ui.base_ui_pygame import UIMenu, UIDialog, ui_manager
-from src.ui.dungeon_selection_ui import DungeonSelectionUI
+from src.ui.window_system import WindowManager
+try:
+    from src.ui.dungeon_selection_ui import DungeonSelectionUI
+except ImportError:
+    # ダンジョン選択UIが未実装の場合はMockを使用
+    DungeonSelectionUI = None
 from src.core.config_manager import config_manager
 from src.core.save_manager import save_manager
 from src.utils.logger import logger
@@ -66,7 +71,7 @@ class OverworldManager:
         self.main_menu: Optional[UIMenu] = None
         self.location_menu: Optional[UIMenu] = None
         self.settings_menu_active = False
-        self.dungeon_selection_ui = DungeonSelectionUI()
+        self.dungeon_selection_ui = DungeonSelectionUI() if DungeonSelectionUI else None
         
         # コールバック
         self.on_enter_dungeon: Optional[Callable] = None
@@ -80,6 +85,10 @@ class OverworldManager:
         # 施設入場前のメニュー状態を記録するフラグ
         self.main_menu_was_visible = False
         self.settings_menu_was_visible = False
+        
+        # WindowManager統合
+        self.window_manager = WindowManager.get_instance()
+        self.main_window = None
         
         logger.info("OverworldManagerを初期化しました")
     
@@ -101,8 +110,8 @@ class OverworldManager:
         if from_dungeon:
             self._auto_recovery()
         
-        # メインメニューを表示
-        self._show_main_menu()
+        # メインメニューを表示（新システム優先）
+        self._show_main_menu_window()
         
         logger.info(f"パーティが地上部に入りました: {party.name}")
         return True
@@ -224,6 +233,224 @@ class OverworldManager:
         
         ui_manager.add_menu(self.main_menu)
         ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+    
+    # === WindowManagerベースの新メソッド ===
+    
+    def _show_main_menu_window(self):
+        """メインメニューをWindowManagerで表示（新システム）"""
+        try:
+            from src.ui.window_system.overworld_main_window import OverworldMainWindow
+            
+            # メニュー設定を作成
+            menu_config = self._create_main_menu_config()
+            
+            # OverworldMainWindowを作成
+            self.main_window = OverworldMainWindow('overworld_main', menu_config)
+            
+            # メッセージハンドラーを設定
+            self.main_window.message_handler = self.handle_main_menu_message
+            
+            # ウィンドウを表示
+            self.window_manager.show_window(self.main_window, push_to_stack=True)
+            
+            logger.info("WindowManagerでメインメニューを表示しました")
+            
+        except ImportError:
+            # OverworldMainWindowが未実装の場合はレガシーメソッドを使用
+            logger.warning("OverworldMainWindow未実装、レガシーメニューを使用")
+            self._show_main_menu()
+    
+    def _create_main_menu_config(self):
+        """メインメニュー設定を作成"""
+        facilities = [
+            ("guild", config_manager.get_text("facility.guild")),
+            ("inn", config_manager.get_text("facility.inn")),
+            ("shop", config_manager.get_text("facility.shop")),
+            ("temple", config_manager.get_text("facility.temple")),
+            ("magic_guild", config_manager.get_text("facility.magic_guild"))
+        ]
+        
+        menu_items = []
+        
+        # 施設メニュー項目
+        for facility_id, facility_name in facilities:
+            menu_items.append({
+                'id': facility_id,
+                'label': facility_name,
+                'type': 'facility',
+                'enabled': True,
+                'facility_id': facility_id
+            })
+        
+        # ダンジョン入口
+        menu_items.append({
+            'id': 'dungeon_entrance',
+            'label': config_manager.get_text("facility.dungeon_entrance"),
+            'type': 'action',
+            'enabled': True
+        })
+        
+        return {
+            'menu_type': 'overworld_main',
+            'title': config_manager.get_text("overworld.surface_map"),
+            'menu_items': menu_items,
+            'party': self.current_party,
+            'show_party_info': True,
+            'show_gold': True
+        }
+    
+    def handle_main_menu_message(self, message_type: str, data: dict) -> bool:
+        """メインメニューメッセージ処理"""
+        if message_type == 'menu_item_selected':
+            item_id = data.get('item_id')
+            
+            if item_id in ['guild', 'inn', 'shop', 'temple', 'magic_guild']:
+                facility_id = data.get('facility_id', item_id)
+                return self._enter_facility(facility_id)
+            elif item_id == 'dungeon_entrance':
+                return self._enter_dungeon()
+                
+        elif message_type == 'overworld_exit_requested':
+            return self._handle_overworld_exit()
+            
+        return False
+    
+    def _create_settings_menu_config(self):
+        """設定メニュー設定を作成"""
+        categories = [
+            {
+                'id': 'game_menu',
+                'name': config_manager.get_text("menu.settings"),
+                'fields': [
+                    {
+                        'id': 'party_status',
+                        'name': config_manager.get_text("menu.party_status"),
+                        'type': 'action',
+                        'enabled': self.current_party is not None,
+                        'action': 'party_status'
+                    },
+                    {
+                        'id': 'save_game',
+                        'name': config_manager.get_text("menu.save_game"),
+                        'type': 'action',
+                        'enabled': self.current_party is not None,
+                        'action': 'save_game'
+                    },
+                    {
+                        'id': 'load_game',
+                        'name': config_manager.get_text("menu.load_game"),
+                        'type': 'action',
+                        'enabled': True,
+                        'action': 'load_game'
+                    },
+                    {
+                        'id': 'back',
+                        'name': config_manager.get_text("menu.back"),
+                        'type': 'action',
+                        'enabled': True,
+                        'action': 'back'
+                    }
+                ]
+            }
+        ]
+        
+        return {
+            'categories': categories,
+            'title': config_manager.get_text("menu.settings"),
+            'party': self.current_party
+        }
+    
+    def _create_party_status_config(self):
+        """パーティステータス設定を作成"""
+        return {
+            'party': self.current_party,
+            'display_mode': 'status_view',
+            'show_detailed_stats': True
+        }
+    
+    def _create_save_menu_config(self):
+        """セーブメニュー設定を作成"""
+        return {
+            'menu_type': 'save_load',
+            'operation': 'save',
+            'party': self.current_party,
+            'max_slots': MAX_SAVE_SLOTS
+        }
+    
+    def _create_load_menu_config(self):
+        """ロードメニュー設定を作成"""
+        return {
+            'menu_type': 'save_load',
+            'operation': 'load',
+            'max_slots': MAX_SAVE_SLOTS
+        }
+    
+    def _show_settings_menu_window(self):
+        """設定メニューをWindowManagerで表示"""
+        try:
+            from src.ui.window_system.settings_window import SettingsWindow
+            
+            config = self._create_settings_menu_config()
+            settings_window = SettingsWindow('settings_menu', config)
+            settings_window.message_handler = self.handle_settings_message
+            
+            self.window_manager.show_window(settings_window, push_to_stack=True)
+            
+        except ImportError:
+            # SettingsWindowが未実装の場合はレガシーメソッドを使用
+            logger.warning("SettingsWindow未実装、レガシー設定メニューを使用")
+            self.show_settings_menu()
+    
+    def handle_settings_message(self, message_type: str, data: dict) -> bool:
+        """設定メニューメッセージ処理"""
+        if message_type == 'menu_item_selected':
+            item_id = data.get('item_id')
+            
+            if item_id == 'party_status':
+                return self._show_party_status()
+            elif item_id == 'save_game':
+                return self._show_save_menu()
+            elif item_id == 'load_game':
+                return self._show_load_menu()
+            elif item_id == 'back':
+                return self._back_to_main_menu()
+                
+        return False
+    
+    def _show_dungeon_selection_window(self):
+        """ダンジョン選択をWindowManagerで表示"""
+        # TODO: DungeonSelectionWindowの実装後に追加
+        logger.info("ダンジョン選択ウィンドウ（実装予定）")
+        if self.dungeon_selection_ui:
+            # レガシー実装を使用
+            self.dungeon_selection_ui.show()
+    
+    def _handle_overworld_exit(self) -> bool:
+        """オーバーワールド退場処理"""
+        return self.exit_overworld()
+    
+    def handle_escape_key(self) -> bool:
+        """ESCキー処理（WindowManager対応）"""
+        if not self.is_active:
+            return False
+        
+        # 設定メニューが表示されている場合は戻る
+        if self.settings_menu_active:
+            return self._back_to_main_menu()
+        
+        # 通常状態では設定メニューを表示
+        self._show_settings_menu_window()
+        return True
+    
+    def _back_to_main_menu(self) -> bool:
+        """メインメニューに戻る"""
+        self.settings_menu_active = False
+        
+        # WindowManagerでback操作
+        if self.window_manager.get_active_window():
+            self.window_manager.go_back()
+        
+        return True
     
     def show_settings_menu(self):
         """設定画面の表示（ESCキー用）"""
