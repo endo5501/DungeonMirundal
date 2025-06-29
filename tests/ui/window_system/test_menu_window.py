@@ -17,25 +17,49 @@ class TestMenuWindow:
     
     def setup_method(self):
         """各テストメソッドの前に実行される"""
-        # Pygame全体の完全初期化
+        # Pygame全体の完全初期化（WSL2対応）
         pygame.quit()  # 既存の状態をクリア
+        
+        # 短い待機時間を追加（WSL2環境でのフォントサブシステム安定化）
+        import time
+        time.sleep(0.01)
+        
         pygame.init()
         
         # ディスプレイの初期化
-        pygame.display.set_mode((800, 600))  # 十分なサイズで初期化
+        self.screen = pygame.display.set_mode((800, 600))  # 十分なサイズで初期化
         
-        # フォントモジュールの確実な初期化
-        pygame.font.init()
+        # フォントモジュールの確実な初期化（WSL2対応）
+        if not pygame.font.get_init():
+            pygame.font.init()
+        
+        # フォント初期化後の短い待機
+        time.sleep(0.01)
         
         # pygame_gui用UIManagerを初期化
         self.ui_manager = pygame_gui.UIManager((800, 600))
+        
+        # UIManager初期化後の短い待機
+        time.sleep(0.01)
     
     def teardown_method(self):
         """各テストメソッドの後に実行される"""
+        import time
+        
         # UI要素の完全クリーンアップ
         if hasattr(self, 'ui_manager'):
             try:
                 self.ui_manager.clear_and_reset()
+                # クリーンアップ後の短い待機
+                time.sleep(0.01)
+            except:
+                pass
+        
+        # 画面サーフェスのクリア
+        if hasattr(self, 'screen'):
+            try:
+                self.screen.fill((0, 0, 0))
+                pygame.display.flip()
             except:
                 pass
         
@@ -43,13 +67,15 @@ class TestMenuWindow:
         try:
             if pygame.display.get_init():
                 pygame.display.quit()
+                time.sleep(0.01)  # ディスプレイ終了後の待機
         except:
             pass
         
-        # フォントモジュールの確実な終了
+        # フォントモジュールの確実な終了（WSL2対応）
         try:
             if pygame.font.get_init():
                 pygame.font.quit()
+                time.sleep(0.01)  # フォント終了後の待機
         except:
             pass
         
@@ -57,6 +83,7 @@ class TestMenuWindow:
         try:
             if pygame.get_init():
                 pygame.quit()
+                time.sleep(0.01)  # 全体終了後の待機
         except:
             pass
     
