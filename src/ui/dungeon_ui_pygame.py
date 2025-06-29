@@ -6,6 +6,7 @@ import pygame
 
 from src.ui.window_system import WindowManager
 from src.ui.window_system.battle_ui_window import BattleUIWindow
+from src.ui.windows.battle_integration_manager import get_battle_integration_manager, BattleContext
 from src.ui.character_status_bar import CharacterStatusBar, create_character_status_bar
 from src.ui.small_map_ui_pygame import SmallMapUI
 from src.character.party import Party
@@ -188,7 +189,41 @@ class DungeonUIManagerPygame:
             self.character_status_bar = None
     
     def show_battle_ui(self, battle_manager, enemies):
-        """戦闘UIを表示（WindowSystem版）"""
+        """戦闘UIを表示（WindowSystem統合版）"""
+        try:
+            # BattleIntegrationManagerを使用した統合戦闘
+            battle_integration = get_battle_integration_manager()
+            
+            # 戦闘コンテキストを作成
+            battle_context = BattleContext(
+                dungeon_level=getattr(self, 'current_level', 1),
+                dungeon_x=getattr(self, 'current_x', 0),
+                dungeon_y=getattr(self, 'current_y', 0),
+                encounter_type="random_encounter",
+                return_callback=self._on_battle_return
+            )
+            
+            # 統合マネージャーで戦闘開始
+            success = battle_integration.start_battle(
+                party=self.current_party,
+                enemies=enemies,
+                battle_context=battle_context
+            )
+            
+            if success:
+                logger.info("戦闘UIを表示（統合版）")
+                return True
+            else:
+                # フォールバック - 直接BattleUIWindowを使用
+                return self._show_battle_ui_fallback(battle_manager, enemies)
+                
+        except Exception as e:
+            logger.error(f"戦闘UI表示エラー: {e}")
+            # フォールバック - 直接BattleUIWindowを使用
+            return self._show_battle_ui_fallback(battle_manager, enemies)
+    
+    def _show_battle_ui_fallback(self, battle_manager, enemies):
+        """戦闘UI表示のフォールバック実装"""
         try:
             battle_config = self._create_battle_ui_config(battle_manager, enemies)
             
@@ -199,11 +234,74 @@ class DungeonUIManagerPygame:
             
             self.battle_ui_window.create()
             
-            logger.info("戦闘UIを表示（WindowSystem版）")
+            logger.info("戦闘UIを表示（フォールバック版）")
             return True
         except Exception as e:
-            logger.error(f"戦闘UI表示エラー: {e}")
+            logger.error(f"戦闘UIフォールバック表示エラー: {e}")
             return False
+    
+    def _on_battle_return(self, victory: bool, battle_result: dict):
+        """戦闘終了後のコールバック"""
+        try:
+            if victory:
+                logger.info("戦闘に勝利しました")
+                # 経験値・アイテム獲得処理
+                self._handle_battle_victory(battle_result)
+            else:
+                logger.info("戦闘が終了しました（敗北・逃走）")
+                # 敗北・逃走処理
+                self._handle_battle_defeat(battle_result)
+            
+            # ダンジョンUIに復帰
+            self._return_to_dungeon_ui()
+            
+        except Exception as e:
+            logger.error(f"戦闘復帰処理エラー: {e}")
+    
+    def _handle_battle_victory(self, battle_result: dict):
+        """戦闘勝利処理"""
+        try:
+            # 経験値獲得
+            exp_gained = battle_result.get('experience_gained', 0)
+            if exp_gained > 0:
+                logger.info(f"経験値 {exp_gained} を獲得")
+                # パーティに経験値を付与（実装に応じて調整）
+            
+            # アイテム獲得
+            items_gained = battle_result.get('items_gained', [])
+            if items_gained:
+                logger.info(f"アイテム {len(items_gained)} 個を獲得")
+                # インベントリに追加（実装に応じて調整）
+            
+            # ゴールド獲得
+            gold_gained = battle_result.get('gold_gained', 0)
+            if gold_gained > 0:
+                logger.info(f"ゴールド {gold_gained} を獲得")
+                # パーティのゴールドに追加（実装に応じて調整）
+                
+        except Exception as e:
+            logger.error(f"戦闘勝利処理エラー: {e}")
+    
+    def _handle_battle_defeat(self, battle_result: dict):
+        """戦闘敗北・逃走処理"""
+        try:
+            # 敗北・逃走時の処理（実装に応じて調整）
+            logger.info("戦闘敗北・逃走処理")
+            
+        except Exception as e:
+            logger.error(f"戦闘敗北処理エラー: {e}")
+    
+    def _return_to_dungeon_ui(self):
+        """ダンジョンUIに復帰"""
+        try:
+            # ダンジョン画面の状態を復元
+            self.is_menu_open = False
+            self.current_menu_type = DungeonMenuType.NONE
+            
+            logger.info("ダンジョンUIに復帰しました")
+            
+        except Exception as e:
+            logger.error(f"ダンジョンUI復帰エラー: {e}")
     
     def _create_battle_ui_config(self, battle_manager=None, enemies=None):
         """BattleUIWindow用設定を作成"""

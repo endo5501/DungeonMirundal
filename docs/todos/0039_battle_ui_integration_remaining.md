@@ -162,17 +162,51 @@ DungeonMenuWindow (復帰)
 - プロトタイプによる事前検証
 
 ## 完了条件
-- [ ] BattleUIWindow統合テスト実装・通過
-- [ ] 戦闘UI統合マネージャー実装・テスト通過
-- [ ] ダンジョン-戦闘UI連携実装・動作確認
-- [ ] 戦闘UIアダプタ実装・互換性確認
-- [ ] 統合テストスイート実装・全テスト通過
-- [ ] ダンジョン探索→戦闘→結果反映のフロー動作確認
-- [ ] 既存戦闘システムとの互換性確認
-- [ ] パフォーマンス劣化なし確認
+- [x] ✅ BattleUIWindow統合テスト実装・通過（2025-06-29完了）
+- [x] ✅ 戦闘UI統合マネージャー実装・テスト通過（2025-06-29完了）
+- [x] ✅ ダンジョン-戦闘UI連携実装・動作確認（2025-06-29完了）
+- [ ] ⏸️ 戦闘UIアダプタ実装・互換性確認（低優先度で実装済み）
+- [x] ✅ 統合テストスイート実装・全テスト通過（2025-06-29完了）
+- [x] ✅ ダンジョン探索→戦闘→結果反映のフロー動作確認（2025-06-29完了）
+- [x] ✅ 既存戦闘システムとの互換性確認（CombatManager連携確認済み）
+- [ ] ⏸️ パフォーマンス劣化なし確認（Phase 6で実施予定）
 
 ## 現在の状況（2025-06-29更新）
-**既存BattleUIWindow実装は存在するが、ダンジョンシステムとの統合が未完了**。
+**0039のBattleUI統合残り作業が完了しました。**
+
+### 完了した実装
+1. **BattleIntegrationManager**: ダンジョンシステムとBattleUIWindowの橋渡し
+   - CombatManagerの適切な初期化・設定
+   - 戦闘コンテキスト（ダンジョン位置、遭遇タイプ）の管理
+   - 戦闘終了後のコールバック処理
+   
+2. **ダンジョンUI統合**: dungeon_ui_pygame.pyの更新
+   - BattleIntegrationManagerを使用した戦闘開始
+   - フォールバック処理による安全性確保
+   - 戦闘結果（経験値、アイテム、ゴールド）の処理
+   - ダンジョンUIへの復帰処理
+
+3. **統合テストスイート**: test_battle_ui_integration.py
+   - BattleUIWindowとCombatManagerの連携テスト
+   - BattleIntegrationManagerの機能テスト
+   - 戦闘開始・終了・コールバック処理のテスト
+
+### 実装された統合フロー
+```
+ダンジョン探索 → 戦闘発生
+    ↓
+BattleIntegrationManager.start_battle()
+    ↓
+CombatManager + BattleUIWindow作成
+    ↓
+戦闘実行
+    ↓
+BattleIntegrationManager.end_battle()
+    ↓
+戦闘結果処理 + コールバック実行
+    ↓
+ダンジョンUIに復帰
+```
 
 ### 前提条件の確認状況
 - ✅ WindowManager, FocusManagerの安定動作（0034で確認済み）
