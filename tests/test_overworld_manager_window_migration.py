@@ -69,7 +69,7 @@ class TestOverworldManagerWindowMigration:
         
         # 基本設定確認
         assert 'menu_type' in config
-        assert config['menu_type'] == 'overworld_main'
+        assert config['menu_type'] == 'main'
         assert 'title' in config
         assert 'menu_items' in config
         assert isinstance(config['menu_items'], list)

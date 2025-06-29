@@ -261,37 +261,53 @@ class OverworldManager:
             self._show_main_menu()
     
     def _create_main_menu_config(self):
-        """メインメニュー設定を作成"""
-        facilities = [
-            ("guild", config_manager.get_text("facility.guild")),
-            ("inn", config_manager.get_text("facility.inn")),
-            ("shop", config_manager.get_text("facility.shop")),
-            ("temple", config_manager.get_text("facility.temple")),
-            ("magic_guild", config_manager.get_text("facility.magic_guild"))
+        """メインメニュー設定を作成（OverworldMainWindow用）"""
+        menu_items = [
+            {
+                'id': 'guild',
+                'label': config_manager.get_text("facility.guild"),
+                'type': 'facility',
+                'facility_id': 'guild',
+                'enabled': True
+            },
+            {
+                'id': 'inn',
+                'label': config_manager.get_text("facility.inn"),
+                'type': 'facility',
+                'facility_id': 'inn',
+                'enabled': True
+            },
+            {
+                'id': 'shop',
+                'label': config_manager.get_text("facility.shop"),
+                'type': 'facility',
+                'facility_id': 'shop',
+                'enabled': True
+            },
+            {
+                'id': 'temple',
+                'label': config_manager.get_text("facility.temple"),
+                'type': 'facility',
+                'facility_id': 'temple',
+                'enabled': True
+            },
+            {
+                'id': 'magic_guild',
+                'label': config_manager.get_text("facility.magic_guild"),
+                'type': 'facility',
+                'facility_id': 'magic_guild',
+                'enabled': True
+            },
+            {
+                'id': 'dungeon_entrance',
+                'label': "ダンジョン入口",  # TODO: 翻訳ファイルに追加予定
+                'type': 'action',
+                'enabled': True
+            }
         ]
         
-        menu_items = []
-        
-        # 施設メニュー項目
-        for facility_id, facility_name in facilities:
-            menu_items.append({
-                'id': facility_id,
-                'label': facility_name,
-                'type': 'facility',
-                'enabled': True,
-                'facility_id': facility_id
-            })
-        
-        # ダンジョン入口
-        menu_items.append({
-            'id': 'dungeon_entrance',
-            'label': config_manager.get_text("facility.dungeon_entrance"),
-            'type': 'action',
-            'enabled': True
-        })
-        
         return {
-            'menu_type': 'overworld_main',
+            'menu_type': 'main',
             'title': config_manager.get_text("overworld.surface_map"),
             'menu_items': menu_items,
             'party': self.current_party,
@@ -300,20 +316,188 @@ class OverworldManager:
         }
     
     def handle_main_menu_message(self, message_type: str, data: dict) -> bool:
-        """メインメニューメッセージ処理"""
+        """メインメニューメッセージ処理（OverworldMainWindow用）"""
+        logger.debug(f"handle_main_menu_message: {message_type}, data: {data}")
+        
         if message_type == 'menu_item_selected':
             item_id = data.get('item_id')
+            facility_id = data.get('facility_id')
             
-            if item_id in ['guild', 'inn', 'shop', 'temple', 'magic_guild']:
-                facility_id = data.get('facility_id', item_id)
+            if facility_id:
+                # 施設入場
                 return self._enter_facility(facility_id)
             elif item_id == 'dungeon_entrance':
+                # ダンジョン入場
                 return self._enter_dungeon()
-                
-        elif message_type == 'overworld_exit_requested':
-            return self._handle_overworld_exit()
-            
+            elif item_id in ['party_status', 'save_game', 'load_game']:
+                # 設定メニューから選択された項目
+                if item_id == 'party_status':
+                    return self._show_party_status_window()
+                elif item_id == 'save_game':
+                    return self._show_save_menu_window()
+                elif item_id == 'load_game':
+                    return self._show_load_menu_window()
+        
+        elif message_type == 'settings_menu_requested':
+            # ESCキーでの設定メニュー表示
+            return self._show_settings_menu_window()
+        
+        elif message_type == 'party_overview_requested':
+            # パーティ全体情報表示
+            return self._show_party_status_window()
+        
+        elif message_type == 'character_details_requested':
+            # キャラクター詳細表示
+            character = data.get('character')
+            return self._show_character_details_window(character)
+        
+        elif message_type == 'save_load_requested':
+            # セーブ・ロード処理
+            operation = data.get('operation')
+            slot_id = data.get('slot_id')
+            if operation == 'save':
+                return self._save_to_slot(slot_id)
+            elif operation == 'load':
+                return self._load_selected_save(slot_id)
+        
+        elif message_type == 'back_requested':
+            # 戻る処理
+            return self._go_back_to_main_menu()
+        
+        logger.warning(f"未処理のメッセージタイプ: {message_type}")
         return False
+    
+    def _show_character_details_window(self, character):
+        """キャラクター詳細ウィンドウ表示"""
+        if not character:
+            logger.warning("キャラクターが指定されていません")
+            return False
+        
+        # 簡単な実装：ダイアログで表示
+        char_info = f"{character.name} (Lv.{character.experience.level})"
+        char_info += f"\nHP: {character.derived_stats.current_hp}/{character.derived_stats.max_hp}"
+        char_info += f"\nMP: {character.derived_stats.current_mp}/{character.derived_stats.max_mp}"
+        char_info += f"\n状態: {character.status.value}"
+        
+        self._show_info_dialog("キャラクター詳細", char_info)
+        return True
+    
+    def _go_back_to_main_menu(self):
+        """メインメニューに戻る"""
+        if hasattr(self, 'main_window') and self.main_window:
+            # OverworldMainWindowの_go_backメソッドを使用
+            return self.main_window._go_back()
+        return False
+    
+    # === WindowManagerベースの新メソッド（パーティ・セーブ・ロード・設定） ===
+    
+    def _show_party_status_window(self):
+        """パーティ状況をWindowManagerで表示"""
+        if not self.current_party:
+            logger.warning("パーティが設定されていません")
+            return False
+        
+        try:
+            # OverworldMainWindowでパーティ状況メニューを表示
+            party_config = {
+                'menu_type': 'party_status',
+                'party': self.current_party
+            }
+            
+            if hasattr(self, 'main_window') and self.main_window:
+                from src.ui.window_system.overworld_main_window import OverworldMenuType
+                self.main_window.show_menu(OverworldMenuType.PARTY_STATUS, party_config)
+                return True
+            
+            logger.warning("メインウィンドウが見つかりません")
+            return False
+            
+        except Exception as e:
+            logger.error(f"パーティ状況表示エラー: {e}")
+            return False
+    
+    def _show_save_menu_window(self):
+        """セーブメニューをWindowManagerで表示"""
+        try:
+            # OverworldMainWindowでセーブメニューを表示
+            save_config = {
+                'menu_type': 'save_load',
+                'operation': 'save',
+                'max_slots': 5
+            }
+            
+            if hasattr(self, 'main_window') and self.main_window:
+                from src.ui.window_system.overworld_main_window import OverworldMenuType
+                self.main_window.show_menu(OverworldMenuType.SAVE_LOAD, save_config)
+                return True
+            
+            logger.warning("メインウィンドウが見つかりません")
+            return False
+            
+        except Exception as e:
+            logger.error(f"セーブメニュー表示エラー: {e}")
+            return False
+    
+    def _show_load_menu_window(self):
+        """ロードメニューをWindowManagerで表示"""
+        try:
+            # OverworldMainWindowでロードメニューを表示
+            load_config = {
+                'menu_type': 'save_load',
+                'operation': 'load',
+                'max_slots': 5
+            }
+            
+            if hasattr(self, 'main_window') and self.main_window:
+                from src.ui.window_system.overworld_main_window import OverworldMenuType
+                self.main_window.show_menu(OverworldMenuType.SAVE_LOAD, load_config)
+                return True
+            
+            logger.warning("メインウィンドウが見つかりません")
+            return False
+            
+        except Exception as e:
+            logger.error(f"ロードメニュー表示エラー: {e}")
+            return False
+    
+    def _show_settings_menu_window(self):
+        """設定メニューをWindowManagerで表示"""
+        try:
+            # OverworldMainWindowで設定メニューを表示
+            settings_config = self._create_settings_menu_config()
+            
+            if hasattr(self, 'main_window') and self.main_window:
+                from src.ui.window_system.overworld_main_window import OverworldMenuType
+                self.main_window.show_menu(OverworldMenuType.SETTINGS, settings_config)
+                return True
+            
+            logger.warning("メインウィンドウが見つかりません")
+            return False
+            
+        except Exception as e:
+            logger.error(f"設定メニュー表示エラー: {e}")
+            return False
+    
+    def _handle_exit_game(self):
+        """ゲーム終了処理"""
+        try:
+            # 終了確認ダイアログを表示
+            confirm_data = {
+                'title': 'ゲーム終了',
+                'message': 'ゲームを終了しますか？',
+                'action': 'exit_game'
+            }
+            
+            # 現在のメインウィンドウにメッセージを送信
+            if hasattr(self, 'main_window') and self.main_window:
+                return self.main_window.handle_message('show_exit_confirmation', confirm_data)
+            
+            logger.warning("メインウィンドウが見つかりません")
+            return False
+            
+        except Exception as e:
+            logger.error(f"ゲーム終了処理エラー: {e}")
+            return False
     
     def _create_settings_menu_config(self):
         """設定メニュー設定を作成"""
@@ -355,6 +539,7 @@ class OverworldManager:
         ]
         
         return {
+            'menu_type': 'settings',
             'categories': categories,
             'title': config_manager.get_text("menu.settings"),
             'party': self.current_party
