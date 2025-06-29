@@ -6,7 +6,8 @@ from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.party import Party
 from src.character.character import Character
 from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
-from src.ui.base_ui_pygame import UIMenu, UIDialog, ui_manager
+from src.ui.window_system import WindowManager
+from src.ui.window_system.facility_menu_window import FacilityMenuWindow
 from src.ui.selection_list_ui import ItemSelectionList
 # NOTE: panda3D UI components removed - using pygame-based UI now
 from src.core.config_manager import config_manager
@@ -62,22 +63,95 @@ class MagicGuild(BaseFacility):
             'resurrection': {'name': 'リザレクション', 'level': 7, 'cost': 2000}
         }
     
-    def _setup_menu_items(self, menu: UIMenu):
-        """魔術師ギルド固有のメニュー項目を設定"""
-        menu.add_menu_item(
-            "魔術書購入",
-            self._show_spellbook_shop_menu
-        )
+    def _create_magic_guild_menu_config(self):
+        """MagicGuild用のFacilityMenuWindow設定を作成"""
+        menu_items = [
+            {
+                'id': 'spellbook_shop',
+                'label': "魔術書購入",
+                'type': 'action',
+                'enabled': True
+            },
+            {
+                'id': 'identification',
+                'label': "アイテム鑑定",
+                'type': 'action',
+                'enabled': self.current_party is not None
+            },
+            {
+                'id': 'analysis',
+                'label': "魔法分析",
+                'type': 'action',
+                'enabled': self.current_party is not None
+            },
+            {
+                'id': 'exit',
+                'label': config_manager.get_text("menu.exit"),
+                'type': 'exit',
+                'enabled': True
+            }
+        ]
         
-        menu.add_menu_item(
-            "アイテム鑑定",
-            self._show_identification_menu
-        )
+        return {
+            'facility_type': FacilityType.MAGIC_GUILD.value,
+            'facility_name': config_manager.get_text("facility.magic_guild"),
+            'menu_items': menu_items,
+            'party': self.current_party,
+            'show_party_info': True,
+            'show_gold': True
+        }
+    
+    def show_menu(self):
+        """MagicGuildメインメニューを表示（FacilityMenuWindow使用）"""
+        window_manager = WindowManager.get_instance()
         
-        menu.add_menu_item(
-            "魔法分析",
-            self._show_analysis_menu
-        )
+        # メニュー設定を作成
+        menu_config = self._create_magic_guild_menu_config()
+        
+        # FacilityMenuWindowを作成
+        magic_guild_window = FacilityMenuWindow('magic_guild_main_menu', menu_config)
+        
+        # メッセージハンドラーを設定
+        magic_guild_window.message_handler = self.handle_facility_message
+        
+        # ウィンドウを表示
+        window_manager.show_window(magic_guild_window, push_to_stack=True)
+        
+        logger.info(config_manager.get_text("app_log.entered_magic_guild"))
+    
+    def handle_facility_message(self, message_type: str, data: dict) -> bool:
+        """FacilityMenuWindowからのメッセージを処理"""
+        if message_type == 'menu_item_selected':
+            item_id = data.get('id')
+            
+            if item_id == 'spellbook_shop':
+                return self._show_spellbook_shop_menu()
+            elif item_id == 'identification':
+                return self._show_identification_menu()
+            elif item_id == 'analysis':
+                return self._show_analysis_menu()
+                
+        elif message_type == 'facility_exit_requested':
+            return self._handle_exit()
+            
+        return False
+    
+    def _handle_exit(self) -> bool:
+        """施設退場処理"""
+        logger.info(config_manager.get_text("app_log.left_magic_guild"))
+        
+        # WindowManagerでウィンドウを閉じる
+        window_manager = WindowManager.get_instance()
+        if window_manager.get_active_window():
+            window_manager.go_back()
+            
+        return True
+    
+    def _setup_menu_items(self, menu):
+        """施設固有のメニュー項目を設定（新システムでは使用されない）"""
+        # 新WindowSystemでは_create_magic_guild_menu_config()を使用するため、この関数は使用されない
+        # BaseFacilityの抽象メソッドを満たすため空実装を提供
+        pass
         
         menu.add_menu_item(
             "大魔術師と話す",
@@ -906,7 +980,7 @@ class MagicGuild(BaseFacility):
             ]
         )
     
-    def _show_submenu(self, submenu: UIMenu):
+    def _show_submenu(self, submenu):
         """サブメニューを表示"""
         # メインメニューを隠す
         if self.main_menu:
@@ -914,7 +988,7 @@ class MagicGuild(BaseFacility):
         
         self._show_menu_safe(submenu, modal=True)
     
-    def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
+    def _back_to_main_menu_from_submenu(self, submenu):
         """サブメニューからメインメニューに戻る"""
         self._hide_menu_safe(submenu.menu_id)
         if self.main_menu:

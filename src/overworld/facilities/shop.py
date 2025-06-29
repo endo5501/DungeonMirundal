@@ -4,7 +4,8 @@ import pygame
 from typing import List, Optional
 from src.overworld.base_facility import BaseFacility, FacilityType
 from src.items.item import Item, ItemInstance, ItemType, item_manager
-from src.ui.base_ui_pygame import UIMenu, ui_manager
+from src.ui.window_system import WindowManager
+from src.ui.window_system.facility_menu_window import FacilityMenuWindow
 from src.ui.selection_list_ui import ItemSelectionList, CustomSelectionList, SelectionListData
 # NOTE: panda3D UI components removed - using pygame-based UI now
 from src.core.config_manager import config_manager
@@ -59,22 +60,96 @@ class Shop(BaseFacility):
             "torch", "lockpick"
         ])
     
-    def _setup_menu_items(self, menu: UIMenu):
-        """商店固有のメニュー項目を設定"""
-        menu.add_menu_item(
-            config_manager.get_text("shop.menu.buy_items"),
-            self._show_buy_menu
-        )
+    def _create_shop_menu_config(self):
+        """Shop用のFacilityMenuWindow設定を作成"""
+        menu_items = [
+            {
+                'id': 'buy_items',
+                'label': config_manager.get_text("shop.menu.buy_items"),
+                'type': 'action',
+                'enabled': True
+            },
+            {
+                'id': 'sell_items',
+                'label': config_manager.get_text("shop.menu.sell_items"),
+                'type': 'action',
+                'enabled': self.current_party is not None
+            },
+            {
+                'id': 'talk_shopkeeper',
+                'label': config_manager.get_text("shop.menu.talk_shopkeeper"),
+                'type': 'action',
+                'enabled': True
+            },
+            {
+                'id': 'exit',
+                'label': config_manager.get_text("menu.exit"),
+                'type': 'exit',
+                'enabled': True
+            }
+        ]
         
-        menu.add_menu_item(
-            config_manager.get_text("shop.menu.sell_items"),
-            self._show_sell_menu
-        )
+        return {
+            'facility_type': FacilityType.SHOP.value,
+            'facility_name': config_manager.get_text("facility.shop"),
+            'menu_items': menu_items,
+            'party': self.current_party,
+            'show_party_info': True,
+            'show_gold': True
+        }
+    
+    def show_menu(self):
+        """Shopメインメニューを表示（FacilityMenuWindow使用）"""
+        window_manager = WindowManager.get_instance()
         
-        menu.add_menu_item(
-            config_manager.get_text("shop.menu.talk_shopkeeper"),
-            self._talk_to_shopkeeper
-        )
+        # メニュー設定を作成
+        menu_config = self._create_shop_menu_config()
+        
+        # FacilityMenuWindowを作成
+        shop_window = FacilityMenuWindow('shop_main_menu', menu_config)
+        
+        # メッセージハンドラーを設定
+        shop_window.message_handler = self.handle_facility_message
+        
+        # ウィンドウを表示
+        window_manager.show_window(shop_window, push_to_stack=True)
+        
+        logger.info(config_manager.get_text("app_log.entered_shop"))
+    
+    def handle_facility_message(self, message_type: str, data: dict) -> bool:
+        """FacilityMenuWindowからのメッセージを処理"""
+        if message_type == 'menu_item_selected':
+            item_id = data.get('id')
+            
+            if item_id == 'buy_items':
+                return self._show_buy_menu()
+            elif item_id == 'sell_items':
+                return self._show_sell_menu()
+            elif item_id == 'talk_shopkeeper':
+                return self._talk_to_shopkeeper()
+                
+        elif message_type == 'facility_exit_requested':
+            return self._handle_exit()
+            
+        return False
+    
+    def _handle_exit(self) -> bool:
+        """施設退場処理"""
+        self._cleanup_ui()
+        logger.info(config_manager.get_text("app_log.left_shop"))
+        
+        # WindowManagerでウィンドウを閉じる
+        window_manager = WindowManager.get_instance()
+        if window_manager.get_active_window():
+            window_manager.go_back()
+            
+        return True
+    
+    def _setup_menu_items(self, menu):
+        """施設固有のメニュー項目を設定（新システムでは使用されない）"""
+        # 新WindowSystemでは_create_shop_menu_config()を使用するため、この関数は使用されない
+        # BaseFacilityの抽象メソッドを満たすため空実装を提供
+        pass
     
     def _on_enter(self):
         """商店入場時の処理"""
@@ -805,7 +880,7 @@ class Shop(BaseFacility):
             height=350  # 会話メッセージ表示に適切な高さ
         )
     
-    def _show_submenu(self, submenu: UIMenu):
+    def _show_submenu(self, submenu):
         """サブメニューを表示"""
         # メインメニューを隠す
         if self.menu_stack_manager:
@@ -816,7 +891,7 @@ class Shop(BaseFacility):
         ui_manager.add_menu(submenu)
         ui_manager.show_menu(submenu.menu_id, modal=True)
     
-    def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
+    def _back_to_main_menu_from_submenu(self, submenu):
         """サブメニューからメインメニューに戻る"""
         ui_manager.hide_menu(submenu.menu_id)
         

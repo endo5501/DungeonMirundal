@@ -6,7 +6,8 @@ from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.party import Party
 from src.character.character import Character, CharacterStatus
 from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
-from src.ui.base_ui_pygame import UIMenu, UIDialog, ui_manager
+from src.ui.window_system import WindowManager
+from src.ui.window_system.facility_menu_window import FacilityMenuWindow
 from src.ui.selection_list_ui import ItemSelectionList
 # NOTE: panda3D UI components removed - using pygame-based UI now
 from src.core.config_manager import config_manager
@@ -49,28 +50,103 @@ class Temple(BaseFacility):
             'all_status_cure': SERVICE_COST_ALL_STATUS_CURE,  # 全状態異常治療
         }
     
-    def _setup_menu_items(self, menu: UIMenu):
-        """教会固有のメニュー項目を設定"""
-        menu.add_menu_item(
-            "蘇生サービス",
-            self._show_resurrection_menu
-        )
+    def _create_temple_menu_config(self):
+        """Temple用のFacilityMenuWindow設定を作成"""
+        menu_items = [
+            {
+                'id': 'resurrection',
+                'label': "蘇生サービス",
+                'type': 'action',
+                'enabled': self.current_party is not None
+            },
+            {
+                'id': 'blessing',
+                'label': "祝福サービス",
+                'type': 'action',
+                'enabled': self.current_party is not None
+            },
+            {
+                'id': 'talk_priest',
+                'label': "神父と話す",
+                'type': 'action',
+                'enabled': True
+            },
+            {
+                'id': 'prayerbook_shop',
+                'label': "祈祷書購入",
+                'type': 'action',
+                'enabled': True
+            },
+            {
+                'id': 'exit',
+                'label': config_manager.get_text("menu.exit"),
+                'type': 'exit',
+                'enabled': True
+            }
+        ]
         
+        return {
+            'facility_type': FacilityType.TEMPLE.value,
+            'facility_name': config_manager.get_text("facility.temple"),
+            'menu_items': menu_items,
+            'party': self.current_party,
+            'show_party_info': True,
+            'show_gold': True
+        }
+    
+    def show_menu(self):
+        """Templeメインメニューを表示（FacilityMenuWindow使用）"""
+        window_manager = WindowManager.get_instance()
         
-        menu.add_menu_item(
-            "祝福サービス",
-            self._show_blessing_menu
-        )
+        # メニュー設定を作成
+        menu_config = self._create_temple_menu_config()
         
-        menu.add_menu_item(
-            "神父と話す",
-            self._talk_to_priest
-        )
+        # FacilityMenuWindowを作成
+        temple_window = FacilityMenuWindow('temple_main_menu', menu_config)
         
-        menu.add_menu_item(
-            "祈祷書購入",
-            self._show_prayerbook_shop
-        )
+        # メッセージハンドラーを設定
+        temple_window.message_handler = self.handle_facility_message
+        
+        # ウィンドウを表示
+        window_manager.show_window(temple_window, push_to_stack=True)
+        
+        logger.info("教会に入りました")
+    
+    def handle_facility_message(self, message_type: str, data: dict) -> bool:
+        """FacilityMenuWindowからのメッセージを処理"""
+        if message_type == 'menu_item_selected':
+            item_id = data.get('id')
+            
+            if item_id == 'resurrection':
+                return self._show_resurrection_menu()
+            elif item_id == 'blessing':
+                return self._show_blessing_menu()
+            elif item_id == 'talk_priest':
+                return self._talk_to_priest()
+            elif item_id == 'prayerbook_shop':
+                return self._show_prayerbook_shop()
+                
+        elif message_type == 'facility_exit_requested':
+            return self._handle_exit()
+            
+        return False
+    
+    def _handle_exit(self) -> bool:
+        """施設退場処理"""
+        logger.info("教会から出ました")
+        
+        # WindowManagerでウィンドウを閉じる
+        window_manager = WindowManager.get_instance()
+        if window_manager.get_active_window():
+            window_manager.go_back()
+            
+        return True
+    
+    def _setup_menu_items(self, menu):
+        """施設固有のメニュー項目を設定（新システムでは使用されない）"""
+        # 新WindowSystemでは_create_temple_menu_config()を使用するため、この関数は使用されない
+        # BaseFacilityの抽象メソッドを満たすため空実装を提供
+        pass
     
     def _on_enter(self):
         """教会入場時の処理"""
@@ -506,7 +582,7 @@ class Temple(BaseFacility):
             ]
         )
     
-    def _show_submenu(self, submenu: UIMenu):
+    def _show_submenu(self, submenu):
         """サブメニューを表示"""
         # メインメニューを隠す
         if self.main_menu:
@@ -515,7 +591,7 @@ class Temple(BaseFacility):
         ui_manager.add_menu(submenu)
         ui_manager.show_menu(submenu.menu_id, modal=True)
     
-    def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
+    def _back_to_main_menu_from_submenu(self, submenu):
         """サブメニューからメインメニューに戻る"""
         ui_manager.hide_menu(submenu.menu_id)
         

@@ -4,9 +4,9 @@ from typing import Dict, List, Optional, Any, Callable
 from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.character import Character
 from src.character.party import Party, PartyPosition
-from src.ui.base_ui_pygame import UIMenu, UIDialog
 from src.ui.character_creation import CharacterCreationWizard
-from src.ui.window_system import MenuWindow
+from src.ui.window_system import MenuWindow, WindowManager
+from src.ui.window_system.facility_menu_window import FacilityMenuWindow
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
@@ -55,27 +55,97 @@ class AdventurersGuild(BaseFacility):
         # 作成済みキャラクターの一時保存
         self.created_characters: List[Character] = []
     
-    def _setup_menu_items(self, menu: UIMenu):
-        """ギルド固有のメニュー項目を設定"""
-        menu.add_menu_item(
-            config_manager.get_text("guild.menu.character_creation"),
-            self._show_character_creation
-        )
+    def _create_guild_menu_config(self):
+        """Guild用のFacilityMenuWindow設定を作成"""
+        menu_items = [
+            {
+                'id': 'character_creation',
+                'label': config_manager.get_text("guild.menu.character_creation"),
+                'type': 'action',
+                'enabled': True
+            },
+            {
+                'id': 'party_formation',
+                'label': config_manager.get_text("guild.menu.party_formation"),
+                'type': 'action',
+                'enabled': self.current_party is not None
+            },
+            {
+                'id': 'character_list',
+                'label': config_manager.get_text("guild.menu.character_list"),
+                'type': 'action',
+                'enabled': len(self.created_characters) > 0 or (self.current_party and len(self.current_party.characters) > 0)
+            },
+            {
+                'id': 'class_change',
+                'label': config_manager.get_text("guild.menu.class_change"),
+                'type': 'action',
+                'enabled': self.current_party is not None and len(self.current_party.characters) > 0
+            },
+            {
+                'id': 'exit',
+                'label': config_manager.get_text("menu.exit"),
+                'type': 'exit',
+                'enabled': True
+            }
+        ]
         
-        menu.add_menu_item(
-            config_manager.get_text("guild.menu.party_formation"),
-            self._show_party_formation
-        )
+        return {
+            'facility_type': FacilityType.GUILD.value,
+            'facility_name': config_manager.get_text("facility.guild"),
+            'menu_items': menu_items,
+            'party': self.current_party,
+            'show_party_info': True,
+            'show_gold': True
+        }
+    
+    def show_menu(self):
+        """Guildメインメニューを表示（FacilityMenuWindow使用）"""
+        window_manager = WindowManager.get_instance()
         
-        menu.add_menu_item(
-            config_manager.get_text("guild.menu.character_list"),
-            self._show_character_list
-        )
+        # メニュー設定を作成
+        menu_config = self._create_guild_menu_config()
         
-        menu.add_menu_item(
-            config_manager.get_text("guild.menu.class_change"),
-            self._show_class_change
-        )
+        # FacilityMenuWindowを作成
+        guild_window = FacilityMenuWindow('guild_main_menu', menu_config)
+        
+        # メッセージハンドラーを設定
+        guild_window.message_handler = self.handle_facility_message
+        
+        # ウィンドウを表示
+        window_manager.show_window(guild_window, push_to_stack=True)
+        
+        logger.info(config_manager.get_text("app_log.entered_guild"))
+    
+    def handle_facility_message(self, message_type: str, data: dict) -> bool:
+        """FacilityMenuWindowからのメッセージを処理"""
+        if message_type == 'menu_item_selected':
+            item_id = data.get('item_id')
+            
+            if item_id == 'character_creation':
+                return self._show_character_creation()
+            elif item_id == 'party_formation':
+                return self._show_party_formation()
+            elif item_id == 'character_list':
+                return self._show_character_list()
+            elif item_id == 'class_change':
+                return self._show_class_change()
+                
+        elif message_type == 'facility_exit_requested':
+            return self._handle_exit()
+            
+        return False
+    
+    def _handle_exit(self) -> bool:
+        """施設退場処理"""
+        logger.info(config_manager.get_text("app_log.left_guild"))
+        
+        # WindowManagerでウィンドウを閉じる
+        window_manager = WindowManager.get_instance()
+        if window_manager.get_active_window():
+            window_manager.go_back()
+            
+        return True
     
     def _on_enter(self):
         """ギルド入場時の処理"""
@@ -85,12 +155,19 @@ class AdventurersGuild(BaseFacility):
         """ギルド退場時の処理"""
         logger.info(config_manager.get_text("app_log.left_guild"))
     
+    def _setup_menu_items(self, menu):
+        """施設固有のメニュー項目を設定（新システムでは使用されない）"""
+        # 新WindowSystemでは_create_guild_menu_config()を使用するため、この関数は使用されない
+        # BaseFacilityの抽象メソッドを満たすため空実装を提供
+        pass
+    
     def _show_character_creation(self):
         """キャラクター作成ウィザードを表示"""
-        # メインメニューを隠す（menu_stack_managerを使用）
-        if self.menu_stack_manager and self.menu_stack_manager.peek_current_menu():
-            current_menu_entry = self.menu_stack_manager.peek_current_menu()
-            self._hide_menu_safe(current_menu_entry.menu.menu_id)
+        # 現在のウィンドウを隠す（WindowManagerを使用）
+        window_manager = WindowManager.get_instance()
+        current_window = window_manager.get_active_window()
+        if current_window:
+            window_manager.hide_window(current_window)
         
         # キャラクター作成ウィザードを起動
         wizard = CharacterCreationWizard(callback=self._on_character_created)
@@ -115,12 +192,13 @@ class AdventurersGuild(BaseFacility):
     
     def _on_character_creation_cancelled(self):
         """キャラクター作成キャンセル時のコールバック"""
-        # メインメニューを再表示（menu_stack_managerを使用）
-        if self.menu_stack_manager and self.menu_stack_manager.peek_current_menu():
-            current_menu_entry = self.menu_stack_manager.peek_current_menu()
-            ui_mgr = self._get_effective_ui_manager()
-            if ui_mgr:
-                ui_mgr.show_menu(current_menu_entry.menu.menu_id, modal=True)
+        # メインメニューを再表示（WindowManagerを使用）
+        window_manager = WindowManager.get_instance()
+        if window_manager.window_stack.size() > 0:
+            window_manager.show_previous_window()
+        else:
+            # スタックが空の場合は新しくメインメニューを表示
+            self.show_menu()
         
         logger.info(config_manager.get_text("guild.messages.character_creation_cancelled"))
     
@@ -235,7 +313,7 @@ class AdventurersGuild(BaseFacility):
             if window_manager.go_back():
                 logger.debug("AdventurersGuild: WindowManagerでgo_backが成功しました")
             else:
-                # WindowManagerが空になったら、元のUIMenuシステムに戻る
+                # WindowManagerが空になったら、メインメニューを表示
                 logger.debug("AdventurersGuild: WindowManagerが空のため、元のメニューシステムに戻ります")
                 if self.menu_stack_manager:
                     current_entry = self.menu_stack_manager.peek_current_menu()
@@ -1048,34 +1126,11 @@ class AdventurersGuild(BaseFacility):
         logger.debug(f"PositionMenuWindow表示完了")
     
     def _show_new_position_menu(self, character: Character):
-        """新しい位置選択メニュー"""
-        new_pos_menu = UIMenu("new_position_menu", f"{character.name} の新しい位置")
-        
-        positions = [
-            (PartyPosition.FRONT_1, "前衛1"),
-            (PartyPosition.FRONT_2, "前衛2"),
-            (PartyPosition.FRONT_3, "前衛3"),
-            (PartyPosition.BACK_1, "後衛1"),
-            (PartyPosition.BACK_2, "後衛2"),
-            (PartyPosition.BACK_3, "後衛3")
-        ]
-        
-        for position, pos_name in positions:
-            # 現在空いている位置のみ表示（現在位置は除外）
-            current_char_id = self.current_party.formation.positions[position]
-            if current_char_id is None:
-                new_pos_menu.add_menu_item(
-                    pos_name,
-                    self._move_character_to_position,
-                    [character, position]
-                )
-        
-        new_pos_menu.add_back_button(
-            config_manager.get_text("menu.back"),
-            self._show_position_menu
-        )
-        
-        self._show_submenu(new_pos_menu)
+        """新しい位置選択メニュー（WindowSystem版は既に実装済み）"""
+        # この関数は既にWindowSystem版（_show_new_position_menu_window）で実装済み
+        # 新システムではPartyFormationWindow内で処理されるため、この関数は使用されない
+        logger.debug(f"_show_new_position_menu called for {character.name}, redirecting to new system")
+        self._show_new_position_menu_window(character)
     
     def _move_character_to_position(self, character: Character, position: PartyPosition):
         """キャラクターを指定位置に移動"""
@@ -1149,97 +1204,184 @@ class AdventurersGuild(BaseFacility):
     def _show_class_change(self):
         """クラスチェンジ画面を表示"""
         if not self.current_party:
-            self._show_error_message("パーティが設定されていません")
+            self._show_error_window("パーティが設定されていません")
             return
         
         # パーティメンバーが誰もいない場合
         if not self.current_party.characters:
-            self._show_error_message("パーティにメンバーがいません")
+            self._show_error_window("パーティにメンバーがいません")
             return
         
-        # クラスチェンジ可能なキャラクターを選択
-        class_change_menu = UIMenu("class_change_menu", "クラスチェンジ")
-        
-        for position, character in self.current_party.characters.items():
-            # レベル10以上のキャラクターのみ表示
+        # レベル10以上のキャラクターを取得
+        eligible_chars = []
+        for character in self.current_party.characters.values():
             if character.experience.level >= 10:
-                char_info = f"{character.name} (Lv.{character.experience.level} {character.get_class_name()})"
-                class_change_menu.add_menu_item(
-                    char_info,
-                    self._show_class_change_options,
-                    [character]
-                )
+                eligible_chars.append(character)
         
         # 該当者がいない場合
-        if len(class_change_menu.elements) == 0:
-            self._show_dialog(
-                "no_eligible_dialog",
-                "クラスチェンジ",
+        if not eligible_chars:
+            self._show_error_window(
                 "クラスチェンジ可能なキャラクターがいません。\n\n"
                 "条件:\n"
                 "・レベル10以上\n"
-                "・転職先クラスの要求能力値を満たす",
-                buttons=[
-                    {
-                        'text': "戻る",
-                        'command': self._close_dialog
-                    }
-                ]
+                "・転職先クラスの要求能力値を満たす"
             )
             return
         
-        class_change_menu.add_menu_item(
-            "戻る",
-            self._back_to_main_menu_from_submenu,
-            [class_change_menu]
+        # クラスチェンジ用のメニュー設定を作成
+        buttons = []
+        for character in eligible_chars:
+            char_info = f"{character.name} (Lv.{character.experience.level} {character.get_class_name()})"
+            buttons.append({
+                'id': f'class_change_{character.character_id}',
+                'text': char_info,
+                'action': f'show_class_options:{character.character_id}'
+            })
+        
+        menu_config = {
+            'title': "クラスチェンジ",
+            'buttons': buttons
+        }
+        
+        # WindowManagerを使用してクラスチェンジウィンドウを表示
+        window_manager = WindowManager.get_instance()
+        
+        class_change_window = PartyFormationWindow(
+            'class_change_menu',
+            menu_config,
+            action_handler=self._handle_class_change_action
         )
         
-        self._show_submenu(class_change_menu)
+        class_change_window.create()
+        window_manager.window_registry[class_change_window.window_id] = class_change_window
+        window_manager.show_window(class_change_window, push_to_stack=True)
     
-    def _show_class_change_options(self, character: Character):
-        """クラスチェンジ先の選択画面を表示"""
+    def _handle_class_change_action(self, message_type: str, data: dict):
+        """クラスチェンジメニューのアクション処理"""
+        logger.debug(f"AdventurersGuild: クラスチェンジアクション処理: {message_type}, {data}")
+        action = data.get('action')
+        
+        if action and action.startswith('show_class_options:'):
+            # キャラクターIDを取得
+            character_id = action.split(':', 1)[1]
+            
+            # キャラクターオブジェクトを取得
+            character = None
+            for char in self.current_party.characters.values():
+                if char.character_id == character_id:
+                    character = char
+                    break
+            
+            if character:
+                self._show_class_change_options_window(character)
+            else:
+                logger.error(f"キャラクターが見つかりません: {character_id}")
+                self._show_error_window("キャラクターが見つかりません")
+                
+        elif action == 'window_back':
+            # 戻るボタンが押された場合
+            from src.ui.window_system import WindowManager
+            window_manager = WindowManager.get_instance()
+            
+            if window_manager.go_back():
+                logger.debug("AdventurersGuild: クラスチェンジからWindowManagerでgo_backが成功しました")
+            else:
+                # メインメニューを表示
+                self.show_menu()
+        else:
+            logger.warning(f"AdventurersGuild: 未知のクラスチェンジアクション: {action}")
+    
+    def _show_class_change_options_window(self, character: Character):
+        """クラスチェンジ先の選択画面を表示（新WindowSystem版）"""
         from src.character.class_change import ClassChangeValidator, ClassChangeManager
         
         # 転職可能なクラスを取得
         available_classes = ClassChangeValidator.get_available_classes(character)
         
         if not available_classes:
-            self._show_dialog(
-                "no_available_classes",
-                "転職先がありません",
+            self._show_error_window(
                 f"{character.name}が転職可能なクラスがありません。\n\n"
-                "能力値が要求を満たしていない可能性があります。",
-                buttons=[
-                    {
-                        'text': "戻る",
-                        'command': self._close_dialog
-                    }
-                ]
+                "能力値が要求を満たしていない可能性があります。"
             )
             return
         
-        # クラス選択メニュー
-        class_select_menu = UIMenu("class_select_menu", f"{character.name}の転職先")
-        
+        # クラス選択用のメニュー設定を作成
+        buttons = []
         for class_name in available_classes:
             class_info = ClassChangeManager.get_class_change_info(character, class_name)
             display_name = f"{class_info['target_name']} (HP×{class_info['hp_multiplier']:.1f} MP×{class_info['mp_multiplier']:.1f})"
-            class_select_menu.add_menu_item(
-                display_name,
-                self._show_class_change_confirm,
-                [character, class_name]
-            )
+            buttons.append({
+                'id': f'select_class_{class_name}',
+                'text': display_name,
+                'action': f'confirm_class_change:{character.character_id}:{class_name}'
+            })
         
-        class_select_menu.add_menu_item(
-            "戻る",
-            self._back_to_class_change_menu,
-            [class_select_menu]
+        menu_config = {
+            'title': f"{character.name}の転職先",
+            'buttons': buttons
+        }
+        
+        # WindowManagerを使用してクラス選択ウィンドウを表示
+        window_manager = WindowManager.get_instance()
+        
+        class_select_window = PartyFormationWindow(
+            'class_select_menu',
+            menu_config,
+            action_handler=self._handle_class_select_action
         )
         
-        self._show_submenu(class_select_menu)
+        class_select_window.create()
+        window_manager.window_registry[class_select_window.window_id] = class_select_window
+        window_manager.show_window(class_select_window, push_to_stack=True)
     
-    def _show_class_change_confirm(self, character: Character, target_class: str):
-        """クラスチェンジ確認画面"""
+    def _handle_class_select_action(self, message_type: str, data: dict):
+        """クラス選択メニューのアクション処理"""
+        logger.debug(f"AdventurersGuild: クラス選択アクション処理: {message_type}, {data}")
+        action = data.get('action')
+        
+        if action and action.startswith('confirm_class_change:'):
+            # アクションからキャラクターIDとクラス名を取得
+            parts = action.split(':', 2)
+            if len(parts) == 3:
+                character_id = parts[1]
+                target_class = parts[2]
+                
+                # キャラクターオブジェクトを取得
+                character = None
+                for char in self.current_party.characters.values():
+                    if char.character_id == character_id:
+                        character = char
+                        break
+                
+                if character:
+                    self._show_class_change_confirm_window(character, target_class)
+                else:
+                    logger.error(f"キャラクターが見つかりません: {character_id}")
+                    self._show_error_window("キャラクターが見つかりません")
+            else:
+                logger.error(f"不正なアクション形式: {action}")
+                self._show_error_window("クラスチェンジに失敗しました")
+                
+        elif action == 'window_back':
+            # 戻るボタンが押された場合
+            from src.ui.window_system import WindowManager
+            window_manager = WindowManager.get_instance()
+            
+            if window_manager.go_back():
+                logger.debug("AdventurersGuild: クラス選択からWindowManagerでgo_backが成功しました")
+            else:
+                # クラスチェンジメニューを表示
+                self._show_class_change()
+        else:
+            logger.warning(f"AdventurersGuild: 未知のクラス選択アクション: {action}")
+    
+    def _show_class_change_options(self, character: Character):
+        """クラスチェンジ先の選択画面を表示（互換性のため）"""
+        # 新しいWindowSystem版にリダイレクト
+        self._show_class_change_options_window(character)
+    
+    def _show_class_change_confirm_window(self, character: Character, target_class: str):
+        """クラスチェンジ確認画面（新WindowSystem版）"""
         from src.character.class_change import ClassChangeManager
         
         class_info = ClassChangeManager.get_class_change_info(character, target_class)
@@ -1256,41 +1398,122 @@ class AdventurersGuild(BaseFacility):
             f"本当にクラスチェンジしますか？"
         )
         
-        # ゴールドチェック
+        # ボタン設定
         if self.current_party.gold < 1000:
             confirm_text += "\n\n※ ゴールドが不足しています"
             buttons = [
                 {
+                    'id': 'back_insufficient_gold',
                     'text': "戻る",
-                    'command': self._close_dialog
+                    'action': 'window_back'
                 }
             ]
         else:
             buttons = [
                 {
+                    'id': 'confirm_yes',
                     'text': "はい",
-                    'command': lambda: self._execute_class_change(character, target_class)
+                    'action': f'execute_class_change:{character.character_id}:{target_class}'
                 },
                 {
+                    'id': 'confirm_no',
                     'text': "いいえ",
-                    'command': self._close_dialog
+                    'action': 'window_back'
                 }
             ]
         
-        self._show_dialog(
-            "class_change_confirm",
-            "クラスチェンジ確認",
-            confirm_text,
-            buttons=buttons,
-            width=CHARACTER_INFO_DIALOG_WIDTH,
-            height=CHARACTER_INFO_DIALOG_HEIGHT
+        menu_config = {
+            'title': "クラスチェンジ確認",
+            'buttons': buttons
+        }
+        
+        # WindowManagerを使用して確認ウィンドウを表示
+        window_manager = WindowManager.get_instance()
+        
+        confirm_window = PartyFormationWindow(
+            'class_change_confirm',
+            menu_config,
+            action_handler=self._handle_class_confirm_action
         )
+        
+        # 確認メッセージを保存（アクションハンドラーで使用）
+        confirm_window.character = character
+        confirm_window.target_class = target_class
+        confirm_window.confirm_text = confirm_text
+        
+        confirm_window.create()
+        
+        # 確認メッセージをテキストラベルとして追加
+        if hasattr(confirm_window, 'ui_manager') and confirm_window.ui_manager:
+            import pygame_gui
+            import pygame
+            text_rect = pygame.Rect(20, 60, confirm_window.rect.width - 40, 200)
+            confirm_window.message_label = pygame_gui.elements.UILabel(
+                relative_rect=text_rect,
+                text=confirm_text,
+                manager=confirm_window.ui_manager,
+                container=confirm_window.panel
+            )
+        
+        window_manager.window_registry[confirm_window.window_id] = confirm_window
+        window_manager.show_window(confirm_window, push_to_stack=True)
     
-    def _execute_class_change(self, character: Character, target_class: str):
-        """クラスチェンジを実行"""
+    def _handle_class_confirm_action(self, message_type: str, data: dict):
+        """クラスチェンジ確認のアクション処理"""
+        logger.debug(f"AdventurersGuild: クラスチェンジ確認アクション処理: {message_type}, {data}")
+        action = data.get('action')
+        
+        if action and action.startswith('execute_class_change:'):
+            # アクションからキャラクターIDとクラス名を取得
+            parts = action.split(':', 2)
+            if len(parts) == 3:
+                character_id = parts[1]
+                target_class = parts[2]
+                
+                # キャラクターオブジェクトを取得
+                character = None
+                for char in self.current_party.characters.values():
+                    if char.character_id == character_id:
+                        character = char
+                        break
+                
+                if character:
+                    self._execute_class_change_window(character, target_class)
+                else:
+                    logger.error(f"キャラクターが見つかりません: {character_id}")
+                    self._show_error_window("キャラクターが見つかりません")
+            else:
+                logger.error(f"不正なアクション形式: {action}")
+                self._show_error_window("クラスチェンジに失敗しました")
+                
+        elif action == 'window_back':
+            # 戻るボタンが押された場合
+            from src.ui.window_system import WindowManager
+            window_manager = WindowManager.get_instance()
+            
+            if window_manager.go_back():
+                logger.debug("AdventurersGuild: クラスチェンジ確認からWindowManagerでgo_backが成功しました")
+            else:
+                # クラス選択メニューを表示
+                # ※ここでキャラクター情報が必要だが、簡単のためクラスチェンジメニューに戻る
+                self._show_class_change()
+        else:
+            logger.warning(f"AdventurersGuild: 未知のクラスチェンジ確認アクション: {action}")
+    
+    def _show_class_change_confirm(self, character: Character, target_class: str):
+        """クラスチェンジ確認画面（互換性のため）"""
+        # 新しいWindowSystem版にリダイレクト
+        self._show_class_change_confirm_window(character, target_class)
+    
+    def _execute_class_change_window(self, character: Character, target_class: str):
+        """クラスチェンジを実行（新WindowSystem版）"""
         from src.character.class_change import ClassChangeManager
         
-        self._close_dialog()
+        # 現在の確認ウィンドウを閉じる
+        window_manager = WindowManager.get_instance()
+        if 'class_change_confirm' in window_manager.window_registry:
+            confirm_window = window_manager.window_registry['class_change_confirm']
+            window_manager.close_window(confirm_window)
         
         # ゴールドを消費
         self.current_party.gold -= 1000
@@ -1299,42 +1522,46 @@ class AdventurersGuild(BaseFacility):
         success, message = ClassChangeManager.change_class(character, target_class)
         
         if success:
-            self._show_success_message(message + f"\n\n残りゴールド: {self.current_party.gold}G")
+            self._show_success_window(message + f"\n\n残りゴールド: {self.current_party.gold}G")
         else:
             # 失敗時はゴールドを戻す
             self.current_party.gold += 1000
-            self._show_error_message(message)
+            self._show_error_window(message)
     
-    def _back_to_class_change_menu(self, submenu: UIMenu):
-        """クラスチェンジメニューに戻る"""
-        self._hide_menu_safe(submenu.menu_id)
-        # クラスチェンジメニューを再表示
+    def _execute_class_change(self, character: Character, target_class: str):
+        """クラスチェンジを実行（互換性のため）"""
+        # 新しいWindowSystem版にリダイレクト
+        self._execute_class_change_window(character, target_class)
+    
+    def _back_to_class_change_menu(self, submenu=None):
+        """クラスチェンジメニューに戻る（新WindowSystem対応）"""
+        # WindowManagerを使用してクラスチェンジメニューを再表示
         self._show_class_change()
     
     def _return_to_party_formation(self):
         """パーティ編成メニューに戻る"""
-        self._close_dialog()
+        # WindowManagerを使用してパーティ編成メニューを再表示
         self._show_party_formation()
     
-    def _show_submenu(self, submenu: UIMenu):
-        """サブメニューを表示"""
-        # 現在のメニューを隠してサブメニューを表示
-        self._hide_menu_safe("party_formation_menu")
-        self._show_menu_safe(submenu, modal=True)
+    def _show_submenu(self, submenu=None):
+        """サブメニューを表示（新WindowSystemでは不要）"""
+        # 新WindowSystemではウィンドウスタックで自動管理されるため何もしない
+        logger.debug("_show_submenu called, but handled by WindowManager stack")
     
-    def _back_to_formation_menu(self, submenu: UIMenu):
+    def _back_to_formation_menu(self, submenu=None):
         """編成メニューに戻る"""
-        self._hide_menu_safe(submenu.menu_id)
-        # 編成メニューを再表示
-        ui_mgr = self._get_effective_ui_manager()
-        if ui_mgr:
-            ui_mgr.show_menu("party_formation_menu")
+        # WindowManagerを使用してパーティ編成メニューを再表示
+        self._show_party_formation()
     
-    def _back_to_main_menu_from_submenu(self, submenu: UIMenu):
+    def _back_to_main_menu_from_submenu(self, submenu=None):
         """サブメニューからメインメニューに戻る"""
-        self._hide_menu_safe(submenu.menu_id)
-        if self.menu_stack_manager:
-            self.menu_stack_manager.back_to_facility_main()
+        # WindowManagerを使用してメインメニューを表示
+        window_manager = WindowManager.get_instance()
+        if window_manager.go_back():
+            logger.debug("WindowManagerでgo_backが成功しました")
+        else:
+            # スタックが空の場合は新しくメインメニューを表示
+            self.show_menu()
     
     def _back_to_main_menu_fallback(self):
         """フォールバック: 直接メインメニューに戻る"""

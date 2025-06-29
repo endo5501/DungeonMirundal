@@ -4,7 +4,8 @@ import pygame
 from typing import Dict, List, Optional, Any
 from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.party import Party
-from src.ui.base_ui_pygame import UIMenu, UIDialog, UIInputDialog, ui_manager
+from src.ui.window_system import WindowManager
+from src.ui.window_system.facility_menu_window import FacilityMenuWindow
 from src.ui.selection_list_ui import ItemSelectionList, CustomSelectionList, SelectionListData
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -31,14 +32,114 @@ class Inn(BaseFacility):
         # UI要素
         self.storage_view_list: Optional[ItemSelectionList] = None
     
-    def _setup_menu_items(self, menu: UIMenu):
-        """宿屋固有のメニュー項目を設定"""
-        menu.add_menu_item(config_manager.get_text("inn_menu.adventure_preparation"), self._show_adventure_preparation)
-        menu.add_menu_item(config_manager.get_text("inn_menu.item_storage"), self._show_item_organization)
-        menu.add_menu_item(config_manager.get_text("inn_menu.talk_innkeeper"), self._talk_to_innkeeper)
-        menu.add_menu_item(config_manager.get_text("inn_menu.travel_info"), self._show_travel_info)
-        menu.add_menu_item(config_manager.get_text("inn_menu.tavern_rumors"), self._show_tavern_rumors)
-        menu.add_menu_item(config_manager.get_text("inn_menu.change_party_name"), self._change_party_name)
+    def _create_inn_menu_config(self):
+        """Inn用のFacilityMenuWindow設定を作成"""
+        menu_items = [
+            {
+                'id': 'adventure_preparation',
+                'label': config_manager.get_text("inn_menu.adventure_preparation"),
+                'type': 'action',
+                'enabled': True
+            },
+            {
+                'id': 'item_storage',
+                'label': config_manager.get_text("inn_menu.item_storage"),
+                'type': 'action',
+                'enabled': True
+            },
+            {
+                'id': 'talk_innkeeper',
+                'label': config_manager.get_text("inn_menu.talk_innkeeper"),
+                'type': 'action',
+                'enabled': True
+            },
+            {
+                'id': 'travel_info',
+                'label': config_manager.get_text("inn_menu.travel_info"),
+                'type': 'action',
+                'enabled': True
+            },
+            {
+                'id': 'tavern_rumors',
+                'label': config_manager.get_text("inn_menu.tavern_rumors"),
+                'type': 'action',
+                'enabled': True
+            },
+            {
+                'id': 'change_party_name',
+                'label': config_manager.get_text("inn_menu.change_party_name"),
+                'type': 'action',
+                'enabled': self.current_party is not None
+            },
+            {
+                'id': 'exit',
+                'label': config_manager.get_text("menu.exit"),
+                'type': 'exit',
+                'enabled': True
+            }
+        ]
+        
+        return {
+            'facility_type': FacilityType.INN.value,
+            'facility_name': config_manager.get_text("facility.inn"),
+            'menu_items': menu_items,
+            'party': self.current_party,
+            'show_party_info': True,
+            'show_gold': True
+        }
+    
+    def show_menu(self):
+        """Innメインメニューを表示（FacilityMenuWindow使用）"""
+        window_manager = WindowManager.get_instance()
+        
+        # メニュー設定を作成
+        menu_config = self._create_inn_menu_config()
+        
+        # FacilityMenuWindowを作成
+        inn_window = FacilityMenuWindow('inn_main_menu', menu_config)
+        
+        # メッセージハンドラーを設定
+        inn_window.message_handler = self.handle_facility_message
+        
+        # ウィンドウを表示
+        window_manager.show_window(inn_window, push_to_stack=True)
+        
+        logger.info(config_manager.get_text("app_log.entered_inn"))
+    
+    def handle_facility_message(self, message_type: str, data: dict) -> bool:
+        """FacilityMenuWindowからのメッセージを処理"""
+        if message_type == 'menu_item_selected':
+            item_id = data.get('id')
+            
+            if item_id == 'adventure_preparation':
+                return self._show_adventure_preparation()
+            elif item_id == 'item_storage':
+                return self._show_item_organization()
+            elif item_id == 'talk_innkeeper':
+                return self._talk_to_innkeeper()
+            elif item_id == 'travel_info':
+                return self._show_travel_info()
+            elif item_id == 'tavern_rumors':
+                return self._show_tavern_rumors()
+            elif item_id == 'change_party_name':
+                return self._change_party_name()
+                
+        elif message_type == 'facility_exit_requested':
+            return self._handle_exit()
+            
+        return False
+    
+    def _handle_exit(self) -> bool:
+        """施設退場処理"""
+        self._cleanup_all_ui()
+        logger.info(config_manager.get_text("app_log.left_inn"))
+        
+        # WindowManagerでウィンドウを閉じる
+        window_manager = WindowManager.get_instance()
+        if window_manager.get_active_window():
+            window_manager.go_back()
+            
+        return True
     
     def _on_enter(self):
         """宿屋入場時の処理"""
@@ -48,6 +149,12 @@ class Inn(BaseFacility):
         """宿屋退場時の処理"""
         self._cleanup_all_ui()
         logger.info(config_manager.get_text("app_log.left_inn"))
+    
+    def _setup_menu_items(self, menu):
+        """施設固有のメニュー項目を設定（新システムでは使用されない）"""
+        # 新WindowSystemでは_create_inn_menu_config()を使用するため、この関数は使用されない
+        # BaseFacilityの抽象メソッドを満たすため空実装を提供
+        pass
     
     def _cleanup_all_ui(self):
         """全てのUI要素をクリーンアップ"""

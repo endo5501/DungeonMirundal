@@ -10,45 +10,70 @@
 
 ## 対象ファイル（低優先度）
 
-### 施設関連ファイル（5ファイル）
+### 施設関連ファイル（5ファイル） ✅ **基本移行完了**
 
-#### 1. src/overworld/facilities/guild.py → FacilityMenuWindow
-**現状**: UIMenuベースのギルド施設
-**移行先**: `src/ui/windows/facility_menu_window.py`使用
+#### 1. src/overworld/facilities/guild.py → FacilityMenuWindow ✅ **完了**
+**現状**: FacilityMenuWindow完全移行済み
+**移行先**: `src/ui/window_system/facility_menu_window.py`使用
 
-**移行作業**:
-- `FacilityMenuWindow`への統一移行
-- `FacilityMenuManager`, `FacilityMenuUIFactory`の活用
-- t-wada式TDDで開発
-- ギルド固有機能（冒険者登録、パーティ編成）の統合
+**完了した移行作業**:
+- ✅ `FacilityMenuWindow`への統一移行完了
+- ✅ メインメニュー、パーティ編成、クラスチェンジ全機能移行
+- ✅ t-wada式TDDテスト作成・実施済み
+- ✅ WindowManagerベースの新システム統合
+- ✅ UIMenu依存の完全除去
 
-#### 2. src/overworld/facilities/inn.py → FacilityMenuWindow  
-**現状**: UIMenuベースの宿屋施設
-**移行作業**:
-- 宿泊、回復機能の`FacilityMenuWindow`統合
-- t-wada式TDDで開発
-- パーティ情報表示の統一化
+#### 2. src/overworld/facilities/inn.py → FacilityMenuWindow ✅ **基本移行完了**
+**現状**: メインメニューFacilityMenuWindow移行済み、サブ機能UIMenu残存
+**移行先**: `src/ui/window_system/facility_menu_window.py`使用
 
-#### 3. src/overworld/facilities/shop.py → FacilityMenuWindow
-**現状**: UIMenuベースの商店施設  
-**移行作業**:
-- 売買システムの`FacilityMenuWindow`統合
-- t-wada式TDDで開発
-- アイテム一覧表示の統一化
+**完了した移行作業**:
+- ✅ メインメニューのFacilityMenuWindow移行
+- ✅ handle_facility_message実装
+- ✅ WindowManager統合
 
-#### 4. src/overworld/facilities/magic_guild.py → FacilityMenuWindow
-**現状**: UIMenuベースの魔法ギルド施設
-**移行作業**:
-- 魔法習得システムの`FacilityMenuWindow`統合
-- t-wada式TDDで開発
-- 魔法スロット管理の統一化
+**残存作業** (→ docs/todos/0041):
+- 🔄 アイテム・魔法管理サブメニューのUIMenu除去
+- 🔄 UISelectionList統合対応
 
-#### 5. src/overworld/facilities/temple.py → FacilityMenuWindow
-**現状**: UIMenuベースの神殿施設
-**移行作業**:
-- 復活・治療システムの`FacilityMenuWindow`統合
-- t-wada式TDDで開発
-- 祈祷システムの統一化
+#### 3. src/overworld/facilities/shop.py → FacilityMenuWindow ✅ **基本移行完了**
+**現状**: メインメニューFacilityMenuWindow移行済み、サブ機能UIMenu残存
+**移行先**: `src/ui/window_system/facility_menu_window.py`使用
+
+**完了した移行作業**:
+- ✅ メインメニューのFacilityMenuWindow移行
+- ✅ handle_facility_message実装
+- ✅ WindowManager統合
+
+**残存作業** (→ docs/todos/0041):
+- 🔄 購入・売却UIのUIMenu除去
+- 🔄 UISelectionList → ListWindow統合
+
+#### 4. src/overworld/facilities/magic_guild.py → FacilityMenuWindow ✅ **基本移行完了**
+**現状**: メインメニューFacilityMenuWindow移行済み、サブ機能UIMenu残存
+**移行先**: `src/ui/window_system/facility_menu_window.py`使用
+
+**完了した移行作業**:
+- ✅ メインメニューのFacilityMenuWindow移行
+- ✅ handle_facility_message実装
+- ✅ WindowManager統合
+
+**残存作業** (→ docs/todos/0041):
+- 🔄 魔術書購入・鑑定UIのUIMenu除去
+- 🔄 UISelectionList → ListWindow統合
+
+#### 5. src/overworld/facilities/temple.py → FacilityMenuWindow ✅ **基本移行完了**
+**現状**: メインメニューFacilityMenuWindow移行済み、サブ機能UIMenu残存
+**移行先**: `src/ui/window_system/facility_menu_window.py`使用
+
+**完了した移行作業**:
+- ✅ メインメニューのFacilityMenuWindow移行
+- ✅ handle_facility_message実装
+- ✅ WindowManager統合
+
+**残存作業** (→ docs/todos/0041):
+- 🔄 蘇生・祝福サービスUIのUIMenu除去
+- 🔄 UISelectionList → ListWindow統合
 
 ### 管理機能関連ファイル（6ファイル）
 
@@ -104,7 +129,11 @@
 
 * ./docs/todos/0040_adapter_removal_and_cleanup.md
 
-#### 11. 全テストの確認修正
+#### 13. 低優先度作業で発生した残作業
+
+* ./docs/todos/0041_facility_remaining_uimenu_cleanup.md
+
+#### 14. 全テストの確認修正
 **現状**: 全テスト(uv run pytest)で多数のfaildが発生
 **作業**: UIMenu関係テストの削除、テストを修正してpassdへ
 参考: ./docs/todos/0037_window_system_test_stabilization.md
@@ -245,8 +274,11 @@ class OverworldManager:
   - 段階毎の統合テスト実施
 
 ## 完了条件
-- [ ] 施設関連5ファイルの完全移行
-- [ ] 管理機能4ファイルの完全移行
+- [x] ✅ **施設関連5ファイルの基本移行完了** (2025-06-29)
+  - [x] Guild: 完全移行済み
+  - [x] Inn, Shop, MagicGuild, Temple: メインメニュー移行済み
+- [ ] 🔄 施設関連サブ機能の完全移行 (→ docs/todos/0041)
+- [ ] 管理機能6ファイルの完全移行
 - [ ] UIMenuクラスの完全削除
 - [ ] レガシーコードの完全除去
 - [ ] 全機能の動作確認完了
@@ -261,8 +293,26 @@ class OverworldManager:
 - フォーカス管理問題の根絶
 - レガシーコード完全クリーンアップ
 
+## 作業ログ
+
+### 2025-06-29: 第1段階 施設基本移行完了 ✅
+- **Guild完全移行**: UIMenuから完全にFacilityMenuWindowへ移行
+  - TDDアプローチでテスト作成・実施
+  - メインメニュー、パーティ編成、クラスチェンジ全機能移行
+  - テスト通過確認済み
+- **Inn基本移行**: メインメニューFacilityMenuWindow移行完了
+- **Shop基本移行**: メインメニューFacilityMenuWindow移行完了  
+- **MagicGuild基本移行**: メインメニューFacilityMenuWindow移行完了
+- **Temple基本移行**: メインメニューFacilityMenuWindow移行完了
+- **残存課題文書化**: docs/todos/0041_facility_remaining_uimenu_cleanup.md作成
+
+### 次回作業予定
+- 第2段階: 管理機能WindowManager統合
+- docs/todos/0041: 施設サブ機能残存UIMenuクリーンアップ
+
 ## 関連ドキュメント
 - `docs/todos/0031_change_window_system.md`: 調査結果
 - `docs/todos/0032_window_system_migration_high_priority.md`: 高優先度移行
 - `docs/todos/0033_window_system_migration_medium_priority.md`: 中優先度移行
+- `docs/todos/0041_facility_remaining_uimenu_cleanup.md`: 施設残存UIMenuクリーンアップ
 - `docs/window_system.md`: WindowSystem設計書
