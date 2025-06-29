@@ -5,7 +5,7 @@ import pygame
 from src.character.party import Party
 from src.ui.base_ui_pygame import UIMenu, UIButton, UIText
 from src.ui.selection_list_ui import CustomSelectionList, SelectionListData
-from src.ui.menu_stack_manager import MenuStackManager, MenuType
+# from src.ui.menu_stack_manager import MenuStackManager, MenuType  # WindowSystem移行により削除
 from src.ui.character_status_bar import CharacterStatusBar, create_character_status_bar
 from src.ui.window_system.overworld_main_window import OverworldMainWindow
 from src.ui.window_system import WindowManager
@@ -58,8 +58,8 @@ class OverworldManager:
         self.is_active = False
         self.settings_active = False
         
-        # MenuStackManager（統一されたメニュー管理）
-        self.menu_stack_manager: Optional[MenuStackManager] = None
+        # MenuStackManager削除（WindowSystemへ移行）
+        # self.menu_stack_manager: Optional[MenuStackManager] = None
         
         # キャラクターステータスバー
         self.character_status_bar: Optional[CharacterStatusBar] = None
@@ -73,9 +73,9 @@ class OverworldManager:
         # WindowManagerを取得
         self.window_manager = WindowManager.get_instance()
         
-        # MenuStackManagerを初期化（レガシーサポート用）
-        self.menu_stack_manager = MenuStackManager(ui_manager)
-        self.menu_stack_manager.on_escape_pressed = self._handle_escape_from_menu_stack
+        # MenuStackManagerの初期化を削除（WindowSystemへ完全移行）
+        # self.menu_stack_manager = MenuStackManager(ui_manager)
+        # self.menu_stack_manager.on_escape_pressed = self._handle_escape_from_menu_stack
         
         # 新WindowManagerベースのメインメニューを作成
         self._create_window_based_main_menu()
@@ -191,6 +191,54 @@ class OverworldManager:
             'party': self.current_party,
             'show_party_info': True,
             'show_gold': True
+        }
+    
+    def _create_settings_menu_config(self):
+        """設定メニュー設定を作成（OverworldMainWindow用）"""
+        from src.core.config_manager import config_manager
+        
+        categories = [
+            {
+                'id': 'game_menu',
+                'name': config_manager.get_text("menu.settings"),
+                'fields': [
+                    {
+                        'id': 'party_status',
+                        'name': config_manager.get_text("menu.party_status"),
+                        'type': 'action',
+                        'enabled': self.current_party is not None,
+                        'action': 'party_status'
+                    },
+                    {
+                        'id': 'save_game',
+                        'name': config_manager.get_text("menu.save_game"),
+                        'type': 'action',
+                        'enabled': self.current_party is not None,
+                        'action': 'save_game'
+                    },
+                    {
+                        'id': 'load_game',
+                        'name': config_manager.get_text("menu.load_game"),
+                        'type': 'action',
+                        'enabled': True,
+                        'action': 'load_game'
+                    },
+                    {
+                        'id': 'back',
+                        'name': config_manager.get_text("menu.back"),
+                        'type': 'action',
+                        'enabled': True,
+                        'action': 'back'
+                    }
+                ]
+            }
+        ]
+        
+        return {
+            'menu_type': 'settings',
+            'categories': categories,
+            'title': config_manager.get_text("menu.settings"),
+            'party': self.current_party
         }
     
     def handle_main_menu_message(self, message_type: str, data: dict) -> bool:
@@ -382,9 +430,8 @@ class OverworldManager:
                 if hasattr(self, 'settings_menu') and self.settings_menu:
                     self.ui_manager.hide_menu(self.settings_menu.menu_id)
             
-            # MenuStackManagerのクリーンアップ
-            if hasattr(self, 'menu_stack_manager') and self.menu_stack_manager:
-                self.menu_stack_manager.clear_stack()
+            # MenuStackManagerのクリーンアップ（削除済み）
+            # WindowSystemへ移行により不要
             
             logger.info("統一化されたクリーンアップが完了しました")
             
@@ -1219,13 +1266,26 @@ class OverworldManager:
     # === 画面遷移メソッド ===
     
     def _show_settings_menu(self):
-        """設定画面を表示"""
+        """設定画面を表示（WindowSystem優先）"""
+        try:
+            # WindowSystemベースの設定メニュー表示を試行
+            if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
+                settings_config = self._create_settings_menu_config()
+                from src.ui.window_system.overworld_main_window import OverworldMenuType
+                self.overworld_main_window.show_menu(OverworldMenuType.SETTINGS, settings_config)
+                self.settings_active = True
+                logger.info("WindowSystemベースで設定画面を表示しました")
+                return
+        except Exception as e:
+            logger.warning(f"WindowSystemベースの設定画面表示エラー: {e}")
+        
+        # フォールバック: レガシーUIMenu使用
         if self.main_menu:
             self.ui_manager.hide_menu(self.main_menu.menu_id)
         if self.settings_menu:
             self.settings_menu.show()
         self.settings_active = True
-        logger.info("設定画面を表示しました")
+        logger.info("レガシーUIMenuで設定画面を表示しました")
     
     def _hide_settings_menu(self):
         """設定画面を非表示"""
@@ -1258,14 +1318,11 @@ class OverworldManager:
             if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
                 self.show_main_menu_window_manager()
             else:
-                # フォールバック：従来のMenuStackManagerを使用
-                if self.main_menu and self.menu_stack_manager:
-                    # スタックをクリアしてからROOTメニューを追加
-                    self.menu_stack_manager.clear_stack()
-                    self.menu_stack_manager.push_menu(self.main_menu, MenuType.ROOT)
-                elif self.main_menu:
-                    # フォールバック：従来の方法
+                # フォールバック：従来の方法（MenuStackManager除去）
+                if self.main_menu:
                     self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+                else:
+                    logger.error("メインメニューが作成されていません")
             
             if from_dungeon:
                 logger.info("ダンジョンから地上部に帰還しました")
@@ -1383,30 +1440,10 @@ class OverworldManager:
         # キャラクターステータスバーの描画はUIマネージャーが行うため、ここでは描画しない
         # （UIマネージャーのelementsに追加済み）
     
-    def _handle_escape_from_menu_stack(self) -> bool:
-        """MenuStackManagerからのESCキー処理コールバック"""
-        try:
-            # MenuStackManagerが現在のメニュー状態に応じて適切に処理
-            # ROOTメニュー（地上マップ）の場合は設定画面表示
-            # その他の場合は前のメニューに戻る
-            current_entry = self.menu_stack_manager.peek_current_menu()
-            
-            if current_entry and current_entry.menu_type == MenuType.ROOT:
-                # 地上マップから設定画面へ
-                self._show_settings_menu()
-                return True
-            elif current_entry and current_entry.menu_type == MenuType.SETTINGS:
-                # 設定画面から地上マップへ
-                self._hide_settings_menu()
-                self._show_main_menu()
-                return True
-            
-            # その他の場合はMenuStackManagerにデフォルト処理を委譲
-            return False
-            
-        except Exception as e:
-            logger.error(f"ESCキー処理エラー: {e}")
-            return False
+    # MenuStackManager関連メソッド削除（WindowSystemへ移行）
+    # def _handle_escape_from_menu_stack(self) -> bool:
+    #     """MenuStackManagerからのESCキー処理コールバック"""
+    #     # WindowSystemへ移行により削除
     
     def handle_event(self, event: pygame.event.Event) -> bool:
         """イベント処理"""
