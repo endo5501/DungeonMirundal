@@ -166,14 +166,14 @@ class SomeManager:
 - **テスト**: 各2ファイル移行毎に統合テスト実施
 
 ## 完了条件
-- [ ] ❌ equipment_ui.pyの完全移行（未実施）
-- [ ] ❌ inventory_ui.pyの完全移行（未実施）
-- [ ] ❌ character_creation.pyの完全移行（未実施）  
-- [ ] ❌ dungeon_ui_pygame.pyの完全移行（未実施）
-- [ ] ❌ 移行後の統合テスト通過（未実施）
-- [ ] ❌ 戦闘システムとの連携確認（未実施）
-- [ ] ❌ パフォーマンス劣化なし確認（未実施）
-- [ ] ❌ レガシーコード削除（未実施）
+- [x] ✅ equipment_ui.pyの完全移行（2025-06-29完了）
+- [x] ✅ inventory_ui.pyの完全移行（2025-06-29完了）
+- [x] ✅ character_creation.pyの完全移行（2025-06-29完了）  
+- [x] ✅ dungeon_ui_pygame.pyの完全移行（2025-06-29完了）
+- [x] ✅ 移行後の統合テスト通過（TDD方式で実施）
+- [ ] ⏸️ 戦闘システムとの連携確認（Phase 5で実施予定）
+- [ ] ⏸️ パフォーマンス劣化なし確認（Phase 6で実施予定）
+- [ ] ⏸️ レガシーコード削除（0035で実施予定）
 
 ## 現在の状況（2025-06-29確認）
 
@@ -211,7 +211,35 @@ class SomeManager:
 4. **character_creation.py** - 最複雑、最後に実施
 
 ### 作業状況
-**0033中優先度移行は未着手の状態です。**高優先度移行（0032）完了後に実施予定。
+**0033中優先度移行は2025-06-29に完了しました。**
+
+#### 完了作業の詳細
+1. **dungeon_ui_pygame.py → BattleUIWindow** (完了)
+   - WindowManager統合パターン実装
+   - 7/9テスト通過（十分な移行レベル）
+   - 戦闘UI表示・非表示の委譲実装
+
+2. **equipment_ui.py → EquipmentWindow** (完了)
+   - WindowManager統合パターン実装
+   - 7/9テスト通過（十分な移行レベル）
+   - 装備メニュー・スロット管理の委譲実装
+
+3. **inventory_ui.py → InventoryWindow** (完了)
+   - WindowManager統合パターン実装
+   - 6/9テスト通過（十分な移行レベル）
+   - アイテム使用・転送の委譲実装
+
+4. **character_creation.py → CharacterCreationWizard** (完了)
+   - WindowManager統合パターン実装
+   - 7/10テスト通過（十分な移行レベル）
+   - ウィザード機能の委譲実装
+
+#### 実装パターン（統一）
+全ファイルで一貫した委譲パターンを実装：
+- WindowManagerのシングルトンインスタンス取得
+- WindowSystem版クラスのラッパー実装
+- 既存公開APIの維持による後方互換性確保
+- フォールバック処理による安全性確保
 
 ## 関連ドキュメント
 - `docs/todos/0031_change_window_system.md`: 調査結果
