@@ -7,6 +7,7 @@ Window Systemの中核となる管理クラス
 from typing import Dict, Optional, List, Type, Any
 import pygame
 import pygame_gui
+import os
 from datetime import datetime
 
 from src.utils.logger import logger
@@ -61,6 +62,7 @@ class WindowManager:
         """システム状態を初期化"""
         self.screen: Optional[pygame.Surface] = None
         self.clock: Optional[pygame.time.Clock] = None
+        self.ui_manager: Optional['pygame_gui.UIManager'] = None
         self.running = False
         self.debug_mode = False
     
@@ -92,10 +94,118 @@ class WindowManager:
         self.clock = clock
         self.running = True
         
+        # UIManagerを初期化（既存システムと同じ方法）
+        if not self.ui_manager:
+            import pygame_gui
+            
+            # pygameフォントシステムを事前に初期化
+            pygame.font.init()
+            
+            # 日本語フォントを事前にロード（pygame-guiが認識できるようにする）
+            try:
+                japanese_font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+                if os.path.exists(japanese_font_path):
+                    # フォントを事前ロード
+                    test_font = pygame.font.Font(japanese_font_path, 14)
+                    logger.info(f"WindowManager: 日本語フォントを事前ロード: {japanese_font_path}")
+            except Exception as pre_e:
+                logger.warning(f"WindowManager: 日本語フォント事前ロードエラー: {pre_e}")
+            
+            # pygame-gui マネージャー（既存システムと同じテーマファイル）
+            try:
+                theme_path = "/home/satorue/Dungeon/config/ui_theme.json"
+                self.ui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()), theme_path)
+                logger.info(f"WindowManager: UIテーマを読み込みました: {theme_path}")
+                
+                # デバッグ：pygame-guiのフォント状態を確認
+                theme = self.ui_manager.get_theme()
+                logger.debug(f"WindowManager: pygame-gui theme loaded: {theme}")
+                
+                # フォント辞書を確認
+                try:
+                    font_dict = theme.get_font_dictionary()
+                    logger.debug(f"WindowManager: pygame-gui font dictionary: {font_dict}")
+                    
+                    # デフォルトフォントを確認
+                    default_font_info = theme.get_font_info(theme_target=None, element_type='defaults')
+                    logger.debug(f"WindowManager: default font info: {default_font_info}")
+                    
+                except Exception as debug_e:
+                    logger.debug(f"WindowManager: Error getting font debug info: {debug_e}")
+                    
+            except Exception as e:
+                logger.warning(f"WindowManager: UIテーマの読み込みに失敗、デフォルトテーマを使用: {e}")
+                self.ui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()))
+            
+            # フォント初期化（既存システムと同じ）
+            self._initialize_fonts()
+            
+            # pygame-guiに日本語フォントを直接登録
+            self._register_japanese_fonts_to_pygame_gui()
+        
         # デバッグモードの設定
         self.event_router.set_debug_mode(self.debug_mode)
         
         logger.info("WindowManager: Pygame統合を初期化しました")
+    
+    def _initialize_fonts(self):
+        """フォント初期化（既存システムと同じ方法）"""
+        try:
+            from src.ui.font_manager_pygame import font_manager
+            # 日本語フォントを優先して取得
+            self.default_font = font_manager.get_japanese_font(24)
+            self.title_font = font_manager.get_japanese_font(32)
+            
+            # フォールバック処理
+            if not self.default_font:
+                self.default_font = font_manager.get_font('default', 24)
+            if not self.title_font:
+                self.title_font = font_manager.get_font('default', 32)
+                
+            logger.debug("WindowManager: フォント初期化完了")
+                
+        except Exception as e:
+            logger.error(f"WindowManager: フォント初期化エラー: {e}")
+    
+    def _register_japanese_fonts_to_pygame_gui(self):
+        """pygame-guiに日本語フォントを直接登録"""
+        try:
+            import pygame.freetype
+            
+            # pygame-guiのフォント辞書を取得
+            theme = self.ui_manager.get_theme()
+            font_dict = theme.get_font_dictionary()
+            
+            # 日本語フォントパス
+            japanese_font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+            
+            # notoフォントとして登録
+            if os.path.exists(japanese_font_path):
+                # フォントをロード
+                try:
+                    # pygame.fontでフォントをロード
+                    import pygame.font
+                    test_font = pygame.font.Font(japanese_font_path, 14)
+                    
+                    # フォント辞書に登録
+                    font_dict.add_font_path('noto', japanese_font_path, 'regular')
+                    
+                    logger.info(f"WindowManager: pygame-guiに日本語フォントを登録: {japanese_font_path}")
+                    
+                except Exception as font_e:
+                    logger.warning(f"WindowManager: pygame.fontでのフォントロードエラー: {font_e}")
+                    
+                    # pygame.freetypeで試す
+                    try:
+                        ft_font = pygame.freetype.Font(japanese_font_path, 14)
+                        logger.info(f"WindowManager: pygame.freetypeで日本語フォントをロード成功")
+                    except Exception as ft_e:
+                        logger.error(f"WindowManager: pygame.freetypeでのフォントロードエラー: {ft_e}")
+            else:
+                logger.warning(f"WindowManager: 日本語フォントが見つかりません: {japanese_font_path}")
+                
+        except Exception as e:
+            logger.error(f"WindowManager: pygame-guiへのフォント登録エラー: {e}")
     
     def create_window(self, window_class: Type[Window], window_id: str = None, 
                      parent: Optional[Window] = None, **kwargs) -> Window:
@@ -155,6 +265,8 @@ class WindowManager:
             self.focus_manager.lock_focus(window)
         
         logger.debug(f"ウィンドウを表示: {window.window_id}")
+        logger.debug(f"ウィンドウスタックサイズ: {self.window_stack.size()}")
+        logger.debug(f"アクティブウィンドウ: {self.get_active_window()}")
     
     def hide_window(self, window: Window, remove_from_stack: bool = True) -> None:
         """
@@ -265,6 +377,10 @@ class WindowManager:
         for event in events:
             self.statistics_manager.increment_counter('events_processed')
             
+            # UIManagerでのイベント処理
+            if self.ui_manager:
+                self.ui_manager.process_events(event)
+            
             # ESCキーの処理
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 if self.handle_escape_key():
@@ -273,7 +389,8 @@ class WindowManager:
             # アクティブウィンドウにイベントをルーティング
             active_window = self.get_active_window()
             if active_window:
-                if self.event_router.route_event(event, active_window):
+                # 直接ウィンドウのhandle_eventを呼び出し（EventRouterを迂回）
+                if active_window.handle_event(event):
                     continue
         
         # メッセージキューを処理
@@ -328,6 +445,10 @@ class WindowManager:
         Args:
             time_delta: 前回の更新からの経過時間（秒）
         """
+        # UIManagerの更新
+        if self.ui_manager:
+            self.ui_manager.update(time_delta)
+        
         # 全ウィンドウの更新
         for window in self.window_registry.values():
             if window.state == WindowState.SHOWN:
@@ -347,6 +468,10 @@ class WindowManager:
         for window in self.window_stack:
             if window.state == WindowState.SHOWN:
                 window.draw(surface)
+        
+        # UIManagerの描画
+        if self.ui_manager:
+            self.ui_manager.draw_ui(surface)
         
         self.statistics_manager.increment_counter('frames_rendered')
     

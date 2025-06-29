@@ -368,6 +368,12 @@ class GameManager:
         from src.ui.base_ui_pygame import initialize_ui_manager
         self.ui_manager = initialize_ui_manager(self.screen)
         
+        # WindowManagerの初期化（screenとclockを渡す）
+        from src.ui.window_system.window_manager import WindowManager
+        window_manager = WindowManager.get_instance()
+        window_manager.initialize_pygame(self.screen, self.clock)
+        logger.info("WindowManagerをPygameで初期化しました")
+        
         # 地上部マネージャーの初期化
         try:
             self.overworld_manager = OverworldManager()
@@ -697,19 +703,32 @@ class GameManager:
                 if event.type == pygame.QUIT:
                     self.running = False
                 else:
-                    # UIマネージャーでイベント処理
+                    # WindowManagerでイベント処理（最優先）
                     ui_handled = False
-                    if hasattr(self, 'ui_manager') and self.ui_manager:
-                        ui_handled = self.ui_manager.handle_event(event)
+                    from src.ui.window_system import WindowManager
+                    window_manager = WindowManager.get_instance()
                     
-                    # オーバーワールドマネージャーでイベント処理
-                    if not ui_handled and self.current_location == GameLocation.OVERWORLD and self.overworld_manager:
-                        ui_handled = self.overworld_manager.handle_event(event)
+                    # WindowManagerが初期化されていない場合は初期化
+                    if not window_manager.screen:
+                        window_manager.initialize_pygame(self.screen, self.clock)
                     
-                    # ダンジョンUIマネージャーでイベント処理
-                    if not ui_handled and self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
-                        if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
-                            ui_handled = self.dungeon_renderer.dungeon_ui_manager.handle_input(event)
+                    # アクティブなウィンドウがある場合はWindowManagerで処理し、他のUIシステムをスキップ
+                    if window_manager.get_active_window():
+                        window_manager.handle_global_events([event])
+                        ui_handled = True
+                    else:
+                        # UIマネージャーでイベント処理
+                        if hasattr(self, 'ui_manager') and self.ui_manager:
+                            ui_handled = self.ui_manager.handle_event(event)
+                        
+                        # オーバーワールドマネージャーでイベント処理
+                        if not ui_handled and self.current_location == GameLocation.OVERWORLD and self.overworld_manager:
+                            ui_handled = self.overworld_manager.handle_event(event)
+                        
+                        # ダンジョンUIマネージャーでイベント処理
+                        if not ui_handled and self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
+                            if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
+                                ui_handled = self.dungeon_renderer.dungeon_ui_manager.handle_input(event)
                     
                     # UIで処理されなかった場合のみ入力マネージャーに送信
                     if not ui_handled and hasattr(self, 'input_manager'):
@@ -721,8 +740,16 @@ class GameManager:
             
             # FPS制限とUIマネージャーの更新（pygame-gui）
             time_delta = self.clock.tick(self.target_fps) / 1000.0
-            if hasattr(self, 'ui_manager') and self.ui_manager:
-                self.ui_manager.update(time_delta)
+            
+            # WindowManagerの更新
+            from src.ui.window_system import WindowManager
+            window_manager = WindowManager.get_instance()
+            window_manager.update(time_delta)
+            
+            # WindowManagerがアクティブでない場合のみ既存のUIManagerを更新
+            if not window_manager.get_active_window():
+                if hasattr(self, 'ui_manager') and self.ui_manager:
+                    self.ui_manager.update(time_delta)
             
             # 画面をクリア
             self.screen.fill((0, 0, 0))
@@ -730,9 +757,15 @@ class GameManager:
             # 現在の状態に応じて描画
             self._render_current_state()
             
-            # UIの描画
-            if hasattr(self, 'ui_manager') and self.ui_manager:
-                self.ui_manager.render()
+            # WindowManagerの描画
+            from src.ui.window_system import WindowManager
+            window_manager = WindowManager.get_instance()
+            window_manager.draw(self.screen)
+            
+            # WindowManagerがアクティブでない場合のみ既存のUIManagerを描画
+            if not window_manager.get_active_window():
+                if hasattr(self, 'ui_manager') and self.ui_manager:
+                    self.ui_manager.render()
             
             # デバッグ情報の描画
             if self.debug_enabled:

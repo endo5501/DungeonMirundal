@@ -179,6 +179,13 @@ overworld:
   town_center: "町の中心部"
   surface_map: "地上"
   facility_selection: "施設選択"
+  main_menu:
+    title: "地上部メニュー"
+    enter_dungeon: "ダンジョンに入る"
+    settings: "設定"
+    save_game: "セーブ"
+    load_game: "ロード"
+    exit_game: "ゲーム終了"
 
 # インベントリ
 inventory:

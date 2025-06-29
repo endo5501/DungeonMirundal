@@ -63,8 +63,9 @@ class MenuWindow(Window):
         if not isinstance(config['buttons'], list):
             raise ValueError("Menu config 'buttons' must be a list")
         
-        if len(config['buttons']) == 0:
-            raise ValueError("Menu config 'buttons' cannot be empty")
+        # BackButtonManagerが戻るボタンを自動追加するため、空のボタン配列も許可
+        # if len(config['buttons']) == 0:
+        #     raise ValueError("Menu config 'buttons' cannot be empty")
     
     def create(self) -> None:
         """UI要素を作成"""
@@ -79,16 +80,33 @@ class MenuWindow(Window):
     
     def _initialize_ui_manager(self) -> None:
         """UIManagerを初期化"""
-        screen_width = 1024
-        screen_height = 768
-        self.ui_manager = pygame_gui.UIManager((screen_width, screen_height))
+        # WindowManagerから共有UIManagerを取得
+        from .window_manager import WindowManager
+        window_manager = WindowManager.get_instance()
+        
+        if hasattr(window_manager, 'ui_manager') and window_manager.ui_manager:
+            self.ui_manager = window_manager.ui_manager
+            logger.debug(f"MenuWindow: 共有UIManagerを使用: {self.ui_manager}")
+        else:
+            # WindowManagerにUIManagerがない場合は新規作成
+            screen_width = 1024
+            screen_height = 768
+            self.ui_manager = pygame_gui.UIManager((screen_width, screen_height))
+            window_manager.ui_manager = self.ui_manager
+            logger.debug(f"MenuWindow: 新規UIManagerを作成: {self.ui_manager}")
+        
+        logger.debug(f"MenuWindow: UIManager確認完了: {self.ui_manager}")
+        logger.debug(f"MenuWindow: UIManagerを設定: {self.ui_manager}")
     
     def _calculate_layout(self) -> None:
         """メニューのレイアウトを計算"""
-        button_count = len(self.menu_config['buttons'])
+        # 元のボタン + 戻るボタン（必要な場合）の総数
+        original_buttons = self.menu_config['buttons']
+        additional_count = self.back_button_manager.get_additional_button_count()
+        total_button_count = len(original_buttons) + additional_count
         has_title = 'title' in self.menu_config
         
-        self.rect = self.layout.calculate_menu_rect(button_count, has_title)
+        self.rect = self.layout.calculate_menu_rect(total_button_count, has_title)
     
     def _create_panel(self) -> None:
         """メニューパネルを作成"""
@@ -129,6 +147,7 @@ class MenuWindow(Window):
                 manager=self.ui_manager,
                 container=self.panel
             )
+            logger.debug(f"MenuWindow: ボタン作成: {button_config['text']} -> {ui_button}")
             
             # MenuButtonオブジェクトを作成
             menu_button = MenuButton(
@@ -162,8 +181,7 @@ class MenuWindow(Window):
         if not self.ui_manager:
             return False
         
-        # pygame-guiにイベントを渡す
-        self.ui_manager.process_events(event)
+        # pygame-guiのイベント処理はWindowManagerで行われるため、ここではスキップ
         
         # キーボードナビゲーション
         if event.type == pygame.KEYDOWN:
@@ -181,11 +199,18 @@ class MenuWindow(Window):
                 return True
         
         # ボタンクリック処理
-        if event.type == pygame_gui.UI_BUTTON_PRESSED:
-            for button in self.buttons:
-                if event.ui_element == button.ui_element:
-                    self._execute_button_action(button)
-                    return True
+        try:
+            import pygame_gui
+            if hasattr(pygame_gui, 'UI_BUTTON_PRESSED') and event.type == pygame_gui.UI_BUTTON_PRESSED:
+                logger.debug(f"MenuWindow: ボタンクリックイベント受信: {event.ui_element}")
+                for button in self.buttons:
+                    if event.ui_element == button.ui_element:
+                        logger.debug(f"MenuWindow: ボタンマッチ: {button.action}")
+                        self._execute_button_action(button)
+                        return True
+                logger.debug("MenuWindow: マッチするボタンが見つかりません")
+        except ImportError:
+            pass
         
         return False
     
@@ -239,12 +264,23 @@ class MenuWindow(Window):
     def cleanup_ui(self) -> None:
         """UI要素のクリーンアップ"""
         # ボタンをクリア
+        for button in self.buttons:
+            if button.ui_element:
+                button.ui_element.kill()
         self.buttons.clear()
         
-        # pygame-guiの要素を削除
-        if self.ui_manager:
-            for element in list(self.ui_manager.get_root_container().elements):
-                element.kill()
-            self.ui_manager = None
+        # 個別に作成されたUI要素をクリーンアップ
+        if hasattr(self, 'title_label') and self.title_label:
+            self.title_label.kill()
+            self.title_label = None
+            
+        if hasattr(self, 'panel') and self.panel:
+            self.panel.kill()
+            self.panel = None
+            
+        # カスタム要素もクリーンアップ（例：formation_label）
+        if hasattr(self, 'formation_label') and self.formation_label:
+            self.formation_label.kill()
+            self.formation_label = None
         
         logger.debug(f"MenuWindow UI要素をクリーンアップ: {self.window_id}")

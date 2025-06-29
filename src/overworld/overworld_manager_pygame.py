@@ -7,6 +7,8 @@ from src.ui.base_ui_pygame import UIMenu, UIButton, UIText
 from src.ui.selection_list_ui import CustomSelectionList, SelectionListData
 from src.ui.menu_stack_manager import MenuStackManager, MenuType
 from src.ui.character_status_bar import CharacterStatusBar, create_character_status_bar
+from src.ui.window_system.overworld_main_window import OverworldMainWindow
+from src.ui.window_system import WindowManager
 from src.utils.logger import logger
 from src.core.config_manager import config_manager
 
@@ -69,10 +71,17 @@ class OverworldManager:
         """UIマネージャーを設定"""
         self.ui_manager = ui_manager
         
-        # MenuStackManagerを初期化
+        # WindowManagerを取得
+        self.window_manager = WindowManager.get_instance()
+        
+        # MenuStackManagerを初期化（レガシーサポート用）
         self.menu_stack_manager = MenuStackManager(ui_manager)
         self.menu_stack_manager.on_escape_pressed = self._handle_escape_from_menu_stack
         
+        # 新WindowManagerベースのメインメニューを作成
+        self._create_window_based_main_menu()
+        
+        # レガシーメニューも保持（段階的移行のため）
         self._create_main_menu()
         self._create_settings_menu()
         self.setup_facility_callbacks()
@@ -107,11 +116,98 @@ class OverworldManager:
     def on_facility_exit(self):
         """施設退場時のコールバック"""
         logger.info("施設から地上部に戻りました")
-        # メインメニューを再表示（モーダルとして）
-        if self.main_menu:
-            self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+        
+        # WindowManagerベースのメインメニューを表示
+        if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
+            # 既存のメインウィンドウを表示
+            if self.overworld_main_window.window_id not in self.window_manager.window_registry:
+                self.window_manager.window_registry[self.overworld_main_window.window_id] = self.overworld_main_window
+            self.window_manager.show_window(self.overworld_main_window, push_to_stack=True)
         else:
-            self._create_main_menu()
+            # レガシーメニューにフォールバック
+            if self.main_menu:
+                self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+            else:
+                self._create_main_menu()
+                if self.main_menu:
+                    self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+    
+    def _create_window_based_main_menu(self):
+        """WindowManagerベースのメインメニューを作成"""
+        try:
+            # OverworldMainWindowを作成
+            self.overworld_main_window = OverworldMainWindow(
+                window_id="overworld_main",
+                action_handler=self._handle_overworld_action
+            )
+            
+            # WindowManagerに登録
+            self.window_manager.window_registry[self.overworld_main_window.window_id] = self.overworld_main_window
+            
+            logger.info("WindowManagerベースのメインメニューを作成しました")
+        except Exception as e:
+            logger.error(f"WindowManagerベースのメインメニュー作成エラー: {e}")
+            self.overworld_main_window = None
+    
+    def _handle_overworld_action(self, message_type: str, data: dict):
+        """地上部メニューのアクション処理"""
+        logger.debug(f"OverworldManager: アクション処理: {message_type}, {data}")
+        action = data.get('action')
+        
+        if action and action.startswith('enter_facility:'):
+            # 施設入場処理
+            facility_id = action.split(':', 1)[1]
+            self._enter_facility_window_manager(facility_id)
+        elif action == 'enter_dungeon':
+            # ダンジョン入場処理
+            self._on_enter_dungeon()
+        elif action == 'show_settings':
+            # 設定画面表示
+            self._show_settings_window_manager()
+        elif action == 'save_game':
+            # セーブ処理
+            self._save_game()
+        elif action == 'load_game':
+            # ロード処理
+            self._load_game()
+        elif action == 'exit_game':
+            # ゲーム終了処理
+            self._exit_game()
+        else:
+            logger.warning(f"OverworldManager: 未知のアクション: {action}")
+    
+    def _enter_facility_window_manager(self, facility_id: str):
+        """WindowManager経由で施設に入場"""
+        logger.debug(f"WindowManager経由で施設入場: {facility_id}")
+        # 既存の施設入場処理を流用
+        if facility_id == 'guild':
+            self._on_guild()
+        elif facility_id == 'inn':
+            self._on_inn()
+        elif facility_id == 'shop':
+            self._on_shop()
+        elif facility_id == 'temple':
+            self._on_temple()
+        elif facility_id == 'magic_guild':
+            self._on_magic_guild()
+    
+    def _show_settings_window_manager(self):
+        """WindowManager経由で設定画面を表示"""
+        logger.debug("WindowManager経由で設定画面表示")
+        # 既存の設定表示処理を流用
+        self._on_settings()
+    
+    def show_main_menu_window_manager(self):
+        """WindowManagerベースのメインメニューを表示"""
+        if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
+            self.overworld_main_window.create()
+            if self.overworld_main_window.window_id not in self.window_manager.window_registry:
+                self.window_manager.window_registry[self.overworld_main_window.window_id] = self.overworld_main_window
+            self.window_manager.show_window(self.overworld_main_window, push_to_stack=True)
+            logger.info("WindowManagerベースのメインメニューを表示しました")
+        else:
+            logger.error("WindowManagerベースのメインメニューが作成されていません")
+            # レガシーメニューにフォールバック
             if self.main_menu:
                 self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
     
@@ -938,14 +1034,18 @@ class OverworldManager:
             if self.ui_manager and not self.main_menu:
                 self._create_main_menu()
             
-            # MenuStackManagerを使用してメインメニューを表示
-            if self.main_menu and self.menu_stack_manager:
-                # スタックをクリアしてからROOTメニューを追加
-                self.menu_stack_manager.clear_stack()
-                self.menu_stack_manager.push_menu(self.main_menu, MenuType.ROOT)
-            elif self.main_menu:
-                # フォールバック：従来の方法
-                self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+            # WindowManagerベースのメインメニューを使用
+            if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
+                self.show_main_menu_window_manager()
+            else:
+                # フォールバック：従来のMenuStackManagerを使用
+                if self.main_menu and self.menu_stack_manager:
+                    # スタックをクリアしてからROOTメニューを追加
+                    self.menu_stack_manager.clear_stack()
+                    self.menu_stack_manager.push_menu(self.main_menu, MenuType.ROOT)
+                elif self.main_menu:
+                    # フォールバック：従来の方法
+                    self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
             
             if from_dungeon:
                 logger.info("ダンジョンから地上部に帰還しました")

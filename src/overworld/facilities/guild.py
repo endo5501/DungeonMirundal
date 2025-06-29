@@ -1,11 +1,12 @@
 """冒険者ギルド"""
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable
 from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.character import Character
 from src.character.party import Party, PartyPosition
 from src.ui.base_ui_pygame import UIMenu, UIDialog
 from src.ui.character_creation import CharacterCreationWizard
+from src.ui.window_system import MenuWindow
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
@@ -15,6 +16,30 @@ FORMATION_DIALOG_HEIGHT = 450
 CHARACTER_LIST_DIALOG_HEIGHT = 500
 CHARACTER_INFO_DIALOG_WIDTH = 500
 CHARACTER_INFO_DIALOG_HEIGHT = 400
+
+
+class PartyFormationWindow(MenuWindow):
+    """パーティ編成専用ウィンドウ"""
+    
+    def __init__(self, window_id: str, menu_config: Dict[str, Any], 
+                 action_handler: Optional[Callable] = None, **kwargs):
+        super().__init__(window_id, menu_config, **kwargs)
+        self.action_handler = action_handler
+    
+    def _execute_button_action(self, button) -> None:
+        """ボタンアクションを実行（オーバーライド）"""
+        logger.debug(f"PartyFormationWindow: ボタンアクション実行: {button.action} (id={button.id})")
+        if self.action_handler:
+            message_data = {
+                'action': button.action,
+                'button_id': button.id
+            }
+            logger.debug(f"PartyFormationWindow: action_handler呼び出し: {message_data}")
+            self.action_handler('menu_action', message_data)
+        else:
+            # デフォルトの処理
+            logger.debug("PartyFormationWindow: デフォルト処理実行")
+            super()._execute_button_action(button)
 
 
 class AdventurersGuild(BaseFacility):
@@ -99,80 +124,667 @@ class AdventurersGuild(BaseFacility):
         
         logger.info(config_manager.get_text("guild.messages.character_creation_cancelled"))
     
+    def _create_party_formation_menu_config(self):
+        """パーティ編成用のMenuWindow設定を動的に作成"""
+        buttons = []
+        
+        # 現在のパーティ状況を表示
+        buttons.append({
+            'id': 'check_current',
+            'text': config_manager.get_text("guild.party_formation.check_current"),
+            'action': 'show_current_formation'
+        })
+        
+        # キャラクター追加（パーティが満員でない場合）
+        if len(self.current_party.characters) < 6:
+            buttons.append({
+                'id': 'add_character',
+                'text': config_manager.get_text("guild.party_formation.add_character"),
+                'action': 'show_add_character_menu'
+            })
+        
+        # キャラクター削除（パーティにキャラクターがいる場合）
+        if len(self.current_party.characters) > 0:
+            buttons.append({
+                'id': 'remove_character',
+                'text': config_manager.get_text("guild.party_formation.remove_character"),
+                'action': 'show_remove_character_menu'
+            })
+        
+        # 位置変更（パーティに2人以上いる場合）
+        if len(self.current_party.characters) > 1:
+            buttons.append({
+                'id': 'change_position',
+                'text': config_manager.get_text("guild.party_formation.change_position"),
+                'action': 'show_position_menu'
+            })
+        
+        return {
+            'title': config_manager.get_text("guild.party_formation.title"),
+            'buttons': buttons
+        }
+
     def _show_party_formation(self):
         """パーティ編成画面を表示"""
         if not self.current_party:
             self._show_error_message(config_manager.get_text("guild.messages.no_party_set"))
             return
         
-        # 利用可能なキャラクターの種類を確認（後続機能で使用予定）
-        # available_chars = self.created_characters.copy()
-        # party_chars = list(self.current_party.characters.values())
-        
-        # パーティ編成メニューを作成
-        formation_menu = UIMenu("party_formation_menu", config_manager.get_text("guild.party_formation.title"))
-        
-        # 現在のパーティ状況を表示
-        formation_menu.add_menu_item(
-            config_manager.get_text("guild.party_formation.check_current"),
-            self._show_current_formation
-        )
-        
-        # キャラクター追加
-        if len(self.current_party.characters) < 6:
-            formation_menu.add_menu_item(
-                config_manager.get_text("guild.party_formation.add_character"),
-                self._show_add_character_menu
-            )
-        
-        # キャラクター削除
-        if len(self.current_party.characters) > 0:
-            formation_menu.add_menu_item(
-                config_manager.get_text("guild.party_formation.remove_character"),
-                self._show_remove_character_menu
-            )
-        
-        # 位置変更
-        if len(self.current_party.characters) > 1:
-            formation_menu.add_menu_item(
-                config_manager.get_text("guild.party_formation.change_position"),
-                self._show_position_menu
-            )
-        
-        # 戻る（画面下部固定）
-        formation_menu.add_back_button(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [formation_menu]
-        )
-        
-        # メインメニューを隠して編成メニューを表示
+        # 現在のメニューを非表示にする
         if self.menu_stack_manager:
             current_entry = self.menu_stack_manager.peek_current_menu()
             if current_entry:
                 self._hide_menu_safe(current_entry.menu.menu_id)
         
-        self._show_menu_safe(formation_menu, modal=True)
+        # WindowManagerを取得し、pygame統合を初期化
+        from src.ui.window_system import WindowManager
+        import pygame
+        window_manager = WindowManager.get_instance()
+        
+        # pygame統合が初期化されていない場合は初期化
+        if not window_manager.screen:
+            screen = pygame.display.get_surface()
+            clock = pygame.time.Clock()
+            window_manager.initialize_pygame(screen, clock)
+        
+        # 動的なメニュー設定を作成
+        menu_config = self._create_party_formation_menu_config()
+        
+        # PartyFormationWindowを作成
+        formation_window = PartyFormationWindow(
+            'party_formation',
+            menu_config,
+            action_handler=self._handle_party_formation_action
+        )
+        
+        # ウィンドウを作成
+        formation_window.create()
+        logger.debug(f"PartyFormationWindow作成完了: ボタン数={len(formation_window.buttons)}")
+        for i, btn in enumerate(formation_window.buttons):
+            logger.debug(f"ボタン{i}: {btn.text} (action={btn.action}, ui_element={btn.ui_element})")
+        
+        # WindowManagerに登録して表示
+        window_manager.window_registry[formation_window.window_id] = formation_window
+        window_manager.show_window(formation_window, push_to_stack=True)
+        logger.debug(f"PartyFormationWindow表示完了: アクティブウィンドウ={window_manager.get_active_window()}")
+    
+    def _handle_party_formation_action(self, message_type: str, data: dict):
+        """パーティ編成メニューのアクション処理"""
+        logger.debug(f"AdventurersGuild: アクション処理開始: {message_type}, {data}")
+        action = data.get('action')
+        
+        if action == 'show_current_formation':
+            logger.debug("AdventurersGuild: 現在の編成を表示")
+            self._show_current_formation()
+        elif action == 'show_add_character_menu':
+            logger.debug("AdventurersGuild: キャラクター追加メニューを表示")
+            self._show_add_character_menu()
+        elif action == 'show_remove_character_menu':
+            logger.debug("AdventurersGuild: キャラクター削除メニューを表示")
+            self._show_remove_character_menu()
+        elif action == 'show_position_menu':
+            logger.debug("AdventurersGuild: 位置変更メニューを表示")
+            self._show_position_menu()
+        elif action == 'window_back':
+            # 戻るボタンが押された場合 - WindowManagerの階層を使って戻る
+            logger.debug("AdventurersGuild: パーティ編成戻るボタン処理開始")
+            from src.ui.window_system import WindowManager
+            window_manager = WindowManager.get_instance()
+            
+            # WindowManagerのgo_back機能を使用
+            if window_manager.go_back():
+                logger.debug("AdventurersGuild: WindowManagerでgo_backが成功しました")
+            else:
+                # WindowManagerが空になったら、元のUIMenuシステムに戻る
+                logger.debug("AdventurersGuild: WindowManagerが空のため、元のメニューシステムに戻ります")
+                if self.menu_stack_manager:
+                    current_entry = self.menu_stack_manager.peek_current_menu()
+                    if current_entry:
+                        self._show_menu_safe(current_entry.menu, modal=True)
+        else:
+            logger.warning(f"AdventurersGuild: 未知のアクション: {action}")
+    
+    def _handle_formation_display_action(self, message_type: str, data: dict):
+        """編成表示ウィンドウのアクション処理"""
+        logger.debug(f"AdventurersGuild: 編成表示アクション処理: {message_type}, {data}")
+        action = data.get('action')
+        
+        if action in ['back_to_formation_menu', 'window_back']:
+            # WindowManagerのgo_back機能を使用
+            from src.ui.window_system import WindowManager
+            window_manager = WindowManager.get_instance()
+            
+            if window_manager.go_back():
+                logger.debug("AdventurersGuild: 編成表示からWindowManagerでgo_backが成功しました")
+            else:
+                # パーティ編成ウィンドウを新規作成して表示
+                self._show_party_formation()
+        else:
+            logger.warning(f"AdventurersGuild: 未知の編成表示アクション: {action}")
+    
+    def _handle_add_character_action(self, message_type: str, data: dict):
+        """キャラクター追加ウィンドウのアクション処理"""
+        logger.debug(f"AdventurersGuild: キャラクター追加アクション処理: {message_type}, {data}")
+        action = data.get('action')
+        
+        if action and action.startswith('add_character:'):
+            # キャラクターIDを取得
+            character_id = action.split(':', 1)[1]
+            
+            # キャラクターオブジェクトを取得
+            character = None
+            for char in self.created_characters:
+                if char.character_id == character_id:
+                    character = char
+                    break
+            
+            if character:
+                # キャラクターをパーティに追加
+                success = self.current_party.add_character(character)
+                
+                # キャラクター追加ウィンドウを閉じる
+                from src.ui.window_system import WindowManager
+                window_manager = WindowManager.get_instance()
+                
+                if 'add_character' in window_manager.window_registry:
+                    add_window = window_manager.window_registry['add_character']
+                    window_manager.close_window(add_window)
+                
+                if success:
+                    # 成功メッセージを表示してパーティ編成メニューに戻る
+                    self._show_success_window(f"{character.name}をパーティに追加しました")
+                else:
+                    # エラーメッセージを表示
+                    self._show_error_window("キャラクターの追加に失敗しました")
+            else:
+                logger.error(f"キャラクターが見つかりません: {character_id}")
+                self._show_error_window("キャラクターが見つかりません")
+                
+        elif action == 'window_back':
+            # 戻るボタンが押された場合
+            from src.ui.window_system import WindowManager
+            window_manager = WindowManager.get_instance()
+            
+            if window_manager.go_back():
+                logger.debug("AdventurersGuild: キャラクター追加からWindowManagerでgo_backが成功しました")
+            else:
+                # パーティ編成ウィンドウを新規作成して表示
+                self._show_party_formation()
+        else:
+            logger.warning(f"AdventurersGuild: 未知のキャラクター追加アクション: {action}")
+    
+    def _handle_remove_character_action(self, message_type: str, data: dict):
+        """キャラクター削除ウィンドウのアクション処理"""
+        logger.debug(f"AdventurersGuild: キャラクター削除アクション処理: {message_type}, {data}")
+        action = data.get('action')
+        
+        if action and action.startswith('remove_character:'):
+            # キャラクターIDを取得
+            character_id = action.split(':', 1)[1]
+            
+            # キャラクターオブジェクトを取得
+            character = None
+            for char in self.current_party.characters.values():
+                if char.character_id == character_id:
+                    character = char
+                    break
+            
+            if character:
+                # 確認ダイアログを表示
+                self._show_confirmation_window(
+                    f"{character.name}をパーティから削除しますか？",
+                    lambda: self._confirm_remove_character(character)
+                )
+            else:
+                logger.error(f"キャラクターが見つかりません: {character_id}")
+                self._show_error_window("キャラクターが見つかりません")
+                
+        elif action == 'window_back':
+            # 戻るボタンが押された場合
+            from src.ui.window_system import WindowManager
+            window_manager = WindowManager.get_instance()
+            
+            if window_manager.go_back():
+                logger.debug("AdventurersGuild: キャラクター削除からWindowManagerでgo_backが成功しました")
+            else:
+                # パーティ編成ウィンドウを新規作成して表示
+                self._show_party_formation()
+        else:
+            logger.warning(f"AdventurersGuild: 未知のキャラクター削除アクション: {action}")
+    
+    def _show_error_window(self, message: str):
+        """エラーメッセージウィンドウを表示"""
+        menu_config = {
+            'title': "エラー",
+            'buttons': [
+                {
+                    'id': 'ok_error',
+                    'text': "OK",
+                    'action': 'close_error'
+                }
+            ]
+        }
+        
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        
+        error_window = PartyFormationWindow(
+            'error_dialog',
+            menu_config,
+            action_handler=self._handle_error_action
+        )
+        
+        error_window.create()
+        
+        # エラーメッセージをテキストラベルとして追加
+        if hasattr(error_window, 'ui_manager') and error_window.ui_manager:
+            import pygame_gui
+            import pygame
+            text_rect = pygame.Rect(20, 60, error_window.rect.width - 40, 40)
+            error_window.message_label = pygame_gui.elements.UILabel(
+                relative_rect=text_rect,
+                text=message,
+                manager=error_window.ui_manager,
+                container=error_window.panel
+            )
+        
+        window_manager.window_registry[error_window.window_id] = error_window
+        window_manager.show_window(error_window, push_to_stack=True)
+    
+    def _show_success_window(self, message: str):
+        """成功メッセージウィンドウを表示"""
+        menu_config = {
+            'title': "完了",
+            'buttons': [
+                {
+                    'id': 'ok_success',
+                    'text': "OK",
+                    'action': 'close_success'
+                }
+            ]
+        }
+        
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        
+        success_window = PartyFormationWindow(
+            'success_dialog',
+            menu_config,
+            action_handler=self._handle_success_action
+        )
+        
+        success_window.create()
+        
+        # 成功メッセージをテキストラベルとして追加
+        if hasattr(success_window, 'ui_manager') and success_window.ui_manager:
+            import pygame_gui
+            import pygame
+            text_rect = pygame.Rect(20, 60, success_window.rect.width - 40, 40)
+            success_window.message_label = pygame_gui.elements.UILabel(
+                relative_rect=text_rect,
+                text=message,
+                manager=success_window.ui_manager,
+                container=success_window.panel
+            )
+        
+        window_manager.window_registry[success_window.window_id] = success_window
+        window_manager.show_window(success_window, push_to_stack=True)
+    
+    def _handle_error_action(self, message_type: str, data: dict):
+        """エラーダイアログのアクション処理"""
+        action = data.get('action')
+        
+        if action in ['close_error', 'window_back']:
+            from src.ui.window_system import WindowManager
+            window_manager = WindowManager.get_instance()
+            
+            if window_manager.go_back():
+                logger.debug("AdventurersGuild: エラーダイアログからWindowManagerでgo_backが成功しました")
+            else:
+                # パーティ編成ウィンドウを新規作成して表示
+                self._show_party_formation()
+    
+    def _handle_success_action(self, message_type: str, data: dict):
+        """成功ダイアログのアクション処理"""
+        action = data.get('action')
+        
+        if action in ['close_success', 'window_back']:
+            from src.ui.window_system import WindowManager
+            window_manager = WindowManager.get_instance()
+            
+            if window_manager.go_back():
+                logger.debug("AdventurersGuild: 成功ダイアログからWindowManagerでgo_backが成功しました")
+            else:
+                # パーティ編成メニューを更新して再表示（キャラクターが追加されたため）
+                self._show_party_formation()
+    
+    def _show_confirmation_window(self, message: str, confirm_callback):
+        """確認ダイアログウィンドウを表示"""
+        menu_config = {
+            'title': "確認",
+            'buttons': [
+                {
+                    'id': 'confirm_yes',
+                    'text': "はい",
+                    'action': 'confirm_yes'
+                },
+                {
+                    'id': 'confirm_no',
+                    'text': "いいえ",
+                    'action': 'confirm_no'
+                }
+            ]
+        }
+        
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        
+        confirmation_window = PartyFormationWindow(
+            'confirmation_dialog',
+            menu_config,
+            action_handler=self._handle_confirmation_action
+        )
+        
+        # コールバック関数を保存
+        confirmation_window.confirm_callback = confirm_callback
+        confirmation_window.create()
+        
+        # 確認メッセージをテキストラベルとして追加
+        if hasattr(confirmation_window, 'ui_manager') and confirmation_window.ui_manager:
+            import pygame_gui
+            import pygame
+            text_rect = pygame.Rect(20, 60, confirmation_window.rect.width - 40, 60)
+            confirmation_window.message_label = pygame_gui.elements.UILabel(
+                relative_rect=text_rect,
+                text=message,
+                manager=confirmation_window.ui_manager,
+                container=confirmation_window.panel
+            )
+        
+        window_manager.window_registry[confirmation_window.window_id] = confirmation_window
+        window_manager.show_window(confirmation_window, push_to_stack=True)
+    
+    def _handle_confirmation_action(self, message_type: str, data: dict):
+        """確認ダイアログのアクション処理"""
+        action = data.get('action')
+        
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        
+        if 'confirmation_dialog' in window_manager.window_registry:
+            confirmation_window = window_manager.window_registry['confirmation_dialog']
+            
+            if action == 'confirm_yes' and hasattr(confirmation_window, 'confirm_callback'):
+                # 「はい」が押された場合、コールバックを実行
+                confirmation_window.confirm_callback()
+            
+            # 確認ダイアログを閉じる
+            window_manager.close_window(confirmation_window)
+            
+            if action == 'confirm_no' or action == 'window_back':
+                # 「いいえ」または戻るボタンの場合、WindowManagerのgo_backを使用
+                if not window_manager.go_back():
+                    # go_backが失敗した場合はパーティ編成ウィンドウを表示
+                    self._show_party_formation()
+                    logger.debug("AdventurersGuild: 確認ダイアログからWindowManagerでgo_backが失敗、パーティ編成を表示")
+    
+    def _confirm_remove_character(self, character):
+        """キャラクター削除を実行"""
+        success = self.current_party.remove_character(character.character_id)
+        
+        if success:
+            # 削除されたキャラクターを作成済みリストに戻す
+            if character not in self.created_characters:
+                self.created_characters.append(character)
+            
+            # 成功メッセージを表示
+            self._show_success_window(f"{character.name}をパーティから削除しました")
+        else:
+            # エラーメッセージを表示
+            self._show_error_window("キャラクターの削除に失敗しました")
+    
+    def _handle_position_menu_action(self, message_type: str, data: dict):
+        """位置変更メニューのアクション処理"""
+        logger.debug(f"AdventurersGuild: 位置変更アクション処理: {message_type}, {data}")
+        action = data.get('action')
+        
+        if action and action.startswith('select_character_for_position:'):
+            # キャラクターIDを取得
+            character_id = action.split(':', 1)[1]
+            
+            # キャラクターオブジェクトを取得
+            character = None
+            for char in self.current_party.characters.values():
+                if char.character_id == character_id:
+                    character = char
+                    break
+            
+            if character:
+                # 新しい位置選択メニューを表示
+                self._show_new_position_menu_window(character)
+            else:
+                logger.error(f"キャラクターが見つかりません: {character_id}")
+                self._show_error_window("キャラクターが見つかりません")
+                
+        elif action == 'window_back':
+            # 戻るボタンが押された場合
+            from src.ui.window_system import WindowManager
+            window_manager = WindowManager.get_instance()
+            
+            if window_manager.go_back():
+                logger.debug("AdventurersGuild: 位置変更からWindowManagerでgo_backが成功しました")
+            else:
+                # パーティ編成ウィンドウを新規作成して表示
+                self._show_party_formation()
+        else:
+            logger.warning(f"AdventurersGuild: 未知の位置変更アクション: {action}")
+    
+    def _show_new_position_menu_window(self, character):
+        """新しい位置選択メニューをWindowで表示"""
+        from src.character.party import PartyPosition
+        
+        # 利用可能な位置を取得
+        available_positions = []
+        positions = [
+            (PartyPosition.FRONT_1, "前衛1"),
+            (PartyPosition.FRONT_2, "前衛2"),
+            (PartyPosition.FRONT_3, "前衛3"),
+            (PartyPosition.BACK_1, "後衛1"),
+            (PartyPosition.BACK_2, "後衛2"),
+            (PartyPosition.BACK_3, "後衛3")
+        ]
+        
+        for position, pos_name in positions:
+            # 現在空いている位置のみ表示（現在位置は除外）
+            current_char_id = self.current_party.formation.positions[position]
+            if current_char_id is None:
+                available_positions.append((position, pos_name))
+        
+        if not available_positions:
+            self._show_error_window("移動可能な位置がありません")
+            return
+        
+        # 現在の位置メニューウィンドウを閉じる
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        
+        if 'position_menu' in window_manager.window_registry:
+            position_window = window_manager.window_registry['position_menu']
+            window_manager.close_window(position_window)
+        
+        # 新しい位置選択用のメニュー設定を作成
+        buttons = []
+        for position, pos_name in available_positions:
+            buttons.append({
+                'id': f'move_to_{position.value}',
+                'text': pos_name,
+                'action': f'move_character:{character.character_id}:{position.value}'
+            })
+        
+        menu_config = {
+            'title': f"{character.name}の新しい位置",
+            'buttons': buttons
+        }
+        
+        # 新しい位置選択ウィンドウを作成
+        new_position_window = PartyFormationWindow(
+            'new_position_menu',
+            menu_config,
+            action_handler=self._handle_new_position_action
+        )
+        
+        new_position_window.create()
+        
+        # WindowManagerに登録して表示
+        window_manager.window_registry[new_position_window.window_id] = new_position_window
+        window_manager.show_window(new_position_window, push_to_stack=True)
+        logger.debug(f"NewPositionWindow表示完了")
+    
+    def _handle_new_position_action(self, message_type: str, data: dict):
+        """新しい位置選択のアクション処理"""
+        logger.debug(f"AdventurersGuild: 新しい位置アクション処理: {message_type}, {data}")
+        action = data.get('action')
+        
+        if action and action.startswith('move_character:'):
+            # アクションからキャラクターIDと位置を取得
+            parts = action.split(':', 2)
+            if len(parts) == 3:
+                character_id = parts[1]
+                position_value = parts[2]
+                
+                # キャラクターオブジェクトを取得
+                character = None
+                for char in self.current_party.characters.values():
+                    if char.character_id == character_id:
+                        character = char
+                        break
+                
+                # 位置を取得
+                from src.character.party import PartyPosition
+                position = None
+                for pos in PartyPosition:
+                    if pos.value == position_value:
+                        position = pos
+                        break
+                
+                if character and position:
+                    # 位置移動を実行
+                    success = self.current_party.move_character(character.character_id, position)
+                    
+                    # 新しい位置選択ウィンドウを閉じる
+                    from src.ui.window_system import WindowManager
+                    window_manager = WindowManager.get_instance()
+                    
+                    if 'new_position_menu' in window_manager.window_registry:
+                        new_pos_window = window_manager.window_registry['new_position_menu']
+                        window_manager.close_window(new_pos_window)
+                    
+                    if success:
+                        # 成功メッセージを表示
+                        self._show_success_window(f"{character.name}の位置を変更しました")
+                    else:
+                        # エラーメッセージを表示
+                        self._show_error_window("位置の変更に失敗しました")
+                else:
+                    logger.error(f"キャラクターまたは位置が見つかりません: {character_id}, {position_value}")
+                    self._show_error_window("位置の変更に失敗しました")
+            else:
+                logger.error(f"不正なアクション形式: {action}")
+                self._show_error_window("位置の変更に失敗しました")
+                
+        elif action == 'window_back':
+            # 戻るボタンが押された場合
+            from src.ui.window_system import WindowManager
+            window_manager = WindowManager.get_instance()
+            
+            if window_manager.go_back():
+                logger.debug("AdventurersGuild: 新しい位置選択からWindowManagerでgo_backが成功しました")
+            else:
+                # 位置変更メニューを表示
+                self._show_position_menu()
+        else:
+            logger.warning(f"AdventurersGuild: 未知の新しい位置アクション: {action}")
     
     def _show_current_formation(self):
         """現在の編成を表示"""
         if not self.current_party:
             return
         
+        # 現在のパーティ編成ウィンドウを完全に閉じる
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        
+        # 既存のformation_displayがあれば閉じる
+        if 'formation_display' in window_manager.window_registry:
+            old_display = window_manager.window_registry['formation_display']
+            window_manager.close_window(old_display)
+        
+        # 現在のformation_windowを完全に閉じる
+        if 'party_formation' in window_manager.window_registry:
+            formation_window = window_manager.window_registry['party_formation']
+            window_manager.close_window(formation_window)
+        
+        # 編成表示用のメニュー設定を作成（戻るボタンは自動追加されるので手動では追加しない）
         formation_text = self._format_party_formation()
-        self._show_dialog(
-            "current_formation_dialog",
-            config_manager.get_text("guild.party_formation.current_formation_title"),
-            formation_text,
-            buttons=[
-                {
-                    'text': config_manager.get_text("menu.back"),
-                    'command': self._close_current_formation_dialog
-                }
-            ],
-            width=FORMATION_DIALOG_WIDTH,  # パーティ編成表示に十分な幅
-            height=FORMATION_DIALOG_HEIGHT  # 複数キャラクターの情報表示に十分な高さ
+        menu_config = {
+            'title': config_manager.get_text("guild.party_formation.current_formation_title"),
+            'buttons': []  # 戻るボタンはBackButtonManagerが自動追加する
+        }
+        
+        # 編成表示ウィンドウを作成
+        formation_display_window = PartyFormationWindow(
+            'formation_display',
+            menu_config,
+            action_handler=self._handle_formation_display_action
         )
+        
+        # ウィンドウ作成後に編成情報を追加
+        formation_display_window.create()
+        
+        # 編成情報をテキストラベルとして追加
+        self._add_formation_text_to_window(formation_display_window, formation_text)
+        
+        # WindowManagerに登録して表示
+        window_manager.window_registry[formation_display_window.window_id] = formation_display_window
+        window_manager.show_window(formation_display_window, push_to_stack=True)
+        logger.debug(f"FormationDisplayWindow表示完了")
+    
+    def _add_formation_text_to_window(self, window, formation_text):
+        """編成情報をウィンドウに追加"""
+        if hasattr(window, 'ui_manager') and window.ui_manager and hasattr(window, 'panel'):
+            import pygame_gui
+            import pygame
+            
+            # ウィンドウのサイズを取得
+            window_width = window.rect.width
+            window_height = window.rect.height
+            logger.debug(f"ウィンドウサイズ: {window_width}x{window_height}")
+            
+            # より安全なテキスト領域のサイズ計算
+            margin = 20
+            title_height = 40  # タイトル領域
+            button_height = 40  # 戻るボタン領域
+            text_top = title_height + 10  # タイトルの下に少しマージン
+            text_width = max(200, window_width - (margin * 2))  # 最低200px確保
+            text_height = max(100, window_height - text_top - button_height - 20)  # 最低100px確保
+            
+            logger.debug(f"計算されたテキスト領域: {text_width}x{text_height} (top: {text_top})")
+            
+            # テキスト領域を作成
+            text_rect = pygame.Rect(margin, text_top, text_width, text_height)
+            try:
+                window.formation_label = pygame_gui.elements.UILabel(
+                    relative_rect=text_rect,
+                    text=formation_text,
+                    manager=window.ui_manager,
+                    container=window.panel
+                )
+                logger.debug(f"編成テキストラベルを追加しました: {text_width}x{text_height}")
+            except Exception as e:
+                logger.error(f"テキストラベル作成エラー: {e}")
+                # フォールバック: タイトルに情報を追加
+                if hasattr(window, 'title_label') and window.title_label:
+                    window.title_label.set_text(f"{window.title_label.text}\n\n{formation_text}")
     
     def _close_current_formation_dialog(self):
         """現在の編成ダイアログを閉じてパーティ編成メニューに戻る"""
@@ -217,8 +829,6 @@ class AdventurersGuild(BaseFacility):
     
     def _show_add_character_menu(self):
         """キャラクター追加メニュー"""
-        add_menu = UIMenu("add_character_menu", config_manager.get_text("guild.party_formation.character_add_title"))
-        
         # 利用可能なキャラクター（パーティに参加していない）
         available_chars = [
             char for char in self.created_characters 
@@ -226,30 +836,57 @@ class AdventurersGuild(BaseFacility):
         ]
         
         if not available_chars:
-            self._show_error_message(self.config_manager.get_text("errors.no_addable_characters"))
+            # エラーメッセージをMenuWindowで表示
+            self._show_error_window("追加可能なキャラクターがいません")
             return
         
+        # 現在のパーティ編成ウィンドウを完全に閉じる
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        
+        # 既存のadd_characterがあれば閉じる
+        if 'add_character' in window_manager.window_registry:
+            old_add = window_manager.window_registry['add_character']
+            window_manager.close_window(old_add)
+        
+        if 'party_formation' in window_manager.window_registry:
+            formation_window = window_manager.window_registry['party_formation']
+            window_manager.close_window(formation_window)
+        
+        # キャラクター追加用のメニュー設定を作成
+        buttons = []
         for char in available_chars:
             char_info = f"{char.name} Lv.{char.experience.level} ({char.get_race_name()}/{char.get_class_name()})"
-            add_menu.add_menu_item(
-                char_info,
-                self._add_character_to_party,
-                [char]
-            )
+            buttons.append({
+                'id': f'add_char_{char.character_id}',
+                'text': char_info,
+                'action': f'add_character:{char.character_id}'
+            })
         
-        add_menu.add_back_button(
-            config_manager.get_text("menu.back"),
-            self._back_to_formation_menu,
-            [add_menu]
+        menu_config = {
+            'title': config_manager.get_text("guild.party_formation.character_add_title"),
+            'buttons': buttons
+        }
+        
+        # キャラクター追加ウィンドウを作成
+        add_char_window = PartyFormationWindow(
+            'add_character',
+            menu_config,
+            action_handler=self._handle_add_character_action
         )
         
-        self._show_submenu(add_menu)
+        add_char_window.create()
+        
+        # WindowManagerに登録して表示
+        window_manager.window_registry[add_char_window.window_id] = add_char_window
+        window_manager.show_window(add_char_window, push_to_stack=True)
+        logger.debug(f"AddCharacterWindow表示完了")
     
     def _add_character_to_party(self, character: Character):
         """パーティにキャラクターを追加"""
         if not self.current_party:
             logger.warning(config_manager.get_text("guild.messages.party_not_set_warning"))
-            self._show_error_message(self.config_manager.get_text("errors.no_party_set"))
+            self._show_error_message(config_manager.get_text("errors.no_party_set"))
             return
         
         try:
@@ -273,25 +910,54 @@ class AdventurersGuild(BaseFacility):
     
     def _show_remove_character_menu(self):
         """キャラクター削除メニュー"""
-        remove_menu = UIMenu("remove_character_menu", "キャラクター削除")
-        
         party_chars = list(self.current_party.characters.values())
         
+        if not party_chars:
+            # エラーメッセージをMenuWindowで表示
+            self._show_error_window("削除可能なキャラクターがいません")
+            return
+        
+        # 現在のパーティ編成ウィンドウを完全に閉じる
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        
+        # 既存のremove_characterがあれば閉じる
+        if 'remove_character' in window_manager.window_registry:
+            old_remove = window_manager.window_registry['remove_character']
+            window_manager.close_window(old_remove)
+        
+        if 'party_formation' in window_manager.window_registry:
+            formation_window = window_manager.window_registry['party_formation']
+            window_manager.close_window(formation_window)
+        
+        # キャラクター削除用のメニュー設定を作成
+        buttons = []
         for char in party_chars:
             char_info = f"{char.name} Lv.{char.experience.level} ({char.get_class_name()})"
-            remove_menu.add_menu_item(
-                char_info,
-                self._remove_character_from_party,
-                [char]
-            )
+            buttons.append({
+                'id': f'remove_char_{char.character_id}',
+                'text': char_info,
+                'action': f'remove_character:{char.character_id}'
+            })
         
-        remove_menu.add_back_button(
-            config_manager.get_text("menu.back"),
-            self._back_to_formation_menu,
-            [remove_menu]
+        menu_config = {
+            'title': "キャラクター削除",
+            'buttons': buttons
+        }
+        
+        # キャラクター削除ウィンドウを作成
+        remove_char_window = PartyFormationWindow(
+            'remove_character',
+            menu_config,
+            action_handler=self._handle_remove_character_action
         )
         
-        self._show_submenu(remove_menu)
+        remove_char_window.create()
+        
+        # WindowManagerに登録して表示
+        window_manager.window_registry[remove_char_window.window_id] = remove_char_window
+        window_manager.show_window(remove_char_window, push_to_stack=True)
+        logger.debug(f"RemoveCharacterWindow表示完了")
     
     def _remove_character_from_party(self, character: Character):
         """パーティからキャラクターを削除"""
@@ -331,28 +997,55 @@ class AdventurersGuild(BaseFacility):
     
     def _show_position_menu(self):
         """位置変更メニュー"""
-        position_menu = UIMenu("position_menu", config_manager.get_text("guild.party_formation.position_change_title"))
-        
         party_chars = list(self.current_party.characters.values())
         
+        if not party_chars:
+            self._show_error_window("位置変更可能なキャラクターがいません")
+            return
+        
+        # 現在のパーティ編成ウィンドウを完全に閉じる
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        
+        # 既存のposition_menuがあれば閉じる
+        if 'position_menu' in window_manager.window_registry:
+            old_position = window_manager.window_registry['position_menu']
+            window_manager.close_window(old_position)
+        
+        if 'party_formation' in window_manager.window_registry:
+            formation_window = window_manager.window_registry['party_formation']
+            window_manager.close_window(formation_window)
+        
+        # 位置変更用のメニュー設定を作成
+        buttons = []
         for char in party_chars:
             current_pos = self.current_party.formation.get_character_position(char.character_id)
             pos_text = current_pos.value if current_pos else "不明"
             char_info = f"{char.name} ({pos_text})"
-            
-            position_menu.add_menu_item(
-                char_info,
-                self._show_new_position_menu,
-                [char]
-            )
+            buttons.append({
+                'id': f'pos_char_{char.character_id}',
+                'text': char_info,
+                'action': f'select_character_for_position:{char.character_id}'
+            })
         
-        position_menu.add_back_button(
-            config_manager.get_text("menu.back"),
-            self._back_to_formation_menu,
-            [position_menu]
+        menu_config = {
+            'title': config_manager.get_text("guild.party_formation.position_change_title"),
+            'buttons': buttons
+        }
+        
+        # 位置変更ウィンドウを作成
+        position_window = PartyFormationWindow(
+            'position_menu',
+            menu_config,
+            action_handler=self._handle_position_menu_action
         )
         
-        self._show_submenu(position_menu)
+        position_window.create()
+        
+        # WindowManagerに登録して表示
+        window_manager.window_registry[position_window.window_id] = position_window
+        window_manager.show_window(position_window, push_to_stack=True)
+        logger.debug(f"PositionMenuWindow表示完了")
     
     def _show_new_position_menu(self, character: Character):
         """新しい位置選択メニュー"""

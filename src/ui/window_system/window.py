@@ -107,6 +107,8 @@ class Window(ABC):
         状態をHIDDENに変更し、UI要素を非表示にする
         """
         if self.state == WindowState.SHOWN:
+            # UI要素をクリーンアップ
+            self.cleanup_ui()
             self.state = WindowState.HIDDEN
             self.on_hide()
             logger.debug(f"ウィンドウを非表示: {self.window_id}")
