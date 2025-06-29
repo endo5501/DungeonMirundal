@@ -3,7 +3,7 @@
 from typing import Dict, List, Optional, Any, Tuple, Callable
 from enum import Enum
 
-from src.ui.base_ui import UIElement, UIButton, UIText, UIMenu, UIDialog, UIState, ui_manager
+from src.ui.base_ui_pygame import UIElement, UIButton, UIText, UIMenu, UIDialog, UIState, ui_manager
 from src.magic.spells import SpellBook, SpellSlot, Spell, SpellManager, spell_manager, SpellSchool, SpellType
 from src.character.party import Party
 from src.character.character import Character
