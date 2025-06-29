@@ -448,7 +448,7 @@ class Temple(BaseFacility):
     
     def _cleanup_temple_ui(self):
         """教会UIのクリーンアップ（pygame版では不要）"""
-        # pygame版ではUIMenuが自動的に管理されるため、特別なクリーンアップは不要
+        # pygame版では自動的に管理されるため、特別なクリーンアップは不要
         pass
     
     def _cleanup_and_return_to_main_temple(self):

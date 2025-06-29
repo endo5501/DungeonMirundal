@@ -1,7 +1,14 @@
 # 0043: MenuStackManager役割見直し・段階的移行計画
 
+**ステータス**: 🔄 0044（UIMenu段階的削除計画）に統合
+
 ## 目的
 WindowManager導入後のアーキテクチャにおけるMenuStackManagerクラスの役割を見直し、機能重複の解消と段階的移行戦略を策定する。
+
+## 2025-06-29更新
+**本タスクは0044（UIMenu段階的削除 - 長期計画）に統合されました。**
+- MenuStackManagerはUIMenuシステムの一部として、0044の段階的削除計画に含まれます
+- 以下の内容は参考資料として保持しますが、実施は0044の計画に従います
 
 ## 背景・経緯
 - WindowSystemの段階的導入により、MenuStackManagerとWindowManagerの機能重複が発生
@@ -99,19 +106,19 @@ WindowManager導入後のアーキテクチャにおけるMenuStackManagerクラ
 
 ## 継続使用の妥当性判断
 
-### 現在の方針: **継続使用を推奨**
+### ~~現在の方針: **継続使用を推奨**~~ → **0044に統合**
 
-#### 支持要因
+#### 支持要因（参考）
 - ✅ 安定した動作実績
 - ✅ レガシーコードとの高い互換性
 - ✅ 段階的移行におけるリスク軽減
 - ✅ DialogTemplateとの密結合による移行コスト
 
-#### 条件
-- 🔄 新規機能開発ではWindowManagerを優先
-- 🔄 定期的な移行進捗評価（四半期ごと）
-- 🔄 技術債務の蓄積防止
-- 🔄 明確な廃止タイムライン遵守
+#### 0044での対応方針
+- 🔄 UIMenuシステムの一部として段階的削除
+- 🔄 Phase 2（中リスク削除）で対応予定
+- 🔄 施設システムWindowSystem化の一環として実施
+- 🔄 4-8週間の移行期間を想定
 
 ## アーキテクチャ移行パターン
 
@@ -178,13 +185,15 @@ class BaseFacility:
 - [ ] システム統一化完了度
 - [ ] パフォーマンス改善効果
 
-## 完了条件
-- [ ] Phase 1: WindowManager機能拡張とハイブリッド実装安定化
-- [ ] Phase 2: DialogTemplate再設計と施設システム統一
-- [ ] Phase 3: MenuStackManager完全除去とアーキテクチャ最適化
+## 完了条件（0044で実施）
+- [ ] ~~Phase 1: WindowManager機能拡張とハイブリッド実装安定化~~ → 0044 Phase 2で対応
+- [ ] ~~Phase 2: DialogTemplate再設計と施設システム統一~~ → 0044 Phase 2で対応
+- [ ] ~~Phase 3: MenuStackManager完全除去とアーキテクチャ最適化~~ → 0044 Phase 2で対応
 - [ ] 全システムでのWindowManager統一使用
 - [ ] レガシーコードの完全除去
 - [ ] パフォーマンス劣化なし確認
+
+**注**: 本タスクの完了条件は0044（UIMenu段階的削除計画）のPhase 2として実施されます。
 
 ## 期待される効果
 
@@ -206,12 +215,22 @@ class BaseFacility:
 ## 関連ドキュメント
 - `docs/todos/0034_window_system_migration_low_priority.md`: 親タスク
 - `docs/todos/0042_management_functions_window_system_integration.md`: 管理機能統合
+- `docs/todos/0044_uimenu_phased_removal_long_term.md`: UIMenu段階的削除計画（本タスクの移管先）
 - `docs/window_system.md`: WindowSystem設計書
 
 ## 作業ログ
 - 2025-06-29: 詳細分析レポート作成、現状調査完了
 - 2025-06-29: 段階的移行戦略策定、3フェーズ計画確定
 - 2025-06-29: 継続使用妥当性判断、条件付き継続を決定
+- 2025-06-29: **0044（UIMenu段階的削除計画）に統合**
 
-### 推奨される次のアクション
-現在は**Phase 1の準備段階**として、WindowManagerの機能拡張から開始することを推奨。immediate対応が必要な緊急課題ではないため、計画的な実施で十分。
+### 統合の理由
+1. **UIMenuシステムの一部**: MenuStackManagerはUIMenuシステムの中間層として機能
+2. **削除タイミングの一致**: UIMenu削除時に同時に対応することが効率的
+3. **優先度の整合**: 両者とも長期的な技術債務解消として位置づけ
+4. **作業効率**: 個別対応より統合的アプローチが効果的
+
+### 0044での扱い
+- MenuStackManagerは0044のPhase 2（中リスク削除）で対応予定
+- UISelectionListと共にListWindow等への移行を実施
+- 施設システムの完全WindowSystem化の一環として処理

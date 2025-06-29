@@ -6,7 +6,7 @@ from enum import Enum
 import pygame
 
 from src.character.party import Party
-from src.ui.base_ui_pygame import UIMenu, ui_manager
+# UIMenuは段階的削除により使用しない
 from src.ui.menu_stack_manager import MenuStackManager, MenuType
 from src.ui.dialog_template import DialogTemplate
 from src.ui.window_system import WindowManager
@@ -49,7 +49,7 @@ class BaseFacility(ABC):
         # WindowManager統合（新システム）
         self.window_manager = WindowManager.get_instance()
         
-        # メニューシステム（レガシー）
+        # MenuStackManagerシステム
         self.menu_stack_manager: Optional[MenuStackManager] = None
         self.dialog_template: Optional[DialogTemplate] = None
         
@@ -111,7 +111,7 @@ class BaseFacility(ABC):
     
     def _show_main_menu_unified(self):
         """統一されたメインメニュー表示（WindowManagerのみ）"""
-        # WindowManagerベースの表示のみ使用（レガシーフォールバック削除）
+        # WindowManagerベースの表示のみ使用
         self._show_main_menu_window_manager()
         logger.info(f"WindowManagerで施設メインメニューを表示: {self.facility_id}")
     
@@ -126,7 +126,7 @@ class BaseFacility(ABC):
             self.window_manager.show_window(facility_window, push_to_stack=True)
             
         except ImportError:
-            logger.warning("FacilityMenuWindow未実装、レガシーシステムを使用")
+            logger.warning("FacilityMenuWindow未実装、フォールバックが必要")
             raise
     
     
@@ -194,7 +194,7 @@ class BaseFacility(ABC):
             # WindowManagerクリーンアップ（新システム）
             self._cleanup_ui_windows()
             
-            # メニューシステムのクリーンアップ（レガシー）
+            # MenuStackManagerシステムのクリーンアップ
             if self.menu_stack_manager:
                 self.menu_stack_manager.clear_stack()
             if self.dialog_template:
@@ -243,7 +243,7 @@ class BaseFacility(ABC):
             return True
             
         except ImportError:
-            logger.warning("DialogWindow未実装、レガシーダイアログを使用")
+            logger.warning("DialogWindow未実装、フォールバックダイアログを使用")
             return self.show_information_dialog(title, message, on_close)
         except Exception as e:
             logger.error(f"WindowManagerダイアログエラー: {e}")
@@ -270,7 +270,7 @@ class BaseFacility(ABC):
             return True
             
         except ImportError:
-            logger.warning("DialogWindow未実装、レガシーダイアログを使用")
+            logger.warning("DialogWindow未実装、フォールバックダイアログを使用")
             return self.show_error_dialog(title, message, on_close)
         except Exception as e:
             logger.error(f"WindowManagerエラーダイアログエラー: {e}")
@@ -297,7 +297,7 @@ class BaseFacility(ABC):
             return True
             
         except ImportError:
-            logger.warning("DialogWindow未実装、レガシーダイアログを使用")
+            logger.warning("DialogWindow未実装、フォールバックダイアログを使用")
             return self.show_success_dialog(title, message, on_close)
         except Exception as e:
             logger.error(f"WindowManager成功ダイアログエラー: {e}")
@@ -335,7 +335,7 @@ class BaseFacility(ABC):
             return True
             
         except ImportError:
-            logger.warning("DialogWindow未実装、レガシーダイアログを使用")
+            logger.warning("DialogWindow未実装、フォールバックダイアログを使用")
             return self.show_confirmation_dialog(title, message, on_confirm, on_cancel)
         except Exception as e:
             logger.error(f"WindowManager確認ダイアログエラー: {e}")
@@ -352,7 +352,7 @@ class BaseFacility(ABC):
             return True
             
         except ImportError:
-            logger.warning("FacilityMenuWindow未実装、レガシーサブメニューを使用")
+            logger.warning("FacilityMenuWindow未実装、フォールバックサブメニューを使用")
             return False
         except Exception as e:
             logger.error(f"WindowManagerサブメニューエラー: {e}")
@@ -387,20 +387,7 @@ class BaseFacility(ABC):
             logger.error(f"統一ダイアログエラー: {e}")
             return False
     
-    # === 新しいメニューシステム用メソッド（レガシー） ===
-    
-    def show_submenu(self, menu: UIMenu, context: Dict[str, Any] = None) -> bool:
-        """サブメニューを表示"""
-        try:
-            self.menu_stack_manager.push_menu(
-                menu, 
-                MenuType.SUBMENU,
-                context or {}
-            )
-            return True
-        except Exception as e:
-            logger.error(f"サブメニュー表示エラー: {e}")
-            return False
+    # === WindowSystem統合メソッド ===
     
     def show_information_dialog(self, title: str, message: str, 
                               on_close: Optional[Callable] = None, 
@@ -533,29 +520,11 @@ class BaseFacility(ABC):
         return True
     
     def _get_effective_ui_manager(self):
-        """有効なUIマネージャーを取得（menu_stack_manager優先）"""
+        """有効なUIマネージャーを取得（menu_stack_manager専用）"""
         if self.menu_stack_manager and self.menu_stack_manager.ui_manager:
             return self.menu_stack_manager.ui_manager
-        return ui_manager
+        return None
     
-    def _hide_menu_safe(self, menu_id: str):
-        """メニューを安全に非表示にする"""
-        try:
-            ui_mgr = self._get_effective_ui_manager()
-            if ui_mgr:
-                ui_mgr.hide_menu(menu_id)
-        except Exception as e:
-            logger.error(f"メニュー非表示エラー: {e}")
-    
-    def _show_menu_safe(self, menu: UIMenu, modal: bool = True):
-        """メニューを安全に表示する"""
-        try:
-            ui_mgr = self._get_effective_ui_manager()
-            if ui_mgr:
-                ui_mgr.add_menu(menu)
-                ui_mgr.show_menu(menu.menu_id, modal=modal)
-        except Exception as e:
-            logger.error(f"メニュー表示エラー: {e}")
     
     def back_to_previous_menu(self) -> bool:
         """前のメニューに戻る"""
