@@ -332,8 +332,23 @@ class GameManager:
         """ヘルプアクションの処理"""
         if pressed:
             logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.help_action"), input_type=input_type.value))
-            from src.ui.help_ui import help_ui
-            help_ui.show_help_menu()
+            # 新WindowSystemのHelpWindowを使用
+            from src.ui.window_system.window_manager import WindowManager
+            from src.ui.window_system.help_window import HelpWindow
+            import pygame
+            
+            window_manager = WindowManager.get_instance()
+            # Pygameが初期化されていない場合は初期化
+            if not window_manager.screen and self.screen:
+                window_manager.initialize_pygame(self.screen, self.clock)
+            
+            help_window = window_manager.create_window(
+                HelpWindow,
+                window_manager=window_manager,
+                rect=pygame.Rect(100, 100, 600, 500),
+                window_id="main_help_window"
+            )
+            help_window.show_main_help_menu()
     
     def _on_movement_action(self, action: str, pressed: bool, input_type):
         """移動アクションの処理"""

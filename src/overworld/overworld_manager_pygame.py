@@ -970,9 +970,24 @@ class OverworldManager:
         logger.info("設定が選択されました")
         # ゲーム設定画面の表示
         try:
-            from src.ui.settings_ui import settings_ui
-            settings_ui.set_close_callback(self._on_settings_close)
-            settings_ui.show()
+            # 新WindowSystemのSettingsWindowを使用
+            from src.ui.window_system.window_manager import WindowManager
+            from src.ui.window_system.settings_window import SettingsWindow
+            import pygame
+            
+            window_manager = WindowManager.get_instance()
+            # Pygameが初期化されていない場合は初期化
+            if not window_manager.screen and hasattr(self, 'screen') and self.screen:
+                window_manager.initialize_pygame(self.screen, pygame.time.Clock())
+            
+            settings_window = window_manager.create_window(
+                SettingsWindow,
+                window_manager=window_manager,
+                rect=pygame.Rect(200, 100, 600, 500),
+                window_id="main_settings_window"
+            )
+            settings_window.set_close_callback(self._on_settings_close)
+            settings_window.show_settings_menu()
             logger.info("設定画面を表示しました")
         except Exception as e:
             logger.error(f"設定画面表示エラー: {e}")

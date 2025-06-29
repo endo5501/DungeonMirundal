@@ -91,9 +91,15 @@
 - 他の必要クラスの保持確認
 - Fowler式リファクタリングを実施
 
+#### 11. 高優先度作業で発生した残作業
+
+* ./docs/todos/0035_window_system_legacy_cleanup.md
+* ./docs/todos/0036_overworld_manager_code_cleanup.md 
+
 #### 11. 全テストの確認修正
 **現状**: 全テスト(uv run pytest)で多数のfaildが発生
 **作業**: UIMenu関係テストの削除、テストを修正してpassdへ
+参考: ./docs/todos/0037_window_system_test_stabilization.md
 
 ## 技術仕様
 
