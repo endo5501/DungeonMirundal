@@ -110,17 +110,10 @@ class BaseFacility(ABC):
         self._show_main_menu_unified()
     
     def _show_main_menu_unified(self):
-        """統一されたメインメニュー表示（WindowManager優先）"""
-        try:
-            # WindowManagerベースの表示を試行
-            self._show_main_menu_window_manager()
-            logger.info(f"WindowManagerで施設メインメニューを表示: {self.facility_id}")
-        except ImportError as e:
-            logger.warning(f"WindowManager未実装、レガシーメニューを使用: {e}")
-            self._show_main_menu_new()
-        except Exception as e:
-            logger.error(f"WindowManagerエラー、レガシーメニューに切り替え: {e}")
-            self._show_main_menu_new()
+        """統一されたメインメニュー表示（WindowManagerのみ）"""
+        # WindowManagerベースの表示のみ使用（レガシーフォールバック削除）
+        self._show_main_menu_window_manager()
+        logger.info(f"WindowManagerで施設メインメニューを表示: {self.facility_id}")
     
     def _show_main_menu_window_manager(self):
         """WindowManagerベースメインメニュー表示（新システム）"""
@@ -136,72 +129,22 @@ class BaseFacility(ABC):
             logger.warning("FacilityMenuWindow未実装、レガシーシステムを使用")
             raise
     
-    def _show_main_menu_new(self):
-        """新しいメニューシステムでメインメニューを表示"""
-        try:
-            main_menu = self._create_main_menu()
-            self._add_common_menu_items(main_menu)
-            self._push_main_menu_to_stack(main_menu)
-            
-            logger.info(f"新システムで施設メインメニューを表示: {self.facility_id}")
-            
-        except Exception as e:
-            logger.error(f"メニューシステム表示エラー: {e}")
-            raise
     
-    def _create_main_menu(self) -> UIMenu:
-        """メインメニューを作成"""
-        menu_title = self.get_name()
-        main_menu = UIMenu(f"{self.facility_id}_main_menu", menu_title)
-        
-        # 施設固有のメニュー項目を追加
-        self._setup_menu_items(main_menu)
-        
-        return main_menu
-    
-    def _add_common_menu_items(self, menu: UIMenu):
-        """共通メニュー項目を追加"""
-        menu.add_menu_item(
-            config_manager.get_text("menu.exit"),
-            self._exit_facility
-        )
-    
-    def _push_main_menu_to_stack(self, menu: UIMenu):
-        """メインメニューをスタックにプッシュ"""
-        self.menu_stack_manager.push_menu(
-            menu, 
-            MenuType.FACILITY_MAIN,
-            {'facility_id': self.facility_id}
-        )
     
     # === WindowManager統合メソッド ===
     
     def _create_facility_menu_config(self) -> Dict[str, Any]:
         """施設メニュー設定を作成（WindowManager用）"""
-        menu_items = []
-        
-        # 施設固有のメニュー項目を作成
-        # 各施設でオーバーライドされる抽象メソッドを使用
-        temp_menu = UIMenu(f"{self.facility_id}_temp", self.get_name())
-        self._setup_menu_items(temp_menu)
-        
-        # UIMenuのアイテムをWindowSystem形式に変換
-        for element in temp_menu.elements:
-            if hasattr(element, 'text') and hasattr(element, 'command'):
-                menu_items.append({
-                    'id': element.text.replace(' ', '_').lower(),
-                    'label': element.text,
-                    'type': 'action',
-                    'enabled': True
-                })
-        
-        # 共通の退出アイテムを追加
-        menu_items.append({
-            'id': 'exit',
-            'label': config_manager.get_text("menu.exit"),
-            'type': 'action',
-            'enabled': True
-        })
+        # 基本的な退出メニューのみ提供
+        # 各施設で独自の設定メソッドをオーバーライドして使用
+        menu_items = [
+            {
+                'id': 'exit',
+                'label': config_manager.get_text("menu.exit"),
+                'type': 'action',
+                'enabled': True
+            }
+        ]
         
         return {
             'menu_type': 'facility',
@@ -276,47 +219,6 @@ class BaseFacility(ABC):
         except Exception as e:
             logger.error(f"WindowSystemクリーンアップエラー: {e}")
     
-    def _show_dialog(self, dialog_id: str, title: str, message: str, buttons: List[Dict[str, Any]] = None,
-                     width: int = None, height: int = None):
-        """ダイアログの表示（新システムへのプロキシ）"""
-        # ボタンデータの変換
-        if buttons:
-            # 最初のボタンをon_closeとして使用
-            on_close = buttons[0]['command'] if buttons else None
-            self.show_information_dialog(title, message, on_close)
-        else:
-            self.show_information_dialog(title, message)
-    
-    def _close_dialog(self):
-        """ダイアログを閉じる（新システムへのプロキシ）"""
-        # 新システムではダイアログは自動的に閉じられるため、特別な処理は不要
-        # メインメニューに戻る処理のみ実行
-        if self.menu_stack_manager:
-            self.menu_stack_manager.back_to_facility_main()
-    
-    
-    def _show_success_message(self, message: str):
-        """成功メッセージの表示（新システムへのプロキシ）"""
-        self.show_success_dialog(
-            config_manager.get_text("common.info"),
-            message
-        )
-    
-    def _show_error_message(self, message: str):
-        """エラーメッセージの表示（新システムへのプロキシ）"""
-        self.show_error_dialog(
-            config_manager.get_text("common.error"),
-            message
-        )
-    
-    def _show_confirmation(self, message: str, on_confirm: Callable, on_cancel: Callable = None):
-        """確認ダイアログの表示（新システムへのプロキシ）"""
-        self.show_confirmation_dialog(
-            config_manager.get_text("common.confirm"),
-            message,
-            on_confirm,
-            on_cancel
-        )
     
     # === WindowManagerベースダイアログシステム ===
     
@@ -681,11 +583,6 @@ class BaseFacility(ABC):
         except Exception as e:
             logger.error(f"ESCキー処理エラー: {e}")
             return False
-    
-    @abstractmethod
-    def _setup_menu_items(self, menu: UIMenu):
-        """施設固有のメニュー項目を設定（サブクラスで実装）"""
-        pass
     
     @abstractmethod
     def _on_enter(self):

@@ -155,11 +155,6 @@ class AdventurersGuild(BaseFacility):
         """ギルド退場時の処理"""
         logger.info(config_manager.get_text("app_log.left_guild"))
     
-    def _setup_menu_items(self, menu):
-        """施設固有のメニュー項目を設定（新システムでは使用されない）"""
-        # 新WindowSystemでは_create_guild_menu_config()を使用するため、この関数は使用されない
-        # BaseFacilityの抽象メソッドを満たすため空実装を提供
-        pass
     
     def _show_character_creation(self):
         """キャラクター作成ウィザードを表示"""

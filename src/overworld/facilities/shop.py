@@ -145,11 +145,6 @@ class Shop(BaseFacility):
             
         return True
     
-    def _setup_menu_items(self, menu):
-        """施設固有のメニュー項目を設定（新システムでは使用されない）"""
-        # 新WindowSystemでは_create_shop_menu_config()を使用するため、この関数は使用されない
-        # BaseFacilityの抽象メソッドを満たすため空実装を提供
-        pass
     
     def _on_enter(self):
         """商店入場時の処理"""

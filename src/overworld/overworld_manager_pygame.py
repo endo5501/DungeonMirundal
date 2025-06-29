@@ -117,20 +117,8 @@ class OverworldManager:
         """施設退場時のコールバック"""
         logger.info("施設から地上部に戻りました")
         
-        # WindowManagerベースのメインメニューを表示
-        if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
-            # 既存のメインウィンドウを表示
-            if self.overworld_main_window.window_id not in self.window_manager.window_registry:
-                self.window_manager.window_registry[self.overworld_main_window.window_id] = self.overworld_main_window
-            self.window_manager.show_window(self.overworld_main_window, push_to_stack=True)
-        else:
-            # レガシーメニューにフォールバック
-            if self.main_menu:
-                self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
-            else:
-                self._create_main_menu()
-                if self.main_menu:
-                    self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+        # 統一化されたメインメニュー表示を使用
+        self._show_main_menu_unified()
     
     def _create_window_based_main_menu(self):
         """WindowManagerベースのメインメニューを作成"""
@@ -196,6 +184,92 @@ class OverworldManager:
         logger.debug("WindowManager経由で設定画面表示")
         # 既存の設定表示処理を流用
         self._on_settings()
+    
+    # === ハイブリッド実装統一化メソッド ===
+    
+    def _show_main_menu_unified(self):
+        """統一化されたメインメニュー表示（WindowManager優先）"""
+        try:
+            # WindowManagerベースを優先
+            if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
+                # ウィンドウをWindowManagerに登録（未登録の場合）
+                if self.overworld_main_window.window_id not in self.window_manager.window_registry:
+                    self.window_manager.window_registry[self.overworld_main_window.window_id] = self.overworld_main_window
+                
+                # WindowManagerで表示
+                self.window_manager.show_window(self.overworld_main_window, push_to_stack=True)
+                logger.info("WindowManagerベースでメインメニューを表示しました")
+                return True
+            else:
+                logger.warning("OverworldMainWindowが利用できません、レガシーメニューを使用")
+                return self._show_main_menu_legacy()
+                
+        except Exception as e:
+            logger.error(f"WindowManagerベースメニュー表示エラー: {e}")
+            return self._show_main_menu_legacy()
+    
+    def _show_main_menu_legacy(self):
+        """レガシーUIMenuベースのメインメニュー表示（フォールバック）"""
+        try:
+            if self.main_menu:
+                self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+            else:
+                self._create_main_menu()
+                if self.main_menu:
+                    self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+            
+            logger.info("レガシーUIMenuでメインメニューを表示しました")
+            return True
+            
+        except Exception as e:
+            logger.error(f"レガシーメニュー表示エラー: {e}")
+            return False
+    
+    def _show_main_menu_window_manager(self):
+        """WindowManagerベースのメインメニュー表示（テスト用）"""
+        return self._show_main_menu_unified()
+    
+    def show_main_menu(self):
+        """メインメニューを表示（統一化エントリーポイント）"""
+        return self._show_main_menu_unified()
+    
+    def _cleanup_unified(self):
+        """統一化されたクリーンアップ処理"""
+        try:
+            # WindowManagerベースのクリーンアップ
+            if hasattr(self, 'window_manager') and self.window_manager:
+                # アクティブウィンドウのクリーンアップ
+                active_window = self.window_manager.get_active_window()
+                if active_window:
+                    self.window_manager.close_window(active_window.window_id)
+            
+            # レガシーUI要素のクリーンアップ
+            if hasattr(self, 'ui_manager') and self.ui_manager:
+                if hasattr(self, 'main_menu') and self.main_menu:
+                    self.ui_manager.hide_menu(self.main_menu.menu_id)
+                if hasattr(self, 'settings_menu') and self.settings_menu:
+                    self.ui_manager.hide_menu(self.settings_menu.menu_id)
+            
+            # MenuStackManagerのクリーンアップ
+            if hasattr(self, 'menu_stack_manager') and self.menu_stack_manager:
+                self.menu_stack_manager.clear_stack()
+            
+            logger.info("統一化されたクリーンアップが完了しました")
+            
+        except Exception as e:
+            logger.error(f"統一化クリーンアップエラー: {e}")
+    
+    def cleanup(self):
+        """標準クリーンアップメソッド"""
+        self._cleanup_unified()
+    
+    def _cleanup_ui(self):
+        """UIクリーンアップメソッド"""
+        self._cleanup_unified()
+    
+    def _cleanup_windows(self):
+        """ウィンドウクリーンアップメソッド"""
+        self._cleanup_unified()
     
     def show_main_menu_window_manager(self):
         """WindowManagerベースのメインメニューを表示"""

@@ -260,7 +260,34 @@ class OverworldManager:
 - **レガシー併用**: ImportErrorフォールバック機能で段階的移行
 - **テスト全通過**: 12項目テスト完了、統合確認済み
 
-### 次回予定
-- Phase 2: overworld_manager_pygame.py統合
-- Phase 3: base_facility.py最終移行
-- Phase 4: menu_stack_manager.py役割見直し
+### 2025-06-29: Phase 2 - overworld_manager_pygame.py ハイブリッド実装統一完了 ✅
+- **TDDアプローチ実装**: test_overworld_manager_pygame_unification.py作成
+- **ハイブリッド実装統一**: WindowManager優先、MenuStackManager フォールバック
+- **統一メソッド実装**:
+  - `_show_main_menu_unified()`: WindowManager最優先メニュー表示
+  - `_cleanup_unified()`: 統合リソースクリーンアップ
+  - `_handle_overworld_action()`: メッセージハンドラパターン実装
+- **12項目テスト全通過**: ハイブリッド実装除去進捗確認済み
+
+### 2025-06-29: Phase 3 - base_facility.py WindowManager統合完了 ✅
+- **TDDアプローチ実装**: test_base_facility_window_manager_migration.py作成
+- **BaseFacility WindowManager統合**: 
+  - WindowManagerプロパティ追加、統一メニュー表示実装
+  - `_create_facility_menu_config()`: FacilityMenuWindow設定生成
+  - `handle_facility_message()`: WindowManagerメッセージ処理
+  - `_show_main_menu_unified()`: WindowManager優先統一表示
+- **ダイアログシステム移行**: 完全WindowManagerベース実装
+  - `show_information_dialog_window()`, `show_error_dialog_window()`等
+  - レガシーフォールバック機能付き統一インターフェース
+- **FacilityManager統合**: WindowManager設定、クリーンアップ実装
+- **15項目テスト全通過**: 完全なWindowManager統合確認済み
+
+### 完了したPhase 2作業概要
+- **overworld_manager.py**: ✅ WindowManager完全統合（レガシー併用）
+- **overworld_manager_pygame.py**: ✅ ハイブリッド実装統一化
+- **base_facility.py**: ✅ WindowManager統合、ダイアログシステム移行
+
+### 残存作業
+- **menu_stack_manager.py**: 役割見直し（優先度: 低）
+  - WindowSystem導入後の位置づけ検討
+  - 継続使用 vs 廃止の判断要

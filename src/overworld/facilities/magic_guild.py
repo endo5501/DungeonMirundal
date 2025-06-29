@@ -147,16 +147,6 @@ class MagicGuild(BaseFacility):
             
         return True
     
-    def _setup_menu_items(self, menu):
-        """施設固有のメニュー項目を設定（新システムでは使用されない）"""
-        # 新WindowSystemでは_create_magic_guild_menu_config()を使用するため、この関数は使用されない
-        # BaseFacilityの抽象メソッドを満たすため空実装を提供
-        pass
-        
-        menu.add_menu_item(
-            "大魔術師と話す",
-            self._talk_to_archmage
-        )
     
     def _on_enter(self):
         """魔術師ギルド入場時の処理"""

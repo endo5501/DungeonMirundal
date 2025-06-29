@@ -150,11 +150,6 @@ class Inn(BaseFacility):
         self._cleanup_all_ui()
         logger.info(config_manager.get_text("app_log.left_inn"))
     
-    def _setup_menu_items(self, menu):
-        """施設固有のメニュー項目を設定（新システムでは使用されない）"""
-        # 新WindowSystemでは_create_inn_menu_config()を使用するため、この関数は使用されない
-        # BaseFacilityの抽象メソッドを満たすため空実装を提供
-        pass
     
     def _cleanup_all_ui(self):
         """全てのUI要素をクリーンアップ"""
