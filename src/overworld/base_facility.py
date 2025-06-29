@@ -9,6 +9,7 @@ from src.character.party import Party
 from src.ui.base_ui_pygame import UIMenu, ui_manager
 from src.ui.menu_stack_manager import MenuStackManager, MenuType
 from src.ui.dialog_template import DialogTemplate
+from src.ui.window_system import WindowManager
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
@@ -45,10 +46,12 @@ class BaseFacility(ABC):
         self.is_active = DEFAULT_ACTIVE_STATE
         self.current_party: Optional[Party] = None
         
-        # メニューシステム
+        # WindowManager統合（新システム）
+        self.window_manager = WindowManager.get_instance()
+        
+        # メニューシステム（レガシー）
         self.menu_stack_manager: Optional[MenuStackManager] = None
         self.dialog_template: Optional[DialogTemplate] = None
-        
         
         logger.info(f"施設を初期化しました: {facility_id} ({facility_type.value})")
     
@@ -104,7 +107,34 @@ class BaseFacility(ABC):
     
     def _show_main_menu(self):
         """メインメニューの表示"""
-        self._show_main_menu_new()
+        self._show_main_menu_unified()
+    
+    def _show_main_menu_unified(self):
+        """統一されたメインメニュー表示（WindowManager優先）"""
+        try:
+            # WindowManagerベースの表示を試行
+            self._show_main_menu_window_manager()
+            logger.info(f"WindowManagerで施設メインメニューを表示: {self.facility_id}")
+        except ImportError as e:
+            logger.warning(f"WindowManager未実装、レガシーメニューを使用: {e}")
+            self._show_main_menu_new()
+        except Exception as e:
+            logger.error(f"WindowManagerエラー、レガシーメニューに切り替え: {e}")
+            self._show_main_menu_new()
+    
+    def _show_main_menu_window_manager(self):
+        """WindowManagerベースメインメニュー表示（新システム）"""
+        try:
+            from src.ui.window_system.facility_menu_window import FacilityMenuWindow
+            
+            menu_config = self._create_facility_menu_config()
+            facility_window = FacilityMenuWindow(f"{self.facility_id}_main", menu_config)
+            facility_window.message_handler = self.handle_facility_message
+            self.window_manager.show_window(facility_window, push_to_stack=True)
+            
+        except ImportError:
+            logger.warning("FacilityMenuWindow未実装、レガシーシステムを使用")
+            raise
     
     def _show_main_menu_new(self):
         """新しいメニューシステムでメインメニューを表示"""
@@ -144,7 +174,61 @@ class BaseFacility(ABC):
             {'facility_id': self.facility_id}
         )
     
+    # === WindowManager統合メソッド ===
     
+    def _create_facility_menu_config(self) -> Dict[str, Any]:
+        """施設メニュー設定を作成（WindowManager用）"""
+        menu_items = []
+        
+        # 施設固有のメニュー項目を作成
+        # 各施設でオーバーライドされる抽象メソッドを使用
+        temp_menu = UIMenu(f"{self.facility_id}_temp", self.get_name())
+        self._setup_menu_items(temp_menu)
+        
+        # UIMenuのアイテムをWindowSystem形式に変換
+        for element in temp_menu.elements:
+            if hasattr(element, 'text') and hasattr(element, 'command'):
+                menu_items.append({
+                    'id': element.text.replace(' ', '_').lower(),
+                    'label': element.text,
+                    'type': 'action',
+                    'enabled': True
+                })
+        
+        # 共通の退出アイテムを追加
+        menu_items.append({
+            'id': 'exit',
+            'label': config_manager.get_text("menu.exit"),
+            'type': 'action',
+            'enabled': True
+        })
+        
+        return {
+            'menu_type': 'facility',
+            'facility_type': self.facility_type.value,
+            'title': self.get_name(),
+            'menu_items': menu_items,
+            'party': self.current_party  # FacilityMenuWindowで必要
+        }
+    
+    def handle_facility_message(self, message_type: str, data: dict) -> bool:
+        """FacilityMenuWindowからのメッセージを処理"""
+        if message_type == 'menu_item_selected':
+            item_id = data.get('item_id')
+            
+            if item_id == 'exit':
+                self._exit_facility()
+                return True
+            else:
+                # 施設固有のアクション処理
+                return self._handle_facility_action(item_id, data)
+        
+        return False
+    
+    def _handle_facility_action(self, action_id: str, data: dict) -> bool:
+        """施設固有のアクション処理（サブクラスでオーバーライド可能）"""
+        logger.warning(f"未処理の施設アクション: {action_id} (施設: {self.facility_id})")
+        return False
     
     def _exit_facility(self):
         """施設から出る（UI用）"""
@@ -164,7 +248,10 @@ class BaseFacility(ABC):
     def _cleanup_ui(self):
         """UI要素のクリーンアップ"""
         try:
-            # メニューシステムのクリーンアップ
+            # WindowManagerクリーンアップ（新システム）
+            self._cleanup_ui_windows()
+            
+            # メニューシステムのクリーンアップ（レガシー）
             if self.menu_stack_manager:
                 self.menu_stack_manager.clear_stack()
             if self.dialog_template:
@@ -174,6 +261,20 @@ class BaseFacility(ABC):
             
         except Exception as e:
             logger.error(f"UIクリーンアップエラー: {e}")
+    
+    def _cleanup_ui_windows(self):
+        """WindowSystem関連のクリーンアップ"""
+        try:
+            if self.window_manager:
+                # 施設に関連するウィンドウを閉じる
+                facility_window_id = f"{self.facility_id}_main"
+                if facility_window_id in self.window_manager.window_registry:
+                    self.window_manager.close_window(facility_window_id)
+                
+            logger.debug(f"施設 {self.facility_id} のWindowSystemをクリーンアップしました")
+            
+        except Exception as e:
+            logger.error(f"WindowSystemクリーンアップエラー: {e}")
     
     def _show_dialog(self, dialog_id: str, title: str, message: str, buttons: List[Dict[str, Any]] = None,
                      width: int = None, height: int = None):
@@ -217,7 +318,174 @@ class BaseFacility(ABC):
             on_cancel
         )
     
-    # === 新しいメニューシステム用メソッド ===
+    # === WindowManagerベースダイアログシステム ===
+    
+    def show_information_dialog_window(self, title: str, message: str, 
+                                     on_close: Optional[Callable] = None) -> bool:
+        """情報ダイアログを表示（WindowManager版）"""
+        try:
+            from src.ui.window_system.dialog_window import DialogWindow
+            
+            dialog_config = {
+                'title': title,
+                'message': message,
+                'dialog_type': 'information',
+                'buttons': [{'id': 'ok', 'label': 'OK', 'type': 'primary'}]
+            }
+            
+            dialog_window = DialogWindow(f"{self.facility_id}_info_dialog", dialog_config)
+            if on_close:
+                dialog_window.message_handler = lambda msg_type, data: on_close() if msg_type == 'dialog_closed' else None
+            
+            self.window_manager.show_window(dialog_window, push_to_stack=True)
+            return True
+            
+        except ImportError:
+            logger.warning("DialogWindow未実装、レガシーダイアログを使用")
+            return self.show_information_dialog(title, message, on_close)
+        except Exception as e:
+            logger.error(f"WindowManagerダイアログエラー: {e}")
+            return self.show_information_dialog(title, message, on_close)
+    
+    def show_error_dialog_window(self, title: str, message: str,
+                               on_close: Optional[Callable] = None) -> bool:
+        """エラーダイアログを表示（WindowManager版）"""
+        try:
+            from src.ui.window_system.dialog_window import DialogWindow
+            
+            dialog_config = {
+                'title': title,
+                'message': message,
+                'dialog_type': 'error',
+                'buttons': [{'id': 'ok', 'label': 'OK', 'type': 'primary'}]
+            }
+            
+            dialog_window = DialogWindow(f"{self.facility_id}_error_dialog", dialog_config)
+            if on_close:
+                dialog_window.message_handler = lambda msg_type, data: on_close() if msg_type == 'dialog_closed' else None
+            
+            self.window_manager.show_window(dialog_window, push_to_stack=True)
+            return True
+            
+        except ImportError:
+            logger.warning("DialogWindow未実装、レガシーダイアログを使用")
+            return self.show_error_dialog(title, message, on_close)
+        except Exception as e:
+            logger.error(f"WindowManagerエラーダイアログエラー: {e}")
+            return self.show_error_dialog(title, message, on_close)
+    
+    def show_success_dialog_window(self, title: str, message: str,
+                                 on_close: Optional[Callable] = None) -> bool:
+        """成功ダイアログを表示（WindowManager版）"""
+        try:
+            from src.ui.window_system.dialog_window import DialogWindow
+            
+            dialog_config = {
+                'title': title,
+                'message': message,
+                'dialog_type': 'success',
+                'buttons': [{'id': 'ok', 'label': 'OK', 'type': 'primary'}]
+            }
+            
+            dialog_window = DialogWindow(f"{self.facility_id}_success_dialog", dialog_config)
+            if on_close:
+                dialog_window.message_handler = lambda msg_type, data: on_close() if msg_type == 'dialog_closed' else None
+            
+            self.window_manager.show_window(dialog_window, push_to_stack=True)
+            return True
+            
+        except ImportError:
+            logger.warning("DialogWindow未実装、レガシーダイアログを使用")
+            return self.show_success_dialog(title, message, on_close)
+        except Exception as e:
+            logger.error(f"WindowManager成功ダイアログエラー: {e}")
+            return self.show_success_dialog(title, message, on_close)
+    
+    def show_confirmation_dialog_window(self, title: str, message: str,
+                                      on_confirm: Optional[Callable] = None,
+                                      on_cancel: Optional[Callable] = None) -> bool:
+        """確認ダイアログを表示（WindowManager版）"""
+        try:
+            from src.ui.window_system.dialog_window import DialogWindow
+            
+            dialog_config = {
+                'title': title,
+                'message': message,
+                'dialog_type': 'confirmation',
+                'buttons': [
+                    {'id': 'yes', 'label': 'はい', 'type': 'primary'},
+                    {'id': 'no', 'label': 'いいえ', 'type': 'secondary'}
+                ]
+            }
+            
+            def handle_confirmation_message(msg_type: str, data: dict):
+                if msg_type == 'dialog_button_clicked':
+                    button_id = data.get('button_id')
+                    if button_id == 'yes' and on_confirm:
+                        on_confirm()
+                    elif button_id == 'no' and on_cancel:
+                        on_cancel()
+            
+            dialog_window = DialogWindow(f"{self.facility_id}_confirm_dialog", dialog_config)
+            dialog_window.message_handler = handle_confirmation_message
+            
+            self.window_manager.show_window(dialog_window, push_to_stack=True)
+            return True
+            
+        except ImportError:
+            logger.warning("DialogWindow未実装、レガシーダイアログを使用")
+            return self.show_confirmation_dialog(title, message, on_confirm, on_cancel)
+        except Exception as e:
+            logger.error(f"WindowManager確認ダイアログエラー: {e}")
+            return self.show_confirmation_dialog(title, message, on_confirm, on_cancel)
+    
+    def show_submenu_window(self, submenu_id: str, submenu_config: Dict[str, Any]) -> bool:
+        """サブメニューを表示（WindowManager版）"""
+        try:
+            from src.ui.window_system.facility_menu_window import FacilityMenuWindow
+            
+            submenu_window = FacilityMenuWindow(submenu_id, submenu_config)
+            submenu_window.message_handler = self.handle_facility_message
+            self.window_manager.show_window(submenu_window, push_to_stack=True)
+            return True
+            
+        except ImportError:
+            logger.warning("FacilityMenuWindow未実装、レガシーサブメニューを使用")
+            return False
+        except Exception as e:
+            logger.error(f"WindowManagerサブメニューエラー: {e}")
+            return False
+    
+    # === 統一インターフェース ===
+    
+    def _show_submenu_unified(self, submenu_config: Dict[str, Any]) -> bool:
+        """統一されたサブメニュー表示"""
+        try:
+            submenu_id = f"{self.facility_id}_submenu_{pygame.time.get_ticks()}"
+            return self.show_submenu_window(submenu_id, submenu_config)
+        except Exception:
+            # フォールバック処理
+            return False
+    
+    def _show_dialog_unified(self, dialog_type: str, title: str, message: str, **kwargs) -> bool:
+        """統一されたダイアログ表示"""
+        try:
+            if dialog_type == 'information':
+                return self.show_information_dialog_window(title, message, kwargs.get('on_close'))
+            elif dialog_type == 'error':
+                return self.show_error_dialog_window(title, message, kwargs.get('on_close'))
+            elif dialog_type == 'success':
+                return self.show_success_dialog_window(title, message, kwargs.get('on_close'))
+            elif dialog_type == 'confirmation':
+                return self.show_confirmation_dialog_window(title, message, kwargs.get('on_confirm'), kwargs.get('on_cancel'))
+            else:
+                logger.warning(f"未知のダイアログタイプ: {dialog_type}")
+                return False
+        except Exception as e:
+            logger.error(f"統一ダイアログエラー: {e}")
+            return False
+    
+    # === 新しいメニューシステム用メソッド（レガシー） ===
     
     def show_submenu(self, menu: UIMenu, context: Dict[str, Any] = None) -> bool:
         """サブメニューを表示"""
@@ -453,6 +721,9 @@ class FacilityManager:
         self.on_facility_exit_callback: Optional[Callable] = None
         self.ui_manager = None
         
+        # WindowManager統合
+        self.window_manager = WindowManager.get_instance()
+        
         logger.info("FacilityManagerを初期化しました")
     
     def set_ui_manager(self, ui_manager):
@@ -569,8 +840,34 @@ class FacilityManager:
         self.on_facility_exit_callback = callback
         logger.debug("施設退場コールバックを設定しました")
     
+    def set_window_manager(self, window_manager: WindowManager):
+        """WindowManagerを設定"""
+        self.window_manager = window_manager
+        
+        # 全施設にもWindowManagerを設定
+        for facility in self.facilities.values():
+            facility.window_manager = window_manager
+        
+        logger.info("FacilityManagerにWindowManagerを設定しました")
+    
+    def _cleanup_all_windows(self):
+        """全施設のWindowSystemクリーンアップ"""
+        try:
+            for facility in self.facilities.values():
+                if hasattr(facility, '_cleanup_ui_windows'):
+                    facility._cleanup_ui_windows()
+            
+            logger.info("全施設のWindowSystemをクリーンアップしました")
+            
+        except Exception as e:
+            logger.error(f"WindowSystemクリーンアップエラー: {e}")
+    
     def cleanup(self):
         """リソースのクリーンアップ"""
+        # WindowSystemクリーンアップ
+        self._cleanup_all_windows()
+        
+        # 施設クリーンアップ
         for facility in self.facilities.values():
             if facility.is_active:
                 facility.exit()
