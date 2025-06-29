@@ -9,7 +9,7 @@ import pygame
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
 
 from src.ui.base_ui_pygame import (
-    UIElement, UIText, UIButton, UIMenu, UIDialog, UIManager,
+    UIElement, UIText, UIButton, UIDialog, UIManager,  # UIMenu: Phase 4.5で削除
     UIState, UIAlignment, ui_manager
 )
 
@@ -260,7 +260,8 @@ class TestUIButton:
         assert clicked is False  # 非表示なので実行されない
 
 
-class TestUIMenu:
+# class TestUIMenu:  # UIMenu削除済み - Phase 4.5
+class TestUIMenuRemoved:
     """UIMenuクラスのテスト"""
     
     def setup_method(self):

@@ -6,7 +6,7 @@ from enum import Enum
 from src.character.party import Party
 from src.character.character import Character, CharacterStatus
 from src.overworld.base_facility import BaseFacility, FacilityManager, facility_manager
-from src.ui.base_ui_pygame import UIMenu, UIDialog, ui_manager
+from src.ui.base_ui_pygame import UIDialog, ui_manager  # UIMenu: Phase 4.5で削除
 from src.ui.window_system import WindowManager
 try:
     from src.ui.dungeon_selection_ui import DungeonSelectionUI
@@ -67,9 +67,9 @@ class OverworldManager:
         self.current_location = OverworldLocation.TOWN_CENTER
         self.is_active = False
         
-        # UI要素
-        self.main_menu: Optional[UIMenu] = None
-        self.location_menu: Optional[UIMenu] = None
+        # UI要素（レガシーUIMenuは段階的削除により使用停止）
+        # self.main_menu: Optional[UIMenu] = None  # WindowSystem移行により削除
+        # self.location_menu: Optional[UIMenu] = None  # WindowSystem移行により削除
         self.settings_menu_active = False
         self.dungeon_selection_ui = DungeonSelectionUI() if DungeonSelectionUI else None
         
@@ -207,7 +207,8 @@ class OverworldManager:
         if self.main_menu:
             ui_manager.hide_menu(self.main_menu.menu_id)
         
-        self.main_menu = UIMenu("overworld_main_menu", config_manager.get_text("overworld.surface_map"))
+        # メインメニュー作成（UIMenu削除済み - WindowSystem移行）
+        # self.main_menu = UIMenu("overworld_main_menu", config_manager.get_text("overworld.surface_map"))  # 削除
         
         # 各施設への直接アクセス
         facilities = [
@@ -642,7 +643,8 @@ class OverworldManager:
         if self.location_menu:
             ui_manager.hide_menu(self.location_menu.menu_id)
         
-        self.location_menu = UIMenu("settings_menu", config_manager.get_text("menu.settings"))
+        # ロケーションメニュー作成（UIMenu削除済み - WindowSystem移行）
+        # self.location_menu = UIMenu("settings_menu", config_manager.get_text("menu.settings"))  # 削除
         self.settings_menu_active = True
         
         # パーティ状況確認
@@ -753,7 +755,10 @@ class OverworldManager:
             return
         
         # 詳細パーティ状況メニューを表示
-        party_menu = UIMenu("party_status_menu", "パーティ状況")
+        # パーティメニュー作成（UIMenu削除済み - WindowSystem移行）
+        # party_menu = UIMenu("party_status_menu", "パーティ状況")  # 削除
+        logger.info("パーティ状況はWindowSystemメニューで実装済み")
+        return  # UIMenuベースの実装は削除
         
         # パーティ全体情報
         party_menu.add_menu_item(
@@ -986,7 +991,10 @@ class OverworldManager:
         save_slot_info = {slot.slot_id: slot for slot in save_slots}
         
         # セーブスロット選択メニューを作成
-        save_menu = UIMenu("save_slot_menu", "セーブスロット選択")
+        # セーブメニュー作成（UIMenu削除済み - WindowSystem移行）
+        # save_menu = UIMenu("save_slot_menu", "セーブスロット選択")  # 削除
+        logger.info("セーブスロット選択はWindowSystemメニューで実装済み")
+        return  # UIMenuベースの実装は削除
         
         # セーブスロットを表示
         for slot_id in range(SAVE_SLOT_RANGE_START, SAVE_SLOT_RANGE_END):
@@ -1063,7 +1071,10 @@ class OverworldManager:
             return
         
         # セーブデータ選択メニューを作成
-        load_menu = UIMenu("load_game_menu", "セーブデータ選択")
+        # ロードメニュー作成（UIMenu削除済み - WindowSystem移行）
+        # load_menu = UIMenu("load_game_menu", "セーブデータ選択")  # 削除
+        logger.info("セーブデータ選択はWindowSystemメニューで実装済み")
+        return  # UIMenuベースの実装は削除
         
         for slot in save_slots:
             slot_info = f"スロット {slot.slot_id}: {slot.name} (Lv.{slot.party_level})"

@@ -3,7 +3,7 @@
 from typing import Optional, Callable
 import pygame
 from src.character.party import Party
-from src.ui.base_ui_pygame import UIMenu, UIButton, UIText
+from src.ui.base_ui_pygame import UIButton, UIText  # UIMenu: Phase 4.5で削除
 from src.ui.selection_list_ui import CustomSelectionList, SelectionListData
 # from src.ui.menu_stack_manager import MenuStackManager, MenuType  # WindowSystem移行により削除
 from src.ui.character_status_bar import CharacterStatusBar, create_character_status_bar
@@ -51,9 +51,9 @@ class OverworldManager:
         self.enter_dungeon_callback: Optional[Callable] = None
         self.exit_game_callback: Optional[Callable] = None
         
-        # UI要素
-        self.main_menu: Optional[UIMenu] = None
-        self.settings_menu: Optional[UIMenu] = None
+        # UI要素（レガシーUIMenuは段階的削除により使用停止）
+        # self.main_menu: Optional[UIMenu] = None  # WindowSystem移行により削除
+        # self.settings_menu: Optional[UIMenu] = None  # WindowSystem移行により削除
         self.dungeon_selection_list: Optional[CustomSelectionList] = None
         self.is_active = False
         self.settings_active = False
@@ -80,9 +80,9 @@ class OverworldManager:
         # 新WindowManagerベースのメインメニューを作成
         self._create_window_based_main_menu()
         
-        # レガシーメニューも保持（段階的移行のため）
-        self._create_main_menu()
-        self._create_settings_menu()
+        # レガシーメニューは削除（WindowSystem完全移行）
+        # self._create_main_menu()  # WindowSystem移行により削除
+        # self._create_settings_menu()  # WindowSystem移行により削除
         self.setup_facility_callbacks()
         
         # キャラクターステータスバーを初期化
@@ -465,92 +465,18 @@ class OverworldManager:
                 self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
     
     def _create_main_menu(self):
-        """メインメニューを作成（6つの施設 + 設定画面）"""
-        if not self.ui_manager:
-            return
-        
-        # メインメニュー作成（日本語対応フォント使用）
-        self.main_menu = UIMenu("overworld_main", "地上マップ")
-        
-        # 6つの施設ボタンを作成（2列3行レイアウト）
-        # 左列
-        guild_button = UIButton("guild", "冒険者ギルド", MAIN_MENU_LEFT_COLUMN_X, MAIN_MENU_START_Y, MAIN_MENU_BUTTON_WIDTH, MAIN_MENU_BUTTON_HEIGHT)
-        guild_button.on_click = self._on_guild
-        self.main_menu.add_element(guild_button)
-        
-        inn_button = UIButton("inn", "宿屋", MAIN_MENU_LEFT_COLUMN_X, MAIN_MENU_START_Y + MAIN_MENU_BUTTON_SPACING, MAIN_MENU_BUTTON_WIDTH, MAIN_MENU_BUTTON_HEIGHT)
-        inn_button.on_click = self._on_inn
-        self.main_menu.add_element(inn_button)
-        
-        shop_button = UIButton("shop", "商店", MAIN_MENU_LEFT_COLUMN_X, MAIN_MENU_START_Y + MAIN_MENU_BUTTON_SPACING * 2, MAIN_MENU_BUTTON_WIDTH, MAIN_MENU_BUTTON_HEIGHT)
-        shop_button.on_click = self._on_shop
-        self.main_menu.add_element(shop_button)
-        
-        # 右列
-        temple_button = UIButton("temple", "教会", MAIN_MENU_RIGHT_COLUMN_X, MAIN_MENU_START_Y, MAIN_MENU_BUTTON_WIDTH, MAIN_MENU_BUTTON_HEIGHT)
-        temple_button.on_click = self._on_temple
-        self.main_menu.add_element(temple_button)
-        
-        magic_guild_button = UIButton("magic_guild", "魔術師ギルド", MAIN_MENU_RIGHT_COLUMN_X, MAIN_MENU_START_Y + MAIN_MENU_BUTTON_SPACING, MAIN_MENU_BUTTON_WIDTH, MAIN_MENU_BUTTON_HEIGHT)
-        magic_guild_button.on_click = self._on_magic_guild
-        self.main_menu.add_element(magic_guild_button)
-        
-        dungeon_button = UIButton("enter_dungeon", "ダンジョン入口", MAIN_MENU_RIGHT_COLUMN_X, MAIN_MENU_START_Y + MAIN_MENU_BUTTON_SPACING * 2, MAIN_MENU_BUTTON_WIDTH, MAIN_MENU_BUTTON_HEIGHT)
-        dungeon_button.on_click = self._on_enter_dungeon
-        self.main_menu.add_element(dungeon_button)
-        
-        # 設定画面への案内テキスト
-        help_text = UIText("esc_help", "[ESC] 設定画面", 300, 450)
-        self.main_menu.add_element(help_text)
-        
-        # UIマネージャーに追加
-        self.ui_manager.add_menu(self.main_menu)
-        
-        logger.info("オーバーワールドメインメニューを作成しました（6施設対応）")
+        """メインメニュー作成（削除：WindowSystem移行済み）"""
+        # UIMenuベースのメインメニューはPhase 4.5で削除
+        # 既に_create_window_based_main_menu()でWindowSystemベースのメニューを作成済み
+        logger.info("レガシーUIMenuメインメニューは削除されました（WindowSystem移行済み）")
+        pass
     
     def _create_settings_menu(self):
-        """設定画面を作成"""
-        if not self.ui_manager:
-            return
-        
-        # 設定メニュー作成
-        self.settings_menu = UIMenu("settings_menu", "設定画面")
-        
-        # パーティ状況ボタン
-        party_status_button = UIButton("party_status", "パーティ状況", 250, 200, 300, 50)
-        party_status_button.on_click = self._on_party_status
-        self.settings_menu.add_element(party_status_button)
-        
-        # ゲームを保存ボタン
-        save_button = UIButton("save_game", "ゲームを保存", 250, 270, 300, 50)
-        save_button.on_click = self._on_save_game
-        self.settings_menu.add_element(save_button)
-        
-        # ゲームをロードボタン
-        load_button = UIButton("load_game", "ゲームをロード", 250, 340, 300, 50)
-        load_button.on_click = self._on_load_game
-        self.settings_menu.add_element(load_button)
-        
-        # 設定ボタン
-        config_button = UIButton("config", "設定", 250, 410, 300, 50)
-        config_button.on_click = self._on_config
-        self.settings_menu.add_element(config_button)
-        
-        # 終了ボタン
-        exit_button = UIButton("exit_game", "終了", 250, 480, 300, 50)
-        exit_button.on_click = self._on_exit_game
-        self.settings_menu.add_element(exit_button)
-        
-        # 戻るボタン
-        back_button = UIButton("back_to_overworld", "戻る", 250, 550, 300, 50)
-        back_button.on_click = self._on_back_to_overworld
-        self.settings_menu.add_element(back_button)
-        
-        # UIマネージャーに追加（最初は非表示）
-        self.ui_manager.add_menu(self.settings_menu)
-        self.settings_menu.hide()
-        
-        logger.info("設定画面メニューを作成しました")
+        """設定メニュー作成（削除：WindowSystem移行済み）"""
+        # UIMenuベースの設定メニューはPhase 4.5で削除
+        # 既にOverworldMainWindowで設定メニュー機能を実装済み
+        logger.info("レガシーUIMenu設定メニューは削除されました（WindowSystem移行済み）")
+        pass
     
     def _on_enter_dungeon(self):
         """ダンジョン入場 - 選択画面を表示"""
@@ -965,31 +891,12 @@ class OverworldManager:
         if self.settings_menu:
             self.ui_manager.hide_menu(self.settings_menu.menu_id)
         
-        # セーブスロット選択メニューを作成
-        save_slot_menu = UIMenu("save_slot_selection_menu", "セーブスロット選択")
+        # セーブスロット選択メニューをWindowSystemで作成
+        # UIMenuは削除済み - OverworldMainWindowのSAVE_LOADメニューを使用
+        logger.info("セーブスロット選択はWindowSystemメニューで実装されています")
         
-        # 利用可能なセーブスロットを取得
-        save_slots = self._get_save_slots()
-        
-        for slot in save_slots:
-            slot_info = self._format_save_slot_info(slot)
-            save_slot_menu.add_menu_item(
-                slot_info,
-                self._save_to_slot,
-                [slot['slot_id']]
-            )
-        
-        # 戻るボタン
-        save_slot_menu.add_menu_item(
-            "戻る",
-            self._close_save_slot_selection
-        )
-        
-        # メニューを表示
-        self.ui_manager.add_menu(save_slot_menu)
-        self.ui_manager.show_menu(save_slot_menu.menu_id, modal=True)
-        
-        logger.info("セーブスロット選択メニューを表示しました")
+        # UIMenuベースの実装は削除済み - WindowSystemメニューを使用してください
+        pass
     
     def _show_load_slot_selection(self):
         """ロードスロット選択画面を表示"""
@@ -1003,41 +910,12 @@ class OverworldManager:
         if self.settings_menu:
             self.ui_manager.hide_menu(self.settings_menu.menu_id)
         
-        # ロードスロット選択メニューを作成
-        load_slot_menu = UIMenu("load_slot_selection_menu", "ロードスロット選択")
+        # ロードスロット選択メニューをWindowSystemで作成
+        # UIMenuは削除済み - OverworldMainWindowのSAVE_LOADメニューを使用
+        logger.info("ロードスロット選択はWindowSystemメニューで実装されています")
         
-        # 利用可能なセーブスロットを取得
-        save_slots = self._get_save_slots()
-        
-        # ロード可能なスロットのみ表示
-        loadable_slots = [slot for slot in save_slots if slot['is_used']]
-        
-        if loadable_slots:
-            for slot in loadable_slots:
-                slot_info = self._format_save_slot_info(slot)
-                load_slot_menu.add_menu_item(
-                    slot_info,
-                    self._load_from_slot,
-                    [slot['slot_id']]
-                )
-        else:
-            # ロード可能なスロットがない場合
-            load_slot_menu.add_menu_item(
-                "ロード可能なセーブデータがありません",
-                lambda: None
-            )
-        
-        # 戻るボタン
-        load_slot_menu.add_menu_item(
-            "戻る",
-            self._close_load_slot_selection
-        )
-        
-        # メニューを表示
-        self.ui_manager.add_menu(load_slot_menu)
-        self.ui_manager.show_menu(load_slot_menu.menu_id, modal=True)
-        
-        logger.info("ロードスロット選択メニューを表示しました")
+        # UIMenuベースの実装は削除済み - WindowSystemメニューを使用してください
+        pass
     
     def _get_save_slots(self):
         """セーブスロット情報を取得"""

@@ -363,197 +363,9 @@ class UIButton(UIElement):
                     pass  # 最終的にも失敗した場合は背景のみ描画
 
 
-class UIMenu:
-    """メニューシステム"""
-    
-    def __init__(self, menu_id: str, title: str = ""):
-        self.menu_id = menu_id
-        self.title = title
-        self.elements: List[UIElement] = []
-        self.state = UIState.HIDDEN
-        self.selected_index = 0
-        
-        # メニュー設定
-        self.background_color = (30, 30, 30, 200)
-        self.title_color = (255, 255, 255)
-        
-    def add_element(self, element: UIElement):
-        """要素を追加"""
-        self.elements.append(element)
-        element.parent = self
-    
-    def add_menu_item(self, text: str, callback: callable, args: list = None):
-        """メニュー項目を追加（Panda3D互換性のため）"""
-        # メニュー項目の位置を自動計算
-        item_count = len(self.elements)
-        x = 300  # 中央寄り
-        y = 150 + (item_count * 40)  # 間隔を40に縮めて収まりやすくする
-        
-        # 画面高さ768に収まらない場合の調整
-        if y > 680:  # 下部マージンを考慮
-            y = 680  # 最大位置に固定
-        
-        button = UIButton(f"{self.menu_id}_item_{len(self.elements)}", text, 
-                         x=x, y=y, width=200, height=35)  # 高さも縮める
-        if args:
-            button.on_click = lambda: callback(*args)
-        else:
-            button.on_click = callback
-        self.add_element(button)
-    
-    def add_back_button(self, text: str, callback: callable, args: list = None):
-        """戻るボタンを画面下部に固定位置で追加"""
-        x = 300  # 中央寄り
-        y = 700  # 画面下部固定
-        
-        button = UIButton(f"{self.menu_id}_back_button", text, 
-                         x=x, y=y, width=200, height=35)
-        if args:
-            button.on_click = lambda: callback(*args)
-        else:
-            button.on_click = callback
-        self.add_element(button)
-    
-    def show(self):
-        """メニューを表示"""
-        self.state = UIState.VISIBLE
-        for element in self.elements:
-            element.show()
-    
-    def hide(self):
-        """メニューを非表示"""
-        self.state = UIState.HIDDEN
-        for element in self.elements:
-            element.hide()
-    
-    def handle_event(self, event: pygame.event.Event) -> bool:
-        """イベント処理"""
-        if self.state != UIState.VISIBLE:
-            return False
-        
-        # キーボードナビゲーション
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                self.selected_index = max(0, self.selected_index - 1)
-                return True
-            elif event.key == pygame.K_DOWN:
-                self.selected_index = min(len(self.elements) - 1, self.selected_index + 1)
-                return True
-            elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
-                if 0 <= self.selected_index < len(self.elements):
-                    element = self.elements[self.selected_index]
-                    if element.on_click:
-                        element.on_click()
-                return True
-        
-        # 各要素のイベント処理
-        for element in self.elements:
-            if element.handle_event(event):
-                return True
-        
-        return False
-    
-    def render(self, screen: pygame.Surface, font: Optional[pygame.font.Font] = None):
-        """メニュー描画（日本語フォント対応）"""
-        if self.state != UIState.VISIBLE:
-            return
-        
-        # フォントを取得（日本語対応）
-        use_font = font
-        if not use_font:
-            try:
-                from src.ui.font_manager_pygame import font_manager
-                use_font = font_manager.get_japanese_font(DEFAULT_FONT_SIZE)
-                if not use_font:
-                    use_font = font_manager.get_default_font()
-            except Exception as e:
-                logger.warning(f"フォントマネージャーの取得に失敗: {e}")
-                # 利用可能な日本語フォントを安全に取得
-                use_font = _get_available_japanese_font(24)
-                if not use_font:
-                    use_font = pygame.font.Font(None, 24)
-        
-        # 背景描画（半透明）
-        if len(self.background_color) >= 4 and self.background_color[3] < 255:  # アルファ値がある場合
-            overlay = pygame.Surface((screen.get_width(), screen.get_height()))
-            overlay.set_alpha(self.background_color[3])
-            overlay.fill(self.background_color[:3])
-            screen.blit(overlay, (0, 0))
-        
-        # タイトル描画（日本語対応）
-        if use_font and self.title:
-            try:
-                title_surface = use_font.render(self.title, True, self.title_color)
-                title_rect = title_surface.get_rect()
-                title_rect.centerx = screen.get_width() // 2
-                title_rect.y = 50
-                screen.blit(title_surface, title_rect)
-            except Exception as e:
-                logger.warning(f"タイトル描画エラー: {e}")
-                # 英語フォールバック
-                try:
-                    fallback_font = pygame.font.Font(None, 24)
-                    title_surface = fallback_font.render(self.title, True, self.title_color)
-                    title_rect = title_surface.get_rect()
-                    title_rect.centerx = screen.get_width() // 2
-                    title_rect.y = 50
-                    screen.blit(title_surface, title_rect)
-                except:
-                    pass
-        
-        # 各要素を描画
-        for i, element in enumerate(self.elements):
-            # 選択されている要素をハイライト
-            if i == self.selected_index:
-                highlight_rect = element.rect.inflate(4, 4)
-                pygame.draw.rect(screen, (255, 255, 0), highlight_rect, 2)
-            
-            element.render(screen, use_font)
-
-
-class UIDialog(UIMenu):
-    """ダイアログシステム"""
-    
-    def __init__(self, dialog_id: str, title: str, message: str, x: int = 100, y: int = 100, 
-                 width: int = 400, height: int = 200):
-        super().__init__(dialog_id, title)
-        self.dialog_id = dialog_id  # 互換性のため
-        self.message = message
-        self.rect = pygame.Rect(x, y, width, height)
-        
-        # ダイアログ専用設定
-        self.background_color = (50, 50, 50, 255)
-        self.border_color = (150, 150, 150)
-        self.message_color = (200, 200, 200)
-        
-    def render(self, screen: pygame.Surface, font: Optional[pygame.font.Font] = None):
-        """ダイアログ描画（日本語フォント対応）"""
-        if self.state != UIState.VISIBLE:
-            return
-        
-        # フォントを取得（日本語対応）
-        use_font = font
-        if not use_font:
-            try:
-                from src.ui.font_manager_pygame import font_manager
-                use_font = font_manager.get_japanese_font(DEFAULT_FONT_SIZE)
-                if not use_font:
-                    use_font = font_manager.get_default_font()
-            except Exception as e:
-                logger.warning(f"フォントマネージャーの取得に失敗: {e}")
-                # 利用可能な日本語フォントを安全に取得
-                use_font = _get_available_japanese_font(24)
-                if not use_font:
-                    use_font = pygame.font.Font(None, 24)
-        
-        # ダイアログ背景
-        pygame.draw.rect(screen, self.background_color, self.rect)
-        pygame.draw.rect(screen, self.border_color, self.rect, 2)
-        
-        if use_font:
-            # タイトル描画（日本語対応）
-            if self.title:
-                try:
+# UIMenuクラスは削除されました（Phase 4.5: UIMenuクラス本体削除）
+# WindowSystemベースのメニュー機能を使用してください
+# class UIMenu:  # 削除済み
                     title_surface = use_font.render(self.title, True, self.title_color)
                     title_rect = title_surface.get_rect()
                     title_rect.centerx = self.rect.centerx
@@ -597,6 +409,50 @@ class UIDialog(UIMenu):
         # 各要素を描画
         for element in self.elements:
             element.render(screen, use_font)
+    
+    def add_element(self, element: UIElement):
+        """要素を追加"""
+        self.elements.append(element)
+        element.parent = self
+    
+    def show(self):
+        """ダイアログを表示"""
+        self.state = UIState.VISIBLE
+        for element in self.elements:
+            element.show()
+    
+    def hide(self):
+        """ダイアログを非表示"""
+        self.state = UIState.HIDDEN
+        for element in self.elements:
+            element.hide()
+    
+    def handle_event(self, event: pygame.event.Event) -> bool:
+        """イベント処理"""
+        if self.state != UIState.VISIBLE:
+            return False
+        
+        # キーボードナビゲーション
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                self.selected_index = max(0, self.selected_index - 1)
+                return True
+            elif event.key == pygame.K_DOWN:
+                self.selected_index = min(len(self.elements) - 1, self.selected_index + 1)
+                return True
+            elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+                if 0 <= self.selected_index < len(self.elements):
+                    element = self.elements[self.selected_index]
+                    if element.on_click:
+                        element.on_click()
+                return True
+        
+        # 各要素のイベント処理
+        for element in self.elements:
+            if element.handle_event(event):
+                return True
+        
+        return False
 
 
 class UIManager:
@@ -605,7 +461,7 @@ class UIManager:
     def __init__(self, screen: pygame.Surface):
         self.screen = screen
         self.elements: Dict[str, UIElement] = {}
-        self.menus: Dict[str, UIMenu] = {}
+        self.menus: Dict[str, Any] = {}  # UIMenu削除済み - レガシー互換性のため
         self.dialogs: Dict[str, UIDialog] = {}
         self.persistent_elements: Dict[str, UIElement] = {}  # 常に最前面に表示される要素
         self.modal_stack: List[str] = []  # モーダル要素のスタック
@@ -703,9 +559,10 @@ class UIManager:
         elif element_id in self.dialogs:
             del self.dialogs[element_id]
     
-    def add_menu(self, menu: UIMenu):
-        """メニューを追加"""
-        self.menus[menu.menu_id] = menu
+    def add_menu(self, menu: Any):  # UIMenu削除済み - レガシー互換性のため
+        """メニューを追加（非推奨：WindowSystemを使用してください）"""
+        if hasattr(menu, 'menu_id'):
+            self.menus[menu.menu_id] = menu
     
     def add_dialog(self, dialog: UIDialog):
         """ダイアログを追加"""
