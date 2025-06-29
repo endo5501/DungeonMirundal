@@ -10,7 +10,6 @@ from src.ui.character_status_bar import CharacterStatusBar, create_character_sta
 from src.ui.window_system.overworld_main_window import OverworldMainWindow
 from src.ui.window_system import WindowManager
 from src.utils.logger import logger
-from src.core.config_manager import config_manager
 
 # Pygame地上部システム定数
 MAIN_MENU_BUTTON_WIDTH = 200
@@ -864,7 +863,6 @@ class OverworldManager:
         """セーブスロット情報を取得"""
         # TODO: 実際のセーブデータストレージから取得
         # 現在は仮のデータを返す
-        import datetime
         
         slots = []
         for slot_id in range(SAVE_SLOT_RANGE_START, SAVE_SLOT_RANGE_END):
