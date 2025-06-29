@@ -163,6 +163,21 @@ def test_statistics_tracking_across_operations(self):
 - [ ] CI/CD環境での確実な動作
 - [ ] テストカバレッジの維持・向上
 
+## 現在の状況（2025-06-29更新）
+**WindowSystem移行は完了したが、テスト環境の安定化が未完了**。WSL2環境での特有の問題と考えられる。
+
+### 検出された問題の現状
+1. **フォント関連テスト失敗**: 12テストが`pygame.error: Invalid font`で失敗
+2. **Statistics追跡テスト失敗**: イベント処理統計の同期問題
+
+### 影響範囲
+- **優先度**: 中（品質保証）
+- **緊急性**: 中（継続的なテスト失敗）
+- **対象**: WindowSystemテストスイート
+
+### 推奨アクション
+フォント問題はWSL2環境特有の可能性が高いため、実際のゲーム動作には影響しない。Statistics問題も機能的には問題ないが、テスト環境の改善が必要。
+
 ## 関連ドキュメント
 - `docs/todos/0032_window_system_migration_high_priority.md`: WindowSystem移行（完了）
 - `docs/window_system.md`: WindowSystem設計書

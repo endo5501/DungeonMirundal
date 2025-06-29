@@ -171,6 +171,24 @@ DungeonMenuWindow (復帰)
 - [ ] 既存戦闘システムとの互換性確認
 - [ ] パフォーマンス劣化なし確認
 
+## 現在の状況（2025-06-29更新）
+**既存BattleUIWindow実装は存在するが、ダンジョンシステムとの統合が未完了**。
+
+### 前提条件の確認状況
+- ✅ WindowManager, FocusManagerの安定動作（0034で確認済み）
+- 🔄 既存BattleUIWindow, BattleUIManagerの動作確認（要調査）
+- 🔄 ダンジョンシステムの戦闘発生ロジック（要調査）
+
+### 影響範囲
+- **優先度**: 中（ゲーム機能完成度）
+- **緊急性**: 低（既存実装で最低限動作）
+- **依存関係**: ダンジョンシステム設計
+
+### 推奨アプローチ
+1. 既存BattleUIWindow実装の詳細調査
+2. ダンジョンシステムとの統合ポイント特定
+3. 最小限の統合から段階的実装
+
 ## 関連ドキュメント
 - `docs/todos/0033_window_system_migration_medium_priority.md`: 本移行作業
 - `src/ui/window_system/battle_ui_window.py`: 既存戦闘UIウィンドウ実装

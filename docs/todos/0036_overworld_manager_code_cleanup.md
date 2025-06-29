@@ -106,6 +106,19 @@ from datetime import datetime  # 未使用
 - [ ] overworld_manager関連テストの通過
 - [ ] WindowSystem統合テストの通過
 
+## 現在の状況（2025-06-29更新）
+**0042でoverworld_manager_pygame.pyの主要統合作業が完了**。ただし、Pylance診断で検出された未使用インポートの削除作業は未実施。
+
+### 影響範囲
+- **優先度**: 中（コード品質向上）
+- **緊急性**: 低（機能に影響なし）
+- **対象ファイル**: overworld_manager_pygame.py
+
+### 次回アクション
+1. 実際の使用箇所をrgコマンドで再確認
+2. 未使用が確定したインポートを削除
+3. テスト実行で影響がないことを確認
+
 ## 関連ドキュメント
 - `docs/todos/0032_window_system_migration_high_priority.md`: WindowSystem移行（完了）
 - `docs/todos/0035_window_system_legacy_cleanup.md`: レガシークリーンアップ計画
