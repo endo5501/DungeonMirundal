@@ -17,12 +17,48 @@ class TestMenuWindow:
     
     def setup_method(self):
         """各テストメソッドの前に実行される"""
+        # Pygame全体の完全初期化
+        pygame.quit()  # 既存の状態をクリア
         pygame.init()
-        pygame.display.set_mode((1, 1), pygame.NOFRAME)
+        
+        # ディスプレイの初期化
+        pygame.display.set_mode((800, 600))  # 十分なサイズで初期化
+        
+        # フォントモジュールの確実な初期化
+        pygame.font.init()
+        
+        # pygame_gui用UIManagerを初期化
+        self.ui_manager = pygame_gui.UIManager((800, 600))
     
     def teardown_method(self):
         """各テストメソッドの後に実行される"""
-        pygame.quit()
+        # UI要素の完全クリーンアップ
+        if hasattr(self, 'ui_manager'):
+            try:
+                self.ui_manager.clear_and_reset()
+            except:
+                pass
+        
+        # ディスプレイの終了
+        try:
+            if pygame.display.get_init():
+                pygame.display.quit()
+        except:
+            pass
+        
+        # フォントモジュールの確実な終了
+        try:
+            if pygame.font.get_init():
+                pygame.font.quit()
+        except:
+            pass
+        
+        # Pygame全体の終了
+        try:
+            if pygame.get_init():
+                pygame.quit()
+        except:
+            pass
     
     def test_menu_window_inherits_from_window(self):
         """MenuWindowがWindowクラスを継承することを確認"""
