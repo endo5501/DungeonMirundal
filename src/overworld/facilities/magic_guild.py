@@ -8,6 +8,7 @@ from src.character.character import Character
 from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
 from src.ui.window_system import WindowManager
 from src.ui.window_system.facility_menu_window import FacilityMenuWindow
+from src.ui.window_system.magic_guild_service_window import MagicGuildServiceWindow
 from src.ui.selection_list_ui import ItemSelectionList
 # NOTE: panda3D UI components removed - using pygame-based UI now
 from src.core.config_manager import config_manager
@@ -309,26 +310,27 @@ class MagicGuild(BaseFacility):
         self._show_spellbook_category("高位魔法の魔術書", advanced_spellbooks)
     
     def _show_spellbook_category(self, category_name: str, spellbooks: List[Dict[str, Any]]):
-        """魔術書カテゴリの商品一覧を表示"""
+        """魔術書カテゴリの商品一覧を表示（MagicGuildServiceWindow使用）"""
         if not self.current_party:
             return
         
-        shop_menu = UIMenu("spellbook_category_menu", category_name)
+        # MagicGuildServiceWindow設定を作成
+        guild_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['spellbook_shop'],
+            'available_items': spellbooks,
+            'title': category_name
+        }
         
-        for spellbook in spellbooks:
-            spellbook_info = f"{spellbook['name']} - {spellbook['price']}G"
-            shop_menu.add_menu_item(
-                spellbook_info,
-                self._show_spellbook_details,
-                [spellbook]
-            )
+        # MagicGuildServiceWindowを作成
+        spellbook_shop_window = MagicGuildServiceWindow('magic_guild_spellbook_category', guild_config)
         
-        shop_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._show_spellbook_shop_menu
-        )
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(spellbook_shop_window, push_to_stack=True)
         
-        self._show_submenu(shop_menu)
+        logger.info(f"魔術書カテゴリウィンドウを表示しました: {category_name}")
     
     def _show_spellbook_details(self, spellbook: Dict[str, Any]):
         """魔術書の詳細情報と購入確認を表示"""
@@ -400,9 +402,7 @@ class MagicGuild(BaseFacility):
         logger.info(f"魔術書購入: {spellbook['name']} ({price}G)")
     
     def _show_available_spells(self, character: Character):
-        """習得可能魔法一覧を表示"""
-        spells_menu = UIMenu("available_spells_menu", f"{character.name} の魔法習得")
-        
+        """習得可能魔法一覧を表示（MagicGuildServiceWindow使用）"""
         # キャラクターのレベルに応じて習得可能な魔法を表示
         character_level = character.experience.level
         available_for_character = []
@@ -416,20 +416,24 @@ class MagicGuild(BaseFacility):
             self._show_error_message(f"{character.name} が習得できる魔法がありません")
             return
         
-        for spell_id, spell_data in available_for_character:
-            spell_info = f"{spell_data['name']} Lv.{spell_data['level']} - {spell_data['cost']}G"
-            spells_menu.add_menu_item(
-                spell_info,
-                self._learn_spell,
-                [character, spell_id, spell_data]
-            )
+        # MagicGuildServiceWindow設定を作成
+        guild_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['spell_learning'],
+            'selected_character': character,
+            'available_items': available_for_character,
+            'title': f'{character.name} の魔法習得'
+        }
         
-        spells_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._show_spell_learning_menu
-        )
+        # MagicGuildServiceWindowを作成
+        spell_learning_window = MagicGuildServiceWindow('magic_guild_spell_learning', guild_config)
         
-        self._show_submenu(spells_menu)
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(spell_learning_window, push_to_stack=True)
+        
+        logger.info(f"{character.name}の魔法習得ウィンドウを表示しました")
     
     def _learn_spell(self, character: Character, spell_id: str, spell_data: Dict[str, Any]):
         """魔法習得処理"""
@@ -512,64 +516,46 @@ class MagicGuild(BaseFacility):
             )
             return
         
-        # 鑑定メニューを作成
-        identification_menu = UIMenu("identification_menu", "アイテム鑑定")
+        # MagicGuildServiceWindow設定を作成
+        guild_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['identification'],
+            'available_items': unidentified_items,
+            'title': 'アイテム鑑定'
+        }
         
-        for slot, item_instance, item in unidentified_items:
-            # アイテム表示名を作成
-            item_name = f"未鑑定の{item.item_type.value}"
-            if item_instance.quantity > 1:
-                item_name += f" x{item_instance.quantity}"
-            
-            identification_cost = self.service_costs['item_identification']
-            total_cost = identification_cost * item_instance.quantity
-            
-            item_info = f"{item_name} ({total_cost}G)"
-            
-            identification_menu.add_menu_item(
-                item_info,
-                self._show_identification_confirmation,
-                [slot, item_instance, item]
-            )
+        # MagicGuildServiceWindowを作成
+        identification_window = MagicGuildServiceWindow('magic_guild_identification', guild_config)
         
-        identification_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [identification_menu]
-        )
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(identification_window, push_to_stack=True)
         
-        self._show_submenu(identification_menu)
+        logger.info("アイテム鑑定ウィンドウを表示しました")
     
     def _show_analysis_menu(self):
-        """魔法分析メニューを表示"""
+        """魔法分析メニューを表示（MagicGuildServiceWindow使用）"""
         if not self.current_party:
             self._show_error_message("パーティが設定されていません")
             return
         
-        analysis_menu = UIMenu("analysis_menu", "魔法分析")
+        # MagicGuildServiceWindow設定を作成
+        guild_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['analysis', 'character_analysis', 'spell_usage_check'],
+            'title': '魔法分析'
+        }
         
-        analysis_menu.add_menu_item(
-            "パーティの魔法適性分析",
-            self._analyze_party_magic_aptitude
-        )
+        # MagicGuildServiceWindowを作成
+        analysis_window = MagicGuildServiceWindow('magic_guild_analysis', guild_config)
         
-        analysis_menu.add_menu_item(
-            "キャラクター個別分析",
-            self._show_character_analysis_menu
-        )
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(analysis_window, push_to_stack=True)
         
-        analysis_menu.add_menu_item(
-            "魔法使用回数確認",
-            self._show_spell_usage_info
-        )
-        
-        analysis_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [analysis_menu]
-        )
-        
-        self._show_submenu(analysis_menu)
+        logger.info("魔法分析ウィンドウを表示しました")
     
     def _analyze_party_magic_aptitude(self):
         """パーティの魔法適性分析"""
@@ -670,30 +656,27 @@ class MagicGuild(BaseFacility):
         logger.info(f"パーティ魔法適性分析実行: {self.current_party.name}")
     
     def _show_character_analysis_menu(self):
-        """キャラクター個別分析メニュー"""
+        """キャラクター個別分析メニュー（MagicGuildServiceWindow使用）"""
         logger.debug("キャラクター個別分析メニューを表示します")
         if not self.current_party:
             return
         
-        char_menu = UIMenu("character_analysis_menu", "キャラクター分析")
+        # MagicGuildServiceWindow設定を作成
+        guild_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['character_analysis'],
+            'title': 'キャラクター分析'
+        }
         
-        for character in self.current_party.get_all_characters():
-            char_info = f"{character.name} (Lv.{character.experience.level})"
-            char_menu.add_menu_item(
-                char_info,
-                self._analyze_character,
-                [character]
-            )
+        # MagicGuildServiceWindowを作成
+        char_analysis_window = MagicGuildServiceWindow('magic_guild_character_analysis', guild_config)
         
-        # Store the character analysis menu for later reference
-        self.character_analysis_menu = char_menu
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(char_analysis_window, push_to_stack=True)
         
-        char_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_analysis_menu_from_character_analysis
-        )
-        
-        self._show_submenu(char_menu)
+        logger.info("キャラクター分析ウィンドウを表示しました")
     
     def _analyze_character(self, character: Character):
         """キャラクター個別分析"""
@@ -827,23 +810,23 @@ class MagicGuild(BaseFacility):
             )
             return
         
-        usage_menu = UIMenu("spell_usage_menu", "魔法使用回数確認")
+        # MagicGuildServiceWindow設定を作成
+        guild_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['spell_usage_check'],
+            'available_items': magic_users,
+            'title': '魔法使用回数確認'
+        }
         
-        for character in magic_users:
-            char_info = f"{character.name} (Lv.{character.experience.level} {character.get_class_name()})"
-            usage_menu.add_menu_item(
-                char_info,
-                self._show_character_spell_usage,
-                [character]
-            )
+        # MagicGuildServiceWindowを作成
+        usage_check_window = MagicGuildServiceWindow('magic_guild_usage_check', guild_config)
         
-        usage_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [usage_menu]
-        )
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(usage_check_window, push_to_stack=True)
         
-        self._show_submenu(usage_menu)
+        logger.info("魔法使用回数確認ウィンドウを表示しました")
     
     def _show_character_spell_usage(self, character):
         """キャラクター個別の魔法使用回数表示"""

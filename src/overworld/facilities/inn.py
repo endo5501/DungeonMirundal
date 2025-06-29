@@ -6,7 +6,9 @@ from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.party import Party
 from src.ui.window_system import WindowManager
 from src.ui.window_system.facility_menu_window import FacilityMenuWindow
+from src.ui.window_system.inn_service_window import InnServiceWindow
 from src.ui.selection_list_ui import ItemSelectionList, CustomSelectionList, SelectionListData
+from src.ui.base_ui_pygame import ui_manager
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 from src.inventory.inventory import Inventory, InventoryManager
@@ -112,9 +114,9 @@ class Inn(BaseFacility):
             item_id = data.get('id')
             
             if item_id == 'adventure_preparation':
-                return self._show_adventure_preparation()
+                return self._show_adventure_service()
             elif item_id == 'item_storage':
-                return self._show_item_organization()
+                return self._show_item_service()
             elif item_id == 'talk_innkeeper':
                 return self._talk_to_innkeeper()
             elif item_id == 'travel_info':
@@ -310,21 +312,56 @@ class Inn(BaseFacility):
     
     # === 冒険準備メニュー ===
     
-    def _show_adventure_preparation(self):
-        """冒険の準備メニューを表示"""
+    def _show_adventure_service(self):
+        """冒険サービス統合ウィンドウを表示（InnServiceWindow使用）"""
         if not self.current_party:
             self.show_error_dialog(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
             return
         
-        prep_menu = UIMenu("adventure_prep_menu", "冒険の準備")
+        # InnServiceWindow設定を作成
+        inn_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['adventure_prep', 'item_management', 'magic_management', 'equipment_management'],
+            'title': '冒険の準備'
+        }
         
-        prep_menu.add_menu_item("アイテム整理", self._show_item_organization)
-        prep_menu.add_menu_item("魔術スロット設定", self._show_spell_slot_management)
-        prep_menu.add_menu_item("祈祷スロット設定", self._show_prayer_slot_management)
-        prep_menu.add_menu_item("パーティ装備確認", self._show_party_equipment_status)
-        prep_menu.add_menu_item(config_manager.get_text("menu.back"), self.back_to_previous_menu)
+        # InnServiceWindowを作成
+        adventure_window = InnServiceWindow('inn_adventure_prep', inn_config)
         
-        self.show_submenu(prep_menu, {'menu_type': 'adventure_prep'})
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(adventure_window, push_to_stack=True)
+        
+        logger.info("冒険準備サービスウィンドウを表示しました")
+    
+    def _show_item_service(self):
+        """アイテム管理サービスウィンドウを表示（InnServiceWindow使用）"""
+        if not self.current_party:
+            self.show_error_dialog(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
+            return
+        
+        # InnServiceWindow設定を作成
+        inn_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['item_management'],
+            'title': 'アイテム整理'
+        }
+        
+        # InnServiceWindowを作成
+        item_window = InnServiceWindow('inn_item_management', inn_config)
+        
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(item_window, push_to_stack=True)
+        
+        logger.info("アイテム管理サービスウィンドウを表示しました")
+    
+    def _show_adventure_preparation(self):
+        """冒険の準備メニューを表示（レガシー - 移行済み）"""
+        # UIMenu削除済み: _show_adventure_preparation()は_show_adventure_service()に移行されました
+        return self._show_adventure_service()
     
     # === アイテム管理 ===
     
@@ -356,21 +393,23 @@ class Inn(BaseFacility):
             self.show_error_dialog(config_manager.get_text("common.error"), config_manager.get_text("app_log.item_organization_display_failed"))
     
     def _show_new_item_organization_menu(self):
-        """新しいアイテム整理メニューを表示"""
-        item_mgmt_menu = UIMenu("new_item_mgmt_menu", "アイテム整理")
+        """新しいアイテム整理メニューを表示（InnServiceWindow使用）"""
+        # InnServiceWindow設定を作成
+        inn_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['item_management'],
+            'title': 'アイテム整理'
+        }
         
-        # キャラクター一覧を追加
-        for character in self.current_party.get_all_characters():
-            item_mgmt_menu.add_menu_item(
-                f"{character.name}のアイテム",
-                self._show_character_item_management,
-                [character]
-            )
+        # InnServiceWindowを作成
+        item_mgmt_window = InnServiceWindow('inn_item_organization', inn_config)
         
-        item_mgmt_menu.add_menu_item("宿屋倉庫の状況", self._show_inn_storage_status)
-        item_mgmt_menu.add_menu_item(config_manager.get_text("menu.back"), self.back_to_previous_menu)
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(item_mgmt_window, push_to_stack=True)
         
-        self.show_submenu(item_mgmt_menu)
+        logger.info("アイテム整理サービスウィンドウを表示しました")
     
     def _show_inn_storage_status(self):
         """宿屋倉庫の状況を表示"""
@@ -406,91 +445,134 @@ class Inn(BaseFacility):
             self.show_error_dialog(config_manager.get_text("common.error"), config_manager.get_text("app_log.storage_status_display_failed"))
     
     def _show_character_item_management(self, character):
-        """キャラクターアイテム管理メニューを表示"""
-        char_menu = UIMenu("character_item_menu", f"{character.name} - アイテム管理")
+        """キャラクターアイテム管理メニューを表示（InnServiceWindow使用）"""
+        # InnServiceWindow設定を作成
+        inn_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['item_management'],
+            'selected_character': character,
+            'title': f'{character.name} - アイテム管理'
+        }
         
-        char_menu.add_menu_item("倉庫→キャラクター", self._show_storage_to_character_transfer, [character])
-        char_menu.add_menu_item("キャラクター→倉庫", self._show_character_to_storage_transfer, [character])
-        char_menu.add_menu_item("アイテム使用", self._show_character_item_usage, [character])
-        char_menu.add_menu_item("詳細表示", self._show_character_item_detail, [character])
-        char_menu.add_menu_item(config_manager.get_text("menu.back"), self.back_to_previous_menu)
+        # InnServiceWindowを作成
+        char_item_window = InnServiceWindow('inn_character_item_mgmt', inn_config)
         
-        self.show_submenu(char_menu, {'character': character})
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(char_item_window, push_to_stack=True)
+        
+        logger.info(f"{character.name}のアイテム管理ウィンドウを表示しました")
     
     # === 魔法管理 ===
     
     def _show_spell_slot_management(self):
-        """魔術スロット設定メニューを表示"""
+        """魔術スロット設定メニューを表示（InnServiceWindow使用）"""
         if not self.current_party:
             return
         
-        spell_menu = UIMenu("spell_mgmt_menu", "魔術スロット設定")
+        # InnServiceWindow設定を作成
+        inn_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['magic_management', 'spell_slot_management'],
+            'title': '魔術スロット設定'
+        }
         
-        for character in self.current_party.get_all_characters():
-            spell_menu.add_menu_item(
-                f"{character.name}の魔術",
-                self._show_character_spell_management,
-                [character]
-            )
+        # InnServiceWindowを作成
+        spell_mgmt_window = InnServiceWindow('inn_spell_management', inn_config)
         
-        spell_menu.add_menu_item(config_manager.get_text("menu.back"), self.back_to_previous_menu)
-        self.show_submenu(spell_menu)
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(spell_mgmt_window, push_to_stack=True)
+        
+        logger.info("魔術スロット設定ウィンドウを表示しました")
     
     def _show_prayer_slot_management(self):
-        """祈祷スロット設定メニューを表示"""
+        """祈祷スロット設定メニューを表示（InnServiceWindow使用）"""
         if not self.current_party:
             return
         
-        prayer_menu = UIMenu("prayer_mgmt_menu", "祈祷スロット設定")
+        # InnServiceWindow設定を作成
+        inn_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['magic_management'],  # 祈祷も魔術管理の一部として統合
+            'title': '祈祷スロット設定'
+        }
         
-        for character in self.current_party.get_all_characters():
-            prayer_menu.add_menu_item(
-                f"{character.name}の祈祷",
-                self._show_character_prayer_management,
-                [character]
-            )
+        # InnServiceWindowを作成
+        prayer_mgmt_window = InnServiceWindow('inn_prayer_management', inn_config)
         
-        prayer_menu.add_menu_item(config_manager.get_text("menu.back"), self.back_to_previous_menu)
-        self.show_submenu(prayer_menu)
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(prayer_mgmt_window, push_to_stack=True)
+        
+        logger.info("祈祷スロット設定ウィンドウを表示しました")
     
     def _show_character_spell_management(self, character):
-        """キャラクター魔術管理メニューを表示"""
-        spell_menu = UIMenu("character_spell_menu", f"{character.name} - 魔術管理")
+        """キャラクター魔術管理メニューを表示（InnServiceWindow使用）"""
+        # InnServiceWindow設定を作成
+        inn_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['magic_management', 'spell_slot_management'],
+            'selected_character': character,
+            'title': f'{character.name} - 魔術管理'
+        }
         
-        spell_menu.add_menu_item("魔術装備", self._show_spell_equip_menu, [character])
-        spell_menu.add_menu_item("現在の状況", self._show_spell_status, [character])
-        spell_menu.add_menu_item(config_manager.get_text("menu.back"), self.back_to_previous_menu)
+        # InnServiceWindowを作成
+        char_spell_window = InnServiceWindow('inn_character_spell_mgmt', inn_config)
         
-        self.show_submenu(spell_menu, {'character': character})
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(char_spell_window, push_to_stack=True)
+        
+        logger.info(f"{character.name}の魔術管理ウィンドウを表示しました")
     
     def _show_character_prayer_management(self, character):
-        """キャラクター祈祷管理メニューを表示"""
-        prayer_menu = UIMenu("character_prayer_menu", f"{character.name} - 祈祷管理")
+        """キャラクター祈祷管理メニューを表示（InnServiceWindow使用）"""
+        # InnServiceWindow設定を作成
+        inn_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['magic_management'],  # 祈祷も魔術管理の一部として統合
+            'selected_character': character,
+            'title': f'{character.name} - 祈祷管理'
+        }
         
-        prayer_menu.add_menu_item("祈祷装備", self._show_prayer_equip_menu, [character])
-        prayer_menu.add_menu_item("現在の状況", self._show_prayer_status, [character])
-        prayer_menu.add_menu_item(config_manager.get_text("menu.back"), self.back_to_previous_menu)
+        # InnServiceWindowを作成
+        char_prayer_window = InnServiceWindow('inn_character_prayer_mgmt', inn_config)
         
-        self.show_submenu(prayer_menu, {'character': character})
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(char_prayer_window, push_to_stack=True)
+        
+        logger.info(f"{character.name}の祈祷管理ウィンドウを表示しました")
     
     # === 装備管理 ===
     
     def _show_party_equipment_status(self):
-        """パーティ装備確認を表示"""
+        """パーティ装備確認を表示（InnServiceWindow使用）"""
         if not self.current_party:
             return
         
-        equipment_menu = UIMenu("party_equipment_menu", "パーティ装備確認")
+        # InnServiceWindow設定を作成
+        inn_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['equipment_management'],
+            'title': 'パーティ装備確認'
+        }
         
-        for character in self.current_party.get_all_characters():
-            equipment_menu.add_menu_item(
-                f"{character.name}の装備",
-                self._show_character_equipment_status,
-                [character]
-            )
+        # InnServiceWindowを作成
+        equipment_status_window = InnServiceWindow('inn_party_equipment_status', inn_config)
         
-        equipment_menu.add_menu_item(config_manager.get_text("menu.back"), self.back_to_previous_menu)
-        self.show_submenu(equipment_menu)
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(equipment_status_window, push_to_stack=True)
+        
+        logger.info("パーティ装備確認ウィンドウを表示しました")
     
     def _show_character_equipment_status(self, character):
         """キャラクター装備状況を表示"""
@@ -533,7 +615,7 @@ class Inn(BaseFacility):
         self.show_information_dialog("実装予定", "この機能は実装予定です")
     
     def _show_spell_equip_menu(self, character):
-        """魔術装備メニュー"""
+        """魔術装備メニュー（InnServiceWindow使用）"""
         try:
             spellbook = self._get_or_create_spellbook(character)
             
@@ -542,20 +624,23 @@ class Inn(BaseFacility):
                 self.show_information_dialog("情報", f"{character.name}は魔法を習得していません")
                 return
             
-            equip_menu = UIMenu("spell_equip_menu", f"{character.name} - 魔術装備")
+            # InnServiceWindow設定を作成
+            inn_config = {
+                'parent_facility': self,
+                'current_party': self.current_party,
+                'service_types': ['spell_slot_management'],
+                'selected_character': character,
+                'title': f'{character.name} - 魔術装備'
+            }
             
-            # 習得済み魔法を表示
-            for spell_id in spellbook.learned_spells:
-                spell = spell_manager.get_spell(spell_id)
-                if spell:
-                    equip_menu.add_menu_item(
-                        f"{spell.get_name()} (Lv.{spell.level})",
-                        self._show_spell_slot_selection,
-                        [character, spell_id]
-                    )
+            # InnServiceWindowを作成
+            spell_equip_window = InnServiceWindow('inn_spell_equip', inn_config)
             
-            equip_menu.add_menu_item("戻る", self._show_character_spell_slot_detail, [character])
-            self.show_submenu(equip_menu, {'character': character})
+            # WindowManagerで表示
+            window_manager = WindowManager.get_instance()
+            window_manager.show_window(spell_equip_window, push_to_stack=True)
+            
+            logger.info(f"{character.name}の魔術装備ウィンドウを表示しました")
             
         except Exception as e:
             logger.error(config_manager.get_text("app_log.spell_equipment_error").format(error=e))
@@ -612,14 +697,24 @@ class Inn(BaseFacility):
             self.show_error_dialog("エラー", "魔法装備中にエラーが発生しました")
     
     def _show_character_spell_slot_detail(self, character):
-        """キャラクター魔法スロット詳細メニューを表示"""
-        spell_mgmt_menu = UIMenu("character_spell_slot_detail", f"{character.name} - 魔法スロット詳細")
+        """キャラクター魔法スロット詳細メニューを表示（InnServiceWindow使用）"""
+        # InnServiceWindow設定を作成
+        inn_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['spell_slot_management'],
+            'selected_character': character,
+            'title': f'{character.name} - 魔法スロット詳細'
+        }
         
-        spell_mgmt_menu.add_menu_item("魔法装備", self._show_spell_equip_menu, [character])
-        spell_mgmt_menu.add_menu_item("スロット状況", self._show_spell_slot_status, [character])
-        spell_mgmt_menu.add_menu_item("戻る", self._show_adventure_preparation)
+        # InnServiceWindowを作成
+        slot_detail_window = InnServiceWindow('inn_spell_slot_detail', inn_config)
         
-        self.show_submenu(spell_mgmt_menu, {'character': character})
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(slot_detail_window, push_to_stack=True)
+        
+        logger.info(f"{character.name}の魔法スロット詳細ウィンドウを表示しました")
     
     def _show_spell_slot_status(self, character):
         """魔法スロット状況を表示"""
@@ -654,25 +749,30 @@ class Inn(BaseFacility):
             self.show_error_dialog("エラー", "スロット状況の表示に失敗しました")
     
     def _show_new_spell_user_selection(self, spell_users: List):
-        """魔法使用者選択メニューを表示"""
+        """魔法使用者選択メニューを表示（InnServiceWindow使用）"""
         if not spell_users:
             self.show_information_dialog("情報", "魔法を使用できるキャラクターがいません")
             return
         
-        user_menu = UIMenu("spell_user_selection", "魔法使用者選択")
+        # InnServiceWindow設定を作成
+        inn_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['magic_management'],
+            'title': '魔法使用者選択'
+        }
         
-        for character in spell_users:
-            user_menu.add_menu_item(
-                f"{character.name} ({character.character_class})",
-                self._show_character_spell_slot_detail,
-                [character]
-            )
+        # InnServiceWindowを作成
+        user_select_window = InnServiceWindow('inn_spell_user_selection', inn_config)
         
-        user_menu.add_menu_item("戻る", self.back_to_previous_menu)
-        self.show_submenu(user_menu)
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(user_select_window, push_to_stack=True)
+        
+        logger.info("魔法使用者選択ウィンドウを表示しました")
     
     def _show_spell_slot_selection(self, character, spell_id: str):
-        """魔法装備用のスロット選択メニューを表示"""
+        """魔法装備用のスロット選択メニューを表示（InnServiceWindow使用）"""
         try:
             spellbook = self._get_or_create_spellbook(character)
             spell = spell_manager.get_spell(spell_id)
@@ -681,22 +781,24 @@ class Inn(BaseFacility):
                 self.show_error_dialog("エラー", "魔法データが見つかりません")
                 return
             
-            slot_menu = UIMenu("spell_slot_selection", f"{spell.get_name()} - スロット選択")
+            # InnServiceWindow設定を作成
+            inn_config = {
+                'parent_facility': self,
+                'current_party': self.current_party,
+                'service_types': ['spell_slot_management'],
+                'selected_character': character,
+                'context': {'target_spell_id': spell_id},
+                'title': f'{spell.get_name()} - スロット選択'
+            }
             
-            # 適切なレベルのスロットのみ表示
-            for level in sorted(spellbook.spell_slots.keys()):
-                if level >= spell.level:  # 魔法レベル以上のスロットのみ
-                    level_slots = spellbook.spell_slots[level]
-                    for i, slot in enumerate(level_slots):
-                        status = "空" if slot.is_empty() else f"使用中: {slot.spell_id}"
-                        slot_menu.add_menu_item(
-                            f"Lv.{level} スロット {i + 1} ({status})",
-                            self._equip_spell_to_slot,
-                            [character, spell_id, level, i]
-                        )
+            # InnServiceWindowを作成
+            slot_select_window = InnServiceWindow('inn_spell_slot_selection', inn_config)
             
-            slot_menu.add_menu_item("戻る", self._show_spell_equip_menu, [character])
-            self.show_submenu(slot_menu, {'character': character, 'spell_id': spell_id})
+            # WindowManagerで表示
+            window_manager = WindowManager.get_instance()
+            window_manager.show_window(slot_select_window, push_to_stack=True)
+            
+            logger.info(f"{spell.get_name()}のスロット選択ウィンドウを表示しました")
             
         except Exception as e:
             logger.error(f"スロット選択メニュー表示エラー: {e}")

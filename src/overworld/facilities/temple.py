@@ -8,8 +8,10 @@ from src.character.character import Character, CharacterStatus
 from src.items.item import Item, ItemManager, ItemInstance, ItemType, item_manager
 from src.ui.window_system import WindowManager
 from src.ui.window_system.facility_menu_window import FacilityMenuWindow
+from src.ui.window_system.temple_service_window import TempleServiceWindow
 from src.ui.selection_list_ui import ItemSelectionList
-# NOTE: panda3D UI components removed - using pygame-based UI now
+from src.ui.base_ui_pygame import ui_manager
+# NOTE: UIMenu removed - migrated to TempleServiceWindow
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
@@ -60,8 +62,8 @@ class Temple(BaseFacility):
                 'enabled': self.current_party is not None
             },
             {
-                'id': 'blessing',
-                'label': "祝福サービス",
+                'id': 'healing_services',
+                'label': "治療・祝福サービス",
                 'type': 'action',
                 'enabled': self.current_party is not None
             },
@@ -119,8 +121,8 @@ class Temple(BaseFacility):
             
             if item_id == 'resurrection':
                 return self._show_resurrection_menu()
-            elif item_id == 'blessing':
-                return self._show_blessing_menu()
+            elif item_id == 'healing_services':
+                return self._show_healing_services()
             elif item_id == 'talk_priest':
                 return self._talk_to_priest()
             elif item_id == 'prayerbook_shop':
@@ -152,65 +154,50 @@ class Temple(BaseFacility):
         logger.info("教会から出ました")
     
     def _show_resurrection_menu(self):
-        """蘇生メニューを表示"""
+        """蘇生メニューを表示（TempleServiceWindow使用）"""
         if not self.current_party:
             self._show_error_message("パーティが設定されていません")
             return
         
-        # 死亡・灰化状態のキャラクターを探す
-        resurrection_candidates = []
-        ash_candidates = []
+        # TempleServiceWindow設定を作成
+        temple_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['resurrection'],
+            'title': '蘇生サービス'
+        }
         
-        for character in self.current_party.get_all_characters():
-            if character.status == CharacterStatus.DEAD:
-                resurrection_candidates.append(character)
-            elif character.status == CharacterStatus.ASHES:
-                ash_candidates.append(character)
+        # TempleServiceWindowを作成
+        resurrection_window = TempleServiceWindow('temple_resurrection', temple_config)
         
-        if not resurrection_candidates and not ash_candidates:
-            self._show_dialog(
-                "no_resurrection_dialog",
-                "蘇生サービス",
-                "蘇生が必要なキャラクターはいません。\n\n"
-                "皆さん健康で何よりです！",
-                buttons=[
-                    {
-                        'text': config_manager.get_text("menu.back"),
-                        'command': self._close_dialog
-                    }
-                ]
-            )
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(resurrection_window, push_to_stack=True)
+        
+        logger.info("蘇生サービスウィンドウを表示しました")
+    
+    def _show_healing_services(self):
+        """治療・祝福サービス統合メニューを表示（TempleServiceWindow使用）"""
+        if not self.current_party:
+            self._show_error_message("パーティが設定されていません")
             return
         
-        resurrection_menu = UIMenu("resurrection_menu", "蘇生サービス")
+        # TempleServiceWindow設定を作成
+        temple_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'service_types': ['status_cure', 'blessing'],
+            'title': '治療・祝福サービス'
+        }
         
-        # 死亡キャラクターの蘇生
-        for character in resurrection_candidates:
-            cost = self.service_costs['resurrection']
-            char_info = f"{character.name} の蘇生 - {cost}G"
-            resurrection_menu.add_menu_item(
-                char_info,
-                self._resurrect_character,
-                [character]
-            )
+        # TempleServiceWindowを作成
+        healing_window = TempleServiceWindow('temple_healing', temple_config)
         
-        # 灰化キャラクターの復活
-        for character in ash_candidates:
-            cost = self.service_costs['ash_restoration']
-            char_info = f"{character.name} の復活 - {cost}G"
-            resurrection_menu.add_menu_item(
-                char_info,
-                self._restore_from_ashes,
-                [character]
-            )
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(healing_window, push_to_stack=True)
         
-        resurrection_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [resurrection_menu]
-        )
-        
-        self._show_submenu(resurrection_menu)
+        logger.info("治療・祝福サービスウィンドウを表示しました")
     
     def _resurrect_character(self, character: Character):
         """キャラクター蘇生"""
@@ -577,123 +564,11 @@ class Temple(BaseFacility):
             ]
         )
     
-    def _show_submenu(self, submenu):
-        """サブメニューを表示"""
-        # メインメニューを隠す
-        if self.main_menu:
-            ui_manager.hide_menu(self.main_menu.menu_id)
-        
-        ui_manager.add_menu(submenu)
-        ui_manager.show_menu(submenu.menu_id, modal=True)
+    # UIMenu削除済み: _show_submenu()と_back_to_main_menu_from_submenu()はWindowSystem移行により不要
     
-    def _back_to_main_menu_from_submenu(self, submenu):
-        """サブメニューからメインメニューに戻る"""
-        ui_manager.hide_menu(submenu.menu_id)
-        
-        
-        if self.main_menu:
-            ui_manager.show_menu(self.main_menu.menu_id)
+    # UIMenu削除済み: _show_status_cure_menu()は_show_healing_services()に統合されました
     
-    def _show_status_cure_menu(self):
-        """状態異常治療メニューを表示"""
-        if not self.current_party:
-            self._show_error_message("パーティが設定されていません")
-            return
-        
-        # 状態異常にかかっているキャラクターを探す
-        affected_characters = []
-        
-        for character in self.current_party.get_all_characters():
-            if character.status in [CharacterStatus.GOOD, CharacterStatus.INJURED]:
-                status_effects = character.get_status_effects()
-                active_effects = status_effects.get_active_effects_summary()
-                if active_effects:
-                    affected_characters.append((character, active_effects))
-        
-        if not affected_characters:
-            self._show_dialog(
-                "no_status_cure_dialog",
-                "状態異常治療",
-                "治療が必要な状態異常はありません。\n\n"
-                "皆さん健康で何よりです！",
-                buttons=[
-                    {
-                        'text': config_manager.get_text("menu.back"),
-                        'command': self._close_dialog
-                    }
-                ]
-            )
-            return
-        
-        status_cure_menu = UIMenu("status_cure_menu", "状態異常治療")
-        
-        # 個別治療メニュー
-        for character, effects in affected_characters:
-            char_info = f"{character.name} - {', '.join(effects[:2])}"  # 最初の2つの効果のみ表示
-            if len(effects) > 2:
-                char_info += "..."
-            
-            status_cure_menu.add_menu_item(
-                char_info,
-                self._show_character_status_cure,
-                [character]
-            )
-        
-        # 全体治療
-        if len(affected_characters) > 1:
-            all_cure_cost = self.service_costs['all_status_cure'] * len(affected_characters)
-            status_cure_menu.add_menu_item(
-                f"全員の状態異常治療 - {all_cure_cost}G",
-                self._cure_all_party_status
-            )
-        
-        status_cure_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu_from_submenu,
-            [status_cure_menu]
-        )
-        
-        self._show_submenu(status_cure_menu)
-    
-    def _show_character_status_cure(self, character: Character):
-        """キャラクター個別の状態異常治療メニュー"""
-        status_effects = character.get_status_effects()
-        active_effects = status_effects.active_effects
-        
-        if not active_effects:
-            self._show_error_message(f"{character.name}には治療すべき状態異常がありません")
-            return
-        
-        char_cure_menu = UIMenu("char_status_cure", f"{character.name}の状態異常治療")
-        
-        # 個別効果治療
-        from src.effects.status_effects import StatusEffectType
-        for effect_type, effect in active_effects.items():
-            effect_name = self._get_status_effect_name(effect_type)
-            cost = self._get_status_cure_cost(effect_type)
-            
-            char_cure_menu.add_menu_item(
-                f"{effect_name}を治療 - {cost}G",
-                self._cure_specific_status,
-                [character, effect_type, cost]
-            )
-        
-        # 全ての状態異常治療
-        if len(active_effects) > 1:
-            all_cost = self.service_costs['all_status_cure']
-            char_cure_menu.add_menu_item(
-                f"全ての状態異常を治療 - {all_cost}G",
-                self._cure_all_character_status,
-                [character, all_cost]
-            )
-        
-        char_cure_menu.add_menu_item(
-            "戻る",
-            self._show_status_cure_menu
-        )
-        
-        ui_manager.add_menu(char_cure_menu)
-        ui_manager.show_menu(char_cure_menu.menu_id, modal=True)
+    # UIMenu削除済み: _show_character_status_cure()は_show_healing_services()に統合されました
     
     def _cure_specific_status(self, character: Character, effect_type, cost: int):
         """特定の状態異常を治療"""

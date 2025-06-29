@@ -6,7 +6,10 @@ from src.overworld.base_facility import BaseFacility, FacilityType
 from src.items.item import Item, ItemInstance, ItemType, item_manager
 from src.ui.window_system import WindowManager
 from src.ui.window_system.facility_menu_window import FacilityMenuWindow
+from src.ui.window_system.shop_transaction_window import ShopTransactionWindow
 from src.ui.selection_list_ui import ItemSelectionList, CustomSelectionList, SelectionListData
+from src.ui.base_ui_pygame import ui_manager
+# NOTE: UIMenu removed - migrated to ShopTransactionWindow
 # NOTE: panda3D UI components removed - using pygame-based UI now
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -122,9 +125,9 @@ class Shop(BaseFacility):
             item_id = data.get('id')
             
             if item_id == 'buy_items':
-                return self._show_buy_menu()
+                return self._show_buy_transaction()
             elif item_id == 'sell_items':
-                return self._show_sell_menu()
+                return self._show_sell_transaction()
             elif item_id == 'talk_shopkeeper':
                 return self._talk_to_shopkeeper()
                 
@@ -182,48 +185,41 @@ class Shop(BaseFacility):
         
         return False
     
-    def _show_buy_menu(self):
-        """購入メニューをUISelectionListで表示"""
+    def _show_buy_transaction(self):
+        """購入取引ウィンドウを表示（ShopTransactionWindow使用）"""
         if not self.current_party:
             self._show_error_message(config_manager.get_text("shop.messages.no_party_set"))
             return
         
-        # 全アイテムを取得
+        # 利用可能アイテムを取得
         available_items = []
         for item_id in self.inventory:
             item = self.item_manager.get_item(item_id)
             if item:
                 available_items.append(item)
         
-        if not available_items:
-            self._show_error_message(config_manager.get_text("shop.purchase.no_stock").format(category=config_manager.get_text("shop.messages.all_items")))
-            return
+        # ShopTransactionWindow設定を作成
+        shop_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'transaction_types': ['purchase', 'category_filter', 'quantity_select'],
+            'available_items': available_items,
+            'title': '商品購入'
+        }
         
-        # UISelectionListを使用
-        list_rect = pygame.Rect(ITEM_LIST_RECT_X, ITEM_LIST_RECT_Y, ITEM_LIST_RECT_WIDTH, ITEM_LIST_RECT_HEIGHT_LARGE)
+        # ShopTransactionWindowを作成
+        purchase_window = ShopTransactionWindow('shop_purchase', shop_config)
         
-        # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
-        if not self._check_pygame_gui_manager():
-            self._show_error_message(config_manager.get_text("shop.messages.buy_menu_display_failed"))
-            return
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(purchase_window, push_to_stack=True)
         
-        self.item_selection_list = ItemSelectionList(
-            relative_rect=list_rect,
-            manager=ui_manager.pygame_gui_manager,
-            title=config_manager.get_text("shop.purchase.title")
-        )
-        
-        # アイテムを追加
-        for item in available_items:
-            display_name = self._format_item_display_name(item)
-            self.item_selection_list.add_item_data(item, display_name)
-        
-        # コールバック設定
-        self.item_selection_list.on_item_selected = self._on_item_selected_for_purchase
-        self.item_selection_list.on_item_details = self._show_item_details
-        
-        # 表示
-        self.item_selection_list.show()
+        logger.info("購入取引ウィンドウを表示しました")
+    
+    def _show_buy_menu(self):
+        """購入メニューをUISelectionListで表示（レガシー - 移行済み）"""
+        # UIMenu削除済み: _show_buy_menu()は_show_buy_transaction()に移行されました
+        return self._show_buy_transaction()
     
     def _on_item_selected_for_purchase(self, item: Item):
         """購入用アイテム選択時のコールバック"""
@@ -237,40 +233,7 @@ class Shop(BaseFacility):
             self.item_selection_list.kill()
             self.item_selection_list = None
     
-    def _show_category_items(self, item_type: ItemType):
-        """カテゴリ別アイテム一覧を表示"""
-        category_key = f"shop.purchase.categories.{item_type.value.lower()}"
-        category_name = config_manager.get_text(category_key)
-        category_menu = UIMenu(f"{item_type.value}_menu", 
-                              config_manager.get_text("shop.purchase.category_list_title").format(category=category_name))
-        
-        # 在庫から該当カテゴリのアイテムを取得
-        available_items = []
-        for item_id in self.inventory:
-            item = self.item_manager.get_item(item_id)
-            if item and item.item_type == item_type:
-                available_items.append(item)
-        
-        if not available_items:
-            category_key = f"shop.purchase.categories.{item_type.value.lower()}"
-            category_name = config_manager.get_text(category_key)
-            self._show_error_message(config_manager.get_text("shop.purchase.no_stock").format(category=category_name))
-            return
-        
-        for item in available_items:
-            item_info = f"{item.get_name()} - {item.price}G"
-            category_menu.add_menu_item(
-                item_info,
-                self._show_item_details,
-                [item]
-            )
-        
-        category_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._show_buy_menu
-        )
-        
-        self._show_submenu(category_menu)
+    # UIMenu削除済み: _show_category_items()はShopTransactionWindowのcategory_filterに統合されました
     
     def _show_item_details(self, item: Item):
         """アイテムの詳細と購入確認"""
@@ -401,31 +364,33 @@ class Shop(BaseFacility):
         self._close_dialog()
         self._show_buy_menu()
     
-    def _show_sell_menu(self):
-        """売却メニューを表示（新しいアイテム管理システム対応）"""
+    def _show_sell_transaction(self):
+        """売却取引ウィンドウを表示（ShopTransactionWindow使用）"""
         if not self.current_party:
             self._show_error_message(config_manager.get_text("shop.messages.no_party_set"))
             return
         
-        # 売却可能なアイテムを全体から取得
-        sellable_items = self._get_all_sellable_items()
+        # ShopTransactionWindow設定を作成
+        shop_config = {
+            'parent_facility': self,
+            'current_party': self.current_party,
+            'transaction_types': ['sell', 'quantity_select'],
+            'title': 'アイテム売却'
+        }
         
-        if not sellable_items:
-            self._show_dialog(
-                "no_items_dialog",
-                config_manager.get_text("shop.sell.title"),
-                config_manager.get_text("shop.messages.no_sellable_items_detailed"),
-                buttons=[
-                    {
-                        'text': config_manager.get_text("menu.back"),
-                        'command': self._close_dialog
-                    }
-                ]
-            )
-            return
+        # ShopTransactionWindowを作成
+        sell_window = ShopTransactionWindow('shop_sell', shop_config)
         
-        # 売却元選択メニューを表示
-        self._show_sell_source_selection(sellable_items)
+        # WindowManagerで表示
+        window_manager = WindowManager.get_instance()
+        window_manager.show_window(sell_window, push_to_stack=True)
+        
+        logger.info("売却取引ウィンドウを表示しました")
+    
+    def _show_sell_menu(self):
+        """売却メニューを表示（レガシー - 移行済み）"""
+        # UIMenu削除済み: _show_sell_menu()は_show_sell_transaction()に移行されました
+        return self._show_sell_transaction()
     
     def _get_all_sellable_items(self):
         """全ての売却可能アイテムを取得（キャラクター個人 + 宿屋倉庫）"""
@@ -606,43 +571,9 @@ class Shop(BaseFacility):
             self.storage_sell_list.kill()
             self.storage_sell_list = None
     
-    def _show_character_sellable_items(self, items, char_name):
-        """キャラクター所持アイテム売却メニュー"""
-        char_sell_menu = UIMenu("character_sell_menu", config_manager.get_text("shop.messages.character_sell_title").format(char_name=char_name))
-        
-        for character, index, item_instance, item in items:
-            display_name = self._format_sellable_item_display_name(item_instance, item)
-            char_sell_menu.add_menu_item(
-                display_name,
-                self._show_character_item_sell_confirmation,
-                [character, index, item_instance, item]
-            )
-        
-        char_sell_menu.add_back_button(
-            config_manager.get_text("menu.back"),
-            self._show_sell_menu
-        )
-        
-        self._show_submenu(char_sell_menu)
+    # UIMenu削除済み: _show_character_sellable_items()はShopTransactionWindowのsellサービスに統合されました
     
-    def _show_storage_sellable_items(self, items):
-        """宿屋倉庫アイテム売却メニュー"""
-        storage_sell_menu = UIMenu("storage_sell_menu", config_manager.get_text("shop.messages.inn_storage_sell_title"))
-        
-        for index, item_instance, item in items:
-            display_name = self._format_sellable_item_display_name(item_instance, item)
-            storage_sell_menu.add_menu_item(
-                display_name,
-                self._show_storage_item_sell_confirmation,
-                [index, item_instance, item]
-            )
-        
-        storage_sell_menu.add_back_button(
-            config_manager.get_text("menu.back"),
-            self._show_sell_menu
-        )
-        
-        self._show_submenu(storage_sell_menu)
+    # UIMenu削除済み: _show_storage_sellable_items()はShopTransactionWindowのsellサービスに統合されました
     
     def _show_character_item_sell_confirmation(self, character, slot_index, item_instance, item):
         """キャラクター所持アイテム売却確認"""
@@ -924,39 +855,10 @@ class Shop(BaseFacility):
         details += f"\n{config_manager.get_text('shop.sell.current_gold_label')}: {self.current_party.gold}G\n"
         details += f"{config_manager.get_text('shop.sell.after_sell_label')}: {self.current_party.gold + (sell_price * item_instance.quantity)}G\n"
         
+        # UIMenu削除済み: 数量選択機能はShopTransactionWindowのquantity_selectに統合されました
         if item_instance.quantity > 1:
             details += f"\n{config_manager.get_text('shop.sell.quantity_select_prompt')}"
-            
-            # 数量選択メニューを表示
-            quantity_menu = UIMenu("sell_quantity_menu", config_manager.get_text("shop.sell.quantity_select_title"))
-            
-            # 1個ずつ、半分、全部のオプションを追加
-            quantity_menu.add_menu_item(
-                config_manager.get_text("shop.sell.sell_one"),
-                self._sell_item,
-                [slot, item_instance, item, sell_price, 1]
-            )
-            
-            if item_instance.quantity >= 2:
-                half_quantity = item_instance.quantity // 2
-                quantity_menu.add_menu_item(
-                    config_manager.get_text("shop.sell.sell_half").format(count=half_quantity),
-                    self._sell_item,
-                    [slot, item_instance, item, sell_price, half_quantity]
-                )
-            
-            quantity_menu.add_menu_item(
-                config_manager.get_text("shop.sell.sell_all").format(count=item_instance.quantity),
-                self._sell_item,
-                [slot, item_instance, item, sell_price, item_instance.quantity]
-            )
-            
-            quantity_menu.add_menu_item(
-                config_manager.get_text("menu.back"),
-                self._show_sell_menu
-            )
-            
-            self._show_submenu(quantity_menu)
+            # 数量選択はShopTransactionWindowで処理
         else:
             details += f"\n{config_manager.get_text('shop.sell.sell_confirm')}"
             
