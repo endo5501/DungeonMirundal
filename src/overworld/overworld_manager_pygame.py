@@ -122,19 +122,152 @@ class OverworldManager:
     def _create_window_based_main_menu(self):
         """WindowManagerベースのメインメニューを作成"""
         try:
-            # OverworldMainWindowを作成
-            self.overworld_main_window = OverworldMainWindow(
-                window_id="overworld_main",
-                action_handler=self._handle_overworld_action
-            )
+            # メインメニュー設定を作成
+            menu_config = self._create_main_menu_config()
             
-            # WindowManagerに登録
-            self.window_manager.window_registry[self.overworld_main_window.window_id] = self.overworld_main_window
+            # OverworldMainWindowを作成
+            self.overworld_main_window = OverworldMainWindow("overworld_main", menu_config)
+            
+            # メッセージハンドラーを設定
+            self.overworld_main_window.message_handler = self.handle_main_menu_message
             
             logger.info("WindowManagerベースのメインメニューを作成しました")
         except Exception as e:
             logger.error(f"WindowManagerベースのメインメニュー作成エラー: {e}")
             self.overworld_main_window = None
+    
+    def _create_main_menu_config(self):
+        """メインメニュー設定を作成（OverworldMainWindow用）"""
+        from src.core.config_manager import config_manager
+        
+        menu_items = [
+            {
+                'id': 'guild',
+                'label': config_manager.get_text("facility.guild"),
+                'type': 'facility',
+                'facility_id': 'guild',
+                'enabled': True
+            },
+            {
+                'id': 'inn',
+                'label': config_manager.get_text("facility.inn"),
+                'type': 'facility',
+                'facility_id': 'inn',
+                'enabled': True
+            },
+            {
+                'id': 'shop',
+                'label': config_manager.get_text("facility.shop"),
+                'type': 'facility',
+                'facility_id': 'shop',
+                'enabled': True
+            },
+            {
+                'id': 'temple',
+                'label': config_manager.get_text("facility.temple"),
+                'type': 'facility',
+                'facility_id': 'temple',
+                'enabled': True
+            },
+            {
+                'id': 'magic_guild',
+                'label': config_manager.get_text("facility.magic_guild"),
+                'type': 'facility',
+                'facility_id': 'magic_guild',
+                'enabled': True
+            },
+            {
+                'id': 'dungeon_entrance',
+                'label': "ダンジョン入口",  # TODO: 翻訳ファイルに追加予定
+                'type': 'action',
+                'enabled': True
+            }
+        ]
+        
+        return {
+            'menu_type': 'main',
+            'title': config_manager.get_text("overworld.surface_map"),
+            'menu_items': menu_items,
+            'party': self.current_party,
+            'show_party_info': True,
+            'show_gold': True
+        }
+    
+    def handle_main_menu_message(self, message_type: str, data: dict) -> bool:
+        """メインメニューメッセージ処理（OverworldMainWindow用）"""
+        logger.debug(f"handle_main_menu_message: {message_type}, data: {data}")
+        
+        if message_type == 'menu_item_selected':
+            item_id = data.get('item_id')
+            facility_id = data.get('facility_id')
+            
+            if facility_id:
+                # 施設入場
+                if facility_id == 'guild':
+                    self._on_guild()
+                elif facility_id == 'inn':
+                    self._on_inn()
+                elif facility_id == 'shop':
+                    self._on_shop()
+                elif facility_id == 'temple':
+                    self._on_temple()
+                elif facility_id == 'magic_guild':
+                    self._on_magic_guild()
+                else:
+                    logger.warning(f"未知の施設: {facility_id}")
+                    return False
+                return True
+            elif item_id == 'dungeon_entrance':
+                # ダンジョン入場
+                self._on_enter_dungeon()
+                return True
+            elif item_id in ['party_status', 'save_game', 'load_game']:
+                # 設定メニューから選択された項目
+                if item_id == 'party_status':
+                    self._on_party_status()
+                    return True
+                elif item_id == 'save_game':
+                    self._on_save_game()
+                    return True
+                elif item_id == 'load_game':
+                    self._on_load_game()
+                    return True
+        
+        elif message_type == 'settings_menu_requested':
+            # ESCキーでの設定メニュー表示
+            self._show_settings_menu()
+            return True
+        
+        elif message_type == 'party_overview_requested':
+            # パーティ全体情報表示
+            self._on_party_status()
+            return True
+        
+        elif message_type == 'character_details_requested':
+            # キャラクター詳細表示（簡易実装）
+            character = data.get('character')
+            if character:
+                logger.info(f"キャラクター詳細表示: {character.name}")
+                # TODO: 詳細なキャラクター情報ダイアログの実装
+            return True
+        
+        elif message_type == 'save_load_requested':
+            # セーブ・ロード処理
+            operation = data.get('operation')
+            slot_id = data.get('slot_id')
+            if operation == 'save':
+                self._save_to_slot(slot_id)
+                return True
+            elif operation == 'load':
+                self._load_from_slot(slot_id)
+                return True
+        
+        elif message_type == 'back_requested':
+            # 戻る処理（通常はメインメニューに戻る）
+            return True
+        
+        logger.warning(f"未処理のメッセージタイプ: {message_type}")
+        return False
     
     def _handle_overworld_action(self, message_type: str, data: dict):
         """地上部メニューのアクション処理"""
