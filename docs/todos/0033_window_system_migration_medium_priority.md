@@ -166,14 +166,52 @@ class SomeManager:
 - **テスト**: 各2ファイル移行毎に統合テスト実施
 
 ## 完了条件
-- [ ] equipment_ui.pyの完全移行
-- [ ] inventory_ui.pyの完全移行
-- [ ] character_creation.pyの完全移行  
-- [ ] dungeon_ui_pygame.pyの完全移行
-- [ ] 移行後の統合テスト通過
-- [ ] 戦闘システムとの連携確認
-- [ ] パフォーマンス劣化なし確認
-- [ ] レガシーコード削除
+- [ ] ❌ equipment_ui.pyの完全移行（未実施）
+- [ ] ❌ inventory_ui.pyの完全移行（未実施）
+- [ ] ❌ character_creation.pyの完全移行（未実施）  
+- [ ] ❌ dungeon_ui_pygame.pyの完全移行（未実施）
+- [ ] ❌ 移行後の統合テスト通過（未実施）
+- [ ] ❌ 戦闘システムとの連携確認（未実施）
+- [ ] ❌ パフォーマンス劣化なし確認（未実施）
+- [ ] ❌ レガシーコード削除（未実施）
+
+## 現在の状況（2025-06-29確認）
+
+### 移行状況の詳細調査結果
+全ての対象ファイルが**旧UIMenuシステムのまま**で、新WindowSystemへの移行が**全く実施されていない**状況です。
+
+#### 1. src/ui/equipment_ui.py
+- **移行率**: 0% - 未実施
+- **現状**: 完全に旧UIMenu形式（UIMenu, UIDialog, ui_manager使用）
+- **必要作業**: EquipmentWindowクラスへの完全書き換え
+- **複雑度**: ★★★★☆（多数のメニュー階層とダイアログ）
+
+#### 2. src/ui/inventory_ui.py  
+- **移行率**: 0% - 未実施
+- **現状**: 完全に旧UIMenu形式（UIMenu, UIDialog, ui_manager使用）
+- **必要作業**: InventoryWindowクラスへの完全書き換え
+- **複雑度**: ★★★★☆（アイテム管理と転送機能）
+
+#### 3. src/ui/dungeon_ui_pygame.py
+- **移行率**: 15% - 部分的実装
+- **現状**: Pygame用に書き換え済みだが旧UIMenu使用（UIElement, UIButton等）
+- **必要作業**: BattleUIWindowクラスへの移行
+- **複雑度**: ★★★☆☆（単純なメニューだが描画処理あり）
+
+#### 4. src/ui/character_creation.py
+- **移行率**: 0% - 未実施  
+- **現状**: 完全に旧UIMenu/UIDialog形式（ウィザード実装）
+- **必要作業**: CharacterCreationWizardクラスへの完全書き換え
+- **複雑度**: ★★★★★（ウィザード形式で複数ステップ）
+
+### 推奨移行順序
+1. **dungeon_ui_pygame.py** - 比較的シンプル、先行移行推奨
+2. **equipment_ui.py** - 装備管理機能
+3. **inventory_ui.py** - アイテム管理機能  
+4. **character_creation.py** - 最複雑、最後に実施
+
+### 作業状況
+**0033中優先度移行は未着手の状態です。**高優先度移行（0032）完了後に実施予定。
 
 ## 関連ドキュメント
 - `docs/todos/0031_change_window_system.md`: 調査結果
