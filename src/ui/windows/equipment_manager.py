@@ -1,4 +1,4 @@
-"""装備システム管理 - UIMenuからWindowSystemへの移行管理"""
+"""装備システム管理 - WindowSystem統合"""
 
 from typing import Optional, Callable
 from src.ui.windows.equipment_window import EquipmentWindow
@@ -12,7 +12,7 @@ class EquipmentManager:
     """
     装備システム管理クラス
     
-    UIMenuベースの旧システムとWindowSystemベースの新システムの
+    WindowSystemベースの装備システムの
     統一インターフェースを提供する
     """
     

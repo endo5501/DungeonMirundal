@@ -1,4 +1,4 @@
-"""インベントリシステム管理 - UIMenuからWindowSystemへの移行管理"""
+"""インベントリシステム管理 - WindowSystem統合"""
 
 from typing import Optional, Callable
 from src.ui.windows.inventory_window import InventoryWindow
@@ -13,7 +13,7 @@ class InventoryManager:
     """
     インベントリシステム管理クラス
     
-    UIMenuベースの旧システムとWindowSystemベースの新システムの
+    WindowSystemベースのインベントリシステムの
     統一インターフェースを提供する
     """
     

@@ -1,4 +1,4 @@
-"""キャラクター作成システム管理 - UIMenuからWindowSystemへの移行管理"""
+"""キャラクター作成システム管理 - WindowSystem統合"""
 
 from typing import Optional, Callable
 from src.ui.windows.character_creation_wizard import CharacterCreationWizard
@@ -11,7 +11,7 @@ class CharacterCreationManager:
     """
     キャラクター作成システム管理クラス
     
-    UIMenuベースの旧システムとWindowSystemベースの新システムの
+    WindowSystemベースのキャラクター作成システムの
     統一インターフェースを提供する
     """
     

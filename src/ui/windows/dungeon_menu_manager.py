@@ -1,4 +1,4 @@
-"""ダンジョンメニューシステム管理 - UIMenuからWindowSystemへの移行管理"""
+"""ダンジョンメニューシステム管理 - WindowSystem統合"""
 
 from typing import Optional, Callable, Any
 from src.ui.windows.dungeon_menu_window import DungeonMenuWindow
@@ -11,7 +11,7 @@ class DungeonMenuManager:
     """
     ダンジョンメニューシステム管理クラス
     
-    UIMenuベースの旧システムとWindowSystemベースの新システムの
+    WindowSystemベースのダンジョンメニューシステムの
     統一インターフェースを提供する
     """
     

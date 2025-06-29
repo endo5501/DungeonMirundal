@@ -60,27 +60,55 @@
 
 ## 完了条件
 
-### Phase 1-2 完了条件 🔄 **待機中**
+### Phase 1-2 完了条件 ✅ **完了済み**
 - [x] ✅ **低優先度移行の完了確認** (0034完了済み)
-- [ ] 🔄 中優先度移行の完了確認（0033未完了）
-- [ ] 🔄 残存UIMenu使用箇所の再調査
+- [x] ✅ 中優先度移行の完了確認（0033完了済み）
+- [x] ✅ 残存UIMenu使用箇所の再調査（完了）
 
-### Phase 3 完了条件  
-- [ ] UIMenuテストの新WindowSystemテスト化
-- [ ] 統合テストの更新
-- [ ] レガシーテストコードの削除
+### Phase 3 完了条件 ✅ **部分完了**
+- [x] ✅ legacyファイルの削除（4ファイル削除完了）
+- [x] ✅ WindowSystemマネージャーコメント更新
+- [x] ✅ 新WindowSystem正常動作確認
+- [ ] 🔄 UIMenuテストの新WindowSystemテスト化（将来作業）
+- [ ] 🔄 統合テストの更新（将来作業）
 
-### Phase 4 完了条件
-- [ ] UIMenuクラスの完全削除
-- [ ] base_ui_pygame.pyのクリーンアップ
-- [ ] 全テストの通過確認
-- [ ] レガシーインポート文の削除
+### Phase 4 完了条件 🔄 **MenuStackManager移行待ち**
+- [ ] 🔄 UIMenuクラスの完全削除（0043 Phase 2以降で実施）
+- [ ] 🔄 base_ui_pygame.pyのクリーンアップ（0043との調整後）
+- [ ] 🔄 全テストの通過確認（段階的実施）
+- [ ] 🔄 レガシーインポート文の削除（0043との連携）
 
 ## 現在の状況（2025-06-29更新）
-**0034 WindowSystem低優先度移行が完了**したため、Phase 1-2の一部が進行。ただし、中優先度移行（0033）が未完了のため、Phase 2以降は継続待機中。
+**0035レガシーUIMenuクリーンアップの第一段階が完了しました。**
+
+### 実施した作業
+1. **legacyファイル削除**: 4ファイルを削除
+   - `src/ui/character_creation_legacy.py` ✅
+   - `src/ui/equipment_ui_legacy.py` ✅
+   - `src/ui/dungeon_ui_pygame_legacy.py` ✅
+   - `src/ui/inventory_ui_legacy.py` ✅
+
+2. **WindowSystemマネージャー更新**: コメント・ドキュメント文字列の更新
+   - inventory_manager.py ✅
+   - equipment_manager.py ✅  
+   - character_creation_manager.py ✅
+   - dungeon_menu_manager.py ✅
+
+3. **動作確認**: 新WindowSystemが正常動作確認済み ✅
+
+### 成果
+- **ファイル数削減**: 4個のlegacyファイル削除
+- **ドキュメント品質向上**: 移行完了後の正確な記述に更新
+- **システム安定性確認**: WindowSystem単体での正常動作確認
+
+### 残存作業の方針
+**Phase 4の完全UIMenu除去は0043のMenuStackManager段階的移行と連携して実施**
+- MenuStackManager：Phase 1（基盤強化）継続中
+- UIMenuクラス：地上部施設システムで現在も使用中
+- 完全除去：0043のPhase 2以降で段階的実施
 
 ### 次回アクション
-0033の進捗確認後、UIMenuクリーンアップ作業を段階的に実施。緊急性は低いため、他の優先作業完了後に実施予定。
+0043のMenuStackManager移行進展に合わせ、UIMenuクラスの段階的除去を実施。現在は安定稼働期間として位置づけ。
 
 ## 関連ドキュメント
 - `docs/todos/0032_window_system_migration_high_priority.md`: 高優先度移行（完了）
