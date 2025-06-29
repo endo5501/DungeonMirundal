@@ -1,11 +1,10 @@
-"""ダンジョン内UIシステム（WindowSystem統合版）"""
+"""ダンジョン内UIシステム（Pygame版）"""
 
 from typing import Dict, List, Optional, Callable, Any
 from enum import Enum
 import pygame
 
-from src.ui.window_system import WindowManager
-from src.ui.window_system.battle_ui_window import BattleUIWindow
+from src.ui.base_ui_pygame import UIElement, UIButton, UIText, UIMenu, UIState, ui_manager
 from src.ui.character_status_bar import CharacterStatusBar, create_character_status_bar
 from src.ui.small_map_ui_pygame import SmallMapUI
 from src.character.party import Party
@@ -25,7 +24,7 @@ class DungeonMenuType(Enum):
 
 
 class DungeonUIManagerPygame:
-    """ダンジョンUI管理クラス（WindowSystem統合版）"""
+    """ダンジョンUI管理クラス（Pygame版）"""
     
     def __init__(self, screen=None):
         logger.info(config_manager.get_text("dungeon_ui.manager_init_start"))
@@ -43,10 +42,6 @@ class DungeonUIManagerPygame:
         
         self.screen_width = self.screen.get_width()
         self.screen_height = self.screen.get_height()
-        
-        # WindowSystem統合
-        self.window_manager = WindowManager.get_instance()
-        self.battle_ui_window: Optional[BattleUIWindow] = None
         
         # UI状態
         self.is_menu_open = False
@@ -136,11 +131,6 @@ class DungeonUIManagerPygame:
         if self.character_status_bar:
             self.character_status_bar.set_party(party)
         
-        # BattleUIWindowにもパーティを設定
-        if self.battle_ui_window:
-            # BattleUIWindowの設定更新（実際の実装では適切なメソッドを使用）
-            pass
-        
         logger.info(config_manager.get_text("dungeon_ui.party_set").format(party_name=party.name))
     
     def set_callback(self, action: str, callback: Callable):
@@ -187,50 +177,6 @@ class DungeonUIManagerPygame:
             logger.error(config_manager.get_text("dungeon_ui.character_status_bar_error").format(error=e))
             self.character_status_bar = None
     
-    def show_battle_ui(self, battle_manager, enemies):
-        """戦闘UIを表示（WindowSystem版）"""
-        try:
-            battle_config = self._create_battle_ui_config(battle_manager, enemies)
-            
-            self.battle_ui_window = BattleUIWindow(
-                window_id="dungeon_battle_ui",
-                battle_config=battle_config
-            )
-            
-            self.battle_ui_window.create()
-            
-            logger.info("戦闘UIを表示（WindowSystem版）")
-            return True
-        except Exception as e:
-            logger.error(f"戦闘UI表示エラー: {e}")
-            return False
-    
-    def _create_battle_ui_config(self, battle_manager=None, enemies=None):
-        """BattleUIWindow用設定を作成"""
-        return {
-            'battle_manager': battle_manager,
-            'party': self.current_party,
-            'enemies': enemies or [],
-            'show_battle_log': True,
-            'show_status_effects': True,
-            'enable_keyboard_shortcuts': True,
-            'enable_animations': True,
-            'auto_advance_log': False,
-            'log_max_entries': 100
-        }
-    
-    def show_action_menu(self):
-        """アクションメニューを表示（BattleUIWindowに委譲）"""
-        if self.battle_ui_window:
-            try:
-                # BattleUIWindowにアクションメニュー表示を委譲
-                self.battle_ui_window._show_action_menu()
-                return True
-            except Exception as e:
-                logger.error(f"アクションメニュー表示エラー: {e}")
-                return False
-        return False
-    
     def toggle_main_menu(self):
         """メインメニューの表示/非表示を切り替え"""
         if self.is_menu_open:
@@ -252,14 +198,7 @@ class DungeonUIManagerPygame:
         logger.info(config_manager.get_text("dungeon_ui.menu_closed"))
     
     def handle_input(self, event) -> bool:
-        """入力処理（WindowSystem版）"""
-        # BattleUIWindowが存在する場合、そちらに委譲
-        if self.battle_ui_window:
-            try:
-                return self.battle_ui_window.handle_event(event)
-            except Exception as e:
-                logger.error(f"BattleUIWindow入力処理エラー: {e}")
-        
+        """入力処理"""
         # 小地図のイベント処理（メニューが開いていなくても処理）
         if self.small_map_ui:
             if self.small_map_ui.handle_event(event):
@@ -393,13 +332,6 @@ class DungeonUIManagerPygame:
         """リソースのクリーンアップ"""
         try:
             self.close_menu()
-            
-            # BattleUIWindowのクリーンアップ
-            if self.battle_ui_window:
-                if hasattr(self.battle_ui_window, 'cleanup_ui'):
-                    self.battle_ui_window.cleanup_ui()
-                self.battle_ui_window = None
-            
             logger.info("DungeonUIManagerPygame リソースをクリーンアップしました")
         except Exception as e:
             logger.error(f"クリーンアップ中にエラー: {e}")
