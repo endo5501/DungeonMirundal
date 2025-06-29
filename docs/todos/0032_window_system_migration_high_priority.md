@@ -126,10 +126,34 @@ WindowManager.instance.show_window(window)
 - `docs/todos/0034_window_system_migration_low_priority.md`: 低優先度移行計画
 
 ## 完了条件
-- [ ] help_ui.pyの完全移行
-- [ ] magic_ui.pyの完全移行  
-- [ ] status_effects_ui.pyの完全移行
-- [ ] settings_ui.pyの完全移行
-- [ ] 移行後の動作確認完了
-- [ ] テスト整合性確保
-- [ ] レガシーコード削除
+
+### 新WindowSystemクラス実装 ✅ **完了**
+- [x] ✅ HelpWindow実装済み (`src/ui/window_system/help_window.py`)
+- [x] ✅ MagicWindow実装済み (`src/ui/window_system/magic_window.py`)
+- [x] ✅ StatusEffectsWindow実装済み (`src/ui/window_system/status_effects_window.py`)
+- [x] ✅ SettingsWindow実装済み (`src/ui/window_system/settings_window.py`)
+
+### UIMenuからWindowSystemへの実際の移行 🔄 **未完了**
+- [ ] 🔄 help_ui.pyの完全移行（UIMenuベース → HelpWindow使用）
+- [ ] 🔄 magic_ui.pyの完全移行（UIMenuベース → MagicWindow使用）
+- [ ] 🔄 status_effects_ui.pyの完全移行（UIMenuベース → StatusEffectsWindow使用）  
+- [ ] 🔄 settings_ui.pyの完全移行（UIMenuベース → SettingsWindow使用）
+- [ ] 🔄 移行後の動作確認完了
+- [ ] 🔄 テスト整合性確保
+- [ ] 🔄 レガシーコード削除
+
+## 現在の状況（2025-06-29確認）
+
+### 実装状況
+- ✅ **新WindowSystemクラス**: 全4クラスが完全実装済み
+- 🔄 **実際の移行作業**: 旧UIMenuベースファイルが依然として使用中
+- 🔄 **統合作業**: 新クラスへの切り替え作業が未実施
+
+### 対象ファイルの現状
+1. **src/ui/help_ui.py**: UIMenuベース実装（line 248でUIMenu使用）
+2. **src/ui/magic_ui.py**: UIMenuベース実装（multiple UIMenu instances）
+3. **src/ui/status_effects_ui.py**: UIMenuベース実装（line 36等でUIMenu使用）
+4. **src/ui/settings_ui.py**: UIMenuベース実装（135, 210等でUIMenu使用）
+
+### 次回アクション
+新WindowSystemクラスは実装完了しているため、各UIファイルの実際の移行作業（UIMenu使用箇所を新WindowSystemクラス呼び出しに変更）を実施する必要があります。
