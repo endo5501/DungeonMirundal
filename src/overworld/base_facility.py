@@ -6,8 +6,8 @@ from enum import Enum
 import pygame
 
 from src.character.party import Party
-# UIMenuは段階的削除により使用しない
-from src.ui.menu_stack_manager import MenuStackManager, MenuType
+# UIMenuとMenuStackManagerは段階的削除により使用しない
+# from src.ui.menu_stack_manager import MenuStackManager, MenuType  # WindowSystem移行により削除
 from src.ui.dialog_template import DialogTemplate
 from src.ui.window_system import WindowManager
 from src.core.config_manager import config_manager
@@ -49,21 +49,25 @@ class BaseFacility(ABC):
         # WindowManager統合（新システム）
         self.window_manager = WindowManager.get_instance()
         
-        # MenuStackManagerシステム
-        self.menu_stack_manager: Optional[MenuStackManager] = None
+        # MenuStackManagerシステム（削除）- WindowSystemへ移行
+        # self.menu_stack_manager: Optional[MenuStackManager] = None
         self.dialog_template: Optional[DialogTemplate] = None
+        self.ui_manager = None  # UIManager参照（レガシー互換性のため）
         
         logger.info(f"施設を初期化しました: {facility_id} ({facility_type.value})")
     
     def initialize_menu_system(self, ui_manager) -> None:
-        """メニューシステムを初期化"""
-        self.menu_stack_manager = MenuStackManager(ui_manager)
-        self.dialog_template = DialogTemplate(self.menu_stack_manager)
+        """メニューシステムを初期化（WindowSystem対応）"""
+        # UIManager参照を保持（レガシー互換性）
+        self.ui_manager = ui_manager
         
-        # ESCキー処理のコールバック設定
-        self.menu_stack_manager.on_escape_pressed = self._handle_escape_key
+        # DialogTemplateの初期化（MenuStackManager不要）
+        if self.dialog_template is None:
+            self.dialog_template = DialogTemplate(None)  # MenuStackManager不要
         
-        logger.info(f"施設 {self.facility_id} のメニューシステムを初期化しました")
+        # WindowSystemではESCキー処理はWindowが直接管理
+        
+        logger.info(f"施設 {self.facility_id} のメニューシステムを初期化しました（WindowSystem対応）")
     
     def get_name(self) -> str:
         """施設名を取得"""
@@ -194,9 +198,8 @@ class BaseFacility(ABC):
             # WindowManagerクリーンアップ（新システム）
             self._cleanup_ui_windows()
             
-            # MenuStackManagerシステムのクリーンアップ
-            if self.menu_stack_manager:
-                self.menu_stack_manager.clear_stack()
+            # MenuStackManagerシステムのクリーンアップ（削除）
+            # WindowSystemではWindowManagerが管理
             if self.dialog_template:
                 self.dialog_template.cleanup_all_dialogs()
                 
@@ -520,34 +523,38 @@ class BaseFacility(ABC):
         return True
     
     def _get_effective_ui_manager(self):
-        """有効なUIマネージャーを取得（menu_stack_manager専用）"""
-        if self.menu_stack_manager and self.menu_stack_manager.ui_manager:
-            return self.menu_stack_manager.ui_manager
-        return None
+        """有効なUIマネージャーを取得（WindowSystem対応）"""
+        # UIManager参照を直接返す
+        return self.ui_manager
     
     
     def back_to_previous_menu(self) -> bool:
-        """前のメニューに戻る"""
-        return self.menu_stack_manager.back_to_previous()
+        """前のメニューに戻る（WindowSystem対応）"""
+        # WindowManagerのgo_back機能を使用
+        if self.window_manager:
+            return self.window_manager.go_back()
+        return False
     
     
     
     
     
     def back_to_facility_main(self) -> bool:
-        """施設メインメニューに戻る"""
-        return self.menu_stack_manager.back_to_facility_main()
+        """施設メインメニューに戻る（WindowSystem対応）"""
+        # 施設を退出してメインメニューに戻る
+        return self.exit()
     
     def _handle_escape_key(self) -> bool:
-        """ESCキー処理（新システム用コールバック）"""
+        """ESCキー処理（WindowSystem対応）"""
         try:
             # 施設固有のESC処理があれば実行
             if hasattr(self, '_on_escape_key'):
                 if self._on_escape_key():
                     return True
             
-            # デフォルトの戻る処理
-            return self.back_to_previous_menu()
+            # WindowSystemでは各Windowが独自にESCキー処理を管理
+            # デフォルトは施設を退出
+            return self.exit()
             
         except Exception as e:
             logger.error(f"ESCキー処理エラー: {e}")
