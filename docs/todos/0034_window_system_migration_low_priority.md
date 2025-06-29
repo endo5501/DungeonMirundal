@@ -81,6 +81,10 @@
 - t-wada式TDDで開発
 - レガシー管理機能の除去
 
+#### 10. 戦闘UI統合
+
+* ./docs/todos/0039_battle_ui_integration_remaining.md
+
 ### 最終クリーンアップ対象
 
 #### 10. src/ui/base_ui_pygame.py  
@@ -95,6 +99,10 @@
 
 * ./docs/todos/0035_window_system_legacy_cleanup.md
 * ./docs/todos/0036_overworld_manager_code_cleanup.md 
+
+#### 12. 中優先度作業で発生した残作業
+
+* ./docs/todos/0040_adapter_removal_and_cleanup.md
 
 #### 11. 全テストの確認修正
 **現状**: 全テスト(uv run pytest)で多数のfaildが発生
