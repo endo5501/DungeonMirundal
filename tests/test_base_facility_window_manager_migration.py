@@ -152,29 +152,61 @@ class TestBaseFacilityWindowManagerMigration:
         # menu_stack_managerは削除済みのため、テスト無効化
         pytest.skip("menu_stack_managerは削除済み - WindowSystemへ完全移行")
 
-    def test_enter_facility_window_manager_integration(self, test_facility, test_party, mock_window_manager):
+    def test_enter_facility_window_manager_integration(self, test_party, mock_window_manager):
         """施設入場WindowManager統合テスト"""
-        # 入場処理実行
-        result = test_facility.enter(test_party)
-        
-        assert result is True
-        assert test_facility.is_active is True
-        assert test_facility.current_party == test_party
-        
-        # メインメニュー表示確認（WindowManagerまたはMenuStackManager）
-        assert hasattr(test_facility, '_show_main_menu')
-
-    def test_exit_facility_window_manager_integration(self, test_facility, test_party):
-        """施設退場WindowManager統合テスト"""
-        # 入場してから退場
-        test_facility.enter(test_party)
-        
-        with patch.object(test_facility, '_cleanup_ui_windows') as mock_cleanup:
-            result = test_facility.exit()
+        # WindowManagerをモックした状態でテスト施設を作成
+        with patch('src.ui.window_system.window_manager.WindowManager') as mock_wm_class:
+            mock_wm_class.get_instance.return_value = mock_window_manager
+            
+            class TestFacility(BaseFacility):
+                def _setup_menu_items(self, menu):
+                    menu.add_menu_item("テストアクション", lambda: None)
+                
+                def _on_enter(self):
+                    pass
+                
+                def _on_exit(self):
+                    pass
+                    
+            test_facility = TestFacility("test_facility_enter", FacilityType.GUILD, "test.facility.name")
+            
+            # 入場処理実行
+            result = test_facility.enter(test_party)
             
             assert result is True
-            assert test_facility.is_active is False
-            assert test_facility.current_party is None
+            assert test_facility.is_active is True
+            assert test_facility.current_party == test_party
+            
+            # メインメニュー表示確認（WindowManagerまたはMenuStackManager）
+            assert hasattr(test_facility, '_show_main_menu')
+
+    def test_exit_facility_window_manager_integration(self, test_party, mock_window_manager):
+        """施設退場WindowManager統合テスト"""
+        # WindowManagerをモックした状態でテスト施設を作成
+        with patch('src.ui.window_system.window_manager.WindowManager') as mock_wm_class:
+            mock_wm_class.get_instance.return_value = mock_window_manager
+            
+            class TestFacility(BaseFacility):
+                def _setup_menu_items(self, menu):
+                    menu.add_menu_item("テストアクション", lambda: None)
+                
+                def _on_enter(self):
+                    pass
+                
+                def _on_exit(self):
+                    pass
+                    
+            test_facility = TestFacility("test_facility_exit", FacilityType.GUILD, "test.facility.name")
+            
+            # 入場してから退場
+            test_facility.enter(test_party)
+            
+            with patch.object(test_facility, '_cleanup_ui_windows') as mock_cleanup:
+                result = test_facility.exit()
+                
+                assert result is True
+                assert test_facility.is_active is False
+                assert test_facility.current_party is None
 
     def test_dialog_system_window_manager_migration(self, test_facility):
         """ダイアログシステムWindowManager移行テスト"""
