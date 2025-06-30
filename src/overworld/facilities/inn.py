@@ -364,7 +364,7 @@ class Inn(BaseFacility):
     
     def _show_adventure_preparation(self):
         """冒険の準備メニューを表示（レガシー - 移行済み）"""
-        # UIMenu削除済み: _show_adventure_preparation()は_show_adventure_service()に移行されました
+        # Legacy note: _show_adventure_preparation()は_show_adventure_service()に移行されました
         return self._show_adventure_service()
     
     # === アイテム管理 ===

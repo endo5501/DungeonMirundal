@@ -58,7 +58,7 @@ class TestInnFacilityMigration:
         assert len(menu_items) >= 6  # 6つの主要メニュー項目 + exit
         
         # 必須メニュー項目の存在確認
-        item_ids = [item['item_id'] for item in menu_items]
+        item_ids = [item['id'] for item in menu_items]
         assert 'adventure_preparation' in item_ids
         assert 'item_storage' in item_ids
         assert 'talk_innkeeper' in item_ids
