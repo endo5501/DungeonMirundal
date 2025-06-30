@@ -64,6 +64,10 @@ class MagicGuild(BaseFacility):
             'resurrection': {'name': 'リザレクション', 'level': 7, 'cost': 2000}
         }
     
+    def _create_facility_menu_config(self):
+        """共通の_create_facility_menu_config実装"""
+        return self._create_magic_guild_menu_config()
+    
     def _create_magic_guild_menu_config(self):
         """MagicGuild用のFacilityMenuWindow設定を作成"""
         menu_items = [
@@ -107,7 +111,7 @@ class MagicGuild(BaseFacility):
         window_manager = WindowManager.get_instance()
         
         # メニュー設定を作成
-        menu_config = self._create_magic_guild_menu_config()
+        menu_config = self._create_facility_menu_config()
         
         # WindowManagerの正しい使用パターン: create_window -> show_window
         magic_guild_window = window_manager.create_window(

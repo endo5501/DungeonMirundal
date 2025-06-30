@@ -99,6 +99,11 @@ class AdventurersGuild(BaseFacility):
             'show_gold': True
         }
     
+    def _create_facility_menu_config(self) -> Dict[str, Any]:
+        """施設メニュー設定を作成（WindowManager用）- BaseFacilityをオーバーライド"""
+        # _create_guild_menu_config()の結果を返す
+        return self._create_guild_menu_config()
+    
     def show_menu(self):
         """Guildメインメニューを表示（FacilityMenuWindow使用）"""
         window_manager = WindowManager.get_instance()

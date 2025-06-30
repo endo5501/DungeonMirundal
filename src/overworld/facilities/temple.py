@@ -52,6 +52,10 @@ class Temple(BaseFacility):
             'all_status_cure': SERVICE_COST_ALL_STATUS_CURE,  # 全状態異常治療
         }
     
+    def _create_facility_menu_config(self):
+        """共通の_create_facility_menu_config実装"""
+        return self._create_temple_menu_config()
+    
     def _create_temple_menu_config(self):
         """Temple用のFacilityMenuWindow設定を作成"""
         menu_items = [
@@ -101,7 +105,7 @@ class Temple(BaseFacility):
         window_manager = WindowManager.get_instance()
         
         # メニュー設定を作成
-        menu_config = self._create_temple_menu_config()
+        menu_config = self._create_facility_menu_config()
         
         # WindowManagerの正しい使用パターン: create_window -> show_window
         temple_window = window_manager.create_window(

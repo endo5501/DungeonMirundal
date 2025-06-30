@@ -507,7 +507,7 @@ class OverworldManager:
         
         self.dungeon_selection_list = CustomSelectionList(
             relative_rect=list_rect,
-            manager=self.ui_manager.pygame_gui_manager,
+            manager=self.ui_manager,
             title="ダンジョン選択"
         )
         

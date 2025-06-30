@@ -90,6 +90,10 @@ class Inn(BaseFacility):
             'show_gold': True
         }
     
+    def _create_facility_menu_config(self) -> Dict[str, Any]:
+        """施設メニュー設定を作成（WindowManager用）- BaseFacilityをオーバーライド"""
+        return self._create_inn_menu_config()
+    
     def show_menu(self):
         """Innメインメニューを表示（FacilityMenuWindow使用）"""
         window_manager = WindowManager.get_instance()

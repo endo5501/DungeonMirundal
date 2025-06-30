@@ -1,7 +1,7 @@
 """商店"""
 
 import pygame
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from src.overworld.base_facility import BaseFacility, FacilityType
 from src.items.item import Item, ItemInstance, ItemType, item_manager
 from src.ui.window_system import WindowManager
@@ -100,6 +100,10 @@ class Shop(BaseFacility):
             'show_party_info': True,
             'show_gold': True
         }
+    
+    def _create_facility_menu_config(self) -> Dict[str, Any]:
+        """施設メニュー設定を作成（WindowManager用）- BaseFacilityをオーバーライド"""
+        return self._create_shop_menu_config()
     
     def show_menu(self):
         """Shopメインメニューを表示（FacilityMenuWindow使用）"""
