@@ -4,8 +4,8 @@ import pytest
 from unittest.mock import Mock, patch
 import pygame
 
-from src.ui.window_system.equipment_window import EquipmentWindow
-from src.ui.window_system.inventory_window import InventoryWindow
+from src.ui.windows.equipment_window import EquipmentWindow
+from src.ui.windows.inventory_window import InventoryWindow
 from src.ui.window_system.character_creation_wizard import CharacterCreationWizard
 from src.ui.window_system.window_manager import WindowManager
 
@@ -74,8 +74,9 @@ class TestWindowSystemMigration:
         assert inventory_window.window_id == "test_inventory"
         assert isinstance(inventory_window, InventoryWindow)
         
-        # CharacterCreationWizard
-        creation_wizard = CharacterCreationWizard("test_creation")
+        # CharacterCreationWizard  
+        wizard_config = {"character_classes": [], "races": []}
+        creation_wizard = CharacterCreationWizard("test_creation", wizard_config)
         assert creation_wizard.window_id == "test_creation"
         assert isinstance(creation_wizard, CharacterCreationWizard)
         

@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Any, Callable
 from src.overworld.base_facility import BaseFacility, FacilityType
 from src.character.character import Character
 from src.character.party import Party, PartyPosition
-from src.ui.character_creation import CharacterCreationWizard
+from src.ui.windows.character_creation_wizard import CharacterCreationWizard
 from src.ui.window_system import MenuWindow, WindowManager
 from src.ui.window_system.facility_menu_window import FacilityMenuWindow
 from src.core.config_manager import config_manager

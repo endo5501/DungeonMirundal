@@ -6,7 +6,7 @@ from enum import Enum
 from src.character.party import Party
 from src.character.character import Character, CharacterStatus
 from src.overworld.base_facility import BaseFacility, FacilityManager, facility_manager
-from src.ui.base_ui_pygame import UIDialog, ui_manager  # レガシーメニュー: Phase 4.5で削除
+# from src.ui.base_ui_pygame import UIDialog, ui_manager  # レガシーメニュー: Phase 4.5で削除済み
 from src.ui.window_system import WindowManager
 try:
     from src.ui.dungeon_selection_ui import DungeonSelectionUI
