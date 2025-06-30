@@ -3,7 +3,7 @@
 from typing import Optional, Callable
 import pygame
 from src.character.party import Party
-from src.ui.base_ui_pygame import UIButton, UIText  # UIMenu: Phase 4.5で削除
+# from src.ui.base_ui_pygame import UIButton, UIText  # UIMenu: Phase 4.5で削除済み（WindowSystem移行）
 from src.ui.selection_list_ui import CustomSelectionList, SelectionListData
 # from src.ui.menu_stack_manager import MenuStackManager, MenuType  # WindowSystem移行により削除
 from src.ui.character_status_bar import CharacterStatusBar, create_character_status_bar
@@ -428,8 +428,9 @@ class OverworldManager:
             if hasattr(self, 'ui_manager') and self.ui_manager:
                 if hasattr(self, 'main_menu') and self.main_menu:
                     self.ui_manager.hide_menu(self.main_menu.menu_id)
-                if hasattr(self, 'settings_menu') and self.settings_menu:
-                    self.ui_manager.hide_menu(self.settings_menu.menu_id)
+                # WindowSystem移行により不要
+                # if hasattr(self, 'settings_menu') and self.settings_menu:
+                #     self.ui_manager.hide_menu(self.settings_menu.menu_id)
             
             # MenuStackManagerのクリーンアップ（削除済み）
             # WindowSystemへ移行により不要
@@ -792,64 +793,67 @@ class OverworldManager:
                 info_text += f"  MP: {character.derived_stats.current_mp}/{character.derived_stats.max_mp}"
                 info_text += f"  状態: {character.status.value}"
             
-            # UIダイアログでパーティ情報を表示（動的サイズ調整）
-            from src.ui.base_ui_pygame import UIDialog, UIButton
+            # WindowSystemベースのダイアログでパーティ情報を表示
+            from src.ui.window_system.dialog_window import DialogWindow, DialogType, DialogButton, DialogResult
             
-            # テキスト量に基づいてダイアログサイズを計算
-            text_length = len(info_text)
-            line_count = info_text.count('\n') + 1
-            
-            # ダイアログサイズの動的調整
-            if text_length > 300:
-                dialog_width = 700
-            elif text_length > 150:
-                dialog_width = 600
-            else:
-                dialog_width = 500
+            # パーティ状況ダイアログを作成
+            try:
+                from src.core.game_manager import GameManager
+                window_manager = GameManager.get_instance().window_manager
                 
-            dialog_height = min(600, max(300, 80 + line_count * 25))
-            
-            # 画面中央に配置
-            dialog_x = (1024 - dialog_width) // 2
-            dialog_y = (768 - dialog_height) // 2
-            
-            party_dialog = UIDialog("party_status_dialog", "パーティ状況", info_text, 
-                                  dialog_x, dialog_y, dialog_width, dialog_height)
-            
-            # OKボタンを画面下部に配置
-            ok_x = dialog_x + (dialog_width - 100) // 2
-            ok_y = dialog_y + dialog_height - 60
-            ok_button = UIButton("party_status_ok", "OK", ok_x, ok_y, 100, 40)
-            ok_button.on_click = self._close_party_status_dialog
-            party_dialog.add_element(ok_button)
-            
-            self.ui_manager.add_dialog(party_dialog)
-            self.ui_manager.show_dialog("party_status_dialog")
+                if window_manager:
+                    # ダイアログウィンドウを作成
+                    dialog = DialogWindow("party_status_dialog")
+                    
+                    # ダイアログ設定
+                    dialog.setup_dialog(
+                        title="パーティ状況",
+                        message=info_text,
+                        dialog_type=DialogType.INFORMATION,
+                        buttons=[DialogButton("OK", DialogResult.OK, is_default=True)]
+                    )
+                    
+                    # ダイアログを表示
+                    window_manager.show_window(dialog, modal=True)
+                    logger.info("WindowSystemベースでパーティ状況を表示しました")
+                else:
+                    logger.error("WindowManagerが利用できません")
+            except Exception as e:
+                logger.error(f"パーティ状況表示エラー: {e}")
+                # フォールバック: ログに出力
+                logger.info("=== パーティ状況 ===")
+                logger.info(info_text)
             
             logger.info(f"パーティ詳細: {info_text}")
         else:
             # パーティが設定されていない場合
-            from src.ui.base_ui_pygame import UIDialog, UIButton
-            no_party_dialog = UIDialog("no_party_dialog", "パーティ状況", "パーティが設定されていません。")
+            from src.ui.window_system.dialog_window import DialogWindow, DialogType, DialogButton, DialogResult
             
-            # OKボタンを追加
-            ok_button = UIButton("no_party_ok", "OK", 400, 400, 100, 40)
-            ok_button.on_click = self._close_party_status_dialog
-            no_party_dialog.add_element(ok_button)
-            
-            self.ui_manager.add_dialog(no_party_dialog)
-            self.ui_manager.show_dialog("no_party_dialog")
-    
-    def _close_party_status_dialog(self):
-        """パーティ状況ダイアログを閉じる"""
-        try:
-            self.ui_manager.hide_dialog("party_status_dialog")
-        except:
-            pass
-        try:
-            self.ui_manager.hide_dialog("no_party_dialog")
-        except:
-            pass
+            try:
+                from src.core.game_manager import GameManager
+                window_manager = GameManager.get_instance().window_manager
+                
+                if window_manager:
+                    # ダイアログウィンドウを作成
+                    dialog = DialogWindow("no_party_dialog")
+                    
+                    # ダイアログ設定
+                    dialog.setup_dialog(
+                        title="パーティ状況",
+                        message="パーティが設定されていません。",
+                        dialog_type=DialogType.INFORMATION,
+                        buttons=[DialogButton("OK", DialogResult.OK, is_default=True)]
+                    )
+                    
+                    # ダイアログを表示
+                    window_manager.show_window(dialog, modal=True)
+                    logger.info("WindowSystemベースで「パーティ未設定」ダイアログを表示しました")
+                else:
+                    logger.error("WindowManagerが利用できません")
+            except Exception as e:
+                logger.error(f"パーティ未設定ダイアログ表示エラー: {e}")
+                # フォールバック: ログに出力
+                logger.info("パーティが設定されていません。")
     
     def _initialize_character_status_bar(self):
         """キャラクターステータスバーを初期化"""
@@ -893,9 +897,9 @@ class OverworldManager:
             logger.error("UIマネージャーが設定されていません")
             return
         
-        # 設定メニューを隠す
-        if self.settings_menu:
-            self.ui_manager.hide_menu(self.settings_menu.menu_id)
+        # 設定メニューを隠す（WindowSystem移行により不要）
+        # if self.settings_menu:
+        #     self.ui_manager.hide_menu(self.settings_menu.menu_id)
         
         # セーブスロット選択メニューをWindowSystemで作成
         # UIMenuは削除済み - OverworldMainWindowのSAVE_LOADメニューを使用
@@ -912,9 +916,9 @@ class OverworldManager:
             logger.error("UIマネージャーが設定されていません")
             return
         
-        # 設定メニューを隠す
-        if self.settings_menu:
-            self.ui_manager.hide_menu(self.settings_menu.menu_id)
+        # 設定メニューを隠す（WindowSystem移行により不要）
+        # if self.settings_menu:
+        #     self.ui_manager.hide_menu(self.settings_menu.menu_id)
         
         # ロードスロット選択メニューをWindowSystemで作成
         # UIMenuは削除済み - OverworldMainWindowのSAVE_LOADメニューを使用
@@ -1066,9 +1070,9 @@ class OverworldManager:
         # セーブスロット選択メニューを隠す
         self.ui_manager.hide_menu("save_slot_selection_menu")
         
-        # 設定メニューを再表示
-        if self.settings_menu:
-            self.ui_manager.show_menu(self.settings_menu.menu_id, modal=True)
+        # 設定メニューを再表示（WindowSystem移行により不要）
+        # if self.settings_menu:
+        #     self.ui_manager.show_menu(self.settings_menu.menu_id, modal=True)
     
     def _close_load_slot_selection(self):
         """ロードスロット選択メニューを閉じて設定画面に戻る"""
@@ -1077,9 +1081,9 @@ class OverworldManager:
         # ロードスロット選択メニューを隠す
         self.ui_manager.hide_menu("load_slot_selection_menu")
         
-        # 設定メニューを再表示
-        if self.settings_menu:
-            self.ui_manager.show_menu(self.settings_menu.menu_id, modal=True)
+        # 設定メニューを再表示（WindowSystem移行により不要）
+        # if self.settings_menu:
+        #     self.ui_manager.show_menu(self.settings_menu.menu_id, modal=True)
     
     def _on_save_game_old(self):
         """ゲームを保存（旧実装）"""
@@ -1131,9 +1135,9 @@ class OverworldManager:
     def _on_settings_close(self):
         """設定画面終了時のコールバック"""
         logger.info("設定画面が閉じられました")
-        # 設定メニューに戻る
-        if self.settings_menu:
-            self.ui_manager.show_menu(self.settings_menu.menu_id, modal=True)
+        # 設定メニューに戻る（WindowSystem移行により不要）
+        # if self.settings_menu:
+        #     self.ui_manager.show_menu(self.settings_menu.menu_id, modal=True)
     
     def _on_back_to_overworld(self):
         """地上部に戻る"""
@@ -1163,18 +1167,19 @@ class OverworldManager:
         except Exception as e:
             logger.warning(f"WindowSystemベースの設定画面表示エラー: {e}")
         
-        # フォールバック: レガシーUIMenu使用
+        # フォールバック: レガシーUIMenu使用（WindowSystem移行により不要）
         if self.main_menu:
             self.ui_manager.hide_menu(self.main_menu.menu_id)
-        if self.settings_menu:
-            self.settings_menu.show()
+        # if self.settings_menu:
+        #     self.settings_menu.show()
         self.settings_active = True
         logger.info("レガシーメニューで設定画面を表示しました")
     
     def _hide_settings_menu(self):
         """設定画面を非表示"""
-        if self.settings_menu:
-            self.settings_menu.hide()
+        # WindowSystem移行により不要
+        # if self.settings_menu:
+        #     self.settings_menu.hide()
         self.settings_active = False
         logger.info("設定画面を非表示にしました")
     
