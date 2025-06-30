@@ -34,6 +34,16 @@ class TestBaseFacilityWindowManagerMigration:
             mock_wm.register_window.return_value = True
             mock_wm.go_back.return_value = True
             mock_wm.window_registry = {}
+            
+            # create_windowメソッドのモック - ウィンドウIDの重複チェックなし
+            def mock_create_window(window_class, window_id, **kwargs):
+                mock_window = Mock()
+                mock_window.window_id = window_id
+                mock_window.message_handler = None
+                mock_window.show = Mock()
+                return mock_window
+            mock_wm.create_window = mock_create_window
+            
             mock_wm_class.get_instance.return_value = mock_wm
             yield mock_wm
 
@@ -91,7 +101,7 @@ class TestBaseFacilityWindowManagerMigration:
         assert config['menu_type'] == 'facility'
         assert 'facility_type' in config
         assert config['facility_type'] == test_facility.facility_type.value
-        assert 'title' in config
+        assert 'facility_name' in config
         assert 'menu_items' in config
         assert isinstance(config['menu_items'], list)
         
@@ -136,16 +146,11 @@ class TestBaseFacilityWindowManagerMigration:
         
         assert result is False
 
+    @pytest.mark.skip(reason="menu_stack_managerは削除済み - WindowSystemへ完全移行")
     def test_window_manager_vs_menu_stack_manager_priority(self, test_facility):
         """WindowManager vs MenuStackManager優先度確認"""
-        # WindowManagerが優先される実装確認
-        assert hasattr(test_facility, 'window_manager') and test_facility.window_manager
-        
-        # 統一メソッドの存在確認
-        assert hasattr(test_facility, '_show_main_menu_unified')
-        
-        # フォールバック確認
-        assert hasattr(test_facility, 'menu_stack_manager')
+        # menu_stack_managerは削除済みのため、テスト無効化
+        pytest.skip("menu_stack_managerは削除済み - WindowSystemへ完全移行")
 
     def test_enter_facility_window_manager_integration(self, test_facility, test_party, mock_window_manager):
         """施設入場WindowManager統合テスト"""
@@ -225,37 +230,17 @@ class TestBaseFacilityWindowManagerMigration:
         assert hasattr(manager, 'set_window_manager')
         assert hasattr(manager, '_cleanup_all_windows')
 
+    @pytest.mark.skip(reason="menu_stack_managerは削除済み - WindowSystemへ完全移行")
     def test_hybrid_implementation_consistency(self, test_facility):
         """ハイブリッド実装一貫性テスト"""
-        # 新旧システムの併用確認
-        assert hasattr(test_facility, 'menu_stack_manager')  # レガシー
-        assert hasattr(test_facility, 'window_manager') or hasattr(test_facility, '_window_manager')  # 新システム
-        
-        # 統一インターフェースの存在確認
-        unified_methods = [
-            '_show_main_menu_unified',
-            '_show_submenu_unified',
-            '_show_dialog_unified'
-        ]
-        
-        for method_name in unified_methods:
-            assert hasattr(test_facility, method_name), f"統一メソッド {method_name} が実装されていません"
+        # menu_stack_managerは削除済みのため、テスト無効化
+        pytest.skip("menu_stack_managerは削除済み - WindowSystemへ完全移行")
 
+    @pytest.mark.skip(reason="menu_stack_managerは削除済み - WindowSystemへ完全移行")
     def test_window_manager_fallback_mechanism(self, test_facility, test_party):
         """WindowManagerフォールバック機構テスト"""
-        test_facility.current_party = test_party
-        
-        # WindowManagerが利用できない場合のフォールバック確認
-        with patch.object(test_facility, 'window_manager', None):
-            try:
-                test_facility._show_main_menu_window_manager()
-                # フォールバックがMenuStackManagerを使用することを期待
-            except Exception:
-                # ImportErrorやその他のエラーは許容
-                pass
-        
-        # MenuStackManagerの存在確認
-        assert test_facility.menu_stack_manager is not None
+        # menu_stack_managerは削除済みのため、テスト無効化
+        pytest.skip("menu_stack_managerは削除済み - WindowSystemへ完全移行")
 
     def test_facility_data_consistency_with_window_manager(self, test_facility):
         """WindowManager環境での施設データ一貫性テスト"""

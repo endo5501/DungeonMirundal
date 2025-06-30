@@ -125,7 +125,13 @@ class BaseFacility(ABC):
             from src.ui.window_system.facility_menu_window import FacilityMenuWindow
             
             menu_config = self._create_facility_menu_config()
-            facility_window = FacilityMenuWindow(f"{self.facility_id}_main", menu_config)
+            
+            # WindowManagerの正しい使用パターン: create_window -> show_window
+            facility_window = self.window_manager.create_window(
+                FacilityMenuWindow,
+                f"{self.facility_id}_main",
+                facility_config=menu_config
+            )
             facility_window.message_handler = self.handle_facility_message
             self.window_manager.show_window(facility_window, push_to_stack=True)
             
@@ -153,7 +159,7 @@ class BaseFacility(ABC):
         return {
             'menu_type': 'facility',
             'facility_type': self.facility_type.value,
-            'title': self.get_name(),
+            'facility_name': self.get_name(),
             'menu_items': menu_items,
             'party': self.current_party  # FacilityMenuWindowで必要
         }
