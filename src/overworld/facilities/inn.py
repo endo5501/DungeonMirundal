@@ -97,8 +97,12 @@ class Inn(BaseFacility):
         # メニュー設定を作成
         menu_config = self._create_inn_menu_config()
         
-        # FacilityMenuWindowを作成
-        inn_window = FacilityMenuWindow('inn_main_menu', menu_config)
+        # WindowManagerの正しい使用パターン: create_window -> show_window
+        inn_window = window_manager.create_window(
+            FacilityMenuWindow,
+            'inn_main_menu',
+            facility_config=menu_config
+        )
         
         # メッセージハンドラーを設定
         inn_window.message_handler = self.handle_facility_message

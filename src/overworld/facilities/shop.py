@@ -108,8 +108,12 @@ class Shop(BaseFacility):
         # メニュー設定を作成
         menu_config = self._create_shop_menu_config()
         
-        # FacilityMenuWindowを作成
-        shop_window = FacilityMenuWindow('shop_main_menu', menu_config)
+        # WindowManagerの正しい使用パターン: create_window -> show_window
+        shop_window = window_manager.create_window(
+            FacilityMenuWindow,
+            'shop_main_menu',
+            facility_config=menu_config
+        )
         
         # メッセージハンドラーを設定
         shop_window.message_handler = self.handle_facility_message

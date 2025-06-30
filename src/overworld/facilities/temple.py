@@ -103,8 +103,12 @@ class Temple(BaseFacility):
         # メニュー設定を作成
         menu_config = self._create_temple_menu_config()
         
-        # FacilityMenuWindowを作成
-        temple_window = FacilityMenuWindow('temple_main_menu', menu_config)
+        # WindowManagerの正しい使用パターン: create_window -> show_window
+        temple_window = window_manager.create_window(
+            FacilityMenuWindow,
+            'temple_main_menu',
+            facility_config=menu_config
+        )
         
         # メッセージハンドラーを設定
         temple_window.message_handler = self.handle_facility_message
