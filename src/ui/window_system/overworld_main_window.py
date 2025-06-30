@@ -87,8 +87,14 @@ class OverworldMainWindow(Window):
             self.surface = pygame.Surface(screen_size)
             self.rect = self.surface.get_rect()
         
-        # pygame-gui UIManager初期化
-        self.ui_manager = pygame_gui.UIManager(self.surface.get_size())
+        # WindowManagerのUIManagerを取得（フォント・テーマが設定済み）
+        from .window_manager import WindowManager
+        window_manager = WindowManager.get_instance()
+        self.ui_manager = window_manager.ui_manager
+        
+        if not self.ui_manager:
+            # フォールバック：新しいUIManagerを作成
+            self.ui_manager = pygame_gui.UIManager(self.surface.get_size())
         
         # メニュータイプに応じてUI作成
         if self.current_menu_type == OverworldMenuType.MAIN:

@@ -54,6 +54,7 @@ class OverworldManager:
         # UI要素（レガシーUIMenuは段階的削除により使用停止）
         # self.main_menu: Optional[UIMenu] = None  # WindowSystem移行により削除
         # self.settings_menu: Optional[UIMenu] = None  # WindowSystem移行により削除
+        self.main_menu = None  # レガシー互換性のため一時的に追加
         self.dungeon_selection_list: Optional[CustomSelectionList] = None
         self.is_active = False
         self.settings_active = False
@@ -453,9 +454,14 @@ class OverworldManager:
     def show_main_menu_window_manager(self):
         """WindowManagerベースのメインメニューを表示"""
         if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
+            logger.debug(f"OverworldMainWindow存在確認: {self.overworld_main_window.window_id}")
             self.overworld_main_window.create()
+            logger.debug(f"OverworldMainWindow create()完了")
+            
             if self.overworld_main_window.window_id not in self.window_manager.window_registry:
                 self.window_manager.window_registry[self.overworld_main_window.window_id] = self.overworld_main_window
+                logger.debug(f"WindowManagerにOverworldMainWindowを登録: {self.overworld_main_window.window_id}")
+            
             self.window_manager.show_window(self.overworld_main_window, push_to_stack=True)
             logger.info("WindowManagerベースのメインメニューを表示しました")
         else:
@@ -1188,19 +1194,11 @@ class OverworldManager:
             if self.character_status_bar:
                 self.character_status_bar.set_party(party)
             
-            # UIマネージャーが設定されていない場合は後で設定
-            if self.ui_manager and not self.main_menu:
-                self._create_main_menu()
-            
             # WindowManagerベースのメインメニューを使用
             if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
                 self.show_main_menu_window_manager()
             else:
-                # フォールバック：従来の方法（MenuStackManager除去）
-                if self.main_menu:
-                    self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
-                else:
-                    logger.error("メインメニューが作成されていません")
+                logger.error("OverworldMainWindowが作成されていません")
             
             if from_dungeon:
                 logger.info("ダンジョンから地上部に帰還しました")
