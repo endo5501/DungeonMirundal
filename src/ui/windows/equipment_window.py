@@ -107,7 +107,10 @@ class EquipmentWindow(Window):
     def set_party(self, party: Party) -> None:
         """パーティを設定"""
         self.current_party = party
-        logger.debug(f"パーティを設定: {party.name}")
+        if party is not None:
+            logger.debug(f"パーティを設定: {party.name}")
+        else:
+            logger.debug("パーティを設定: None（パーティなし）")
 
     def show_party_equipment_overview(self) -> None:
         """パーティ装備概要を表示"""

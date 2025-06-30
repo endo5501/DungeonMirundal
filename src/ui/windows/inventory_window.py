@@ -200,6 +200,10 @@ class InventoryWindow(Window):
 
     def show_inventory_contents(self, inventory: Inventory, title: str, inventory_type: str = "character") -> None:
         """インベントリ内容を表示"""
+        if inventory is None:
+            logger.debug("インベントリ内容を表示: None（インベントリなし）")
+            return
+            
         self.current_inventory = inventory
         self.inventory_type = inventory_type
         self.current_mode = InventoryViewMode.INVENTORY_CONTENTS
