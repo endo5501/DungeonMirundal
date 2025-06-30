@@ -6,7 +6,7 @@ from enum import Enum
 from src.character.party import Party
 from src.character.character import Character, CharacterStatus
 from src.overworld.base_facility import BaseFacility, FacilityManager, facility_manager
-from src.ui.base_ui_pygame import UIDialog, ui_manager  # UIMenu: Phase 4.5で削除
+from src.ui.base_ui_pygame import UIDialog, ui_manager  # レガシーメニュー: Phase 4.5で削除
 from src.ui.window_system import WindowManager
 try:
     from src.ui.dungeon_selection_ui import DungeonSelectionUI
@@ -67,9 +67,9 @@ class OverworldManager:
         self.current_location = OverworldLocation.TOWN_CENTER
         self.is_active = False
         
-        # UI要素（レガシーUIMenuは段階的削除により使用停止）
-        # self.main_menu: Optional[UIMenu] = None  # WindowSystem移行により削除
-        # self.location_menu: Optional[UIMenu] = None  # WindowSystem移行により削除
+        # UI要素（レガシーメニューは段階的削除により使用停止）
+        # self.main_menu: Optional[Menu] = None  # WindowSystem移行により削除
+        # self.location_menu: Optional[Menu] = None  # WindowSystem移行により削除
         self.settings_menu_active = False
         self.dungeon_selection_ui = DungeonSelectionUI() if DungeonSelectionUI else None
         

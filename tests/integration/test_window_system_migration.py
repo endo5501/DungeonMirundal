@@ -4,14 +4,10 @@ import pytest
 from unittest.mock import Mock, patch
 import pygame
 
-from src.ui.windows.equipment_window import EquipmentWindow
-from src.ui.windows.inventory_window import InventoryWindow
-from src.ui.windows.character_creation_wizard import CharacterCreationWizard
-from src.ui.windows.dungeon_menu_window import DungeonMenuWindow
-from src.ui.windows.equipment_manager import equipment_manager
-from src.ui.windows.inventory_manager import inventory_manager
-from src.ui.windows.character_creation_manager import character_creation_manager
-from src.ui.windows.dungeon_menu_manager import dungeon_menu_manager
+from src.ui.window_system.equipment_window import EquipmentWindow
+from src.ui.window_system.inventory_window import InventoryWindow
+from src.ui.window_system.character_creation_wizard import CharacterCreationWizard
+from src.ui.window_system.window_manager import WindowManager
 
 
 class TestWindowSystemMigration:

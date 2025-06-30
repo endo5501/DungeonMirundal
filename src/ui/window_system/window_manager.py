@@ -16,6 +16,7 @@ from .window_stack import WindowStack
 from .focus_manager import FocusManager
 from .event_router import EventRouter
 from .statistics_manager import StatisticsManager
+from .window_pool import get_window_pool
 
 
 class WindowManager:
@@ -56,6 +57,7 @@ class WindowManager:
         self.focus_manager = FocusManager()
         self.event_router = EventRouter()
         self.statistics_manager = StatisticsManager()
+        self.window_pool = get_window_pool()
         self.window_registry: Dict[str, Window] = {}
     
     def _initialize_system_state(self):
@@ -229,8 +231,8 @@ class WindowManager:
         if window_id in self.window_registry:
             raise ValueError(f"ウィンドウID '{window_id}' は既に使用されています")
         
-        # ウィンドウを作成
-        window = window_class(window_id=window_id, parent=parent, **kwargs)
+        # ウィンドウを作成（プールから再利用または新規作成）
+        window = self.window_pool.get_window(window_class, window_id, parent=parent, **kwargs)
         
         # レジストリに登録
         self.window_registry[window_id] = window
@@ -328,8 +330,9 @@ class WindowManager:
         # イベントリスナーをクリーンアップ
         self.event_router.cleanup_window_listeners(window.window_id)
         
-        # ウィンドウを破棄
-        window.destroy()
+        # ウィンドウをプールに返却（失敗した場合は破棄）
+        if not self.window_pool.return_window(window):
+            window.destroy()
         
         # フォーカス状態をクリーンアップ
         self.focus_manager.cleanup_destroyed_windows()

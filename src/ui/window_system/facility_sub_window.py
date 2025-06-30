@@ -7,7 +7,7 @@ from src.ui.window_system.window import Window
 class FacilitySubWindow(Window):
     """施設サブメニュー専用基底クラス
     
-    UIMenuの代替として、施設内のサブメニュー機能を提供するWindowの基底クラス。
+    レガシーメニューの代替として、施設内のサブメニュー機能を提供するWindowの基底クラス。
     共通の戻り処理、コンテキスト管理、設定データ管理を提供。
     """
     
@@ -38,7 +38,7 @@ class FacilitySubWindow(Window):
         """共通の戻り処理
         
         親施設のメインメニューに戻るか、ウィンドウを閉じる。
-        UIMenuの戻り機能の代替実装。
+        レガシーメニューの戻り機能の代替実装。
         """
         if self.parent_facility and hasattr(self.parent_facility, '_show_main_menu'):
             self.parent_facility._show_main_menu()

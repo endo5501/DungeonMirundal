@@ -12,7 +12,7 @@ class ShopTransactionWindow(FacilitySubWindow):
     """商店取引専用ウィンドウ
     
     購入・売却・カテゴリ選択・数量選択を統合したWindow実装。
-    UIMenuの4箇所（category_menu, character_sell_menu, storage_sell_menu, quantity_menu）を代替。
+    レガシーメニューの4箇所（category_menu, character_sell_menu, storage_sell_menu, quantity_menu）を代替。
     """
     
     def __init__(self, window_id: str, facility_config: Dict[str, Any]):

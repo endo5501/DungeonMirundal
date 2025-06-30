@@ -12,7 +12,7 @@ class MagicGuildServiceWindow(FacilitySubWindow):
     """魔術協会サービス専用ウィンドウ
     
     魔術書店、魔法習得、アイテム鑑定、魔法分析、キャラクター分析を統合したWindow実装。
-    UIMenuの6箇所（spellbook_category_menu, available_spells_menu, identification_menu, 
+    レガシーメニューの6箇所（spellbook_category_menu, available_spells_menu, identification_menu, 
     analysis_menu, character_analysis_menu, spell_usage_menu）を代替。
     """
     

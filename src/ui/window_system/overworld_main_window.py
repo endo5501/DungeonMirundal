@@ -1,7 +1,7 @@
 """
 地上部メインウィンドウ
 
-OverworldManagerの9箇所のUIMenuを統合し、地上部の全機能を提供する核心Window
+OverworldManagerの9箇所のレガシーメニューを統合し、地上部の全機能を提供する核心Window
 """
 
 from typing import Dict, List, Optional, Any, Callable
@@ -29,7 +29,7 @@ class OverworldMainWindow(Window):
     """
     地上部メインウィンドウ
     
-    OverworldManagerの以下9箇所のUIMenuを統合:
+    OverworldManagerの以下9箇所のレガシーメニューを統合:
     1. main_menu - 施設アクセス（guild, inn, shop, temple, magic_guild）
     2. location_menu - ダンジョン入口アクセス
     3. settings_menu - パーティ状況、セーブ・ロード、設定画面

@@ -1,6 +1,6 @@
 """Pygame基本UIシステムのテスト"""
 
-import pytest
+# import pytest  # UIMenu削除により@pytest.mark.pygameは不要
 import os
 from unittest.mock import Mock, patch, MagicMock
 import pygame
@@ -9,7 +9,7 @@ import pygame
 os.environ['SDL_VIDEODRIVER'] = 'dummy'
 
 from src.ui.base_ui_pygame import (
-    UIElement, UIText, UIButton, UIDialog, UIManager,  # UIMenu: Phase 4.5で削除
+    UIElement, UIText, UIButton, UIManager,  # UIMenu, UIDialog: Phase 4.5で削除
     UIState, UIAlignment, ui_manager
 )
 
@@ -260,117 +260,8 @@ class TestUIButton:
         assert clicked is False  # 非表示なので実行されない
 
 
-# class TestUIMenu:  # UIMenu削除済み - Phase 4.5
-class TestUIMenuRemoved:
-    """UIMenuクラスのテスト"""
-    
-    def setup_method(self):
-        """各テストメソッドの前に実行"""
-        pygame.init()
-        self.screen = pygame.display.set_mode((800, 600))
-    
-    def teardown_method(self):
-        """各テストメソッドの後に実行"""
-        pygame.quit()
-    
-    def test_ui_menu_initialization(self):
-        """UIMenu初期化テスト"""
-        menu = UIMenu("test_menu", "Test Menu")
-        
-        assert menu.menu_id == "test_menu"
-        assert menu.title == "Test Menu"
-        assert len(menu.elements) == 0
-        assert menu.selected_index == 0
-    
-    def test_ui_menu_add_menu_item(self):
-        """UIMenuメニュー項目追加テスト"""
-        menu = UIMenu("test_menu", "Test Menu")
-        
-        def item1_action():
-            pass
-        
-        def item2_action():
-            pass
-        
-        # UIButtonを作成してメニューに追加
-        button1 = UIButton("item1", "Item 1")
-        button1.on_click = item1_action
-        button2 = UIButton("item2", "Item 2")
-        button2.on_click = item2_action
-        
-        menu.add_element(button1)
-        menu.add_element(button2)
-        
-        assert len(menu.elements) == 2
-        assert menu.elements[0].text == "Item 1"
-        assert menu.elements[0].on_click == item1_action
-        assert menu.elements[1].text == "Item 2"
-        assert menu.elements[1].on_click == item2_action
-    
-    def test_ui_menu_navigation(self):
-        """UIMenuナビゲーションテスト"""
-        menu = UIMenu("test_menu", "Test Menu")
-        
-        # UIButtonを作成してメニューに追加
-        button1 = UIButton("item1", "Item 1")
-        button2 = UIButton("item2", "Item 2")
-        button3 = UIButton("item3", "Item 3")
-        
-        menu.add_element(button1)
-        menu.add_element(button2)
-        menu.add_element(button3)
-        menu.show()  # メニューを表示状態にする
-        
-        # 初期選択
-        assert menu.selected_index == 0
-        
-        # 下方向移動（キーイベントで）
-        down_event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN)
-        menu.handle_event(down_event)
-        assert menu.selected_index == 1
-        
-        menu.handle_event(down_event)
-        assert menu.selected_index == 2
-        
-        # 上方向移動
-        up_event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_UP)
-        menu.handle_event(up_event)
-        assert menu.selected_index == 1
-    
-    def test_ui_menu_execute_selected(self):
-        """UIMenu選択項目実行テスト"""
-        menu = UIMenu("test_menu", "Test Menu")
-        
-        executed_item = None
-        
-        def item1_action():
-            nonlocal executed_item
-            executed_item = "item1"
-        
-        def item2_action():
-            nonlocal executed_item
-            executed_item = "item2"
-        
-        # UIButtonを作成してメニューに追加
-        button1 = UIButton("item1", "Item 1")
-        button1.on_click = item1_action
-        button2 = UIButton("item2", "Item 2")
-        button2.on_click = item2_action
-        
-        menu.add_element(button1)
-        menu.add_element(button2)
-        menu.show()
-        
-        # 最初の項目を実行（エンターキーで）
-        enter_event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)
-        menu.handle_event(enter_event)
-        assert executed_item == "item1"
-        
-        # 2番目の項目に移動して実行
-        down_event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN)
-        menu.handle_event(down_event)
-        menu.handle_event(enter_event)
-        assert executed_item == "item2"
+# UIMenuテストクラスは削除されました（Phase 4.5: UIMenuクラス本体削除）
+# WindowSystemベースのテストクラスを使用してください
 
 
 class TestUIManager:
@@ -403,92 +294,9 @@ class TestUIManager:
         assert "test_element" in self.ui_manager.elements
         assert self.ui_manager.elements["test_element"] == element
     
-    def test_ui_manager_add_menu(self):
-        """UIManagerメニュー追加テスト"""
-        menu = UIMenu("test_menu", "Test Menu")
-        
-        self.ui_manager.add_menu(menu)
-        
-        assert "test_menu" in self.ui_manager.menus
-        assert self.ui_manager.menus["test_menu"] == menu
-    
-    def test_ui_manager_show_hide_menu(self):
-        """UIManagerメニュー表示・非表示テスト"""
-        menu = UIMenu("test_menu", "Test Menu")
-        self.ui_manager.add_menu(menu)
-        
-        # 表示
-        self.ui_manager.show_menu("test_menu")
-        assert menu.state == UIState.VISIBLE
-        
-        # 非表示
-        self.ui_manager.hide_menu("test_menu")
-        assert menu.state == UIState.HIDDEN
-    
-    def test_ui_manager_modal_menu(self):
-        """UIManagerモーダルメニューテスト"""
-        menu = UIMenu("test_menu", "Test Menu")
-        self.ui_manager.add_menu(menu)
-        
-        # モーダル表示
-        self.ui_manager.show_menu("test_menu", modal=True)
-        assert menu.state == UIState.VISIBLE
-        assert "test_menu" in self.ui_manager.modal_stack
+    # UIMenu関連のテストは削除されました（Phase 4.5: UIMenuクラス本体削除）
+    # WindowSystemベースのテストを使用してください
 
 
-@pytest.mark.pygame
-class TestPygameUIIntegration:
-    """Pygame UI統合テスト"""
-    
-    def setup_method(self):
-        """各テストメソッドの前に実行"""
-        pygame.init()
-        self.screen = pygame.display.set_mode((800, 600))
-        self.ui_manager = UIManager(self.screen)
-    
-    def teardown_method(self):
-        """各テストメソッドの後に実行"""
-        pygame.quit()
-    
-    def test_complete_ui_workflow(self):
-        """完全なUIワークフローテスト"""
-        # メニューを作成
-        menu = UIMenu("main_menu", "Main Menu")
-        
-        executed_actions = []
-        
-        def action1():
-            executed_actions.append("action1")
-        
-        def action2():
-            executed_actions.append("action2")
-        
-        # UIButtonを作成してメニューに追加
-        button1 = UIButton("option1", "Option 1")
-        button1.on_click = action1
-        button2 = UIButton("option2", "Option 2")
-        button2.on_click = action2
-        
-        menu.add_element(button1)
-        menu.add_element(button2)
-        
-        # UIManagerに登録・表示
-        self.ui_manager.add_menu(menu)
-        self.ui_manager.show_menu("main_menu")
-        
-        # メニューが表示されていることを確認
-        assert menu.state == UIState.VISIBLE
-        
-        # キーボードナビゲーション
-        down_event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN)
-        self.ui_manager.handle_event(down_event)
-        assert menu.selected_index == 1
-        
-        # エンターキーで実行
-        enter_event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)
-        self.ui_manager.handle_event(enter_event)
-        assert "action2" in executed_actions
-        
-        # 非表示
-        self.ui_manager.hide_menu("main_menu")
-        assert menu.state == UIState.HIDDEN
+# Pygame UI統合テストは削除されました（Phase 4.5: UIMenuクラス本体削除）
+# WindowSystemベースの統合テストを使用してください

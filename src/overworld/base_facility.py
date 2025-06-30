@@ -8,7 +8,7 @@ import pygame
 from src.character.party import Party
 # UIMenuとMenuStackManagerは段階的削除により使用しない
 # from src.ui.menu_stack_manager import MenuStackManager, MenuType  # WindowSystem移行により削除
-from src.ui.dialog_template import DialogTemplate
+# from src.ui.dialog_template import DialogTemplate  # UIDialog削除により使用不可
 from src.ui.window_system import WindowManager
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
@@ -51,7 +51,7 @@ class BaseFacility(ABC):
         
         # MenuStackManagerシステム（削除）- WindowSystemへ移行
         # self.menu_stack_manager: Optional[MenuStackManager] = None
-        self.dialog_template: Optional[DialogTemplate] = None
+        # self.dialog_template: Optional[DialogTemplate] = None  # UIDialog削除により使用不可
         self.ui_manager = None  # UIManager参照（レガシー互換性のため）
         
         logger.info(f"施設を初期化しました: {facility_id} ({facility_type.value})")
@@ -61,9 +61,9 @@ class BaseFacility(ABC):
         # UIManager参照を保持（レガシー互換性）
         self.ui_manager = ui_manager
         
-        # DialogTemplateの初期化（MenuStackManager不要）
-        if self.dialog_template is None:
-            self.dialog_template = DialogTemplate(None)  # MenuStackManager不要
+        # DialogTemplateの初期化（UIDialog削除により使用不可）
+        # if self.dialog_template is None:
+        #     self.dialog_template = DialogTemplate(None)  # UIDialog削除により使用不可
         
         # WindowSystemではESCキー処理はWindowが直接管理
         

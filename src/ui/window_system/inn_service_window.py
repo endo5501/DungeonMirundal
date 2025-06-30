@@ -12,7 +12,7 @@ class InnServiceWindow(FacilitySubWindow):
     """宿屋サービス専用ウィンドウ
     
     冒険準備、アイテム管理、魔術管理、装備管理を統合したタブベースWindow実装。
-    UIMenuの12箇所を代替する最も複雑な統合Window。
+    レガシーメニューの12箇所を代替する最も複雑な統合Window。
     """
     
     def __init__(self, window_id: str, facility_config: Dict[str, Any]):

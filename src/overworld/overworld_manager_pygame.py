@@ -389,7 +389,7 @@ class OverworldManager:
             return self._show_main_menu_legacy()
     
     def _show_main_menu_legacy(self):
-        """レガシーUIMenuベースのメインメニュー表示（フォールバック）"""
+        """レガシーメニューベースのメインメニュー表示（フォールバック）"""
         try:
             if self.main_menu:
                 self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
@@ -398,7 +398,7 @@ class OverworldManager:
                 if self.main_menu:
                     self.ui_manager.show_menu(self.main_menu.menu_id, modal=True)
             
-            logger.info("レガシーUIMenuでメインメニューを表示しました")
+            logger.info("レガシーメニューでメインメニューを表示しました")
             return True
             
         except Exception as e:
@@ -1163,7 +1163,7 @@ class OverworldManager:
         if self.settings_menu:
             self.settings_menu.show()
         self.settings_active = True
-        logger.info("レガシーUIMenuで設定画面を表示しました")
+        logger.info("レガシーメニューで設定画面を表示しました")
     
     def _hide_settings_menu(self):
         """設定画面を非表示"""

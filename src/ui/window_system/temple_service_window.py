@@ -12,7 +12,7 @@ class TempleServiceWindow(FacilitySubWindow):
     """神殿サービス専用ウィンドウ
     
     蘇生サービス、状態異常治療サービスを統合したWindow実装。
-    UIMenuの3箇所（resurrection_menu, status_cure_menu, char_status_cure）を代替。
+    レガシーメニューの3箇所（resurrection_menu, status_cure_menu, char_status_cure）を代替。
     """
     
     def __init__(self, window_id: str, facility_config: Dict[str, Any]):

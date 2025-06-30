@@ -363,96 +363,8 @@ class UIButton(UIElement):
                     pass  # 最終的にも失敗した場合は背景のみ描画
 
 
-# UIMenuクラスは削除されました（Phase 4.5: UIMenuクラス本体削除）
-# WindowSystemベースのメニュー機能を使用してください
-# class UIMenu:  # 削除済み
-                    title_surface = use_font.render(self.title, True, self.title_color)
-                    title_rect = title_surface.get_rect()
-                    title_rect.centerx = self.rect.centerx
-                    title_rect.y = self.rect.y + 10
-                    screen.blit(title_surface, title_rect)
-                except Exception as e:
-                    logger.warning(f"ダイアログタイトル描画エラー: {e}")
-            
-            # メッセージ描画（日本語対応・折り返し対応）
-            if self.message:
-                # ダイアログ内でのテキスト幅制限（マージンを考慮）
-                max_text_width = self.rect.width - 40
-                
-                # 既存の改行を考慮しつつ、各行を折り返し
-                original_lines = self.message.split('\n')
-                all_wrapped_lines = []
-                
-                for original_line in original_lines:
-                    if original_line.strip():  # 空行でない場合
-                        wrapped_lines = wrap_text(original_line, use_font, max_text_width)
-                        all_wrapped_lines.extend(wrapped_lines)
-                    else:  # 空行の場合
-                        all_wrapped_lines.append("")
-                
-                y_offset = self.rect.y + 50
-                line_height = use_font.get_height() + 3
-                
-                for line in all_wrapped_lines:
-                    try:
-                        if line.strip():  # 空行でない場合
-                            message_surface = use_font.render(line, True, self.message_color)
-                            message_rect = message_surface.get_rect()
-                            message_rect.centerx = self.rect.centerx
-                            message_rect.y = y_offset
-                            screen.blit(message_surface, message_rect)
-                        y_offset += line_height
-                    except Exception as e:
-                        logger.warning(f"メッセージ描画エラー: {e}")
-                        y_offset += line_height  # フォールバック行高
-        
-        # 各要素を描画
-        for element in self.elements:
-            element.render(screen, use_font)
-    
-    def add_element(self, element: UIElement):
-        """要素を追加"""
-        self.elements.append(element)
-        element.parent = self
-    
-    def show(self):
-        """ダイアログを表示"""
-        self.state = UIState.VISIBLE
-        for element in self.elements:
-            element.show()
-    
-    def hide(self):
-        """ダイアログを非表示"""
-        self.state = UIState.HIDDEN
-        for element in self.elements:
-            element.hide()
-    
-    def handle_event(self, event: pygame.event.Event) -> bool:
-        """イベント処理"""
-        if self.state != UIState.VISIBLE:
-            return False
-        
-        # キーボードナビゲーション
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                self.selected_index = max(0, self.selected_index - 1)
-                return True
-            elif event.key == pygame.K_DOWN:
-                self.selected_index = min(len(self.elements) - 1, self.selected_index + 1)
-                return True
-            elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
-                if 0 <= self.selected_index < len(self.elements):
-                    element = self.elements[self.selected_index]
-                    if element.on_click:
-                        element.on_click()
-                return True
-        
-        # 各要素のイベント処理
-        for element in self.elements:
-            if element.handle_event(event):
-                return True
-        
-        return False
+# UIMenuクラス・UIDialogクラスは削除されました（Phase 4.5: UIMenuクラス本体削除）
+# WindowSystemベースのメニュー・ダイアログ機能を使用してください
 
 
 class UIManager:
@@ -462,7 +374,7 @@ class UIManager:
         self.screen = screen
         self.elements: Dict[str, UIElement] = {}
         self.menus: Dict[str, Any] = {}  # UIMenu削除済み - レガシー互換性のため
-        self.dialogs: Dict[str, UIDialog] = {}
+        self.dialogs: Dict[str, Any] = {}  # UIDialog削除済み - レガシー互換性のため
         self.persistent_elements: Dict[str, UIElement] = {}  # 常に最前面に表示される要素
         self.modal_stack: List[str] = []  # モーダル要素のスタック
         
@@ -564,9 +476,10 @@ class UIManager:
         if hasattr(menu, 'menu_id'):
             self.menus[menu.menu_id] = menu
     
-    def add_dialog(self, dialog: UIDialog):
-        """ダイアログを追加"""
-        self.dialogs[dialog.dialog_id] = dialog
+    def add_dialog(self, dialog: Any):  # UIDialog削除済み - レガシー互換性のため
+        """ダイアログを追加（非推奨：WindowSystemを使用してください）"""
+        if hasattr(dialog, 'dialog_id'):
+            self.dialogs[dialog.dialog_id] = dialog
     
     def show_menu(self, menu_id: str, modal: bool = False):
         """メニューを表示"""
@@ -683,18 +596,21 @@ def initialize_ui_manager(screen: pygame.Surface):
     return ui_manager
 
 
-class UIInputDialog(UIDialog):
+class UIInputDialog(UIElement):
     """入力ダイアログ"""
     
     def __init__(self, dialog_id: str, title: str, message: str, 
                  initial_text: str = "", placeholder: str = "",
                  on_confirm: callable = None, on_cancel: callable = None):
-        super().__init__(dialog_id, title, message, x=200, y=150, width=400, height=250)
+        super().__init__(dialog_id, x=200, y=150, width=400, height=250)
+        self.title = title
+        self.message = message
         self.input_text = initial_text
         self.placeholder = placeholder
         self.on_confirm = on_confirm
         self.on_cancel = on_cancel
         self.is_active = False
+        self.elements: List[UIElement] = []  # 子要素リスト
         
         # 入力フィールドの位置を設定（メッセージの下に配置）
         self.input_rect = pygame.Rect(self.rect.x + 20, self.rect.y + 120, 
@@ -715,6 +631,11 @@ class UIInputDialog(UIDialog):
                                    width=80, height=30)
             cancel_button.on_click = self._cancel_input
             self.add_element(cancel_button)
+    
+    def add_element(self, element: UIElement):
+        """要素を追加"""
+        self.elements.append(element)
+        element.parent = self
     
     def _confirm_input(self):
         """入力確認"""
@@ -746,13 +667,34 @@ class UIInputDialog(UIDialog):
             self.input_text += event.text
             return True
         
+        # 子要素のイベント処理
+        for element in self.elements:
+            if element.handle_event(event):
+                return True
+        
         # 親クラスのイベント処理
         return super().handle_event(event)
     
+    def show(self):
+        """ダイアログを表示"""
+        super().show()
+        for element in self.elements:
+            element.show()
+    
+    def hide(self):
+        """ダイアログを非表示"""
+        super().hide()
+        for element in self.elements:
+            element.hide()
+    
     def render(self, screen: pygame.Surface, font: Optional[pygame.font.Font] = None):
         """入力ダイアログの描画"""
-        # 親クラスの描画（ダイアログ背景とメッセージ）
-        super().render(screen, font)
+        if self.state != UIState.VISIBLE:
+            return
+        
+        # ダイアログ背景描画
+        pygame.draw.rect(screen, (50, 50, 50), self.rect)
+        pygame.draw.rect(screen, (150, 150, 150), self.rect, 2)
         
         # フォントを取得
         use_font = font
@@ -764,6 +706,30 @@ class UIInputDialog(UIDialog):
                     use_font = font_manager.get_default_font()
             except Exception:
                 use_font = pygame.font.Font(None, 20)
+        
+        # タイトルとメッセージの描画
+        if use_font:
+            # タイトル描画
+            if self.title:
+                try:
+                    title_surface = use_font.render(self.title, True, (255, 255, 255))
+                    title_rect = title_surface.get_rect()
+                    title_rect.centerx = self.rect.centerx
+                    title_rect.y = self.rect.y + 10
+                    screen.blit(title_surface, title_rect)
+                except Exception as e:
+                    logger.warning(f"タイトル描画エラー: {e}")
+            
+            # メッセージ描画
+            if self.message:
+                try:
+                    message_surface = use_font.render(self.message, True, (200, 200, 200))
+                    message_rect = message_surface.get_rect()
+                    message_rect.centerx = self.rect.centerx
+                    message_rect.y = self.rect.y + 50
+                    screen.blit(message_surface, message_rect)
+                except Exception as e:
+                    logger.warning(f"メッセージ描画エラー: {e}")
         
         # 入力フィールドの描画
         if use_font:
@@ -805,3 +771,7 @@ class UIInputDialog(UIDialog):
                 pygame.draw.line(screen, (0, 0, 0), 
                                (cursor_x, self.input_rect.top + 5),
                                (cursor_x, self.input_rect.bottom - 5), 2)
+        
+        # 子要素（ボタン等）を描画
+        for element in self.elements:
+            element.render(screen, font)
