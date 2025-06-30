@@ -97,9 +97,9 @@ class TestQualityAssurance:
     def test_documentation_structure(self):
         """ドキュメント構造の確認"""
         required_docs = [
-            'docs/todos/0044_uimenu_phased_removal_long_term.md',
-            'docs/todos/0045_core_ui_window_implementation.md',
-            'docs/todos/0046_final_integration_testing.md',
+            'docs/fixed/004/0044_uimenu_phased_removal_long_term.md',
+            'docs/fixed/004/0045_core_ui_window_implementation.md',
+            'docs/fixed/004/0046_final_integration_testing.md',
             'docs/window_system.md',
         ]
         
