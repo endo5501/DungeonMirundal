@@ -781,6 +781,10 @@ class GameManager:
             if not window_manager.get_active_window():
                 if hasattr(self, 'ui_manager') and self.ui_manager:
                     self.ui_manager.render()
+            else:
+                # WindowManagerがアクティブでも永続要素（CharacterStatusBar）は常に描画
+                if hasattr(self, 'ui_manager') and self.ui_manager:
+                    self._render_persistent_elements()
             
             # デバッグ情報の描画
             if self.debug_enabled:
@@ -788,6 +792,31 @@ class GameManager:
             
             # 画面更新
             pygame.display.flip()
+    
+    def _render_persistent_elements(self):
+        """
+        UIManagerの永続要素（CharacterStatusBarなど）を描画
+        
+        WindowManagerがアクティブな場合でも、永続要素は常に表示する必要があるため、
+        このメソッドで個別に描画を行う。
+        """
+        try:
+            if hasattr(self.ui_manager, 'persistent_elements'):
+                for element in self.ui_manager.persistent_elements.values():
+                    if element and hasattr(element, 'render'):
+                        try:
+                            # フォントを取得
+                            font = None
+                            if hasattr(self.ui_manager, 'default_font'):
+                                font = self.ui_manager.default_font
+                            
+                            element.render(self.screen, font)
+                            
+                        except Exception as e:
+                            logger.warning(f"永続要素の描画でエラーが発生: {type(element).__name__}: {e}")
+            
+        except Exception as e:
+            logger.error(f"永続要素描画処理でエラーが発生: {e}")
     
     def _render_current_state(self):
         """現在の状態に応じた描画"""

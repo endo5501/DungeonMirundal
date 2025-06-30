@@ -54,10 +54,15 @@ class CharacterSlot:
         pygame.draw.rect(screen, self.border_color, bg_rect, 2)
         
         if not self.character:
-            # 空スロットの場合
-            empty_text = font.render("Empty", True, (128, 128, 128))
-            text_rect = empty_text.get_rect(center=(self.x + self.width // 2, self.y + self.height // 2))
-            screen.blit(empty_text, text_rect)
+            # 空スロットの場合（フォント安全チェック付き）
+            try:
+                if font:
+                    empty_text = font.render("Empty", True, (128, 128, 128))
+                    text_rect = empty_text.get_rect(center=(self.x + self.width // 2, self.y + self.height // 2))
+                    screen.blit(empty_text, text_rect)
+            except pygame.error:
+                # フォントエラーの場合は何も表示しない（スロット枠のみ表示）
+                pass
             return
         
         # キャラクター画像プレースホルダー
@@ -76,19 +81,33 @@ class CharacterSlot:
         pygame.draw.rect(screen, placeholder_color, image_rect)
         pygame.draw.rect(screen, self.border_color, image_rect, 1)
         
-        # プレースホルダーテキスト
-        placeholder_text = font.render("IMG", True, self.text_color)
-        placeholder_rect = placeholder_text.get_rect(center=image_rect.center)
-        screen.blit(placeholder_text, placeholder_rect)
-        
-        # キャラクター名
+        # プレースホルダーテキスト（フォント安全チェック付き）
         try:
-            name_surface = font.render(self.character.name, True, self.text_color)
-            screen.blit(name_surface, (self.name_x, self.name_y))
+            if font:
+                placeholder_text = font.render("IMG", True, self.text_color)
+                placeholder_rect = placeholder_text.get_rect(center=image_rect.center)
+                screen.blit(placeholder_text, placeholder_rect)
+        except pygame.error:
+            # フォントエラーの場合はプレースホルダーテキストを表示しない
+            pass
+        
+        # キャラクター名（フォント安全チェック付き）
+        try:
+            if font:
+                name_surface = font.render(self.character.name, True, self.text_color)
+                screen.blit(name_surface, (self.name_x, self.name_y))
+        except pygame.error:
+            # フォントエラーの場合は名前を表示しない
+            pass
         except Exception as e:
             logger.warning(f"キャラクター名表示エラー: {e}")
-            name_surface = font.render("???", True, self.text_color)
-            screen.blit(name_surface, (self.name_x, self.name_y))
+            try:
+                if font:
+                    name_surface = font.render("???", True, self.text_color)
+                    screen.blit(name_surface, (self.name_x, self.name_y))
+            except pygame.error:
+                # フォントエラーの場合は何も表示しない
+                pass
         
         # HP表示
         self._render_hp_bar(screen, font)
@@ -101,35 +120,44 @@ class CharacterSlot:
         current_hp = self.character.derived_stats.current_hp
         max_hp = self.character.derived_stats.max_hp
         
-        # HPテキスト - スラッシュ文字の問題を回避するため、個別にレンダリング
+        # HPテキスト - スラッシュ文字の問題を回避するため、個別にレンダリング（フォント安全チェック付き）
         try:
-            # 現在HPをレンダリング
-            current_hp_text = str(current_hp)
-            current_hp_surface = font.render(current_hp_text, True, self.text_color)
-            screen.blit(current_hp_surface, (self.hp_x, self.hp_y))
-            
-            # スラッシュをレンダリング
-            slash_x = self.hp_x + current_hp_surface.get_width()
-            slash_surface = font.render("/", True, self.text_color)
-            screen.blit(slash_surface, (slash_x, self.hp_y))
-            
-            # 最大HPをレンダリング
-            max_hp_text = str(max_hp)
-            max_hp_x = slash_x + slash_surface.get_width()
-            max_hp_surface = font.render(max_hp_text, True, self.text_color)
-            screen.blit(max_hp_surface, (max_hp_x, self.hp_y))
-            
-            # HPバーの位置計算用に全体の幅を保持
-            total_width = current_hp_surface.get_width() + slash_surface.get_width() + max_hp_surface.get_width()
+            if font:
+                # 現在HPをレンダリング
+                current_hp_text = str(current_hp)
+                current_hp_surface = font.render(current_hp_text, True, self.text_color)
+                screen.blit(current_hp_surface, (self.hp_x, self.hp_y))
+                
+                # スラッシュをレンダリング
+                slash_x = self.hp_x + current_hp_surface.get_width()
+                slash_surface = font.render("/", True, self.text_color)
+                screen.blit(slash_surface, (slash_x, self.hp_y))
+                
+                # 最大HPをレンダリング
+                max_hp_text = str(max_hp)
+                max_hp_x = slash_x + slash_surface.get_width()
+                max_hp_surface = font.render(max_hp_text, True, self.text_color)
+                screen.blit(max_hp_surface, (max_hp_x, self.hp_y))
+                
+                # HPバーの位置計算用に全体の幅を保持
+                total_width = current_hp_surface.get_width() + slash_surface.get_width() + max_hp_surface.get_width()
+            else:
+                total_width = 50  # フォントがない場合のフォールバック
             
         except Exception as e:
             logger.warning(f"HP表示エラー: {e}")
-            # フォールバック：シンプルな表示
+            # フォールバック：シンプルな表示（フォント安全チェック付き）
             try:
-                fallback_text = f"{current_hp}-{max_hp}"
-                fallback_surface = font.render(fallback_text, True, self.text_color)
-                screen.blit(fallback_surface, (self.hp_x, self.hp_y))
-                total_width = fallback_surface.get_width()
+                if font:
+                    fallback_text = f"{current_hp}-{max_hp}"
+                    fallback_surface = font.render(fallback_text, True, self.text_color)
+                    screen.blit(fallback_surface, (self.hp_x, self.hp_y))
+                    total_width = fallback_surface.get_width()
+                else:
+                    total_width = 50
+            except pygame.error:
+                # フォントエラーの場合はテキストを表示しない
+                total_width = 50
             except:
                 # 最終フォールバック
                 total_width = 50
@@ -193,6 +221,10 @@ class CharacterStatusBar(UIElement):
     def _initialize_font(self):
         """フォントを初期化"""
         try:
+            # Pygameフォントモジュールが初期化されているか確認
+            if not pygame.font.get_init():
+                pygame.font.init()
+            
             # まず日本語フォントマネージャーから取得を試行
             from src.ui.font_manager_pygame import font_manager
             self.font = font_manager.get_japanese_font(16)
@@ -204,6 +236,10 @@ class CharacterStatusBar(UIElement):
             logger.warning(f"フォントマネージャーの取得に失敗: {e}")
         
         try:
+            # Pygameフォントモジュールが初期化されているか再確認
+            if not pygame.font.get_init():
+                pygame.font.init()
+                
             # フォールバック：デフォルトフォント（安定性優先）
             self.font = pygame.font.Font(None, 16)
             self._cached_font = self.font
@@ -245,6 +281,18 @@ class CharacterStatusBar(UIElement):
             
         if not use_font:
             # フォントがない場合は再初期化を試みる
+            self._initialize_font()
+            use_font = self.font
+            if not use_font:
+                return
+        
+        # フォントが有効かチェック（pygame.font.quit()対策）
+        try:
+            # テストレンダリングでフォントの有効性を確認
+            test_surface = use_font.render("", True, (255, 255, 255))
+        except pygame.error:
+            # フォントが無効の場合、再初期化を試行
+            logger.warning("フォントが無効になっているため再初期化します")
             self._initialize_font()
             use_font = self.font
             if not use_font:

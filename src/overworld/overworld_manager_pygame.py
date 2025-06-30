@@ -1192,12 +1192,9 @@ class OverworldManager:
     def enter_overworld(self, party: Party, from_dungeon: bool = False) -> bool:
         """地上部に入場"""
         try:
-            self.current_party = party
+            # パーティを一元管理メソッドで設定
+            self.set_party(party)
             self.is_active = True
-            
-            # キャラクターステータスバーにパーティを設定
-            if self.character_status_bar:
-                self.character_status_bar.set_party(party)
             
             # WindowManagerベースのメインメニューを使用
             if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
@@ -1215,6 +1212,25 @@ class OverworldManager:
         except Exception as e:
             logger.error(f"地上部入場エラー: {e}")
             return False
+    
+    def set_party(self, party: Optional[Party]) -> None:
+        """パーティを設定（一元管理メソッド）"""
+        try:
+            # current_partyを更新
+            self.current_party = party
+            
+            # キャラクターステータスバーにも同期
+            if self.character_status_bar:
+                self.character_status_bar.set_party(party)
+                if party:
+                    logger.info(f"パーティを設定しました: {party.name} (メンバー数: {len(party.characters)})")
+                else:
+                    logger.info("パーティをクリアしました")
+            else:
+                logger.warning("CharacterStatusBarが初期化されていません")
+                
+        except Exception as e:
+            logger.error(f"パーティ設定エラー: {e}")
     
     def exit_overworld(self):
         """地上部を退場"""
