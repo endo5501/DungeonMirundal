@@ -886,7 +886,54 @@ class TestWindowIntegration:
 - [テスト戦略](../testing/testing_strategy.md)
 - [パフォーマンス最適化ガイド](../performance/optimization_guide.md)
 
+## トラブルシューティング
+
+### 「未登録のウィンドウです」エラー
+
+**症状**: `ValueError: 未登録のウィンドウです: window_id`
+
+**原因**: ウィンドウを直接作成して`show_window`を呼び出している
+
+**解決方法**: WindowManagerの正しい使用パターンを使用
+```python
+# ❌ 間違った方法
+window = FacilityMenuWindow("my_window", config)
+window_manager.show_window(window)  # エラー！
+
+# ✅ 正しい方法
+window = window_manager.create_window(
+    FacilityMenuWindow,
+    "my_window", 
+    facility_config=config
+)
+window_manager.show_window(window)
+```
+
+### UIManager初期化エラー
+
+**症状**: `FileNotFoundError: Unable to load resource with path: pygame_gui.data.NotoSans-Regular.ttf`
+
+**原因**: 独自のUIManagerを作成している
+
+**解決方法**: WindowManagerの統一UIManagerを使用
+```python
+# ✅ WindowManagerのUIManagerを使用
+from .window_manager import WindowManager
+window_manager = WindowManager.get_instance()
+self.ui_manager = window_manager.ui_manager
+
+# フォールバック処理も含める
+if not self.ui_manager:
+    # テスト環境対応
+    self.ui_manager = pygame_gui.UIManager((800, 600))
+```
+
 ## 更新履歴
+
+- **2.1 (2025-06-30)**: WindowSystem統一化完了版 + トラブルシューティング
+  - WindowManager登録エラーの解決方法を追加
+  - UIManager統合パターンを追加
+  - 実際の問題解決事例を記録
 
 - **2.0 (2025-06-30)**: WindowSystem統一化完了版
   - UIMenu完全除去後の実装ガイド
