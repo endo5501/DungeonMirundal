@@ -41,7 +41,7 @@ class OverworldMainWindow(Window):
     9. confirmation_dialog - 確認ダイアログ
     """
     
-    def __init__(self, window_id: str, config: Dict[str, Any]):
+    def __init__(self, window_id: str, config: Dict[str, Any], parent: Optional[Window] = None, **kwargs):
         """
         地上部メインウィンドウを初期化
         
@@ -54,8 +54,10 @@ class OverworldMainWindow(Window):
                 - party: 現在のパーティ
                 - show_party_info: パーティ情報表示フラグ
                 - show_gold: ゴールド表示フラグ
+            parent: 親ウィンドウ（オプション）
+            **kwargs: その他のウィンドウ引数
         """
-        super().__init__(window_id, modal=False)
+        super().__init__(window_id, modal=False, parent=parent)
         
         self.config = config
         self.current_menu_type = OverworldMenuType(config.get('menu_type', 'main'))

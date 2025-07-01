@@ -21,6 +21,17 @@ class TestFacilityWindowIdBug:
         self.mock_window_manager = Mock(spec=WindowManager)
         self.mock_window_manager.window_registry = {}
         
+        # Create mock window
+        self.mock_window = Mock()
+        self.mock_window.id = 'inn_main'  # Default window ID
+        
+        # Add missing methods to mock
+        self.mock_window_manager.get_window = Mock(return_value=None)
+        self.mock_window_manager.close_window = Mock()
+        self.mock_window_manager.hide_window = Mock()
+        self.mock_window_manager.show_window = Mock()
+        self.mock_window_manager.create_window = Mock(return_value=self.mock_window)
+        
         # Create mock party
         self.mock_party = Mock(spec=Party)
         self.mock_party.characters = []
@@ -41,27 +52,23 @@ class TestFacilityWindowIdBug:
         self.inn.enter(self.mock_party)
         
         # Check what window ID was used for creation
-        show_window_calls = self.mock_window_manager.show_window.call_args_list
-        assert len(show_window_calls) > 0, "show_window should have been called"
+        create_window_calls = self.mock_window_manager.create_window.call_args_list
+        assert len(create_window_calls) > 0, "create_window should have been called"
         
-        created_window = show_window_calls[0][0][0]  # First argument of first call
-        created_window_id = created_window.id
+        # Get the window ID from create_window call (second positional argument)
+        created_window_id = create_window_calls[0][0][1]  # Second argument is window_id
         
         # Exit facility (should cleanup window)
         self.inn.exit()
         
-        # Check what window ID was used for cleanup
-        cleanup_calls = [
-            call for call in [
-                *self.mock_window_manager.close_window.call_args_list,
-                *self.mock_window_manager.remove_window.call_args_list
-            ]
-        ]
+        # Check what window ID was used for cleanup lookup
+        get_window_calls = self.mock_window_manager.get_window.call_args_list
         
-        if cleanup_calls:
-            cleanup_window_id = cleanup_calls[0][0][0]  # First argument
+        if get_window_calls:
+            # Check if the correct window ID was used for lookup
+            cleanup_window_id = get_window_calls[0][0][0]  # First argument
             assert created_window_id == cleanup_window_id, \
-                f"Window ID used for creation ({created_window_id}) should match cleanup ({cleanup_window_id})"
+                f"Window ID used for creation ({created_window_id}) should match cleanup lookup ({cleanup_window_id})"
         else:
             # The cleanup method should at least check if the window exists
             # This is where the bug occurs - it checks for the wrong ID format
@@ -74,11 +81,10 @@ class TestFacilityWindowIdBug:
         self.inn.enter(self.mock_party)
         
         # Get the window ID used for creation
-        show_window_calls = self.mock_window_manager.show_window.call_args_list
-        assert len(show_window_calls) > 0, "Inn should create a window when entered"
+        create_window_calls = self.mock_window_manager.create_window.call_args_list
+        assert len(create_window_calls) > 0, "Inn should create a window when entered"
         
-        created_window = show_window_calls[0][0][0]
-        created_window_id = created_window.id
+        created_window_id = create_window_calls[0][0][1]  # Second argument is window_id
         
         # Exit inn
         self.inn.exit()
@@ -87,14 +93,11 @@ class TestFacilityWindowIdBug:
         # The window ID used for cleanup should match the one used for creation
         expected_cleanup_id = created_window_id
         
-        # Check all possible cleanup method calls
-        all_cleanup_calls = (
-            self.mock_window_manager.close_window.call_args_list +
-            self.mock_window_manager.remove_window.call_args_list
-        )
+        # Check window lookup during cleanup
+        get_window_calls = self.mock_window_manager.get_window.call_args_list
         
-        if all_cleanup_calls:
-            cleanup_window_id = all_cleanup_calls[0][0][0]
+        if get_window_calls:
+            cleanup_window_id = get_window_calls[0][0][0]  # First argument
             assert cleanup_window_id == expected_cleanup_id, \
                 f"Inn cleanup window ID ({cleanup_window_id}) should match creation ID ({expected_cleanup_id})"
     
@@ -105,11 +108,10 @@ class TestFacilityWindowIdBug:
         self.guild.enter(self.mock_party)
         
         # Get the window ID used for creation
-        show_window_calls = self.mock_window_manager.show_window.call_args_list
-        assert len(show_window_calls) > 0, "Guild should create a window when entered"
+        create_window_calls = self.mock_window_manager.create_window.call_args_list
+        assert len(create_window_calls) > 0, "Guild should create a window when entered"
         
-        created_window = show_window_calls[0][0][0]
-        created_window_id = created_window.id
+        created_window_id = create_window_calls[0][0][1]  # Second argument is window_id
         
         # Exit guild
         self.guild.exit()
@@ -117,14 +119,11 @@ class TestFacilityWindowIdBug:
         # Check if cleanup was attempted with the correct window ID
         expected_cleanup_id = created_window_id
         
-        # Check all possible cleanup method calls
-        all_cleanup_calls = (
-            self.mock_window_manager.close_window.call_args_list +
-            self.mock_window_manager.remove_window.call_args_list
-        )
+        # Check window lookup during cleanup
+        get_window_calls = self.mock_window_manager.get_window.call_args_list
         
-        if all_cleanup_calls:
-            cleanup_window_id = all_cleanup_calls[0][0][0]
+        if get_window_calls:
+            cleanup_window_id = get_window_calls[0][0][0]  # First argument
             assert cleanup_window_id == expected_cleanup_id, \
                 f"Guild cleanup window ID ({cleanup_window_id}) should match creation ID ({expected_cleanup_id})"
     
@@ -136,11 +135,11 @@ class TestFacilityWindowIdBug:
         self.guild.enter(self.mock_party)
         
         # Get window IDs used for creation
-        show_window_calls = self.mock_window_manager.show_window.call_args_list
-        assert len(show_window_calls) >= 2, "Both facilities should create windows"
+        create_window_calls = self.mock_window_manager.create_window.call_args_list
+        assert len(create_window_calls) >= 2, "Both facilities should create windows"
         
-        inn_window_id = show_window_calls[0][0][0].id
-        guild_window_id = show_window_calls[1][0][0].id
+        inn_window_id = create_window_calls[0][0][1]  # Second argument is window_id
+        guild_window_id = create_window_calls[1][0][1]  # Second argument is window_id
         
         assert inn_window_id != guild_window_id, \
             f"Inn and Guild should use different window IDs: inn='{inn_window_id}', guild='{guild_window_id}'"
@@ -150,39 +149,26 @@ class TestFacilityWindowIdBug:
         
         # Check inn window ID format
         self.inn.enter(self.mock_party)
-        inn_calls = self.mock_window_manager.show_window.call_args_list
-        inn_window = inn_calls[0][0][0] if inn_calls else None
+        inn_calls = self.mock_window_manager.create_window.call_args_list
+        inn_window_id = inn_calls[0][0][1] if inn_calls else None
         
         # Reset mock for guild test
         self.mock_window_manager.reset_mock()
         
         # Check guild window ID format  
         self.guild.enter(self.mock_party)
-        guild_calls = self.mock_window_manager.show_window.call_args_list
-        guild_window = guild_calls[0][0][0] if guild_calls else None
+        guild_calls = self.mock_window_manager.create_window.call_args_list
+        guild_window_id = guild_calls[0][0][1] if guild_calls else None
         
         # Both should create windows
-        assert inn_window is not None, "Inn should create a window"
-        assert guild_window is not None, "Guild should create a window"
+        assert inn_window_id is not None, "Inn should create a window"
+        assert guild_window_id is not None, "Guild should create a window"
         
-        # Get actual window IDs - they should be strings from the real objects
-        print(f"Inn window: {inn_window}")
-        print(f"Inn window type: {type(inn_window)}")
-        print(f"Guild window: {guild_window}")
-        print(f"Guild window type: {type(guild_window)}")
-        
-        # Check if windows have id attributes
-        if hasattr(inn_window, 'id'):
-            inn_window_id = inn_window.id
-            print(f"Inn window ID: {inn_window_id}")
-            assert isinstance(inn_window_id, str), f"Inn window ID should be string: {type(inn_window_id)}"
-            assert "inn" in inn_window_id.lower(), f"Inn window ID should contain 'inn': {inn_window_id}"
-        
-        if hasattr(guild_window, 'id'):
-            guild_window_id = guild_window.id
-            print(f"Guild window ID: {guild_window_id}")
-            assert isinstance(guild_window_id, str), f"Guild window ID should be string: {type(guild_window_id)}"
-            assert "guild" in guild_window_id.lower(), f"Guild window ID should contain 'guild': {guild_window_id}"
+        # Check window ID format
+        assert isinstance(inn_window_id, str), f"Inn window ID should be string: {type(inn_window_id)}"
+        assert "inn" in inn_window_id.lower(), f"Inn window ID should contain 'inn': {inn_window_id}"
+        assert isinstance(guild_window_id, str), f"Guild window ID should be string: {type(guild_window_id)}"
+        assert "guild" in guild_window_id.lower(), f"Guild window ID should contain 'guild': {guild_window_id}"
 
 
 if __name__ == "__main__":

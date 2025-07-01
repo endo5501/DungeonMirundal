@@ -30,9 +30,26 @@ class TestFacilitySystemFixes:
         import time
         import random
         self.test_id = str(int(time.time() * 1000000) + random.randint(1000, 9999))
+        
+        # WindowManagerレジストリをクリア
+        try:
+            from src.ui.window_system.window_manager import WindowManager
+            window_manager = WindowManager.get_instance()
+            window_manager.window_registry.clear()
+            window_manager.window_stack.stack.clear()
+        except Exception:
+            pass
     
     def teardown_method(self):
         """各テストメソッドの後に実行"""
+        # WindowManagerレジストリをクリア
+        try:
+            from src.ui.window_system.window_manager import WindowManager
+            window_manager = WindowManager.get_instance()
+            window_manager.window_registry.clear()
+            window_manager.window_stack.stack.clear()
+        except Exception:
+            pass
         pygame.quit()
     
     def test_base_facility_can_be_imported(self):

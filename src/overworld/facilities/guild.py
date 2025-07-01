@@ -114,7 +114,7 @@ class AdventurersGuild(BaseFacility):
         # WindowManagerの正しい使用パターン: create_window -> show_window
         guild_window = window_manager.create_window(
             FacilityMenuWindow,
-            'guild_main_menu',
+            f'{self.facility_id}_main',
             facility_config=menu_config
         )
         

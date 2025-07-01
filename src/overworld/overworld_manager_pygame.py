@@ -138,8 +138,12 @@ class OverworldManager:
             # メインメニュー設定を作成
             menu_config = self._create_main_menu_config()
             
-            # OverworldMainWindowを作成
-            self.overworld_main_window = OverworldMainWindow("overworld_main", menu_config)
+            # WindowManagerを通してOverworldMainWindowを作成・登録
+            self.overworld_main_window = self.window_manager.create_window(
+                OverworldMainWindow,
+                "overworld_main",
+                config=menu_config
+            )
             
             # メッセージハンドラーを設定
             self.overworld_main_window.message_handler = self.handle_main_menu_message

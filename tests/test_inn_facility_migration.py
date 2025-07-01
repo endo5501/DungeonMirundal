@@ -4,6 +4,7 @@ Inn FacilityMenuWindow移行テスト
 
 import pytest
 import inspect
+import pygame
 from unittest.mock import Mock
 
 from src.overworld.facilities.inn import Inn
@@ -12,6 +13,32 @@ from src.overworld.base_facility import FacilityType
 
 class TestInnFacilityMigration:
     """Inn移行テストクラス"""
+    
+    def setup_method(self):
+        """各テストメソッドの前に実行される"""
+        pygame.init()
+        pygame.display.set_mode((1, 1), pygame.NOFRAME)
+        
+        # WindowManagerレジストリをクリア
+        try:
+            from src.ui.window_system.window_manager import WindowManager
+            window_manager = WindowManager.get_instance()
+            window_manager.window_registry.clear()
+            window_manager.window_stack.stack.clear()
+        except Exception:
+            pass
+    
+    def teardown_method(self):
+        """各テストメソッドの後に実行される"""
+        # WindowManagerレジストリをクリア
+        try:
+            from src.ui.window_system.window_manager import WindowManager
+            window_manager = WindowManager.get_instance()
+            window_manager.window_registry.clear()
+            window_manager.window_stack.stack.clear()
+        except Exception:
+            pass
+        pygame.quit()
     
     @pytest.fixture
     def mock_party(self):
@@ -73,21 +100,33 @@ class TestInnFacilityMigration:
         assert hasattr(inn_facility, 'handle_facility_message'), "メッセージハンドラーが存在しません"
         assert callable(inn_facility.handle_facility_message), "メッセージハンドラーが呼び出し可能ではありません"
         
-        # 各種メッセージタイプのハンドリング確認
-        test_messages = [
-            ('menu_item_selected', {'item_id': 'adventure_preparation'}),
-            ('menu_item_selected', {'item_id': 'item_storage'}),
-            ('menu_item_selected', {'item_id': 'talk_innkeeper'}),
-            ('facility_exit_requested', {'facility_type': FacilityType.INN.value})
-        ]
+        # UI作成メソッドをモック化してUI関連エラーを完全回避
+        from unittest.mock import Mock, patch
         
-        for message_type, data in test_messages:
-            try:
-                # メッセージハンドリングが例外を発生させないことを確認
+        with patch.object(inn_facility, '_show_adventure_service', return_value=True) as mock_adventure, \
+             patch.object(inn_facility, '_show_item_service', return_value=True) as mock_storage, \
+             patch.object(inn_facility, '_talk_to_innkeeper', return_value=True) as mock_innkeeper, \
+             patch.object(inn_facility, '_handle_exit', return_value=True) as mock_exit:
+            
+            # 各種メッセージタイプのハンドリング確認
+            test_cases = [
+                ('menu_item_selected', {'item_id': 'adventure_preparation'}, mock_adventure),
+                ('menu_item_selected', {'item_id': 'item_storage'}, mock_storage), 
+                ('menu_item_selected', {'item_id': 'talk_innkeeper'}, mock_innkeeper),
+                ('facility_exit_requested', {'facility_type': FacilityType.INN.value}, mock_exit)
+            ]
+            
+            for message_type, data, expected_mock in test_cases:
+                # メッセージハンドリング実行
                 result = inn_facility.handle_facility_message(message_type, data)
-                assert isinstance(result, bool), "メッセージハンドラーはboolを返す必要があります"
-            except Exception as e:
-                pytest.fail(f"メッセージハンドリングでエラー: {message_type}, {data} -> {e}")
+                
+                # 結果の確認
+                assert isinstance(result, bool), f"メッセージハンドラーはboolを返す必要があります: {message_type}"
+                assert result is True, f"メッセージハンドリングが成功する必要があります: {message_type}"
+                
+                # 対応するメソッドが呼び出されたことを確認
+                expected_mock.assert_called_once()
+                expected_mock.reset_mock()
     
     def test_inn_must_have_facility_menu_config_method(self):
         """InnがFacilityMenuWindow用設定メソッドを持つことを確認"""

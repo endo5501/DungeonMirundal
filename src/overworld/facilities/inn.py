@@ -104,7 +104,7 @@ class Inn(BaseFacility):
         # WindowManagerの正しい使用パターン: create_window -> show_window
         inn_window = window_manager.create_window(
             FacilityMenuWindow,
-            'inn_main_menu',
+            f'{self.facility_id}_main',
             facility_config=menu_config
         )
         
@@ -220,6 +220,7 @@ class Inn(BaseFacility):
             config_manager.get_text("inn.travel_info.title"),
             travel_info
         )
+        return True
     
     def _show_tavern_rumors(self):
         """酒場の噂話を表示"""
@@ -243,6 +244,7 @@ class Inn(BaseFacility):
             f"{config_manager.get_text('inn.rumors.title')} - {title}",
             rumor
         )
+        return True
     
     # === パーティ管理 ===
     
@@ -250,7 +252,7 @@ class Inn(BaseFacility):
         """パーティ名変更機能"""
         if not self.current_party:
             self.show_error_dialog_window(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
-            return
+            return False
         
         current_name = self.current_party.name if self.current_party.name else "無名のパーティ"
         
@@ -266,6 +268,7 @@ class Inn(BaseFacility):
         
         ui_manager.add_dialog(name_input_dialog)
         ui_manager.show_dialog(name_input_dialog.dialog_id)
+        return True
     
     def _on_party_name_confirmed(self, new_name: str):
         """パーティ名変更確認時の処理"""
@@ -329,7 +332,7 @@ class Inn(BaseFacility):
         """冒険サービス統合ウィンドウを表示（InnServiceWindow使用）"""
         if not self.current_party:
             self.show_error_dialog_window(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
-            return
+            return False
         
         # InnServiceWindow設定を作成
         inn_config = {
@@ -349,12 +352,13 @@ class Inn(BaseFacility):
         window_manager.show_window(adventure_window, push_to_stack=True)
         
         logger.info("冒険準備サービスウィンドウを表示しました")
+        return True
     
     def _show_item_service(self):
         """アイテム管理サービスウィンドウを表示（InnServiceWindow使用）"""
         if not self.current_party:
             self.show_error_dialog_window(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
-            return
+            return False
         
         # InnServiceWindow設定を作成
         inn_config = {
@@ -374,6 +378,7 @@ class Inn(BaseFacility):
         window_manager.show_window(item_window, push_to_stack=True)
         
         logger.info("アイテム管理サービスウィンドウを表示しました")
+        return True
     
     def _show_adventure_preparation(self):
         """冒険の準備メニューを表示（レガシー - 移行済み）"""

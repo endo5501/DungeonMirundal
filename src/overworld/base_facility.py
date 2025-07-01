@@ -207,7 +207,7 @@ class BaseFacility(ABC):
             
             # MenuStackManagerシステムのクリーンアップ（削除）
             # WindowSystemではWindowManagerが管理
-            if self.dialog_template:
+            if hasattr(self, 'dialog_template') and self.dialog_template:
                 self.dialog_template.cleanup_all_dialogs()
                 
             logger.debug(f"施設 {self.facility_id} のUIをクリーンアップしました")
@@ -220,10 +220,10 @@ class BaseFacility(ABC):
         try:
             if self.window_manager:
                 # 施設に関連するウィンドウを閉じる
-                # 複数の形式を試行する（個別施設とベースの両方）
+                # 複数の形式を試行する（標準形式を先に探す）
                 possible_window_ids = [
-                    f"{self.facility_id}_main_menu",  # 個別施設形式（guild_main_menu, inn_main_menu）
-                    f"{self.facility_id}_main"        # ベース形式（guild_main, inn_main）
+                    f"{self.facility_id}_main",        # 標準形式（guild_main, inn_main）
+                    f"{self.facility_id}_main_menu"    # 個別施設形式（guild_main_menu, inn_main_menu）
                 ]
                 
                 for facility_window_id in possible_window_ids:
