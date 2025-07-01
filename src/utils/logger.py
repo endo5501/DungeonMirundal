@@ -23,7 +23,13 @@ def setup_logger(name: str = DEFAULT_LOGGER_NAME, level: int = DEFAULT_LOG_LEVEL
     if _logger_already_configured(logger):
         return logger
     
+    # 重複ハンドラーを防ぐため、既存のハンドラーをクリア
+    logger.handlers.clear()
+    
     logger.setLevel(level)
+    
+    # ルートロガーへの伝播を無効化（重複出力防止）
+    logger.propagate = False
     
     # フォーマッターの設定
     formatter = _create_log_formatter()
@@ -36,7 +42,14 @@ def setup_logger(name: str = DEFAULT_LOGGER_NAME, level: int = DEFAULT_LOG_LEVEL
 
 def _logger_already_configured(logger: logging.Logger) -> bool:
     """ロガーが既に設定済みかチェック"""
-    return bool(logger.handlers)
+    # ハンドラーが存在し、かつコンソールハンドラーとファイルハンドラーが両方存在する場合のみ設定済みとする
+    if not logger.handlers:
+        return False
+    
+    has_console_handler = any(isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler) for h in logger.handlers)
+    has_file_handler = any(isinstance(h, logging.FileHandler) for h in logger.handlers)
+    
+    return has_console_handler and has_file_handler
 
 def _create_log_formatter() -> logging.Formatter:
     """ログフォーマッターを作成"""
@@ -79,7 +92,14 @@ def create_custom_logger(name: str, level: Optional[int] = None, log_file: Optio
     if _logger_already_configured(logger):
         return logger
     
+    # 重複ハンドラーを防ぐため、既存のハンドラーをクリア
+    logger.handlers.clear()
+    
     logger.setLevel(level)
+    
+    # ルートロガーへの伝播を無効化（重複出力防止）
+    logger.propagate = False
+    
     formatter = _create_log_formatter()
     
     # コンソールハンドラー
@@ -105,5 +125,18 @@ def _add_custom_file_handler(logger: logging.Logger, formatter: logging.Formatte
     logger.addHandler(file_handler)
 
 
-# デフォルトロガー
-logger = setup_logger()
+# デフォルトロガー - 二重ログ出力防止のため無効化
+# logger = setup_logger()
+
+# 代わりに遅延初期化でシングルトンロガーを提供
+_default_logger = None
+
+def get_default_logger():
+    """デフォルトロガーをシングルトンで取得"""
+    global _default_logger
+    if _default_logger is None:
+        _default_logger = setup_logger()
+    return _default_logger
+
+# 後方互換性のため、logger属性も提供
+logger = get_default_logger()
