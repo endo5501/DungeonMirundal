@@ -1,4 +1,6 @@
-# game_logger.py ── ゲーム内部ログシステム
+# game_logger.py ── ゲーム内部ログシステム（現在無効化）
+# 二重ログ出力問題により一時的に無効化されています
+GAME_LOGGER_ENABLED = False
 import logging
 import threading
 from datetime import datetime
@@ -34,7 +36,7 @@ class GameLogEntry:
 class GameLogger:
     """ゲーム専用のログ管理システム"""
     
-    def __init__(self, max_entries: int = 10000):
+    def __init__(self, max_entries: int = 10000, auto_register_handler: bool = False):
         self.max_entries = max_entries
         self.logs: deque[GameLogEntry] = deque(maxlen=max_entries)
         self.lock = threading.Lock()
@@ -45,8 +47,11 @@ class GameLogger:
             "DEBUG": 0, "INFO": 0, "WARNING": 0, "ERROR": 0, "CRITICAL": 0
         }
         
-        # Pythonの標準ログハンドラーとして登録
-        self.handler = GameLogHandler(self)
+        # Pythonの標準ログハンドラーとして登録（デフォルトは無効）
+        if auto_register_handler:
+            self.handler = GameLogHandler(self)
+        else:
+            self.handler = None
         
     def add_log(self, level: str, message: str, category: str = "general", extra: Optional[Dict[str, Any]] = None):
         """ログエントリーを追加"""
@@ -148,34 +153,67 @@ class GameLogHandler(logging.Handler):
         except Exception:
             self.handleError(record)
 
+class DummyGameLogger:
+    """無効化時に使用するダミーロガー"""
+    def add_log(self, *args, **kwargs):
+        pass
+    
+    def get_logs(self, *args, **kwargs):
+        return []
+    
+    def get_stats(self, *args, **kwargs):
+        return {}
+    
+    def clear(self, *args, **kwargs):
+        pass
+    
+    def search(self, *args, **kwargs):
+        return []
+
 # シングルトンインスタンス
 _game_logger: Optional[GameLogger] = None
 
 def get_game_logger() -> GameLogger:
     """ゲームログインスタンスを取得"""
+    if not GAME_LOGGER_ENABLED:
+        # 無効化されているため、何もしないダミーを返す
+        return DummyGameLogger()
+    
     global _game_logger
     if _game_logger is None:
-        _game_logger = GameLogger()
+        _game_logger = GameLogger(auto_register_handler=False)  # 明示的に無効化
     return _game_logger
 
-def setup_game_logging(root_logger_name: str = "game"):
+def setup_game_logging(root_logger_name: str = "game", enable_standard_logging: bool = False):
     """ゲームログシステムをセットアップ"""
+    if not GAME_LOGGER_ENABLED:
+        return logging.getLogger(root_logger_name)
+        
     game_logger = get_game_logger()
     
-    # ルートゲームロガーを設定
-    logger = logging.getLogger(root_logger_name)
-    logger.addHandler(game_logger.handler)
-    logger.setLevel(logging.DEBUG)
-    
-    return logger
+    # 標準ログシステムとの統合は無効にする（二重出力を防ぐ）
+    if enable_standard_logging and game_logger.handler is not None:
+        # ルートゲームロガーを設定
+        logger = logging.getLogger(root_logger_name)
+        logger.addHandler(game_logger.handler)
+        logger.setLevel(logging.DEBUG)
+        return logger
+    else:
+        # 標準ログシステムには追加しない
+        logger = logging.getLogger(root_logger_name)
+        return logger
 
 # 便利な関数
 def log_game_event(message: str, category: str = "event", **extra):
     """ゲームイベントをログ"""
+    if not GAME_LOGGER_ENABLED:
+        return
     get_game_logger().add_log("INFO", message, category, extra)
 
 def log_player_action(action: str, details: Dict[str, Any]):
     """プレイヤーアクションをログ"""
+    if not GAME_LOGGER_ENABLED:
+        return
     get_game_logger().add_log(
         "INFO", 
         f"Player action: {action}", 
@@ -185,6 +223,8 @@ def log_player_action(action: str, details: Dict[str, Any]):
 
 def log_battle_event(event: str, participants: List[str], result: Dict[str, Any]):
     """戦闘イベントをログ"""
+    if not GAME_LOGGER_ENABLED:
+        return
     get_game_logger().add_log(
         "INFO",
         f"Battle event: {event}",
@@ -194,6 +234,8 @@ def log_battle_event(event: str, participants: List[str], result: Dict[str, Any]
 
 def log_error(error_msg: str, error_code: Optional[str] = None, **extra):
     """エラーをログ"""
+    if not GAME_LOGGER_ENABLED:
+        return
     extra_data = {"error_code": error_code} if error_code else {}
     extra_data.update(extra)
     get_game_logger().add_log("ERROR", error_msg, "error", extra_data)
