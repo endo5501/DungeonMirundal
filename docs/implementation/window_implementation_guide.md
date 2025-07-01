@@ -1,7 +1,7 @@
 # Window実装ガイド
 
-**バージョン**: 2.0 (WindowSystem統一化完了版)  
-**最終更新**: 2025-06-30
+**バージョン**: 2.2 (問題0056解決知見反映版)  
+**最終更新**: 2025-07-01
 
 ## 概要
 
@@ -909,6 +909,33 @@ window = window_manager.create_window(
 window_manager.show_window(window)
 ```
 
+### コンストラクタ引数エラー
+
+**症状**: `AttributeError: 'dict' object has no attribute 'add_child'`
+
+**原因**: Windowクラスのコンストラクタに間違った引数を渡している
+
+**実例**: CharacterCreationWizardクラッシュ問題（問題0056）
+```python
+# ❌ 間違った方法 - 辞書がparentパラメータに渡される
+wizard_config = {'callback': self._on_character_created}
+wizard = CharacterCreationWizard('wizard_id', wizard_config)  # クラッシュ！
+
+# ✅ 正しい方法 - 正しい引数順序とWindowManager使用
+wizard = window_manager.create_window(
+    CharacterCreationWizard,
+    'character_creation_wizard',
+    parent=None,
+    modal=True,
+    callback=self._on_character_created
+)
+```
+
+**学習ポイント**:
+1. **エラーログの正確な解析**: ファイルパスと行番号を確認し、実際のクラス定義を調査する
+2. **コンストラクタ定義の確認**: 推測ではなく、実際のクラスの`__init__`メソッドを確認する
+3. **WindowManager統一パターン**: 直接インスタンス化ではなく`create_window`を使用する
+
 ### UIManager初期化エラー
 
 **症状**: `FileNotFoundError: Unable to load resource with path: pygame_gui.data.NotoSans-Regular.ttf`
@@ -928,7 +955,31 @@ if not self.ui_manager:
     self.ui_manager = pygame_gui.UIManager((800, 600))
 ```
 
+### パーティ情報表示に関する設計判断
+
+**症状**: 施設メニューに不要な「パーティメンバー: 0人、所持金: 0G、HP: 0/0」が表示される
+
+**原因**: 使用されない機能の設定が有効になっている
+
+**解決方法**: 仕様レベルでの機能無効化
+```python
+# ✅ 表示機能を無効化
+'show_party_info': False,
+'show_gold': False
+```
+
+**設計原則**: 
+- 表示画面が存在しない機能は設定レベルで無効化する
+- 将来的に不要と判明した機能はコードから削除を検討する
+
 ## 更新履歴
+
+- **2.2 (2025-07-01)**: 問題0056解決知見反映版
+  - CharacterCreationWizardクラッシュ問題の詳細分析を追加
+  - コンストラクタ引数エラーのトラブルシューティングを追加
+  - エラーログ解析の重要性を強調
+  - パーティ情報表示に関する設計判断を追加
+  - 実際のエラー解決プロセスを記録
 
 - **2.1 (2025-06-30)**: WindowSystem統一化完了版 + トラブルシューティング
   - WindowManager登録エラーの解決方法を追加
