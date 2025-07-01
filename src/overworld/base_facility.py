@@ -130,7 +130,8 @@ class BaseFacility(ABC):
             facility_window = self.window_manager.create_window(
                 FacilityMenuWindow,
                 f"{self.facility_id}_main",
-                facility_config=menu_config
+                facility_config=menu_config,
+                modal=False
             )
             facility_window.message_handler = self.handle_facility_message
             self.window_manager.show_window(facility_window, push_to_stack=True)
@@ -235,20 +236,20 @@ class BaseFacility(ABC):
                                      on_close: Optional[Callable] = None) -> bool:
         """情報ダイアログを表示（WindowManager版）"""
         try:
-            from src.ui.window_system.dialog_window import DialogWindow
+            from src.ui.window_system.dialog_window import DialogWindow, DialogType
             
-            dialog_config = {
-                'title': title,
-                'message': message,
-                'dialog_type': 'information',
-                'buttons': [{'id': 'ok', 'label': 'OK', 'type': 'primary'}]
-            }
-            
-            dialog_window = DialogWindow(f"{self.facility_id}_info_dialog", dialog_config)
+            logger.info(f"情報ダイアログ作成開始: {title}")
+            dialog_window = self.window_manager.create_window(
+                DialogWindow,
+                f"{self.facility_id}_info_dialog", 
+                dialog_type=DialogType.INFORMATION,
+                message=f"{title}\n\n{message}"
+            )
             if on_close:
                 dialog_window.message_handler = lambda msg_type, data: on_close() if msg_type == 'dialog_closed' else None
             
             self.window_manager.show_window(dialog_window, push_to_stack=True)
+            logger.info(f"情報ダイアログ表示完了: {title}")
             return True
             
         except ImportError:
@@ -262,16 +263,14 @@ class BaseFacility(ABC):
                                on_close: Optional[Callable] = None) -> bool:
         """エラーダイアログを表示（WindowManager版）"""
         try:
-            from src.ui.window_system.dialog_window import DialogWindow
+            from src.ui.window_system.dialog_window import DialogWindow, DialogType
             
-            dialog_config = {
-                'title': title,
-                'message': message,
-                'dialog_type': 'error',
-                'buttons': [{'id': 'ok', 'label': 'OK', 'type': 'primary'}]
-            }
-            
-            dialog_window = DialogWindow(f"{self.facility_id}_error_dialog", dialog_config)
+            dialog_window = self.window_manager.create_window(
+                DialogWindow,
+                f"{self.facility_id}_error_dialog", 
+                dialog_type=DialogType.ERROR,
+                message=f"{title}\n\n{message}"
+            )
             if on_close:
                 dialog_window.message_handler = lambda msg_type, data: on_close() if msg_type == 'dialog_closed' else None
             
@@ -289,16 +288,14 @@ class BaseFacility(ABC):
                                  on_close: Optional[Callable] = None) -> bool:
         """成功ダイアログを表示（WindowManager版）"""
         try:
-            from src.ui.window_system.dialog_window import DialogWindow
+            from src.ui.window_system.dialog_window import DialogWindow, DialogType
             
-            dialog_config = {
-                'title': title,
-                'message': message,
-                'dialog_type': 'success',
-                'buttons': [{'id': 'ok', 'label': 'OK', 'type': 'primary'}]
-            }
-            
-            dialog_window = DialogWindow(f"{self.facility_id}_success_dialog", dialog_config)
+            dialog_window = self.window_manager.create_window(
+                DialogWindow,
+                f"{self.facility_id}_success_dialog", 
+                dialog_type=DialogType.SUCCESS,
+                message=f"{title}\n\n{message}"
+            )
             if on_close:
                 dialog_window.message_handler = lambda msg_type, data: on_close() if msg_type == 'dialog_closed' else None
             
@@ -337,7 +334,11 @@ class BaseFacility(ABC):
                     elif button_id == 'no' and on_cancel:
                         on_cancel()
             
-            dialog_window = DialogWindow(f"{self.facility_id}_confirm_dialog", dialog_config)
+            dialog_window = self.window_manager.create_window(
+                DialogWindow,
+                f"{self.facility_id}_confirm_dialog", 
+                dialog_config=dialog_config
+            )
             dialog_window.message_handler = handle_confirmation_message
             
             self.window_manager.show_window(dialog_window, push_to_stack=True)

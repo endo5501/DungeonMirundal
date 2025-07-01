@@ -96,8 +96,8 @@ class Temple(BaseFacility):
             'facility_name': config_manager.get_text("facility.temple"),
             'menu_items': menu_items,
             'party': self.current_party,
-            'show_party_info': True,
-            'show_gold': True
+            'show_party_info': False,
+            'show_gold': False
         }
     
     def show_menu(self):
@@ -125,7 +125,7 @@ class Temple(BaseFacility):
     def handle_facility_message(self, message_type: str, data: dict) -> bool:
         """FacilityMenuWindowからのメッセージを処理"""
         if message_type == 'menu_item_selected':
-            item_id = data.get('id')
+            item_id = data.get('item_id')
             
             if item_id == 'resurrection':
                 return self._show_resurrection_menu()
@@ -175,11 +175,13 @@ class Temple(BaseFacility):
             'title': '蘇生サービス'
         }
         
-        # TempleServiceWindowを作成
-        resurrection_window = TempleServiceWindow('temple_resurrection', temple_config)
-        
-        # WindowManagerで表示
+        # WindowManagerの正しい使用パターン: create_window -> show_window
         window_manager = WindowManager.get_instance()
+        resurrection_window = window_manager.create_window(
+            TempleServiceWindow,
+            'temple_resurrection',
+            temple_config=temple_config
+        )
         window_manager.show_window(resurrection_window, push_to_stack=True)
         
         logger.info("蘇生サービスウィンドウを表示しました")
@@ -198,11 +200,13 @@ class Temple(BaseFacility):
             'title': '治療・祝福サービス'
         }
         
-        # TempleServiceWindowを作成
-        healing_window = TempleServiceWindow('temple_healing', temple_config)
-        
-        # WindowManagerで表示
+        # WindowManagerの正しい使用パターン: create_window -> show_window
         window_manager = WindowManager.get_instance()
+        healing_window = window_manager.create_window(
+            TempleServiceWindow,
+            'temple_healing',
+            temple_config=temple_config
+        )
         window_manager.show_window(healing_window, push_to_stack=True)
         
         logger.info("治療・祝福サービスウィンドウを表示しました")
@@ -560,16 +564,9 @@ class Temple(BaseFacility):
         import random
         title, message = random.choice(messages)
         
-        self._show_dialog(
-            "priest_dialog",
+        self.show_information_dialog_window(
             f"神父 - {title}",
-            message,
-            buttons=[
-                {
-                    'text': config_manager.get_text("menu.back"),
-                    'command': self._back_to_main_menu_from_priest_dialog
-                }
-            ]
+            message
         )
     
     # UIMenu削除済み: _show_submenu()と_back_to_main_menu_from_submenu()はWindowSystem移行により不要

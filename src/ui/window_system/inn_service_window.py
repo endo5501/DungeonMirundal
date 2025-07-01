@@ -15,7 +15,7 @@ class InnServiceWindow(FacilitySubWindow):
     レガシーメニューの12箇所を代替する最も複雑な統合Window。
     """
     
-    def __init__(self, window_id: str, facility_config: Dict[str, Any]):
+    def __init__(self, window_id: str, facility_config: Dict[str, Any], parent=None, **kwargs):
         """初期化
         
         Args:
@@ -26,6 +26,7 @@ class InnServiceWindow(FacilitySubWindow):
                 - service_types: ['adventure_prep', 'item_management', 'magic_management', 'equipment_management']
                 - selected_character: 選択されたキャラクター（オプション）
                 - title: ウィンドウタイトル（オプション）
+            parent: 親ウィンドウ（WindowManagerとの互換性のため）
         """
         super().__init__(window_id, facility_config)
         
@@ -344,9 +345,51 @@ class InnServiceWindow(FacilitySubWindow):
         
         タブベースの統合UI、キャラクター選択、各種サービス機能を作成。
         """
-        # 実装はPhase 2の具体的なUI実装時に追加
-        # 現在はテスト用のプレースホルダー
-        pass
+        if not self.ui_manager:
+            self._initialize_ui_manager()
+        
+        # 基本的なコンテナ作成
+        self.rect = pygame.Rect(100, 100, 600, 400)
+        self.main_container = pygame_gui.elements.UIPanel(
+            relative_rect=self.rect,
+            manager=self.ui_manager
+        )
+        
+        # タイトル表示
+        title_rect = pygame.Rect(20, 20, 560, 40)
+        self.title_label = pygame_gui.elements.UILabel(
+            relative_rect=title_rect,
+            text=self.title,
+            manager=self.ui_manager,
+            container=self.main_container
+        )
+        
+        # サービス一覧表示
+        service_area_rect = pygame.Rect(20, 80, 560, 250)
+        service_text = "利用可能なサービス:\n"
+        for service in self.available_services:
+            service_text += f"• {service}\n"
+        
+        self.service_info_label = pygame_gui.elements.UILabel(
+            relative_rect=service_area_rect,
+            text=service_text,
+            manager=self.ui_manager,
+            container=self.main_container
+        )
+        
+        # 戻るボタンはFacilitySubWindow基底クラスが提供
+        
+        logger.info(f"InnServiceWindow UI作成完了: {self.window_id}")
+    
+    def _initialize_ui_manager(self):
+        """UIManagerを初期化"""
+        from .window_manager import WindowManager
+        window_manager = WindowManager.get_instance()
+        self.ui_manager = window_manager.ui_manager
+        
+        if not self.ui_manager:
+            # フォールバック
+            self.ui_manager = pygame_gui.UIManager((1024, 768))
     
     def handle_message(self, message_type: str, message_data: Dict[str, Any]) -> bool:
         """Windowメッセージの処理
@@ -429,6 +472,13 @@ class InnServiceWindow(FacilitySubWindow):
         Returns:
             イベントを処理したらTrue
         """
-        # 宿屋サービス固有のイベント処理
-        # 現在はプレースホルダー実装
+        if not self.ui_manager:
+            return False
+        
+        # pygame-guiにイベントを渡す
+        self.ui_manager.process_events(event)
+        
+        # 宿屋サービス固有のイベント処理はここに追加
+        # 戻る処理は基底クラス（FacilitySubWindow）が処理
+        
         return False

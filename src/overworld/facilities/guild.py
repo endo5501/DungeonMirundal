@@ -95,8 +95,8 @@ class AdventurersGuild(BaseFacility):
             'facility_name': config_manager.get_text("facility.guild"),
             'menu_items': menu_items,
             'party': self.current_party,
-            'show_party_info': True,
-            'show_gold': True
+            'show_party_info': False,
+            'show_gold': False
         }
     
     def _create_facility_menu_config(self) -> Dict[str, Any]:
@@ -167,17 +167,26 @@ class AdventurersGuild(BaseFacility):
     
     def _show_character_creation(self):
         """キャラクター作成ウィザードを表示"""
-        # 現在のウィンドウを隠す（WindowManagerを使用）
+        # WindowManagerを取得
         window_manager = WindowManager.get_instance()
-        current_window = window_manager.get_active_window()
-        if current_window:
-            window_manager.hide_window(current_window)
         
-        # キャラクター作成ウィザードを起動
-        wizard = CharacterCreationWizard(callback=self._on_character_created)
+        # キャラクター作成ウィザードをWindowManager経由で作成
+        wizard = window_manager.create_window(
+            CharacterCreationWizard,
+            'character_creation_wizard',
+            parent=None,
+            modal=True,
+            callback=self._on_character_created
+        )
+        
         # キャンセル時のコールバックを設定
-        wizard.on_cancel = self._on_character_creation_cancelled
-        wizard.start()
+        wizard.cancel_callback = self._on_character_creation_cancelled
+        
+        # ウィンドウを表示
+        window_manager.show_window(wizard, push_to_stack=True)
+        
+        # ウィザードを開始
+        wizard.start_wizard()
     
     def _on_character_created(self, character: Character):
         """キャラクター作成完了時のコールバック"""

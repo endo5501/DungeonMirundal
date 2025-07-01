@@ -115,10 +115,22 @@ class OverworldManager:
     
     def on_facility_exit(self):
         """施設退場時のコールバック"""
-        logger.info("施設から地上部に戻りました")
+        logger.info("施設から地上部に戻りました - on_facility_exitコールバック実行")
         
-        # 統一化されたメインメニュー表示を使用
-        self._show_main_menu_unified()
+        # WindowManagerで前のウィンドウに戻る（通常は地上メインメニュー）
+        if hasattr(self, 'window_manager') and self.window_manager:
+            logger.info("WindowManager.go_back()を呼び出して前のウィンドウに戻ります")
+            success = self.window_manager.go_back()
+            logger.info(f"WindowManager.go_back()の結果: {success}")
+            
+            # 戻り処理が失敗した場合のフォールバック
+            if not success:
+                logger.warning("go_back()が失敗したため、メインメニューを表示します")
+                self._show_main_menu_unified()
+        else:
+            # WindowManagerが利用できない場合のフォールバック
+            logger.warning("WindowManagerが利用できないため、メインメニューを表示します")
+            self._show_main_menu_unified()
     
     def _create_window_based_main_menu(self):
         """WindowManagerベースのメインメニューを作成"""
@@ -685,9 +697,8 @@ class OverworldManager:
             
             success = facility_manager.enter_facility("guild", self.current_party)
             if success:
-                # 施設に入ったらメインメニューを隠す
-                if self.main_menu:
-                    self.ui_manager.hide_menu(self.main_menu.menu_id)
+                logger.info("冒険者ギルドへの入場に成功しました")
+                # WindowManagerベースシステムではUIマネージャーでの手動非表示は不要
             else:
                 logger.error("冒険者ギルドへの入場に失敗しました")
         except Exception as e:
@@ -705,9 +716,9 @@ class OverworldManager:
             
             success = facility_manager.enter_facility("inn", self.current_party)
             if success:
-                # 施設に入ったらメインメニューを隠す
-                if self.main_menu:
-                    self.ui_manager.hide_menu(self.main_menu.menu_id)
+                logger.info("宿屋への入場に成功しました")
+                # WindowManagerベースシステムではUIマネージャーでの手動非表示は不要
+                # 施設のウィンドウが自動的にスタックに追加される
             else:
                 logger.error("宿屋への入場に失敗しました")
         except Exception as e:
@@ -730,9 +741,8 @@ class OverworldManager:
             
             success = facility_manager.enter_facility("shop", self.current_party)
             if success:
-                # 施設に入ったらメインメニューを隠す
-                if self.main_menu:
-                    self.ui_manager.hide_menu(self.main_menu.menu_id)
+                logger.info("商店への入場に成功しました")
+                # WindowManagerベースシステムではUIマネージャーでの手動非表示は不要
             else:
                 logger.error("商店への入場に失敗しました")
         except Exception as e:
@@ -749,9 +759,8 @@ class OverworldManager:
             
             success = facility_manager.enter_facility("temple", self.current_party)
             if success:
-                # 施設に入ったらメインメニューを隠す
-                if self.main_menu:
-                    self.ui_manager.hide_menu(self.main_menu.menu_id)
+                logger.info("教会への入場に成功しました")
+                # WindowManagerベースシステムではUIマネージャーでの手動非表示は不要
             else:
                 logger.error("教会への入場に失敗しました")
         except Exception as e:
@@ -768,9 +777,8 @@ class OverworldManager:
             
             success = facility_manager.enter_facility("magic_guild", self.current_party)
             if success:
-                # 施設に入ったらメインメニューを隠す
-                if self.main_menu:
-                    self.ui_manager.hide_menu(self.main_menu.menu_id)
+                logger.info("魔術師ギルドへの入場に成功しました")
+                # WindowManagerベースシステムではUIマネージャーでの手動非表示は不要
             else:
                 logger.error("魔術師ギルドへの入場に失敗しました")
         except Exception as e:

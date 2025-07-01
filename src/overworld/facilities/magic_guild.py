@@ -102,8 +102,8 @@ class MagicGuild(BaseFacility):
             'facility_name': config_manager.get_text("facility.magic_guild"),
             'menu_items': menu_items,
             'party': self.current_party,
-            'show_party_info': True,
-            'show_gold': True
+            'show_party_info': False,
+            'show_gold': False
         }
     
     def show_menu(self):
@@ -131,7 +131,7 @@ class MagicGuild(BaseFacility):
     def handle_facility_message(self, message_type: str, data: dict) -> bool:
         """FacilityMenuWindowからのメッセージを処理"""
         if message_type == 'menu_item_selected':
-            item_id = data.get('id')
+            item_id = data.get('item_id')
             
             if item_id == 'spellbook_shop':
                 return self._show_spellbook_shop_menu()
@@ -331,11 +331,13 @@ class MagicGuild(BaseFacility):
             'title': category_name
         }
         
-        # MagicGuildServiceWindowを作成
-        spellbook_shop_window = MagicGuildServiceWindow('magic_guild_spellbook_category', guild_config)
-        
-        # WindowManagerで表示
+        # WindowManagerの正しい使用パターン: create_window -> show_window
         window_manager = WindowManager.get_instance()
+        spellbook_shop_window = window_manager.create_window(
+            MagicGuildServiceWindow,
+            'magic_guild_spellbook_category',
+            guild_config=guild_config
+        )
         window_manager.show_window(spellbook_shop_window, push_to_stack=True)
         
         logger.info(f"魔術書カテゴリウィンドウを表示しました: {category_name}")
@@ -434,11 +436,13 @@ class MagicGuild(BaseFacility):
             'title': f'{character.name} の魔法習得'
         }
         
-        # MagicGuildServiceWindowを作成
-        spell_learning_window = MagicGuildServiceWindow('magic_guild_spell_learning', guild_config)
-        
-        # WindowManagerで表示
+        # WindowManagerの正しい使用パターン: create_window -> show_window
         window_manager = WindowManager.get_instance()
+        spell_learning_window = window_manager.create_window(
+            MagicGuildServiceWindow,
+            'magic_guild_spell_learning',
+            guild_config=guild_config
+        )
         window_manager.show_window(spell_learning_window, push_to_stack=True)
         
         logger.info(f"{character.name}の魔法習得ウィンドウを表示しました")
@@ -533,11 +537,13 @@ class MagicGuild(BaseFacility):
             'title': 'アイテム鑑定'
         }
         
-        # MagicGuildServiceWindowを作成
-        identification_window = MagicGuildServiceWindow('magic_guild_identification', guild_config)
-        
-        # WindowManagerで表示
+        # WindowManagerの正しい使用パターン: create_window -> show_window
         window_manager = WindowManager.get_instance()
+        identification_window = window_manager.create_window(
+            MagicGuildServiceWindow,
+            'magic_guild_identification',
+            guild_config=guild_config
+        )
         window_manager.show_window(identification_window, push_to_stack=True)
         
         logger.info("アイテム鑑定ウィンドウを表示しました")
@@ -556,11 +562,13 @@ class MagicGuild(BaseFacility):
             'title': '魔法分析'
         }
         
-        # MagicGuildServiceWindowを作成
-        analysis_window = MagicGuildServiceWindow('magic_guild_analysis', guild_config)
-        
-        # WindowManagerで表示
+        # WindowManagerの正しい使用パターン: create_window -> show_window
         window_manager = WindowManager.get_instance()
+        analysis_window = window_manager.create_window(
+            MagicGuildServiceWindow,
+            'magic_guild_analysis',
+            guild_config=guild_config
+        )
         window_manager.show_window(analysis_window, push_to_stack=True)
         
         logger.info("魔法分析ウィンドウを表示しました")
@@ -677,11 +685,13 @@ class MagicGuild(BaseFacility):
             'title': 'キャラクター分析'
         }
         
-        # MagicGuildServiceWindowを作成
-        char_analysis_window = MagicGuildServiceWindow('magic_guild_character_analysis', guild_config)
-        
-        # WindowManagerで表示
+        # WindowManagerの正しい使用パターン: create_window -> show_window
         window_manager = WindowManager.get_instance()
+        char_analysis_window = window_manager.create_window(
+            MagicGuildServiceWindow,
+            'magic_guild_character_analysis',
+            guild_config=guild_config
+        )
         window_manager.show_window(char_analysis_window, push_to_stack=True)
         
         logger.info("キャラクター分析ウィンドウを表示しました")
@@ -805,16 +815,9 @@ class MagicGuild(BaseFacility):
                 "パーティに加えてから再度お越しください。"
             )
             
-            self._show_dialog(
-                "no_magic_users_dialog",
+            self.show_information_dialog_window(
                 "魔法使用回数確認",
-                info_text,
-                buttons=[
-                    {
-                        'text': config_manager.get_text("menu.back"),
-                        'command': self._close_dialog
-                    }
-                ]
+                info_text
             )
             return
         
@@ -827,11 +830,13 @@ class MagicGuild(BaseFacility):
             'title': '魔法使用回数確認'
         }
         
-        # MagicGuildServiceWindowを作成
-        usage_check_window = MagicGuildServiceWindow('magic_guild_usage_check', guild_config)
-        
-        # WindowManagerで表示
+        # WindowManagerの正しい使用パターン: create_window -> show_window
         window_manager = WindowManager.get_instance()
+        usage_check_window = window_manager.create_window(
+            MagicGuildServiceWindow,
+            'magic_guild_usage_check',
+            guild_config=guild_config
+        )
         window_manager.show_window(usage_check_window, push_to_stack=True)
         
         logger.info("魔法使用回数確認ウィンドウを表示しました")
@@ -949,16 +954,9 @@ class MagicGuild(BaseFacility):
         import random
         title, message = random.choice(messages)
         
-        self._show_dialog(
-            "archmage_dialog",
+        self.show_information_dialog_window(
             f"大魔術師 - {title}",
-            message,
-            buttons=[
-                {
-                    'text': config_manager.get_text("menu.back"),
-                    'command': self._close_dialog
-                }
-            ]
+            message
         )
     
     def _show_submenu(self, submenu):

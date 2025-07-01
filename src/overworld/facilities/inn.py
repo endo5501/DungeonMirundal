@@ -86,8 +86,8 @@ class Inn(BaseFacility):
             'facility_name': config_manager.get_text("facility.inn"),
             'menu_items': menu_items,
             'party': self.current_party,
-            'show_party_info': True,
-            'show_gold': True
+            'show_party_info': False,
+            'show_gold': False
         }
     
     def _create_facility_menu_config(self) -> Dict[str, Any]:
@@ -118,14 +118,18 @@ class Inn(BaseFacility):
     
     def handle_facility_message(self, message_type: str, data: dict) -> bool:
         """FacilityMenuWindowからのメッセージを処理"""
+        logger.info(f"Inn received message: {message_type}, data: {data}")
+        
         if message_type == 'menu_item_selected':
-            item_id = data.get('id')
+            item_id = data.get('item_id')
+            logger.info(f"Inn menu item selected: {item_id}")
             
             if item_id == 'adventure_preparation':
                 return self._show_adventure_service()
             elif item_id == 'item_storage':
                 return self._show_item_service()
             elif item_id == 'talk_innkeeper':
+                logger.info("宿屋の主人と話すボタンが押されました")
                 return self._talk_to_innkeeper()
             elif item_id == 'travel_info':
                 return self._show_travel_info()
@@ -135,6 +139,7 @@ class Inn(BaseFacility):
                 return self._change_party_name()
                 
         elif message_type == 'facility_exit_requested':
+            logger.info("「出る」ボタンが押されました - facility_exit_requested受信")
             return self._handle_exit()
             
         return False
@@ -144,11 +149,12 @@ class Inn(BaseFacility):
         self._cleanup_all_ui()
         logger.info(config_manager.get_text("app_log.left_inn"))
         
-        # WindowManagerでウィンドウを閉じる
-        window_manager = WindowManager.get_instance()
-        if window_manager.get_active_window():
-            window_manager.go_back()
-            
+        # FacilityManagerに施設退出を通知
+        from src.overworld.base_facility import facility_manager
+        logger.info("FacilityManager.exit_current_facility()を呼び出します")
+        result = facility_manager.exit_current_facility()
+        logger.info(f"FacilityManager.exit_current_facility()の結果: {result}")
+        
         return True
     
     def _on_enter(self):
@@ -200,19 +206,19 @@ class Inn(BaseFacility):
         import random
         title, message = random.choice(messages)
         
-        self.show_information_dialog(
+        result = self.show_information_dialog_window(
             f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
-            message,
-            buttons=[{"text": "戻る", "callback": None}]
+            message
         )
+        logger.info(f"宿屋の主人との会話を表示: {title}")
+        return result
     
     def _show_travel_info(self):
         """旅の情報を表示"""
         travel_info = config_manager.get_text("inn.travel_info.content")
-        self.show_information_dialog(
+        self.show_information_dialog_window(
             config_manager.get_text("inn.travel_info.title"),
-            travel_info,
-            buttons=[{"text": "戻る", "callback": None}]
+            travel_info
         )
     
     def _show_tavern_rumors(self):
@@ -233,10 +239,9 @@ class Inn(BaseFacility):
         import random
         title, rumor = random.choice(rumors)
         
-        self.show_information_dialog(
+        self.show_information_dialog_window(
             f"{config_manager.get_text('inn.rumors.title')} - {title}",
-            rumor,
-            buttons=[{"text": "戻る", "callback": None}]
+            rumor
         )
     
     # === パーティ管理 ===
@@ -244,7 +249,7 @@ class Inn(BaseFacility):
     def _change_party_name(self):
         """パーティ名変更機能"""
         if not self.current_party:
-            self.show_error_dialog(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
+            self.show_error_dialog_window(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
             return
         
         current_name = self.current_party.name if self.current_party.name else "無名のパーティ"
@@ -323,7 +328,7 @@ class Inn(BaseFacility):
     def _show_adventure_service(self):
         """冒険サービス統合ウィンドウを表示（InnServiceWindow使用）"""
         if not self.current_party:
-            self.show_error_dialog(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
+            self.show_error_dialog_window(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
             return
         
         # InnServiceWindow設定を作成
@@ -334,11 +339,13 @@ class Inn(BaseFacility):
             'title': '冒険の準備'
         }
         
-        # InnServiceWindowを作成
-        adventure_window = InnServiceWindow('inn_adventure_prep', inn_config)
-        
-        # WindowManagerで表示
+        # WindowManagerを取得してInnServiceWindowを作成・表示
         window_manager = WindowManager.get_instance()
+        adventure_window = window_manager.create_window(
+            InnServiceWindow,
+            'inn_adventure_prep',
+            facility_config=inn_config
+        )
         window_manager.show_window(adventure_window, push_to_stack=True)
         
         logger.info("冒険準備サービスウィンドウを表示しました")
@@ -346,7 +353,7 @@ class Inn(BaseFacility):
     def _show_item_service(self):
         """アイテム管理サービスウィンドウを表示（InnServiceWindow使用）"""
         if not self.current_party:
-            self.show_error_dialog(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
+            self.show_error_dialog_window(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
             return
         
         # InnServiceWindow設定を作成
@@ -357,11 +364,13 @@ class Inn(BaseFacility):
             'title': 'アイテム整理'
         }
         
-        # InnServiceWindowを作成
-        item_window = InnServiceWindow('inn_item_management', inn_config)
-        
-        # WindowManagerで表示
+        # WindowManagerを取得してInnServiceWindowを作成・表示
         window_manager = WindowManager.get_instance()
+        item_window = window_manager.create_window(
+            InnServiceWindow,
+            'inn_item_management',
+            facility_config=inn_config
+        )
         window_manager.show_window(item_window, push_to_stack=True)
         
         logger.info("アイテム管理サービスウィンドウを表示しました")
