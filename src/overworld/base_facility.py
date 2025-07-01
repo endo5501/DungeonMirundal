@@ -220,9 +220,19 @@ class BaseFacility(ABC):
         try:
             if self.window_manager:
                 # 施設に関連するウィンドウを閉じる
-                facility_window_id = f"{self.facility_id}_main"
-                if facility_window_id in self.window_manager.window_registry:
-                    self.window_manager.close_window(facility_window_id)
+                # 複数の形式を試行する（個別施設とベースの両方）
+                possible_window_ids = [
+                    f"{self.facility_id}_main_menu",  # 個別施設形式（guild_main_menu, inn_main_menu）
+                    f"{self.facility_id}_main"        # ベース形式（guild_main, inn_main）
+                ]
+                
+                for facility_window_id in possible_window_ids:
+                    if facility_window_id in self.window_manager.window_registry:
+                        logger.debug(f"ウィンドウをクリーンアップします: {facility_window_id}")
+                        self.window_manager.close_window(facility_window_id)
+                        break  # 一つ見つかったら終了
+                else:
+                    logger.debug(f"施設 {self.facility_id} に対応するウィンドウが見つかりませんでした")
                 
             logger.debug(f"施設 {self.facility_id} のWindowSystemをクリーンアップしました")
             
