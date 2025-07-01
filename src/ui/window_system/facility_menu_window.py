@@ -28,7 +28,7 @@ class FacilityMenuWindow(Window):
     """
     
     def __init__(self, window_id: str, facility_config: Dict[str, Any], 
-                 parent: Optional[Window] = None, modal: bool = True):
+                 parent: Optional[Window] = None, modal: bool = False):
         """
         施設メニューウィンドウを初期化
         
@@ -65,6 +65,9 @@ class FacilityMenuWindow(Window):
         self.party_info_panel: Optional[pygame_gui.elements.UIPanel] = None
         self.menu_buttons: List[pygame_gui.elements.UIButton] = []
         
+        # メッセージハンドラー
+        self.message_handler = None
+        
         logger.debug(f"FacilityMenuWindowを初期化: {window_id}, {self.facility_type}")
     
     def _validate_and_convert_config(self, config: Dict[str, Any]) -> FacilityConfig:
@@ -99,18 +102,44 @@ class FacilityMenuWindow(Window):
             return
             
         try:
+            logger.info(f"FacilityMenuWindow UI作成開始: {self.window_id}")
             self.rect = self.ui_factory.calculate_window_layout(len(self.menu_items), self.facility_config.show_party_info)
+            logger.info(f"レイアウト計算完了: {self.rect}")
+            
             self.main_container = self.ui_factory.create_main_container(self.rect, self.ui_manager)
+            logger.info(f"メインコンテナ作成完了")
+            
             self.facility_title = self.ui_factory.create_facility_title(self.facility_type, self.facility_name, self.main_container, self.ui_manager)
+            logger.info(f"施設タイトル作成完了")
+            
             if self.facility_config.show_party_info:
                 self.party_info_panel = self.ui_factory.create_party_info_panel(self.main_container, self.ui_manager, True)
                 self._update_party_info_display()
+                logger.info(f"パーティ情報パネル作成完了")
+                
             self.menu_buttons = self.ui_factory.create_menu_buttons(self.menu_items, self.main_container, self.ui_manager, self.facility_config.show_party_info)
+            logger.info(f"メニューボタン作成完了: {len(self.menu_buttons)}個")
+            
+            # デバッグ: 作成されたUI要素を確認
+            if self.ui_manager and hasattr(self.ui_manager, 'get_root_container'):
+                element_count = len(self.ui_manager.get_root_container().elements)
+                logger.info(f"UIManager内のUI要素総数: {element_count}")
+                
+                # 各ボタンの状態を確認
+                for i, button in enumerate(self.menu_buttons):
+                    if button:
+                        logger.info(f"ボタン{i}: visible={button.visible}, alive={button.alive}")
+            
             self._update_menu_button_states()
+            logger.info(f"ボタン状態更新完了")
+            
         except Exception as e:
-            logger.warning(f"FacilityMenuWindow UI作成エラー、スキップ: {e}")
+            logger.error(f"FacilityMenuWindow UI作成エラー: {e}")
+            import traceback
+            logger.error(f"スタックトレース: {traceback.format_exc()}")
+            raise  # エラーを再発生させて問題を明確にする
         
-        logger.debug(f"FacilityMenuWindow UI要素を作成: {self.window_id}")
+        logger.info(f"FacilityMenuWindow UI要素を作成完了: {self.window_id}")
     
     def _initialize_ui_manager(self) -> None:
         """UIManagerを初期化"""
@@ -118,6 +147,8 @@ class FacilityMenuWindow(Window):
         from .window_manager import WindowManager
         window_manager = WindowManager.get_instance()
         self.ui_manager = window_manager.ui_manager
+        
+        logger.info(f"FacilityMenuWindow UIManager初期化: window_manager.ui_manager={self.ui_manager}")
         
         if not self.ui_manager:
             # テスト環境フォールバック：テーマなしでUIManagerを作成
@@ -128,13 +159,17 @@ class FacilityMenuWindow(Window):
                 theme_path = "/home/satorue/Dungeon/config/ui_theme.json"
                 if os.path.exists(theme_path):
                     self.ui_manager = pygame_gui.UIManager((screen_width, screen_height), theme_path)
+                    logger.warning(f"統一UIManagerがないため独自作成（テーマ有り）: {theme_path}")
                 else:
                     self.ui_manager = pygame_gui.UIManager((screen_width, screen_height))
+                    logger.warning(f"統一UIManagerがないため独自作成（テーマ無し）")
             except Exception as e:
                 # テスト環境ではMockUIManagerを使用
                 from unittest.mock import Mock
                 self.ui_manager = Mock()
                 logger.warning(f"UIManager初期化エラー、Mockを使用: {e}")
+        else:
+            logger.info(f"WindowManagerの統一UIManagerを使用: {type(self.ui_manager)}")
     
     
     
@@ -159,14 +194,15 @@ class FacilityMenuWindow(Window):
         current_hp = 0
         
         if self.party:
-            if hasattr(self.party, 'get_member_count'):
-                member_count = self.party.get_member_count()
-            if hasattr(self.party, 'get_gold'):
-                gold = self.party.get_gold()
-            if hasattr(self.party, 'get_total_max_hp'):
-                max_hp = self.party.get_total_max_hp()
-            if hasattr(self.party, 'get_total_current_hp'):
-                current_hp = self.party.get_total_current_hp()
+            # 実際のPartyクラスのプロパティ・メソッドを使用
+            member_count = len(self.party.get_all_characters())
+            gold = self.party.gold
+            
+            # HP合計を計算
+            for character in self.party.get_all_characters():
+                if hasattr(character, 'derived_stats') and character.derived_stats:
+                    max_hp += character.derived_stats.max_hp
+                    current_hp += character.derived_stats.current_hp
         
         return PartyInfo(
             member_count=member_count,
@@ -270,7 +306,7 @@ class FacilityMenuWindow(Window):
             'facility_type': self.facility_type.value
         })
         
-        logger.debug(f"施設退場リクエスト: {self.facility_type}")
+        logger.info(f"施設退場リクエスト送信: {self.facility_type}")
         return True
     
     def _handle_menu_selection(self, item: FacilityMenuItem) -> bool:
@@ -301,6 +337,20 @@ class FacilityMenuWindow(Window):
         """選択インデックスを設定（後方互換性のため）"""
         self.menu_manager.selected_index = value
     
+    def send_message(self, message_type: str, data: Dict[str, Any] = None) -> None:
+        """
+        メッセージハンドラーにメッセージを送信
+        
+        Args:
+            message_type: メッセージの種類
+            data: メッセージデータ
+        """
+        if self.message_handler:
+            self.message_handler(message_type, data or {})
+        else:
+            # フォールバック：親ウィンドウに送信
+            super().send_message(message_type, data)
+    
     def cleanup_ui(self) -> None:
         """UI要素のクリーンアップ"""
         # ボタンリストをクリア
@@ -315,3 +365,27 @@ class FacilityMenuWindow(Window):
         self.ui_manager = None
         
         logger.debug(f"FacilityMenuWindow UI要素をクリーンアップ: {self.window_id}")
+    
+    def disable_ui(self) -> None:
+        """UI要素を一時的に無効化（モーダルダイアログ表示時）"""
+        if self.main_container:
+            self.main_container.hide()
+        logger.info(f"FacilityMenuWindow UI要素を無効化: {self.window_id}")
+    
+    def enable_ui(self) -> None:
+        """UI要素を再度有効化（モーダルダイアログ閉じた時）"""
+        if self.main_container:
+            self.main_container.show()
+        logger.info(f"FacilityMenuWindow UI要素を有効化: {self.window_id}")
+    
+    def hide_ui_elements(self) -> None:
+        """UI要素を非表示にする"""
+        if self.main_container:
+            self.main_container.hide()
+        logger.debug(f"FacilityMenuWindow UI要素を非表示: {self.window_id}")
+    
+    def show_ui_elements(self) -> None:
+        """UI要素を表示する"""
+        if self.main_container:
+            self.main_container.show()
+        logger.debug(f"FacilityMenuWindow UI要素を表示: {self.window_id}")

@@ -95,20 +95,24 @@ class Window(ABC):
         
         if self.state == WindowState.CREATED:
             self.create()
+        elif self.state == WindowState.HIDDEN:
+            # 非表示状態から表示に戻る場合、UI要素を再表示
+            logger.info(f"非表示状態から表示復帰: {self.window_id}, show_ui_elements()を呼び出し")
+            self.show_ui_elements()
         
         self.state = WindowState.SHOWN
         self.on_show()
-        logger.debug(f"ウィンドウを表示: {self.window_id}")
+        logger.info(f"ウィンドウを表示: {self.window_id} (状態: {self.state})")
     
     def hide(self) -> None:
         """
         ウィンドウを非表示
         
-        状態をHIDDENに変更し、UI要素を非表示にする
+        状態をHIDDENに変更し、UI要素を非表示にする（削除はしない）
         """
         if self.state == WindowState.SHOWN:
-            # UI要素をクリーンアップ
-            self.cleanup_ui()
+            # UI要素を非表示にするが削除はしない
+            self.hide_ui_elements()
             self.state = WindowState.HIDDEN
             self.on_hide()
             logger.debug(f"ウィンドウを非表示: {self.window_id}")
@@ -145,6 +149,14 @@ class Window(ABC):
                 element.kill()
             self.ui_manager = None
     
+    def hide_ui_elements(self) -> None:
+        """UI要素を非表示にする（デフォルト実装：何もしない）"""
+        pass
+    
+    def show_ui_elements(self) -> None:
+        """UI要素を表示する（デフォルト実装：何もしない）"""
+        pass
+    
     @abstractmethod
     def handle_event(self, event: pygame.event.Event) -> bool:
         """
@@ -175,8 +187,10 @@ class Window(ABC):
         Args:
             surface: 描画対象のサーフェス
         """
-        if self.state == WindowState.SHOWN and self.ui_manager:
-            self.ui_manager.draw_ui(surface)
+        # WindowManagerから統一UIManagerを使っているため、
+        # 個別のウィンドウでdraw_uiを呼ぶ必要はない
+        # UIManagerの描画はWindowManager.draw()で一括して行われる
+        pass
     
     def handle_escape(self) -> bool:
         """

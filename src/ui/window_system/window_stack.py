@@ -38,11 +38,19 @@ class WindowStack:
             logger.warning(f"ウィンドウは既にスタックに存在します: {window.window_id}")
             return
         
-        # 現在のトップウィンドウを非表示
+        # 現在のトップウィンドウの処理
         current_top = self.peek()
-        if current_top and not window.modal:
-            # モーダルウィンドウでない場合のみ、前のウィンドウを非表示
-            current_top.hide()
+        if current_top:
+            if window.modal:
+                # モーダルウィンドウの場合、前のウィンドウのUI要素を無効化
+                logger.debug(f"モーダルウィンドウ {window.window_id} が {current_top.window_id} の上に表示されます")
+                # UI要素を無効化（非表示にはしない）
+                if hasattr(current_top, 'disable_ui'):
+                    current_top.disable_ui()
+            else:
+                # 非モーダルウィンドウの場合も前のウィンドウを隠す
+                logger.debug(f"非モーダルウィンドウ {window.window_id} が {current_top.window_id} に代わって表示されます")
+                current_top.hide()
         
         self.stack.append(window)
         logger.debug(f"ウィンドウをプッシュ: {window.window_id} (stack size: {len(self.stack)})")
@@ -73,12 +81,25 @@ class WindowStack:
         if window.state == WindowState.SHOWN:
             window.hide()
         
+        # モーダルウィンドウだった場合、前のウィンドウのUIを再度有効化
+        if window.modal:
+            new_top = self.peek()
+            if new_top and hasattr(new_top, 'enable_ui'):
+                new_top.enable_ui()
+        
         # 新しいトップウィンドウを表示
         new_top = self.peek()
-        if new_top and new_top.state == WindowState.HIDDEN:
-            new_top.show()
+        if new_top:
+            logger.info(f"新しいトップウィンドウ: {new_top.window_id}, 状態: {new_top.state}")
+            if new_top.state == WindowState.HIDDEN:
+                new_top.show()
+                logger.info(f"前のウィンドウを再表示: {new_top.window_id}")
+            else:
+                logger.info(f"前のウィンドウは既に表示済み: {new_top.window_id}")
+        else:
+            logger.warning("新しいトップウィンドウがありません")
         
-        logger.debug(f"ウィンドウをポップ: {window.window_id} (stack size: {len(self.stack)})")
+        logger.info(f"ウィンドウをポップ完了: {window.window_id} (stack size: {len(self.stack)})")
         
         # デバッグ情報を出力
         if logger.isEnabledFor(10):  # DEBUG level
@@ -158,16 +179,20 @@ class WindowStack:
         Returns:
             bool: 戻り処理が実行された場合True
         """
+        logger.info(f"go_back開始: スタックサイズ={len(self.stack)}")
         if len(self.stack) <= 1:
-            logger.debug("戻るウィンドウがありません")
+            logger.info("戻るウィンドウがありません")
             return False
         
         current_window = self.pop()
         if current_window:
-            # ウィンドウを破棄
-            current_window.destroy()
+            logger.info(f"現在のウィンドウを破棄: {current_window.window_id}")
+            # WindowManagerを通してウィンドウを破棄（レジストリ削除含む）
+            from .window_manager import WindowManager
+            window_manager = WindowManager.get_instance()
+            window_manager.destroy_window(current_window)
         
-        logger.debug("前のウィンドウに戻りました")
+        logger.info("前のウィンドウに戻りました")
         return True
     
     def go_back_to_root(self) -> bool:
@@ -184,7 +209,9 @@ class WindowStack:
         while len(self.stack) > 1:
             window = self.pop()
             if window:
-                window.destroy()
+                from .window_manager import WindowManager
+                window_manager = WindowManager.get_instance()
+                window_manager.destroy_window(window)
         
         logger.debug("ルートウィンドウまで戻りました")
         return True
@@ -214,7 +241,9 @@ class WindowStack:
         while len(self.stack) > target_index + 1:
             window = self.pop()
             if window:
-                window.destroy()
+                from .window_manager import WindowManager
+                window_manager = WindowManager.get_instance()
+                window_manager.destroy_window(window)
         
         logger.debug(f"ウィンドウまで戻りました: {target_window_id}")
         return True
@@ -226,7 +255,9 @@ class WindowStack:
         while self.stack:
             window = self.pop()
             if window:
-                window.destroy()
+                from .window_manager import WindowManager
+                window_manager = WindowManager.get_instance()
+                window_manager.destroy_window(window)
         
         logger.debug("ウィンドウスタックをクリアしました")
     

@@ -229,6 +229,10 @@ class WindowManager:
         
         # 既存のウィンドウIDと重複チェック
         if window_id in self.window_registry:
+            existing_window = self.window_registry[window_id]
+            logger.error(f"ウィンドウID重複エラー: '{window_id}' は既に使用中")
+            logger.error(f"既存ウィンドウ状態: {existing_window.state}")
+            logger.error(f"スタック内の存在: {window_id in [w.window_id for w in self.window_stack.stack]}")
             raise ValueError(f"ウィンドウID '{window_id}' は既に使用されています")
         
         # ウィンドウを作成（プールから再利用または新規作成）
@@ -254,21 +258,31 @@ class WindowManager:
         
         # ウィンドウを表示
         window.show()
+        logger.info(f"ウィンドウ.show()完了: {window.window_id}, state={window.state}")
         
         # スタックに追加
         if push_to_stack:
             self.window_stack.push(window)
+            logger.info(f"ウィンドウをスタックに追加: {window.window_id}")
         
         # フォーカスを設定
         self.focus_manager.set_focus(window)
+        logger.info(f"フォーカス設定完了: {window.window_id}")
         
         # モーダルウィンドウの場合はフォーカスをロック
         if window.modal:
             self.focus_manager.lock_focus(window)
+            logger.info(f"モーダルウィンドウのフォーカスロック: {window.window_id}")
         
-        logger.debug(f"ウィンドウを表示: {window.window_id}")
-        logger.debug(f"ウィンドウスタックサイズ: {self.window_stack.size()}")
-        logger.debug(f"アクティブウィンドウ: {self.get_active_window()}")
+        # デバッグ: UIManagerの状態を確認
+        if self.ui_manager and hasattr(self.ui_manager, 'get_root_container'):
+            element_count = len(self.ui_manager.get_root_container().elements)
+            logger.info(f"ウィンドウ表示後のUIManager要素数: {element_count}")
+        
+        logger.info(f"ウィンドウ表示完了: {window.window_id}, スタックサイズ: {self.window_stack.size()}")
+        active = self.get_active_window()
+        if active:
+            logger.info(f"現在のアクティブウィンドウ: {active.window_id}")
     
     def hide_window(self, window: Window, remove_from_stack: bool = True) -> None:
         """
@@ -323,6 +337,9 @@ class WindowManager:
         # レジストリから削除
         if window.window_id in self.window_registry:
             del self.window_registry[window.window_id]
+            logger.info(f"ウィンドウをレジストリから削除: {window.window_id}")
+        else:
+            logger.warning(f"破棄対象ウィンドウがレジストリに存在しません: {window.window_id}")
         
         # ウィンドウスタックから削除
         self.window_stack.remove_window(window)
@@ -467,14 +484,49 @@ class WindowManager:
         Args:
             surface: 描画対象のサーフェス
         """
-        # スタック順序で描画（下から上へ）
-        for window in self.window_stack:
-            if window.state == WindowState.SHOWN:
-                window.draw(surface)
+        # モーダルウィンドウを探す
+        modal_window = None
+        modal_index = -1
+        windows_list = list(self.window_stack.stack)
+        
+        # 最後（最上位）のモーダルウィンドウを探す
+        for i in range(len(windows_list) - 1, -1, -1):
+            window = windows_list[i]
+            if window.modal and window.state == WindowState.SHOWN:
+                modal_window = window
+                modal_index = i
+                break
+        
+        # モーダルウィンドウがある場合
+        if modal_window:
+            # モーダルより下のウィンドウは描画しない
+            # ただし、デバッグのために背景を描画
+            
+            # 背景を暗くする（モーダルの下のウィンドウの代わり）
+            overlay = pygame.Surface(surface.get_size())
+            overlay.set_alpha(200)  # 80%の透明度
+            overlay.fill((0, 0, 0))
+            surface.blit(overlay, (0, 0))
+            
+            # モーダルウィンドウのみ描画
+            modal_window.draw(surface)
+        else:
+            # モーダルウィンドウがない場合は通常の描画
+            for window in windows_list:
+                if window.state == WindowState.SHOWN:
+                    window.draw(surface)
         
         # UIManagerの描画
         if self.ui_manager:
+            # デバッグ: UI要素数を確認
+            if hasattr(self.ui_manager, 'get_root_container'):
+                element_count = len(self.ui_manager.get_root_container().elements)
+                if element_count > 0:
+                    logger.debug(f"WindowManager.draw(): UI要素数={element_count}")
+            
             self.ui_manager.draw_ui(surface)
+        else:
+            logger.warning("WindowManager.draw(): UIManagerがありません")
         
         self.statistics_manager.increment_counter('frames_rendered')
     

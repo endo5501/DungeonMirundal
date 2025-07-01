@@ -55,7 +55,7 @@ class OverworldMainWindow(Window):
                 - show_party_info: パーティ情報表示フラグ
                 - show_gold: ゴールド表示フラグ
         """
-        super().__init__(window_id, modal=True)
+        super().__init__(window_id, modal=False)
         
         self.config = config
         self.current_menu_type = OverworldMenuType(config.get('menu_type', 'main'))
@@ -92,9 +92,14 @@ class OverworldMainWindow(Window):
         window_manager = WindowManager.get_instance()
         self.ui_manager = window_manager.ui_manager
         
+        logger.info(f"OverworldMainWindow UIManager初期化: window_manager.ui_manager={self.ui_manager}")
+        
         if not self.ui_manager:
             # フォールバック：新しいUIManagerを作成
             self.ui_manager = pygame_gui.UIManager(self.surface.get_size())
+            logger.warning(f"統一UIManagerがないため独自作成: size={self.surface.get_size()}")
+        else:
+            logger.info(f"WindowManagerの統一UIManagerを使用: {type(self.ui_manager)}")
         
         # メニュータイプに応じてUI作成
         if self.current_menu_type == OverworldMenuType.MAIN:
@@ -140,6 +145,16 @@ class OverworldMainWindow(Window):
         # ゴールド表示
         if self.show_gold and self.party:
             self._create_gold_display()
+        
+        # デバッグ: 作成されたUI要素を確認
+        if self.ui_manager and hasattr(self.ui_manager, 'get_root_container'):
+            element_count = len(self.ui_manager.get_root_container().elements)
+            logger.info(f"OverworldMainWindow UIManager内のUI要素総数: {element_count}")
+            
+            # 各ボタンの状態を確認
+            for i, button in enumerate(self.menu_items):
+                if button:
+                    logger.info(f"地上メニューボタン{i}: visible={button.visible}, alive={button.alive}")
     
     def _create_settings_menu(self) -> None:
         """設定メニューUI作成"""
@@ -544,6 +559,38 @@ class OverworldMainWindow(Window):
         
         # 親クラスのクリーンアップ
         super().cleanup_ui()
+    
+    def hide_ui_elements(self) -> None:
+        """UI要素を非表示にする"""
+        if self.title_label:
+            self.title_label.hide()
+        
+        for button in self.menu_items:
+            button.hide()
+        
+        if self.party_info_panel:
+            self.party_info_panel.hide()
+        
+        if self.gold_label:
+            self.gold_label.hide()
+        
+        logger.info(f"OverworldMainWindow UI要素を非表示: {self.window_id}")
+    
+    def show_ui_elements(self) -> None:
+        """UI要素を表示する"""
+        if self.title_label:
+            self.title_label.show()
+        
+        for button in self.menu_items:
+            button.show()
+        
+        if self.party_info_panel:
+            self.party_info_panel.show()
+        
+        if self.gold_label:
+            self.gold_label.show()
+        
+        logger.info(f"OverworldMainWindow UI要素を表示: {self.window_id}")
     
     def get_current_menu_type(self) -> OverworldMenuType:
         """現在のメニュータイプを取得"""

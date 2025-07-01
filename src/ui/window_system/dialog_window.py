@@ -110,31 +110,49 @@ class DialogWindow(Window):
     
     def create(self) -> None:
         """UI要素を作成"""
+        logger.info(f"DialogWindow.create() 開始: {self.window_id}")
         if not self.ui_manager:
+            logger.info("UIManagerがないため初期化します")
             self._initialize_ui_manager()
-            self._calculate_dialog_size()
-            self._create_dialog_panel()
-            self._create_message_label()
-            self._create_input_field_if_needed()
-            self._create_buttons()
+        self._calculate_dialog_size()
+        logger.info(f"ダイアログサイズ計算完了: {self.rect}")
+        self._create_dialog_panel()
+        self._create_message_label()
+        self._create_input_field_if_needed()
+        self._create_buttons()
         
-        logger.debug(f"DialogWindow UI要素を作成: {self.window_id}")
+        logger.info(f"DialogWindow UI要素を作成完了: {self.window_id}")
     
     def _initialize_ui_manager(self) -> None:
         """UIManagerを初期化"""
-        screen_width = 1024
-        screen_height = 768
-        self.ui_manager = pygame_gui.UIManager((screen_width, screen_height))
+        # WindowManagerの統一されたUIManagerを使用
+        from .window_manager import WindowManager
+        window_manager = WindowManager.get_instance()
+        self.ui_manager = window_manager.ui_manager
+        
+        if not self.ui_manager:
+            # フォールバック: 独自UIManagerを作成
+            screen_width = 1024
+            screen_height = 768
+            self.ui_manager = pygame_gui.UIManager((screen_width, screen_height))
+            logger.warning("WindowManagerのUIManagerが見つからないため、独自UIManagerを作成しました")
+        else:
+            logger.info("WindowManagerの統一UIManagerを使用します")
     
     def _calculate_dialog_size(self) -> None:
         """ダイアログサイズを計算"""
-        # 基本サイズ
-        dialog_width = 400
-        dialog_height = 150
+        # より大きな基本サイズ
+        dialog_width = 600
+        dialog_height = 200
         
-        # メッセージに応じて高さを調整
+        # メッセージに応じてサイズを調整
         message_lines = len(self.message.split('\n'))
-        dialog_height += message_lines * 20
+        dialog_height += max(message_lines * 30, 100)  # より大きな行高さと最小高さ
+        
+        # 日本語テキストの長さに応じて幅を調整
+        max_line_length = max(len(line) for line in self.message.split('\n')) if self.message else 0
+        if max_line_length > 30:  # 長いテキストの場合
+            dialog_width = max(600, min(max_line_length * 16, 800))  # 最大800pxまで
         
         # 入力フィールドがある場合
         if self.dialog_type == DialogType.INPUT:
@@ -143,7 +161,7 @@ class DialogWindow(Window):
         # ボタン数に応じて幅を調整
         button_count = self._get_button_count()
         if button_count > 2:
-            dialog_width = max(400, button_count * 120)
+            dialog_width = max(dialog_width, button_count * 120)
         
         # 画面中央に配置
         screen_width = 1024
@@ -171,7 +189,9 @@ class DialogWindow(Window):
     
     def _create_message_label(self) -> None:
         """メッセージラベルを作成"""
-        message_rect = pygame.Rect(20, 20, self.rect.width - 40, 60)
+        # メッセージエリアは十分な高さを確保
+        message_height = self.rect.height - 120  # ボタンと余白を除いた領域
+        message_rect = pygame.Rect(20, 20, self.rect.width - 40, message_height)
         self.message_label = pygame_gui.elements.UILabel(
             relative_rect=message_rect,
             text=self.message,
@@ -318,8 +338,21 @@ class DialogWindow(Window):
         # 結果をメッセージで送信
         self.send_message('dialog_result', {'result': result, 'data': self.data})
         
-        # ダイアログを閉じる
-        self.send_message('close_requested')
+        # ダイアログを閉じる（スタックから削除せずに非表示）
+        from .window_manager import WindowManager
+        window_manager = WindowManager.get_instance()
+        
+        # ダイアログを閉じる（スタックから削除せずに非表示）
+        window_manager.hide_window(self, remove_from_stack=False)
+        
+        # 手動でスタックから削除（popを使わない）
+        if self in window_manager.window_stack.stack:
+            window_manager.window_stack.stack.remove(self)
+        
+        # 前のウィンドウのUIを再度有効化
+        active_window = window_manager.get_active_window()
+        if active_window and hasattr(active_window, 'enable_ui'):
+            active_window.enable_ui()
         
         logger.debug(f"ダイアログ結果設定: {result.value}, data: {self.data}")
     
@@ -338,3 +371,15 @@ class DialogWindow(Window):
             self.ui_manager = None
         
         logger.debug(f"DialogWindow UI要素をクリーンアップ: {self.window_id}")
+    
+    def hide_ui_elements(self) -> None:
+        """UI要素を非表示にする"""
+        if self.panel:
+            self.panel.hide()
+        logger.debug(f"DialogWindow UI要素を非表示: {self.window_id}")
+    
+    def show_ui_elements(self) -> None:
+        """UI要素を表示する"""
+        if self.panel:
+            self.panel.show()
+        logger.debug(f"DialogWindow UI要素を表示: {self.window_id}")
