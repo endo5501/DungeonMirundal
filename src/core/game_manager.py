@@ -2,6 +2,7 @@
 
 import pygame
 import sys
+from . import dbg_api
 from src.core.config_manager import config_manager
 from src.core.input_manager import InputManager
 from src.core.save_manager import SaveManager
@@ -179,6 +180,10 @@ class GameManager:
                 self.debug_font = None
                 
         status = self.game_config.get_text("ui.settings.enabled") if self.debug_enabled else self.game_config.get_text("ui.settings.disabled")
+
+        # デバッグサーバ起動
+        dbg_api.start(self.screen)
+
         logger.info(self.game_config.get_text("app_log.debug_setting").format(status=status))
     
     def _on_menu_action(self, action: str, pressed: bool, input_type):
