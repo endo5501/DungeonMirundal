@@ -1189,9 +1189,19 @@ class OverworldManager:
     
     def _hide_settings_menu(self):
         """設定画面を非表示"""
-        # WindowSystem移行により不要
+        try:
+            # WindowSystemベースの設定メニューを閉じる
+            if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
+                from src.ui.window_system.overworld_main_window import OverworldMenuType
+                self.overworld_main_window.hide_menu(OverworldMenuType.SETTINGS)
+                logger.info("WindowSystemベースの設定画面を非表示にしました")
+        except Exception as e:
+            logger.warning(f"WindowSystemベースの設定画面非表示エラー: {e}")
+        
+        # レガシーメニューの処理（WindowSystem移行により不要）
         # if self.settings_menu:
         #     self.settings_menu.hide()
+        
         self.settings_active = False
         logger.info("設定画面を非表示にしました")
     
@@ -1207,6 +1217,10 @@ class OverworldManager:
             # パーティを一元管理メソッドで設定
             self.set_party(party)
             self.is_active = True
+            
+            # バグ修正: 地上部入場時にsettings_activeを確実にFalseに設定
+            self.settings_active = False
+            logger.info(f"地上部入場時にsettings_activeをFalseに設定: {self.settings_active}")
             
             # WindowManagerベースのメインメニューを使用
             if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
@@ -1268,10 +1282,15 @@ class OverworldManager:
             return
         
         # 背景色（画面によって色を変える）
+        # バグ修正: settings_activeの状態をログ出力してデバッグ
+        logger.debug(f"OverworldManager.render: settings_active={self.settings_active}")
+        
         if self.settings_active:
             screen.fill((50, 50, 80))  # 設定画面：濃い青
+            logger.debug("背景色: 設定画面（青）")
         else:
             screen.fill((100, 150, 100))  # 地上部：緑
+            logger.debug("背景色: 地上部（緑）")
         
         # 背景テキスト表示（日本語フォント使用）
         try:
@@ -1393,13 +1412,19 @@ class OverworldManager:
                         logger.warning("施設退出に失敗しました")
                 
                 # 地上部でのESCキー処理
+                logger.info(f"ESCキー処理開始: settings_active={self.settings_active}")
+                
                 if self.settings_active:
                     # 設定画面が表示中の場合は地上部に戻る
+                    logger.info("設定画面から地上部に戻ります")
                     self._hide_settings_menu()
                     self._show_main_menu()
+                    logger.info(f"地上部に戻りました: settings_active={self.settings_active}")
                 else:
                     # 地上部が表示中の場合は設定画面を表示
+                    logger.info("地上部から設定画面を表示します")
                     self._show_settings_menu()
+                    logger.info(f"設定画面を表示しました: settings_active={self.settings_active}")
                 return True
         
         return False

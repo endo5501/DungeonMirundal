@@ -518,6 +518,25 @@ class OverworldMainWindow(Window):
         new_config['menu_type'] = menu_type.value
         self._transition_to_menu(new_config)
     
+    def hide_menu(self, menu_type: OverworldMenuType) -> bool:
+        """指定されたメニューを非表示にし、前の状態に戻る"""
+        # 現在のメニューが指定されたタイプと一致しない場合は何もしない
+        if self.current_menu_type != menu_type:
+            logger.warning(f"hide_menu: 現在のメニューが {self.current_menu_type.value} で、要求された {menu_type.value} と異なります")
+            return False
+        
+        # スタックが空の場合は何もしない
+        if not self.menu_stack:
+            logger.warning("hide_menu: メニュースタックが空です")
+            return False
+        
+        # 前の状態を復元
+        previous_config = self.menu_stack.pop()
+        self._transition_to_menu(previous_config)
+        
+        logger.info(f"hide_menu: {menu_type.value} を非表示にし、{self.current_menu_type.value} に戻りました")
+        return True
+    
     def update_party_info(self, party: Party) -> None:
         """パーティ情報更新"""
         self.party = party
