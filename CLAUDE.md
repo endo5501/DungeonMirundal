@@ -15,6 +15,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Pygame依存関係追加: `uv add pygame`
 - テスト実行: `uv run pytest`
 
+### ゲームデバッグ
+
+@docs/how_to_debug_game.md
+
 ## プロジェクト構成
 
 ### アーキテクチャ概要
