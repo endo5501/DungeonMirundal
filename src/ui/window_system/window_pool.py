@@ -93,7 +93,6 @@ class WindowPool:
         Returns:
             bool: 返却成功時True
         """
-        logger.debug(f"WindowPool.return_window() 開始: {window.window_id}")
         with self._lock:
             window_class = type(window)
             pool = self.pools[window_class]
@@ -105,7 +104,6 @@ class WindowPool:
                 return False
             
             # Windowをクリーンアップしてプールに返却
-            logger.debug(f"WindowPool._cleanup_window() 呼び出し: {window.window_id}")
             if self._cleanup_window(window):
                 pool.append(window)
                 self.stats['total_returned'] += 1
@@ -171,10 +169,7 @@ class WindowPool:
             
             # カスタムクリーンアップ処理
             if hasattr(window, 'cleanup_for_pool'):
-                logger.debug(f"WindowPool: cleanup_for_pool() を呼び出し: {window.window_id}")
                 window.cleanup_for_pool()
-            else:
-                logger.debug(f"WindowPool: cleanup_for_pool() メソッドがありません: {window.window_id}")
             
             return True
             
