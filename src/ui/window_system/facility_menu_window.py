@@ -353,15 +353,26 @@ class FacilityMenuWindow(Window):
     
     def cleanup_ui(self) -> None:
         """UI要素のクリーンアップ"""
-        # ボタンリストをクリア
+        # 個別のUI要素を破棄（UIManager全体は触らない）
+        if self.main_container:
+            self.main_container.kill()
+            self.main_container = None
+        
+        if self.facility_title:
+            self.facility_title.kill()
+            self.facility_title = None
+            
+        if self.party_info_panel:
+            self.party_info_panel.kill()
+            self.party_info_panel = None
+        
+        # ボタンを個別に破棄
+        for button in self.menu_buttons:
+            if button:
+                button.kill()
         self.menu_buttons.clear()
         
-        # UI要素をクリア
-        self.facility_title = None
-        self.party_info_panel = None
-        
-        # UIファクトリーを使用してクリーンアップ
-        self.ui_factory.cleanup_ui_elements(self.ui_manager)
+        # UIManagerは共有リソースなのでクリアしない
         self.ui_manager = None
         
         logger.debug(f"FacilityMenuWindow UI要素をクリーンアップ: {self.window_id}")
@@ -389,3 +400,80 @@ class FacilityMenuWindow(Window):
         if self.main_container:
             self.main_container.show()
         logger.debug(f"FacilityMenuWindow UI要素を表示: {self.window_id}")
+    
+    def cleanup_for_pool(self) -> None:
+        """
+        WindowPool返却時のクリーンアップ
+        
+        pygame-gui UI要素を適切に破棄し、再利用可能な状態にする
+        """
+        logger.debug(f"FacilityMenuWindow プールクリーンアップ開始: {self.window_id}")
+        
+        # 個別のUI要素を破棄
+        if self.main_container:
+            self.main_container.kill()
+            self.main_container = None
+        
+        if self.facility_title:
+            self.facility_title.kill()
+            self.facility_title = None
+            
+        if self.party_info_panel:
+            self.party_info_panel.kill()
+            self.party_info_panel = None
+        
+        # ボタンを個別に破棄
+        for button in self.menu_buttons:
+            if button:
+                button.kill()
+        self.menu_buttons.clear()
+        
+        # 状態をリセット
+        self.ui_manager = None
+        
+        logger.debug(f"FacilityMenuWindow プールクリーンアップ完了: {self.window_id}")
+    
+    def reset_for_reuse(self, facility_config: Dict[str, Any], **kwargs) -> None:
+        """
+        WindowPool再利用時のリセット
+        
+        新しい施設設定で再初期化する
+        """
+        logger.debug(f"FacilityMenuWindow 再利用リセット開始: {self.window_id}")
+        
+        # 設定の検証と変換
+        self.facility_config = self._validate_and_convert_config(facility_config)
+        
+        # 施設情報を更新
+        self.facility_type = FacilityType(self.facility_config.facility_type)
+        self.facility_name = self.facility_config.facility_name
+        self.party = self.facility_config.party
+        
+        # メニュー項目を更新
+        self.menu_items = self.facility_config.get_menu_items()
+        
+        # コンポーネントを再初期化
+        self.menu_manager = FacilityMenuManager(self.facility_type, self.menu_items)
+        self.ui_factory = FacilityMenuUIFactory(self.layout)
+        self.validator = FacilityMenuValidator(self.facility_type)
+        
+        # UI要素をクリア（新しく作成されるため）
+        self.main_container = None
+        self.facility_title = None
+        self.party_info_panel = None
+        self.menu_buttons = []
+        
+        # メッセージハンドラーをクリア
+        self.message_handler = None
+        
+        logger.debug(f"FacilityMenuWindow 再利用リセット完了: {self.window_id} -> {self.facility_type}")
+    
+    def destroy(self) -> None:
+        """ウィンドウの完全破棄"""
+        # UI要素をクリーンアップ
+        self.cleanup_for_pool()
+        
+        # 親クラスの破棄処理を呼び出し
+        super().destroy()
+        
+        logger.debug(f"FacilityMenuWindow 完全破棄: {self.window_id}")
