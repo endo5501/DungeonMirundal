@@ -227,9 +227,10 @@ class BaseFacility(ABC):
                 ]
                 
                 for facility_window_id in possible_window_ids:
-                    if facility_window_id in self.window_manager.window_registry:
+                    window = self.window_manager.get_window(facility_window_id)
+                    if window:
                         logger.debug(f"ウィンドウをクリーンアップします: {facility_window_id}")
-                        self.window_manager.close_window(facility_window_id)
+                        self.window_manager.close_window(window)
                         break  # 一つ見つかったら終了
                 else:
                     logger.debug(f"施設 {self.facility_id} に対応するウィンドウが見つかりませんでした")

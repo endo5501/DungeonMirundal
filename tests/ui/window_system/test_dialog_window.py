@@ -118,7 +118,7 @@ class TestDialogWindow:
         mock_event.type = pygame_gui.UI_BUTTON_PRESSED
         mock_event.ui_element = yes_button.ui_element
         
-        with patch.object(dialog, 'send_message') as mock_send:
+        with patch.object(dialog, 'send_message', return_value=None) as mock_send:
             result = dialog.handle_event(mock_event)
         
         # Then: 結果が設定され、メッセージが送信される
@@ -143,7 +143,7 @@ class TestDialogWindow:
         mock_event.type = pygame_gui.UI_BUTTON_PRESSED
         mock_event.ui_element = ok_button.ui_element
         
-        with patch.object(dialog, 'send_message') as mock_send:
+        with patch.object(dialog, 'send_message', return_value=None) as mock_send:
             dialog.handle_event(mock_event)
         
         # Then: 入力されたテキストがデータとして返される
@@ -159,7 +159,7 @@ class TestDialogWindow:
         dialog.create()
         
         # When: ESCキーを押す
-        with patch.object(dialog, 'send_message') as mock_send:
+        with patch.object(dialog, 'send_message', return_value=None) as mock_send:
             result = dialog.handle_escape()
         
         # Then: キャンセル結果が設定される
@@ -180,7 +180,7 @@ class TestDialogWindow:
         enter_event.type = pygame.KEYDOWN
         enter_event.key = pygame.K_RETURN
         
-        with patch.object(dialog, 'send_message') as mock_send:
+        with patch.object(dialog, 'send_message', return_value=None) as mock_send:
             result = dialog.handle_event(enter_event)
         
         # Then: デフォルトボタン（Yes）が実行される
@@ -202,7 +202,7 @@ class TestDialogWindow:
         mock_event.type = pygame_gui.UI_BUTTON_PRESSED
         mock_event.ui_element = ok_button.ui_element
         
-        with patch.object(dialog, 'send_message') as mock_send:
+        with patch.object(dialog, 'send_message', return_value=None) as mock_send:
             dialog.handle_event(mock_event)
         
         # Then: 閉じるメッセージも送信される

@@ -186,11 +186,9 @@ class WindowStack:
         
         current_window = self.pop()
         if current_window:
-            logger.info(f"現在のウィンドウを破棄: {current_window.window_id}")
-            # WindowManagerを通してウィンドウを破棄（レジストリ削除含む）
-            from .window_manager import WindowManager
-            window_manager = WindowManager.get_instance()
-            window_manager.destroy_window(current_window)
+            logger.info(f"現在のウィンドウをポップ: {current_window.window_id}")
+            # ポップ時に既にhideは実行されているため、破棄処理のみ実行
+            current_window.destroy()
         
         logger.info("前のウィンドウに戻りました")
         return True
@@ -209,9 +207,7 @@ class WindowStack:
         while len(self.stack) > 1:
             window = self.pop()
             if window:
-                from .window_manager import WindowManager
-                window_manager = WindowManager.get_instance()
-                window_manager.destroy_window(window)
+                window.destroy()
         
         logger.debug("ルートウィンドウまで戻りました")
         return True
@@ -241,9 +237,7 @@ class WindowStack:
         while len(self.stack) > target_index + 1:
             window = self.pop()
             if window:
-                from .window_manager import WindowManager
-                window_manager = WindowManager.get_instance()
-                window_manager.destroy_window(window)
+                window.destroy()
         
         logger.debug(f"ウィンドウまで戻りました: {target_window_id}")
         return True
@@ -255,9 +249,7 @@ class WindowStack:
         while self.stack:
             window = self.pop()
             if window:
-                from .window_manager import WindowManager
-                window_manager = WindowManager.get_instance()
-                window_manager.destroy_window(window)
+                window.destroy()
         
         logger.debug("ウィンドウスタックをクリアしました")
     

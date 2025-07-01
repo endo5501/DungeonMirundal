@@ -626,6 +626,28 @@ class WindowManager:
         
         return issues
     
+    def handle_orphan_message(self, sender: Window, message_type: str, data: Dict[str, Any]) -> None:
+        """
+        親のないウィンドウからのメッセージを処理
+        
+        Args:
+            sender: 送信者ウィンドウ
+            message_type: メッセージの種類
+            data: メッセージデータ
+        """
+        logger.debug(f"孤児メッセージを受信: {message_type} from {sender.window_id}")
+        
+        # ダイアログの閉じる要求
+        if message_type == 'close_requested':
+            self.hide_window(sender, remove_from_stack=True)
+        # ダイアログの結果通知
+        elif message_type == 'dialog_result':
+            # ダイアログの結果を直接的に処理するロジックがあれば実行
+            logger.info(f"ダイアログ結果: {data}")
+        # その他のメッセージタイプ
+        else:
+            logger.debug(f"未処理の孤児メッセージ: {message_type}")
+    
     def cleanup(self) -> None:
         """システム全体のクリーンアップ"""
         # 全ウィンドウを閉じる

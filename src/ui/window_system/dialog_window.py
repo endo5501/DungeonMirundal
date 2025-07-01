@@ -338,21 +338,8 @@ class DialogWindow(Window):
         # 結果をメッセージで送信
         self.send_message('dialog_result', {'result': result, 'data': self.data})
         
-        # ダイアログを閉じる（スタックから削除せずに非表示）
-        from .window_manager import WindowManager
-        window_manager = WindowManager.get_instance()
-        
-        # ダイアログを閉じる（スタックから削除せずに非表示）
-        window_manager.hide_window(self, remove_from_stack=False)
-        
-        # 手動でスタックから削除（popを使わない）
-        if self in window_manager.window_stack.stack:
-            window_manager.window_stack.stack.remove(self)
-        
-        # 前のウィンドウのUIを再度有効化
-        active_window = window_manager.get_active_window()
-        if active_window and hasattr(active_window, 'enable_ui'):
-            active_window.enable_ui()
+        # 閉じることも通知
+        self.send_message('close_requested')
         
         logger.debug(f"ダイアログ結果設定: {result.value}, data: {self.data}")
     

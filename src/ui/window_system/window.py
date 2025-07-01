@@ -212,7 +212,7 @@ class Window(ABC):
     
     def send_message(self, message_type: str, data: Dict[str, Any] = None) -> None:
         """
-        親ウィンドウにメッセージを送信
+        親ウィンドウまたはWindowManagerにメッセージを送信
         
         Args:
             message_type: メッセージの種類
@@ -220,6 +220,15 @@ class Window(ABC):
         """
         if self.parent:
             self.parent.receive_message(self, message_type, data or {})
+        else:
+            # 親がない場合はWindowManagerに送信
+            try:
+                from .window_manager import WindowManager
+                window_manager = WindowManager.get_instance()
+                if hasattr(window_manager, 'handle_orphan_message'):
+                    window_manager.handle_orphan_message(self, message_type, data or {})
+            except Exception as e:
+                logger.debug(f"WindowManager経由のメッセージ送信に失敗: {e}")
     
     def receive_message(self, sender: 'Window', message_type: str, data: Dict[str, Any]) -> None:
         """
