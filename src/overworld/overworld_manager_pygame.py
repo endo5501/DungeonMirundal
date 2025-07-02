@@ -810,23 +810,28 @@ class OverworldManager:
             
             # パーティ状況ダイアログを作成
             try:
-                from src.core.game_manager import GameManager
-                window_manager = GameManager.get_instance().window_manager
+                from src.ui.window_system import WindowManager
+                window_manager = WindowManager.get_instance()
                 
                 if window_manager:
                     # ダイアログウィンドウを作成
-                    dialog = DialogWindow("party_status_dialog")
-                    
-                    # ダイアログ設定
-                    dialog.setup_dialog(
-                        title="パーティ状況",
-                        message=info_text,
+                    dialog = DialogWindow(
+                        window_id="party_status_dialog",
                         dialog_type=DialogType.INFORMATION,
-                        buttons=[DialogButton("OK", DialogResult.OK, is_default=True)]
+                        message=info_text
                     )
                     
-                    # ダイアログを表示
-                    window_manager.show_window(dialog, modal=True)
+                    # UIManagerを設定
+                    dialog.ui_manager = window_manager.ui_manager
+                    
+                    # ダイアログUI要素を作成
+                    dialog.create()
+                    
+                    # ダイアログをWindowManagerに登録
+                    window_manager.window_registry[dialog.window_id] = dialog
+                    
+                    # ダイアログを表示（DialogWindowは既にmodal=Trueで作成済み）
+                    window_manager.show_window(dialog)
                     logger.info("WindowSystemベースでパーティ状況を表示しました")
                 else:
                     logger.error("WindowManagerが利用できません")
@@ -842,23 +847,28 @@ class OverworldManager:
             from src.ui.window_system.dialog_window import DialogWindow, DialogType, DialogButton, DialogResult
             
             try:
-                from src.core.game_manager import GameManager
-                window_manager = GameManager.get_instance().window_manager
+                from src.ui.window_system import WindowManager
+                window_manager = WindowManager.get_instance()
                 
                 if window_manager:
                     # ダイアログウィンドウを作成
-                    dialog = DialogWindow("no_party_dialog")
-                    
-                    # ダイアログ設定
-                    dialog.setup_dialog(
-                        title="パーティ状況",
-                        message="パーティが設定されていません。",
+                    dialog = DialogWindow(
+                        window_id="no_party_dialog",
                         dialog_type=DialogType.INFORMATION,
-                        buttons=[DialogButton("OK", DialogResult.OK, is_default=True)]
+                        message="パーティが設定されていません。"
                     )
                     
-                    # ダイアログを表示
-                    window_manager.show_window(dialog, modal=True)
+                    # UIManagerを設定
+                    dialog.ui_manager = window_manager.ui_manager
+                    
+                    # ダイアログUI要素を作成
+                    dialog.create()
+                    
+                    # ダイアログをWindowManagerに登録
+                    window_manager.window_registry[dialog.window_id] = dialog
+                    
+                    # ダイアログを表示（DialogWindowは既にmodal=Trueで作成済み）
+                    window_manager.show_window(dialog)
                     logger.info("WindowSystemベースで「パーティ未設定」ダイアログを表示しました")
                 else:
                     logger.error("WindowManagerが利用できません")
