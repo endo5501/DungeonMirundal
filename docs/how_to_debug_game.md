@@ -36,7 +36,49 @@
 
 ## デバッグワークフロー
 
-### 1. 基本的なデバッグフロー
+### 1. 推奨デバッグフロー（新規：2025年7月）
+
+#### A. スクリプトを使用した自動起動
+
+```bash
+# 最も簡単な方法：自動起動スクリプトを使用
+./scripts/start_game_for_debug.sh
+
+# ゲームが起動し、APIが利用可能になったら自動的に制御が返される
+# ✓ Debug API is ready!
+# Game is running (PID: 12345)
+# API endpoint: http://localhost:8765
+```
+
+#### B. Python APIクライアントを使用
+
+```python
+# Python経由でのデバッグ（許可不要、より柔軟）
+from src.debug.game_debug_client import GameDebugClient
+
+client = GameDebugClient()
+if client.wait_for_api():
+    # スクリーンショット取得
+    image = client.screenshot("debug.jpg")
+    
+    # ESCキー送信
+    client.press_escape()
+    
+    # 背景色分析
+    color = client.analyze_background_color()
+    print(f"Background color: {color}")
+```
+
+#### C. コマンドライン経由
+
+```bash
+# Python APIクライアントをコマンドラインで使用
+uv run python src/debug/game_debug_client.py screenshot --save debug.jpg
+uv run python src/debug/game_debug_client.py escape
+uv run python src/debug/game_debug_client.py analyze
+```
+
+### 2. 従来のデバッグフロー（curlコマンド）
 
 ```bash
 # ゲームの起動（Web APIサーバーも同時に起動）
@@ -46,6 +88,8 @@ uv run main.py
 curl "http://localhost:8765/screenshot"
 curl -X POST "http://localhost:8765/input/key?code=27&down=true"
 ```
+
+**注意**: curlコマンドによるデバッグは毎回許可が必要なため、Python APIクライアントの使用を推奨します。
 
 ### 2. 画面遷移のテスト
 
@@ -301,15 +345,111 @@ curl -v "http://localhost:8765/screenshot"
 # ゲームウィンドウがアクティブかどうか確認
 ```
 
+## 高レベルデバッグツール（2025年7月追加）
+
+### デバッグヘルパーの使用
+
+```python
+# 高レベルなデバッグ機能
+from src.debug.debug_helper import DebugHelper, debug_game_session
+
+# コンテキストマネージャーでゲームを自動管理
+with debug_game_session() as client:
+    helper = DebugHelper(client)
+    
+    # ESC遷移問題を自動検証
+    results = helper.verify_esc_transition(save_screenshots=True)
+    print(f"Transitions correct: {results['transitions_correct']}")
+    
+    # アクションシーケンスをキャプチャ
+    captures = helper.capture_transition_sequence([
+        ("escape", None),
+        ("wait", 0.5),
+        ("escape", None),
+        ("wait", 0.5)
+    ])
+```
+
+### 簡単なデバッグ実行
+
+```python
+# 一行でESC問題をデバッグ
+from src.debug.debug_helper import quick_debug_esc_issue
+quick_debug_esc_issue()
+```
+
+## pytest統合
+
+### integrationテストの実行
+
+```bash
+# 通常のテスト（integrationテストは除外）
+uv run pytest
+
+# integrationテストを含めて実行
+uv run pytest -m "integration or slow"
+
+# 背景表示問題のテストのみ実行
+uv run pytest -m integration tests/test_background_display_fix.py
+
+# デバッグヘルパーを使ったテスト
+uv run pytest tests/test_background_display_fix.py::TestBackgroundDisplayFix::test_esc_transition_with_debug_helper -v
+```
+
+### テストフィクスチャの使用
+
+```python
+# pytestテスト内でAPIクライアントを使用
+def test_my_feature(game_api_client):
+    # ゲームが既に起動している状態
+    game_api_client.screenshot()
+    game_api_client.press_escape()
+    color = game_api_client.analyze_background_color()
+    assert color == expected_color
+
+def test_with_debug_helper(debug_helper):
+    # 高レベルなデバッグ機能を使用
+    results = debug_helper.verify_esc_transition()
+    assert results['transitions_correct']
+```
+
+## ツール一覧
+
+### ファイル構成
+
+```
+scripts/
+├── start_game_for_debug.sh    # ゲーム自動起動スクリプト
+
+src/debug/
+├── game_debug_client.py       # Python APIクライアント
+└── debug_helper.py            # 高レベルデバッグ機能
+
+tests/
+├── conftest.py                # pytestフィクスチャ
+└── test_background_display_fix.py  # 背景表示問題のテスト
+```
+
+### 使用場面別推奨ツール
+
+| 場面 | 推奨ツール |
+|------|------------|
+| 簡単なデバッグ | `scripts/start_game_for_debug.sh` + Python APIクライアント |
+| 自動テスト | pytest + フィクスチャ |
+| 複雑なシナリオ | DebugHelper |
+| 問題の素早い確認 | `quick_debug_esc_issue()` |
+| 画面遷移の検証 | `verify_esc_transition()` |
+| CI/CD統合 | pytest integrationマーカー |
+
 ## まとめ
 
-Web APIを活用することで、以下のメリットがあります：
+Web APIとPythonツールを活用することで、以下のメリットがあります：
 
-1. **安定性**: ゲーム再起動後もAPIエンドポイントは継続利用可能
-2. **シンプルさ**: curlコマンドで簡単にテスト可能
-3. **自動化**: スクリプトやCI/CDパイプラインでの自動化が容易
-4. **デバッグ効率**: Claude Codeセッションを維持したままデバッグ継続
-5. **再現性**: コマンドベースでバグの再現手順を正確に記録・実行
-6. **視覚的検証**: スクリーンショットによる画面状態の客観的確認
+1. **即座のデバッグ開始**: 自動起動スクリプトで待機時間なし
+2. **許可不要**: Pythonコードのため毎回の許可が不要
+3. **高レベル機能**: 複雑なデバッグシナリオを簡単に実行
+4. **テスト統合**: pytestと完全に統合されたデバッグ環境
+5. **自動化対応**: CI/CDパイプラインでの自動化が容易
+6. **柔軟性**: コマンドライン、Python、pytest、すべてに対応
 
-このWeb APIを適切に活用することで、より効率的で品質の高いゲーム開発が可能になります。
+これらのツールを適切に活用することで、より効率的で品質の高いゲーム開発が可能になります。
