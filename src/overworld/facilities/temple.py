@@ -180,7 +180,7 @@ class Temple(BaseFacility):
         resurrection_window = window_manager.create_window(
             TempleServiceWindow,
             'temple_resurrection',
-            temple_config=temple_config
+            facility_config=temple_config
         )
         window_manager.show_window(resurrection_window, push_to_stack=True)
         
@@ -205,7 +205,7 @@ class Temple(BaseFacility):
         healing_window = window_manager.create_window(
             TempleServiceWindow,
             'temple_healing',
-            temple_config=temple_config
+            facility_config=temple_config
         )
         window_manager.show_window(healing_window, push_to_stack=True)
         
@@ -409,7 +409,7 @@ class Temple(BaseFacility):
         
         self.prayerbook_selection_list = ItemSelectionList(
             relative_rect=list_rect,
-            manager=ui_manager.pygame_gui_manager,
+            manager=self.ui_manager.pygame_gui_manager,
             title="祈祷書購入"
         )
         
@@ -564,7 +564,7 @@ class Temple(BaseFacility):
         import random
         title, message = random.choice(messages)
         
-        self.show_information_dialog_window(
+        self.show_information_dialog(
             f"神父 - {title}",
             message
         )

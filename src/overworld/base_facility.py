@@ -415,52 +415,104 @@ class BaseFacility(ABC):
                               buttons: Optional[List[Dict]] = None) -> bool:
         """情報ダイアログを表示"""
         try:
-            # buttonsパラメータは現在未実装なので無視
-            dialog = self.dialog_template.create_information_dialog(
-                f"{self.facility_id}_info_{pygame.time.get_ticks()}",
-                title,
-                message,
-                on_close
-            )
-            return self.dialog_template.show_dialog(dialog)
+            # WindowManagerを使用してDialogWindowを直接作成・表示
+            from src.ui.window_system.dialog_window import DialogWindow, DialogType
+            from src.ui.window_system import WindowManager
+            
+            window_manager = WindowManager.get_instance()
+            if window_manager:
+                # DialogWindowを作成
+                dialog_window = window_manager.create_window(
+                    DialogWindow,
+                    f"{self.facility_id}_info_dialog",
+                    dialog_type=DialogType.INFORMATION,
+                    message=f"{title}\n\n{message}"
+                )
+                
+                # コールバック設定
+                if on_close:
+                    original_on_close = on_close
+                    def dialog_message_handler(msg_type: str, data: dict):
+                        if msg_type == 'dialog_result' or msg_type == 'close_requested':
+                            original_on_close()
+                    dialog_window.message_handler = dialog_message_handler
+                
+                # ダイアログを表示
+                window_manager.show_window(dialog_window, push_to_stack=True)
+                return True
+            
+            # フォールバック: dialog_templateが利用可能な場合
+            if hasattr(self, 'dialog_template') and self.dialog_template:
+                dialog = self.dialog_template.create_information_dialog(
+                    f"{self.facility_id}_info_{pygame.time.get_ticks()}",
+                    title,
+                    message,
+                    on_close
+                )
+                return self.dialog_template.show_dialog(dialog)
+            
+            # 最後のフォールバック: ログ出力のみ
+            logger.info(f"情報ダイアログ: {title} - {message}")
+            if on_close:
+                on_close()
+            return True
+            
         except Exception as e:
             logger.error(f"情報ダイアログ表示エラー: {e}")
+            # エラーが発生してもコールバックは実行
+            if on_close:
+                on_close()
             return False
     
     def show_error_dialog(self, title: str, message: str,
                          on_close: Optional[Callable] = None) -> bool:
         """エラーダイアログを表示"""
         try:
-            dialog = self.dialog_template.create_error_dialog(
-                f"{self.facility_id}_error_{pygame.time.get_ticks()}",
-                title,
-                message,
-                on_close
-            )
-            return self.dialog_template.show_dialog(dialog)
+            # WindowManagerを使用してDialogWindowを直接作成・表示
+            from src.ui.window_system.dialog_window import DialogWindow, DialogType
+            from src.ui.window_system import WindowManager
+            
+            window_manager = WindowManager.get_instance()
+            if window_manager:
+                # DialogWindowを作成
+                dialog_window = window_manager.create_window(
+                    DialogWindow,
+                    f"{self.facility_id}_error_dialog",
+                    dialog_type=DialogType.ERROR,
+                    message=f"{title}\n\n{message}"
+                )
+                
+                # コールバック設定
+                if on_close:
+                    original_on_close = on_close
+                    def dialog_message_handler(msg_type: str, data: dict):
+                        if msg_type == 'dialog_result' or msg_type == 'close_requested':
+                            original_on_close()
+                    dialog_window.message_handler = dialog_message_handler
+                
+                # ダイアログを表示
+                window_manager.show_window(dialog_window, push_to_stack=True)
+                return True
+            
+            # フォールバック: dialog_templateが利用可能な場合
+            if hasattr(self, 'dialog_template') and self.dialog_template:
+                dialog = self.dialog_template.create_error_dialog(
+                    f"{self.facility_id}_error_{pygame.time.get_ticks()}",
+                    title,
+                    message,
+                    on_close
+                )
+                return self.dialog_template.show_dialog(dialog)
+            
+            # 最後のフォールバック: ログ出力のみ
+            logger.error(f"エラーダイアログ: {title} - {message}")
+            if on_close:
+                on_close()
+            return True
+            
         except Exception as e:
             logger.error(f"エラーダイアログ表示エラー: {e}")
             # ダイアログ表示に失敗してもコールバックは実行
-            if on_close:
-                on_close()
-            return False
-        
-        try:
-            dialog = self.dialog_template.create_error_dialog(
-                f"{self.facility_id}_error_{pygame.time.get_ticks()}",
-                title,
-                message,
-                on_close
-            )
-            success = self.dialog_template.show_dialog(dialog)
-            # ダイアログ表示に失敗した場合、コールバックを直接実行
-            if not success and on_close:
-                logger.info("ダイアログ表示失敗、コールバックを直接実行")
-                on_close()
-            return success
-        except Exception as e:
-            logger.error(f"エラーダイアログ表示エラー: {e}")
-            # エラーが発生してもコールバックは実行
             if on_close:
                 on_close()
             return False
@@ -469,18 +521,53 @@ class BaseFacility(ABC):
                           on_close: Optional[Callable] = None) -> bool:
         """成功ダイアログを表示"""
         try:
-            dialog = self.dialog_template.create_success_dialog(
-                f"{self.facility_id}_success_{pygame.time.get_ticks()}",
-                title,
-                message,
-                on_close
-            )
-            success = self.dialog_template.show_dialog(dialog)
-            # ダイアログ表示に失敗した場合、コールバックを直接実行
-            if not success and on_close:
-                logger.info("ダイアログ表示失敗、コールバックを直接実行")
+            # WindowManagerを使用してDialogWindowを直接作成・表示
+            from src.ui.window_system.dialog_window import DialogWindow, DialogType
+            from src.ui.window_system import WindowManager
+            
+            window_manager = WindowManager.get_instance()
+            if window_manager:
+                # DialogWindowを作成
+                dialog_window = window_manager.create_window(
+                    DialogWindow,
+                    f"{self.facility_id}_success_dialog",
+                    dialog_type=DialogType.SUCCESS,
+                    message=f"{title}\n\n{message}"
+                )
+                
+                # コールバック設定
+                if on_close:
+                    original_on_close = on_close
+                    def dialog_message_handler(msg_type: str, data: dict):
+                        if msg_type == 'dialog_result' or msg_type == 'close_requested':
+                            original_on_close()
+                    dialog_window.message_handler = dialog_message_handler
+                
+                # ダイアログを表示
+                window_manager.show_window(dialog_window, push_to_stack=True)
+                return True
+            
+            # フォールバック: dialog_templateが利用可能な場合
+            if hasattr(self, 'dialog_template') and self.dialog_template:
+                dialog = self.dialog_template.create_success_dialog(
+                    f"{self.facility_id}_success_{pygame.time.get_ticks()}",
+                    title,
+                    message,
+                    on_close
+                )
+                success = self.dialog_template.show_dialog(dialog)
+                # ダイアログ表示に失敗した場合、コールバックを直接実行
+                if not success and on_close:
+                    logger.info("ダイアログ表示失敗、コールバックを直接実行")
+                    on_close()
+                return success
+            
+            # 最後のフォールバック: ログ出力のみ
+            logger.info(f"成功ダイアログ: {title} - {message}")
+            if on_close:
                 on_close()
-            return success
+            return True
+            
         except Exception as e:
             logger.error(f"成功ダイアログ表示エラー: {e}")
             # エラーが発生してもコールバックは実行
@@ -493,14 +580,52 @@ class BaseFacility(ABC):
                                on_cancel: Optional[Callable] = None) -> bool:
         """確認ダイアログを表示"""
         try:
-            dialog = self.dialog_template.create_confirmation_dialog(
-                f"{self.facility_id}_confirm_{pygame.time.get_ticks()}",
-                title,
-                message,
-                on_confirm,
-                on_cancel
-            )
-            return self.dialog_template.show_dialog(dialog)
+            # WindowManagerを使用してDialogWindowを直接作成・表示
+            from src.ui.window_system.dialog_window import DialogWindow, DialogType, DialogResult
+            from src.ui.window_system import WindowManager
+            
+            window_manager = WindowManager.get_instance()
+            if window_manager:
+                # DialogWindowを作成
+                dialog_window = window_manager.create_window(
+                    DialogWindow,
+                    f"{self.facility_id}_confirm_dialog",
+                    dialog_type=DialogType.CONFIRMATION,
+                    message=f"{title}\n\n{message}"
+                )
+                
+                # コールバック設定
+                def confirmation_message_handler(msg_type: str, data: dict):
+                    if msg_type == 'dialog_result':
+                        result = data.get('result')
+                        if result == DialogResult.YES and on_confirm:
+                            on_confirm()
+                        elif result == DialogResult.NO and on_cancel:
+                            on_cancel()
+                
+                dialog_window.message_handler = confirmation_message_handler
+                
+                # ダイアログを表示
+                window_manager.show_window(dialog_window, push_to_stack=True)
+                return True
+            
+            # フォールバック: dialog_templateが利用可能な場合
+            if hasattr(self, 'dialog_template') and self.dialog_template:
+                dialog = self.dialog_template.create_confirmation_dialog(
+                    f"{self.facility_id}_confirm_{pygame.time.get_ticks()}",
+                    title,
+                    message,
+                    on_confirm,
+                    on_cancel
+                )
+                return self.dialog_template.show_dialog(dialog)
+            
+            # 最後のフォールバック: ログ出力のみ
+            logger.info(f"確認ダイアログ: {title} - {message}")
+            if on_confirm:
+                on_confirm()
+            return True
+            
         except Exception as e:
             logger.error(f"確認ダイアログ表示エラー: {e}")
             return False
@@ -535,10 +660,15 @@ class BaseFacility(ABC):
     
     def _check_pygame_gui_manager(self) -> bool:
         """pygame_gui_managerが利用可能かチェック"""
-        if not hasattr(ui_manager, 'pygame_gui_manager') or ui_manager.pygame_gui_manager is None:
-            logger.warning(f"{self.facility_id}: pygame_gui_managerが利用できません")
+        try:
+            from src.ui.base_ui_pygame import ui_manager
+            if not hasattr(ui_manager, 'pygame_gui_manager') or ui_manager.pygame_gui_manager is None:
+                logger.warning(f"{self.facility_id}: pygame_gui_managerが利用できません")
+                return False
+            return True
+        except ImportError:
+            logger.warning(f"{self.facility_id}: ui_managerのインポートに失敗しました")
             return False
-        return True
     
     def _get_effective_ui_manager(self):
         """有効なUIマネージャーを取得（WindowSystem対応）"""

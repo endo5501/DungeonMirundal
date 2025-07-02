@@ -15,7 +15,7 @@ class TempleServiceWindow(FacilitySubWindow):
     レガシーメニューの3箇所（resurrection_menu, status_cure_menu, char_status_cure）を代替。
     """
     
-    def __init__(self, window_id: str, facility_config: Dict[str, Any]):
+    def __init__(self, window_id: str, facility_config: Dict[str, Any], parent: 'Window' = None):
         """初期化
         
         Args:
@@ -25,8 +25,9 @@ class TempleServiceWindow(FacilitySubWindow):
                 - current_party: 現在のパーティ
                 - service_types: ['resurrection', 'status_cure']
                 - title: ウィンドウタイトル（オプション）
+            parent: 親ウィンドウ（オプション）
         """
-        super().__init__(window_id, facility_config)
+        super().__init__(window_id, facility_config, parent)
         
         # 神殿固有の設定
         self.title = facility_config.get('title', '神殿サービス')

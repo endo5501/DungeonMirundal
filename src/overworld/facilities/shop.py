@@ -196,7 +196,7 @@ class Shop(BaseFacility):
     def _show_buy_transaction(self):
         """購入取引ウィンドウを表示（ShopTransactionWindow使用）"""
         if not self.current_party:
-            self.show_error_dialog_window("エラー", config_manager.get_text("shop.messages.no_party_set"))
+            self.show_error_dialog("エラー", config_manager.get_text("shop.messages.no_party_set"))
             return
         
         # 利用可能アイテムを取得
@@ -220,7 +220,7 @@ class Shop(BaseFacility):
         purchase_window = window_manager.create_window(
             ShopTransactionWindow,
             'shop_purchase',
-            shop_config=shop_config
+            facility_config=shop_config
         )
         window_manager.show_window(purchase_window, push_to_stack=True)
         
@@ -315,13 +315,13 @@ class Shop(BaseFacility):
         
         # ゴールドチェック
         if self.current_party.gold < item.price:
-            self.show_error_dialog_window("エラー", config_manager.get_text("shop.messages.insufficient_gold"))
+            self.show_error_dialog("エラー", config_manager.get_text("shop.messages.insufficient_gold"))
             return
         
         # アイテムインスタンス作成
         instance = self.item_manager.create_item_instance(item.item_id)
         if not instance:
-            self.show_error_dialog_window("エラー", config_manager.get_text("shop.messages.item_creation_failed"))
+            self.show_error_dialog("エラー", config_manager.get_text("shop.messages.item_creation_failed"))
             return
         
         # 購入処理
@@ -334,7 +334,7 @@ class Shop(BaseFacility):
         if not success:
             # 宿屋倉庫が満杯の場合の処理
             self.current_party.gold += item.price  # ゴールドを戻す
-            self.show_error_dialog_window("エラー", config_manager.get_text("errors.inn_storage_full"))
+            self.show_error_dialog("エラー", config_manager.get_text("errors.inn_storage_full"))
             return
         
         success_message = config_manager.get_text("shop.messages.item_purchased_to_storage").format(item_name=item.get_name(), gold=self.current_party.gold)
@@ -377,7 +377,7 @@ class Shop(BaseFacility):
     def _show_sell_transaction(self):
         """売却取引ウィンドウを表示（ShopTransactionWindow使用）"""
         if not self.current_party:
-            self.show_error_dialog_window("エラー", config_manager.get_text("shop.messages.no_party_set"))
+            self.show_error_dialog("エラー", config_manager.get_text("shop.messages.no_party_set"))
             return
         
         # ShopTransactionWindow設定を作成
@@ -393,7 +393,7 @@ class Shop(BaseFacility):
         sell_window = window_manager.create_window(
             ShopTransactionWindow,
             'shop_sell',
-            shop_config=shop_config
+            facility_config=shop_config
         )
         window_manager.show_window(sell_window, push_to_stack=True)
         
@@ -453,7 +453,7 @@ class Shop(BaseFacility):
         
         self.sell_source_selection_list = CustomSelectionList(
             relative_rect=list_rect,
-            manager=ui_manager.pygame_gui_manager,
+            manager=self.ui_manager.pygame_gui_manager,
             title=config_manager.get_text("shop.messages.sell_source_selection_title")
         )
         
@@ -505,12 +505,12 @@ class Shop(BaseFacility):
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
         if not self._check_pygame_gui_manager():
-            self.show_error_dialog_window("エラー", config_manager.get_text("shop.messages.sell_menu_display_failed"))
+            self.show_error_dialog("エラー", config_manager.get_text("shop.messages.sell_menu_display_failed"))
             return
         
         self.character_sell_list = ItemSelectionList(
             relative_rect=list_rect,
-            manager=ui_manager.pygame_gui_manager,
+            manager=self.ui_manager.pygame_gui_manager,
             title=config_manager.get_text("shop.messages.character_sell_title").format(char_name=char_name)
         )
         
@@ -534,12 +534,12 @@ class Shop(BaseFacility):
         
         # pygame_gui_managerが存在しない場合（テスト環境など）は処理をスキップ
         if not self._check_pygame_gui_manager():
-            self.show_error_dialog_window("エラー", config_manager.get_text("shop.messages.sell_menu_display_failed"))
+            self.show_error_dialog("エラー", config_manager.get_text("shop.messages.sell_menu_display_failed"))
             return
         
         self.storage_sell_list = ItemSelectionList(
             relative_rect=list_rect,
-            manager=ui_manager.pygame_gui_manager,
+            manager=self.ui_manager.pygame_gui_manager,
             title=config_manager.get_text("shop.messages.inn_storage_sell_title")
         )
         
@@ -705,11 +705,11 @@ class Shop(BaseFacility):
                     total_price=total_price
                 ))
             else:
-                self.show_error_dialog_window("エラー", config_manager.get_text("shop.messages.character_sell_failed"))
+                self.show_error_dialog("エラー", config_manager.get_text("shop.messages.character_sell_failed"))
                 
         except Exception as e:
             logger.error(f"キャラクターアイテム売却エラー: {e}")
-            self.show_error_dialog_window("エラー", config_manager.get_text("shop.messages.character_sell_error").format(error=str(e)))
+            self.show_error_dialog("エラー", config_manager.get_text("shop.messages.character_sell_error").format(error=str(e)))
     
     def _sell_storage_item(self, slot_index, _, item, sell_price, quantity):
         """宿屋倉庫のアイテムを売却"""
@@ -745,11 +745,11 @@ class Shop(BaseFacility):
                     total_price=total_price
                 ))
             else:
-                self.show_error_dialog_window("エラー", config_manager.get_text("shop.messages.inn_storage_sell_failed"))
+                self.show_error_dialog("エラー", config_manager.get_text("shop.messages.inn_storage_sell_failed"))
                 
         except Exception as e:
             logger.error(f"宿屋倉庫アイテム売却エラー: {e}")
-            self.show_error_dialog_window("エラー", config_manager.get_text("shop.messages.inn_storage_sell_error").format(error=str(e)))
+            self.show_error_dialog("エラー", config_manager.get_text("shop.messages.inn_storage_sell_error").format(error=str(e)))
     
     
     def _format_sellable_item_display_name(self, item_instance, item: Item) -> str:
@@ -804,7 +804,7 @@ class Shop(BaseFacility):
         import random
         title, message = random.choice(messages)
         
-        self.show_information_dialog_window(
+        self.show_information_dialog(
             f"{config_manager.get_text('shop.shopkeeper.title')} - {title}",
             message
         )
@@ -885,13 +885,13 @@ class Shop(BaseFacility):
         
         # 数量チェック
         if quantity > item_instance.quantity:
-            self.show_error_dialog_window("エラー", config_manager.get_text("shop.messages.invalid_quantity"))
+            self.show_error_dialog("エラー", config_manager.get_text("shop.messages.invalid_quantity"))
             return
         
         # パーティインベントリを取得
         party_inventory = self.current_party.get_party_inventory()
         if not party_inventory:
-            self.show_error_dialog_window("エラー", config_manager.get_text("shop.messages.no_party_inventory"))
+            self.show_error_dialog("エラー", config_manager.get_text("shop.messages.no_party_inventory"))
             return
         
         # 売却処理

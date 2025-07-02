@@ -15,7 +15,7 @@ class ShopTransactionWindow(FacilitySubWindow):
     レガシーメニューの4箇所（category_menu, character_sell_menu, storage_sell_menu, quantity_menu）を代替。
     """
     
-    def __init__(self, window_id: str, facility_config: Dict[str, Any]):
+    def __init__(self, window_id: str, facility_config: Dict[str, Any], parent: 'Window' = None):
         """初期化
         
         Args:
@@ -26,8 +26,9 @@ class ShopTransactionWindow(FacilitySubWindow):
                 - transaction_types: ['purchase', 'sell']
                 - available_items: 利用可能アイテムリスト（オプション）
                 - title: ウィンドウタイトル（オプション）
+            parent: 親ウィンドウ（オプション）
         """
-        super().__init__(window_id, facility_config)
+        super().__init__(window_id, facility_config, parent)
         
         # 商店固有の設定
         self.title = facility_config.get('title', '商店取引')

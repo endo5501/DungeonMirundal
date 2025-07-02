@@ -206,7 +206,7 @@ class Inn(BaseFacility):
         import random
         title, message = random.choice(messages)
         
-        result = self.show_information_dialog_window(
+        result = self.show_information_dialog(
             f"{config_manager.get_text('inn.innkeeper.title')} - {title}",
             message
         )
@@ -216,7 +216,7 @@ class Inn(BaseFacility):
     def _show_travel_info(self):
         """旅の情報を表示"""
         travel_info = config_manager.get_text("inn.travel_info.content")
-        self.show_information_dialog_window(
+        self.show_information_dialog(
             config_manager.get_text("inn.travel_info.title"),
             travel_info
         )
@@ -240,7 +240,7 @@ class Inn(BaseFacility):
         import random
         title, rumor = random.choice(rumors)
         
-        self.show_information_dialog_window(
+        self.show_information_dialog(
             f"{config_manager.get_text('inn.rumors.title')} - {title}",
             rumor
         )
@@ -251,7 +251,7 @@ class Inn(BaseFacility):
     def _change_party_name(self):
         """パーティ名変更機能"""
         if not self.current_party:
-            self.show_error_dialog_window(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
+            self.show_error_dialog(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
             return False
         
         current_name = self.current_party.name if self.current_party.name else "無名のパーティ"
@@ -331,7 +331,7 @@ class Inn(BaseFacility):
     def _show_adventure_service(self):
         """冒険サービス統合ウィンドウを表示（InnServiceWindow使用）"""
         if not self.current_party:
-            self.show_error_dialog_window(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
+            self.show_error_dialog(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
             return False
         
         # InnServiceWindow設定を作成
@@ -357,7 +357,7 @@ class Inn(BaseFacility):
     def _show_item_service(self):
         """アイテム管理サービスウィンドウを表示（InnServiceWindow使用）"""
         if not self.current_party:
-            self.show_error_dialog_window(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
+            self.show_error_dialog(config_manager.get_text("app_log.no_party_error_title"), config_manager.get_text("app_log.no_party_error_message"))
             return False
         
         # InnServiceWindow設定を作成

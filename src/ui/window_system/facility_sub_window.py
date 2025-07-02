@@ -11,7 +11,7 @@ class FacilitySubWindow(Window):
     共通の戻り処理、コンテキスト管理、設定データ管理を提供。
     """
     
-    def __init__(self, window_id: str, facility_config: Dict[str, Any]):
+    def __init__(self, window_id: str, facility_config: Dict[str, Any], parent: 'Window' = None):
         """初期化
         
         Args:
@@ -21,8 +21,9 @@ class FacilitySubWindow(Window):
                 - current_party: 現在のパーティ
                 - service_types: 利用可能なサービスタイプ
                 - context: 追加コンテキストデータ
+            parent: 親ウィンドウ（オプション）
         """
-        super().__init__(window_id)
+        super().__init__(window_id, parent)
         self.facility_config = facility_config
         self.parent_facility = facility_config.get('parent_facility')
         self.current_party = facility_config.get('current_party')

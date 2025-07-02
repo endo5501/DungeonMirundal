@@ -193,7 +193,7 @@ class MagicGuild(BaseFacility):
         
         self.spellbook_selection_list = ItemSelectionList(
             relative_rect=list_rect,
-            manager=ui_manager.pygame_gui_manager,
+            manager=self.ui_manager.pygame_gui_manager,
             title="魔術書購入"
         )
         
@@ -336,7 +336,7 @@ class MagicGuild(BaseFacility):
         spellbook_shop_window = window_manager.create_window(
             MagicGuildServiceWindow,
             'magic_guild_spellbook_category',
-            guild_config=guild_config
+            facility_config=guild_config
         )
         window_manager.show_window(spellbook_shop_window, push_to_stack=True)
         
@@ -368,7 +368,7 @@ class MagicGuild(BaseFacility):
             )
         else:
             details += "\n※ ゴールドが不足しています"
-            self._show_dialog(
+            self._show_dialog_unified(
                 "spellbook_details_dialog",
                 "魔術書詳細",
                 details,
@@ -441,7 +441,7 @@ class MagicGuild(BaseFacility):
         spell_learning_window = window_manager.create_window(
             MagicGuildServiceWindow,
             'magic_guild_spell_learning',
-            guild_config=guild_config
+            facility_config=guild_config
         )
         window_manager.show_window(spell_learning_window, push_to_stack=True)
         
@@ -512,7 +512,7 @@ class MagicGuild(BaseFacility):
                         unidentified_items.append((slot, item_instance, item))
         
         if not unidentified_items:
-            self._show_dialog(
+            self._show_dialog_unified(
                 "no_unidentified_items_dialog",
                 "アイテム鑑定",
                 "現在、未鑑定のアイテムはありません。\n\n"
@@ -542,7 +542,7 @@ class MagicGuild(BaseFacility):
         identification_window = window_manager.create_window(
             MagicGuildServiceWindow,
             'magic_guild_identification',
-            guild_config=guild_config
+            facility_config=guild_config
         )
         window_manager.show_window(identification_window, push_to_stack=True)
         
@@ -567,7 +567,7 @@ class MagicGuild(BaseFacility):
         analysis_window = window_manager.create_window(
             MagicGuildServiceWindow,
             'magic_guild_analysis',
-            guild_config=guild_config
+            facility_config=guild_config
         )
         window_manager.show_window(analysis_window, push_to_stack=True)
         
@@ -657,7 +657,7 @@ class MagicGuild(BaseFacility):
         analysis_result += f"\n分析費用: {cost}G\n"
         analysis_result += f"残りゴールド: {self.current_party.gold}G"
         
-        self._show_dialog(
+        self._show_dialog_unified(
             "aptitude_analysis_dialog",
             "魔法適性分析",
             analysis_result,
@@ -690,7 +690,7 @@ class MagicGuild(BaseFacility):
         char_analysis_window = window_manager.create_window(
             MagicGuildServiceWindow,
             'magic_guild_character_analysis',
-            guild_config=guild_config
+            facility_config=guild_config
         )
         window_manager.show_window(char_analysis_window, push_to_stack=True)
         
@@ -765,7 +765,7 @@ class MagicGuild(BaseFacility):
         
         analysis += "\n※ この分析は無料サービスです"
         
-        self._show_dialog(
+        self._show_dialog_unified(
             "character_analysis_dialog",
             f"{character.name} の分析結果",
             analysis,
@@ -835,7 +835,7 @@ class MagicGuild(BaseFacility):
         usage_check_window = window_manager.create_window(
             MagicGuildServiceWindow,
             'magic_guild_usage_check',
-            guild_config=guild_config
+            facility_config=guild_config
         )
         window_manager.show_window(usage_check_window, push_to_stack=True)
         
@@ -898,7 +898,7 @@ class MagicGuild(BaseFacility):
         elif 'bishop' in class_name or '司教' in class_name:
             usage_info += "• 司教として全系統の魔法を習得できます\n"
         
-        self._show_dialog(
+        self._show_dialog_unified(
             "character_spell_usage_dialog",
             f"{character.name} の魔法使用状況",
             usage_info,
@@ -1001,7 +1001,7 @@ class MagicGuild(BaseFacility):
             details += "\n鑑定を実行しますか？\n"
             details += "※ 鑑定したアイテムの正体が明らかになります。"
             
-            self._show_dialog(
+            self._show_dialog_unified(
                 "identification_confirmation_dialog",
                 "鑑定確認",
                 details,
@@ -1019,7 +1019,7 @@ class MagicGuild(BaseFacility):
         else:
             details += "\n※ ゴールドが不足しています"
             
-            self._show_dialog(
+            self._show_dialog_unified(
                 "identification_confirmation_dialog",
                 "鑑定確認",
                 details,
@@ -1080,7 +1080,7 @@ class MagicGuild(BaseFacility):
         result_message += f"残りゴールド: {self.current_party.gold}G\n\n"
         result_message += "鑑定完了！ アイテムの正体が判明しました。"
         
-        self._show_dialog(
+        self._show_dialog_unified(
             "identification_result_dialog",
             "鑑定結果",
             result_message,
@@ -1093,3 +1093,8 @@ class MagicGuild(BaseFacility):
         )
         
         logger.info(f"アイテム鑑定: {item.item_id} x{item_instance.quantity} ({cost}G)")
+    
+    def _close_dialog(self):
+        """ダイアログを閉じる"""
+        # 基本的には何もしない - ダイアログシステムが自動的に処理
+        pass

@@ -503,7 +503,7 @@ class CharacterCreationWizard(Window):
             text="次へ",
             manager=self.ui_manager,
             container=self.content_panel,
-            object_id="next_button"
+            object_id=pygame_gui.core.ObjectID(object_id="next_button")
         )
         self.ui_elements["next_button"] = next_button
         
@@ -515,7 +515,7 @@ class CharacterCreationWizard(Window):
                 text="戻る",
                 manager=self.ui_manager,
                 container=self.content_panel,
-                object_id="back_button"
+                object_id=pygame_gui.core.ObjectID(object_id="back_button")
             )
             self.ui_elements["back_button"] = back_button
         
@@ -526,7 +526,7 @@ class CharacterCreationWizard(Window):
             text="キャンセル",
             manager=self.ui_manager,
             container=self.content_panel,
-            object_id="cancel_button"
+            object_id=pygame_gui.core.ObjectID(object_id="cancel_button")
         )
         self.ui_elements["cancel_button"] = cancel_button
 
@@ -601,7 +601,13 @@ class CharacterCreationWizard(Window):
         """ステップのデータを検証"""
         if step == CreationStep.NAME_INPUT:
             name = self.character_data["name"]
-            return name and len(name.strip()) > 0 and len(name) <= 50
+            # 名前が空の場合、デフォルト名を設定
+            if not name or len(name.strip()) == 0:
+                default_name = "テスト冒険者"
+                self.set_character_name(default_name)
+                logger.info(f"空の名前にデフォルト名を設定: '{default_name}'")
+                return True
+            return len(name) <= 50
         elif step == CreationStep.RACE_SELECTION:
             return self.character_data["race"] in self.races_config
         elif step == CreationStep.STATS_GENERATION:
@@ -714,12 +720,30 @@ class CharacterCreationWizard(Window):
 
     def _handle_button_press(self, event: pygame.event.Event) -> bool:
         """ボタン押下イベントを処理"""
-        element_id = getattr(event.ui_object_id, 'object_id', '') if hasattr(event, 'ui_object_id') else ''
+        element_id = ''
+        
+        # pygame-guiのイベント構造に対応した確実な取得方法
+        if hasattr(event, 'ui_object_id') and hasattr(event.ui_object_id, 'object_id'):
+            element_id = event.ui_object_id.object_id
+            logger.info(f"ui_object_id.object_idから取得: '{element_id}'")
+        elif hasattr(event, 'ui_element'):
+            # UI要素からobject_idを検索
+            for key, element in self.ui_elements.items():
+                if element == event.ui_element:
+                    element_id = key
+                    logger.info(f"UI要素の照合から取得: '{element_id}'")
+                    break
+        
+        logger.info(f"ボタン押下イベント処理: element_id='{element_id}', step={self.current_step.value}")
         
         # 共通ボタン
         if element_id == "next_button":
+            logger.info(f"次へボタンが押されました - 現在のステップ: {self.current_step.value}")
             if self._validate_current_step():
+                logger.info("バリデーション成功 - 次のステップに進みます")
                 self.proceed_to_next_step()
+            else:
+                logger.warning("バリデーション失敗 - 次のステップに進めません")
             return True
         elif element_id == "back_button":
             self.go_to_previous_step()
@@ -779,13 +803,21 @@ class CharacterCreationWizard(Window):
 
     def _validate_current_step(self) -> bool:
         """現在のステップのデータを検証"""
+        logger.info(f"ステップバリデーション開始: {self.current_step.value}")
+        
         # 名前入力の場合、テキストエントリから最新の値を取得
         if self.current_step == CreationStep.NAME_INPUT:
             name_entry = self.ui_elements.get("name_entry")
             if name_entry:
-                self.set_character_name(name_entry.get_text())
+                current_name = name_entry.get_text()
+                logger.info(f"名前入力から取得: '{current_name}'")
+                self.set_character_name(current_name)
+            else:
+                logger.warning("name_entryが見つかりません")
         
-        return self.validate_step_data(self.current_step)
+        result = self.validate_step_data(self.current_step)
+        logger.info(f"バリデーション結果: {result}, データ: {self.character_data}")
+        return result
 
     def _clear_content(self) -> None:
         """コンテンツをクリア"""
