@@ -258,14 +258,11 @@ class AdventurersGuild(BaseFacility):
     def _show_party_formation(self):
         """パーティ編成画面を表示"""
         if not self.current_party:
-            self._show_error_message(config_manager.get_text("guild.messages.no_party_set"))
+            self.show_error_dialog("エラー", config_manager.get_text("guild.messages.no_party_set"))
             return
         
-        # 現在のメニューを非表示にする
-        if self.menu_stack_manager:
-            current_entry = self.menu_stack_manager.peek_current_menu()
-            if current_entry:
-                self._hide_menu_safe(current_entry.menu.menu_id)
+        # WindowManagerベースシステムではメニューの非表示は不要
+        # WindowManagerが自動的にスタック管理を行う
         
         # WindowManagerを取得し、pygame統合を初期化
         from src.ui.window_system import WindowManager
@@ -327,11 +324,8 @@ class AdventurersGuild(BaseFacility):
                 logger.debug("AdventurersGuild: WindowManagerでgo_backが成功しました")
             else:
                 # WindowManagerが空になったら、メインメニューを表示
-                logger.debug("AdventurersGuild: WindowManagerが空のため、元のメニューシステムに戻ります")
-                if self.menu_stack_manager:
-                    current_entry = self.menu_stack_manager.peek_current_menu()
-                    if current_entry:
-                        self._show_menu_safe(current_entry.menu, modal=True)
+                logger.debug("AdventurersGuild: WindowManagerが空のため、メインメニューを表示します")
+                self.show_menu()
         else:
             logger.warning(f"AdventurersGuild: 未知のアクション: {action}")
     
@@ -977,22 +971,22 @@ class AdventurersGuild(BaseFacility):
         """パーティにキャラクターを追加"""
         if not self.current_party:
             logger.warning(config_manager.get_text("guild.messages.party_not_set_warning"))
-            self._show_error_message(config_manager.get_text("errors.no_party_set"))
+            self.show_error_dialog("エラー", config_manager.get_text("errors.no_party_set"))
             return
         
         try:
             success = self.current_party.add_character(character)
             
             if success:
-                self._show_success_message(config_manager.get_text("guild.messages.character_added_success").format(name=character.name))
+                self.show_success_dialog("成功", config_manager.get_text("guild.messages.character_added_success").format(name=character.name))
                 # 追加後はメインメニューに戻る - すべてのサブメニューを閉じる
                 self._close_all_submenus_and_return_to_main()
             else:
-                self._show_error_message(config_manager.get_text("guild.messages.character_add_failed"))
+                self.show_error_dialog("エラー", config_manager.get_text("guild.messages.character_add_failed"))
                 
         except Exception as e:
             logger.error(f"キャラクター追加処理でエラーが発生しました: {e}")
-            self._show_error_message(f"キャラクター追加でエラーが発生しました: {str(e)}")
+            self.show_error_dialog("エラー", f"キャラクター追加でエラーが発生しました: {str(e)}")
             # エラーが発生しても最低限メインメニューに戻る
             try:
                 self._back_to_main_menu_fallback()
@@ -1052,9 +1046,10 @@ class AdventurersGuild(BaseFacility):
     
     def _remove_character_from_party(self, character: Character):
         """パーティからキャラクターを削除"""
-        self._show_confirmation(
+        self.show_confirmation_dialog(
+            "確認",
             f"{character.name} をパーティから削除しますか？",
-            lambda confirmed=None: self._confirm_remove_character(character) if confirmed else None
+            on_confirm=lambda: self._confirm_remove_character(character)
         )
     
     def _confirm_remove_character(self, character: Character):
@@ -1064,27 +1059,20 @@ class AdventurersGuild(BaseFacility):
         
         success = self.current_party.remove_character(character.character_id)
         
-        # 削除確認メニューを閉じる
-        self._hide_menu_safe("remove_character_menu")
+        # WindowManagerベースシステムでは自動的にメニューが管理される
         
         if success:
             # 削除されたキャラクターを作成済みリストに戻す
             if character not in self.created_characters:
                 self.created_characters.append(character)
             
-            self._show_dialog(
-                "character_remove_success",
+            self.show_success_dialog(
                 "キャラクター削除完了",
                 config_manager.get_text("guild.messages.character_remove_success").format(name=character.name),
-                buttons=[
-                    {
-                        'text': config_manager.get_text("common.ok"),
-                        'command': lambda: self._return_to_party_formation()
-                    }
-                ]
+                on_close=lambda: self._return_to_party_formation()
             )
         else:
-            self._show_error_message(config_manager.get_text("guild.messages.character_remove_failed"))
+            self.show_error_dialog("エラー", config_manager.get_text("guild.messages.character_remove_failed"))
     
     def _show_position_menu(self):
         """位置変更メニュー"""
@@ -1149,23 +1137,16 @@ class AdventurersGuild(BaseFacility):
         """キャラクターを指定位置に移動"""
         success = self.current_party.move_character(character.character_id, position)
         
-        # サブメニューを閉じる
-        self._hide_menu_safe("new_position_menu")
+        # WindowManagerベースシステムでは自動的にメニューが管理される
         
         if success:
-            self._show_dialog(
-                "position_change_success",
+            self.show_success_dialog(
                 config_manager.get_text("guild.party_formation.position_change_title"),
                 config_manager.get_text("guild.messages.character_position_changed").format(name=character.name, position=""),
-                buttons=[
-                    {
-                        'text': config_manager.get_text("common.ok"),
-                        'command': lambda: self._return_to_party_formation()
-                    }
-                ]
+                on_close=lambda: self._return_to_party_formation()
             )
         else:
-            self._show_error_message(config_manager.get_text("guild.messages.character_position_change_failed"))
+            self.show_error_dialog("エラー", config_manager.get_text("guild.messages.character_position_change_failed"))
     
     def _show_character_list(self):
         """キャラクター一覧表示"""
@@ -1183,7 +1164,7 @@ class AdventurersGuild(BaseFacility):
         all_chars = list(all_characters.values())
         
         if not all_chars:
-            self._show_error_message("キャラクターがいません")
+            self.show_error_dialog("エラー", "キャラクターがいません")
             return
         
         char_list_text = "【作成済みキャラクター一覧】\n\n"
@@ -1200,18 +1181,9 @@ class AdventurersGuild(BaseFacility):
             
             char_list_text += char_info
         
-        self._show_dialog(
-            "character_list_dialog",
+        self.show_information_dialog(
             "キャラクター一覧",
-            char_list_text,
-            buttons=[
-                {
-                    'text': config_manager.get_text("menu.back"),
-                    'command': self._close_dialog
-                }
-            ],
-            width=750,  # キャラクター詳細情報表示に十分な幅
-            height=CHARACTER_LIST_DIALOG_HEIGHT  # 複数キャラクターのリスト表示に十分な高さ
+            char_list_text
         )
     
     def _show_class_change(self):
@@ -1579,21 +1551,14 @@ class AdventurersGuild(BaseFacility):
     def _back_to_main_menu_fallback(self):
         """フォールバック: 直接メインメニューに戻る"""
         # アクティブなサブメニューを全て非表示にする
-        possible_menus = [
-            "party_formation_menu",
-            "add_character_menu", 
-            "remove_character_menu",
-            "position_menu",
-            "new_position_menu"
-        ]
-        
-        for menu_id in possible_menus:
-            self._hide_menu_safe(menu_id)
-                
-        
-        # メインメニューを表示
-        if self.menu_stack_manager:
-            self.menu_stack_manager.back_to_facility_main()
+        # WindowManagerベースシステムでは自動的にスタック管理される
+        # 直接メインメニューを表示
+        window_manager = WindowManager.get_instance()
+        if window_manager:
+            # すべてのウィンドウを閉じてメインメニューを表示
+            window_manager.go_back_to_root()
+        else:
+            self.show_menu()
     
     def _close_all_submenus_and_return_to_main(self):
         """すべてのサブメニューを閉じてメインメニューに戻る"""
@@ -1609,8 +1574,11 @@ class AdventurersGuild(BaseFacility):
             except Exception as fallback_error:
                 logger.error(f"フォールバック処理でもエラーが発生しました: {fallback_error}")
                 # 最後の手段：基本的なメインメニュー表示
-                if self.menu_stack_manager:
-                    try:
-                        self.menu_stack_manager.back_to_facility_main()
-                    except Exception:
-                        pass  # 最後の手段が失敗しても続行
+                try:
+                    window_manager = WindowManager.get_instance()
+                    if window_manager:
+                        window_manager.go_back_to_root()
+                    else:
+                        self.show_menu()
+                except Exception:
+                    pass  # 最後の手段が失敗しても続行
