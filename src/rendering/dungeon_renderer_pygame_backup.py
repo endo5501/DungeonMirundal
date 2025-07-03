@@ -1,6 +1,6 @@
 """ダンジョン疑似3D描画システム（Pygame完全実装版）"""
 
-from typing import Optional
+from typing import Optional, Tuple
 from enum import Enum
 import pygame
 
@@ -420,8 +420,8 @@ class DungeonRendererPygame:
         """後退（GameManagerからの呼び出し用）"""
         return self.handle_input("move_backward")
     
-    def _move_left(self):
-        """左移動（GameManagerからの呼び出し用）"""
+    def _move_horizontal(self, direction_type: str) -> bool:
+        """水平移動の統一実装（GameManagerからの呼び出し用）"""
         # ダンジョンマネージャーや現在のダンジョンがない場合は何もしない
         if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
             return False
@@ -430,27 +430,24 @@ class DungeonRendererPygame:
         current_pos = self.dungeon_manager.current_dungeon.player_position
         facing = current_pos.facing
         
-        # 左方向を計算
-        left_direction = self._get_left_direction(facing)
+        # 指定された方向を計算
+        if direction_type == 'left':
+            target_direction = self._get_left_direction(facing)
+        elif direction_type == 'right':
+            target_direction = self._get_right_direction(facing)
+        else:
+            raise ValueError(f"不正な方向タイプ: {direction_type}")
         
-        # 左方向に移動を試行
-        return self.dungeon_manager.move_player(left_direction)
+        # 指定方向に移動を試行
+        return self.dungeon_manager.move_player(target_direction)
+    
+    def _move_left(self):
+        """左移動（GameManagerからの呼び出し用）"""
+        return self._move_horizontal('left')
     
     def _move_right(self):
         """右移動（GameManagerからの呼び出し用）"""
-        # ダンジョンマネージャーや現在のダンジョンがない場合は何もしない
-        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
-            return False
-            
-        # 真のストレイフ移動実装
-        current_pos = self.dungeon_manager.current_dungeon.player_position
-        facing = current_pos.facing
-        
-        # 右方向を計算
-        right_direction = self._get_right_direction(facing)
-        
-        # 右方向に移動を試行
-        return self.dungeon_manager.move_player(right_direction)
+        return self._move_horizontal('right')
     
     def _turn_left(self):
         """左回転（GameManagerからの呼び出し用）"""
@@ -663,35 +660,45 @@ class DungeonRendererPygame:
         self.render_dungeon(self.dungeon_manager.current_dungeon)
         return True
     
+    def _calculate_direction(self, direction: Direction, direction_type: str) -> Direction:
+        """方向計算の統一メソッド"""
+        direction_maps = {
+            'opposite': {
+                Direction.NORTH: Direction.SOUTH,
+                Direction.SOUTH: Direction.NORTH,
+                Direction.EAST: Direction.WEST,
+                Direction.WEST: Direction.EAST
+            },
+            'left': {
+                Direction.NORTH: Direction.WEST,
+                Direction.EAST: Direction.NORTH,
+                Direction.SOUTH: Direction.EAST,
+                Direction.WEST: Direction.SOUTH
+            },
+            'right': {
+                Direction.NORTH: Direction.EAST,
+                Direction.EAST: Direction.SOUTH,
+                Direction.SOUTH: Direction.WEST,
+                Direction.WEST: Direction.NORTH
+            }
+        }
+        
+        if direction_type not in direction_maps:
+            raise ValueError(f"不正な方向タイプ: {direction_type}")
+            
+        return direction_maps[direction_type][direction]
+    
     def _get_opposite_direction(self, direction: Direction) -> Direction:
         """反対方向を取得"""
-        opposite_map = {
-            Direction.NORTH: Direction.SOUTH,
-            Direction.SOUTH: Direction.NORTH,
-            Direction.EAST: Direction.WEST,
-            Direction.WEST: Direction.EAST
-        }
-        return opposite_map[direction]
+        return self._calculate_direction(direction, 'opposite')
     
     def _get_left_direction(self, direction: Direction) -> Direction:
         """左方向を取得"""
-        left_map = {
-            Direction.NORTH: Direction.WEST,
-            Direction.EAST: Direction.NORTH,
-            Direction.SOUTH: Direction.EAST,
-            Direction.WEST: Direction.SOUTH
-        }
-        return left_map[direction]
+        return self._calculate_direction(direction, 'left')
     
     def _get_right_direction(self, direction: Direction) -> Direction:
         """右方向を取得"""
-        right_map = {
-            Direction.NORTH: Direction.EAST,
-            Direction.EAST: Direction.SOUTH,
-            Direction.SOUTH: Direction.WEST,
-            Direction.WEST: Direction.NORTH
-        }
-        return right_map[direction]
+        return self._calculate_direction(direction, 'right')
     
     def cleanup(self):
         """リソースのクリーンアップ"""

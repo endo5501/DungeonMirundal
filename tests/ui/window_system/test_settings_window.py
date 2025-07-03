@@ -10,7 +10,7 @@ import pygame
 import pygame_gui
 from unittest.mock import Mock, patch, MagicMock
 from src.ui.window_system import Window, WindowState
-from src.ui.window_system.settings_window import SettingsWindow, SettingsCategory, SettingsTab
+from src.ui.window_system.settings_window import SettingsWindow, SettingsTab
 
 
 class TestSettingsWindow:

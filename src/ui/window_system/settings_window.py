@@ -6,14 +6,12 @@ SettingsWindow クラス
 
 import pygame
 import pygame_gui
-import yaml
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional
 
 from .window import Window
 from .settings_types import (
-    SettingsField, SettingsTab, SettingsCategory, SettingsFieldType,
-    SettingsValidationResult, SettingsChangeEvent
+    SettingsField, SettingsTab, SettingsFieldType
 )
 from .settings_validator import SettingsValidator
 from .settings_loader import SettingsLoader
@@ -125,34 +123,52 @@ class SettingsWindow(Window):
                 container=self.panel
             )
     
-    def _create_tab_container(self) -> None:
-        """タブコンテナを作成"""
+    def _create_ui_container(self, container_type: str) -> None:
+        """統一UIコンテナ作成メソッド"""
         has_title = 'title' in self.settings_config
-        tab_rect = self.layout_manager.calculate_tab_container_rect(self.rect, has_title)
-        self.tab_container = pygame_gui.elements.UIPanel(
-            relative_rect=tab_rect,
+        
+        # コンテナタイプごとの設定
+        container_configs = {
+            'tab': {
+                'rect_method': lambda: self.layout_manager.calculate_tab_container_rect(self.rect, has_title),
+                'element_class': pygame_gui.elements.UIPanel,
+                'attribute_name': 'tab_container'
+            },
+            'content': {
+                'rect_method': lambda: self.layout_manager.calculate_content_container_rect(self.rect, has_title),
+                'element_class': pygame_gui.elements.UIScrollingContainer,
+                'attribute_name': 'content_container'
+            },
+            'button': {
+                'rect_method': lambda: self.layout_manager.calculate_button_container_rect(self.rect),
+                'element_class': pygame_gui.elements.UIPanel,
+                'attribute_name': 'button_container'
+            }
+        }
+        
+        if container_type not in container_configs:
+            raise ValueError(f"不正なコンテナタイプ: {container_type}")
+        
+        config = container_configs[container_type]
+        rect = config['rect_method']()
+        element = config['element_class'](
+            relative_rect=rect,
             manager=self.ui_manager,
             container=self.panel
         )
+        setattr(self, config['attribute_name'], element)
+    
+    def _create_tab_container(self) -> None:
+        """タブコンテナを作成"""
+        self._create_ui_container('tab')
     
     def _create_content_container(self) -> None:
         """コンテンツコンテナを作成"""
-        has_title = 'title' in self.settings_config
-        content_rect = self.layout_manager.calculate_content_container_rect(self.rect, has_title)
-        self.content_container = pygame_gui.elements.UIScrollingContainer(
-            relative_rect=content_rect,
-            manager=self.ui_manager,
-            container=self.panel
-        )
+        self._create_ui_container('content')
     
     def _create_button_container(self) -> None:
         """ボタンコンテナを作成"""
-        button_rect = self.layout_manager.calculate_button_container_rect(self.rect)
-        self.button_container = pygame_gui.elements.UIPanel(
-            relative_rect=button_rect,
-            manager=self.ui_manager,
-            container=self.panel
-        )
+        self._create_ui_container('button')
     
     def _create_tabs(self) -> None:
         """タブを作成"""
@@ -465,56 +481,63 @@ class SettingsWindow(Window):
         # Extract Classパターン適用 - 検証ロジックを専門クラスに委譲
         return self.validator.validate_field_value(field, value)
     
-    def apply_changes(self) -> bool:
-        """変更を適用"""
-        # 変更がある場合は設定を更新
-        if len(self.pending_changes) > 0:
-            # 現在の設定を更新
-            self.current_settings.update(self.pending_changes)
+    def _execute_settings_operation(self, operation_type: str) -> bool:
+        """設定操作の統一メソッド"""
+        if operation_type == 'apply':
+            # 変更がある場合は設定を更新
+            if len(self.pending_changes) > 0:
+                self.current_settings.update(self.pending_changes)
+                self.loader.save_settings(self.current_settings)
+                self.pending_changes.clear()
+                logger.debug("設定変更を適用しました")
             
-            # ファイルに保存
-            self.loader.save_settings(self.current_settings)
+            # 適用メッセージを送信
+            self.send_message('settings_applied', {'settings': self.current_settings})
+            return True
             
+        elif operation_type == 'cancel':
             # 変更をクリア
             self.pending_changes.clear()
             
-            logger.debug("設定変更を適用しました")
-        
-        # 常に適用メッセージを送信（変更の有無に関わらず）
-        self.send_message('settings_applied', {
-            'settings': self.current_settings
-        })
-        
-        return True
+            # フィールドを元の値に戻す
+            for tab in self.tabs:
+                for field in tab.fields:
+                    field.current_value = self.current_settings.get(
+                        field.field_id, field.default_value
+                    )
+                    self._set_ui_element_value(
+                        field.ui_element, field.field_type, field.current_value
+                    )
+            
+            # キャンセルメッセージを送信
+            self.send_message('settings_cancelled')
+            logger.debug("設定変更をキャンセルしました")
+            return True
+            
+        elif operation_type == 'reset':
+            # デフォルト値にリセット
+            for tab in self.tabs:
+                for field in tab.fields:
+                    if field.default_value is not None:
+                        self.set_field_value(field.field_id, field.default_value)
+            
+            logger.debug("設定をデフォルト値にリセットしました")
+            return True
+            
+        else:
+            raise ValueError(f"不正な操作タイプ: {operation_type}")
+    
+    def apply_changes(self) -> bool:
+        """変更を適用"""
+        return self._execute_settings_operation('apply')
     
     def cancel_changes(self) -> None:
         """変更をキャンセル"""
-        # 変更をクリア
-        self.pending_changes.clear()
-        
-        # フィールドを元の値に戻す
-        for tab in self.tabs:
-            for field in tab.fields:
-                field.current_value = self.current_settings.get(
-                    field.field_id, field.default_value
-                )
-                self._set_ui_element_value(
-                    field.ui_element, field.field_type, field.current_value
-                )
-        
-        # キャンセルメッセージを送信
-        self.send_message('settings_cancelled')
-        
-        logger.debug("設定変更をキャンセルしました")
+        self._execute_settings_operation('cancel')
     
     def reset_to_defaults(self) -> None:
         """デフォルト値にリセット"""
-        for tab in self.tabs:
-            for field in tab.fields:
-                if field.default_value is not None:
-                    self.set_field_value(field.field_id, field.default_value)
-        
-        logger.debug("設定をデフォルト値にリセットしました")
+        self._execute_settings_operation('reset')
     
     def handle_escape(self) -> bool:
         """ESCキーの処理"""

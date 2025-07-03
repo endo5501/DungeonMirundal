@@ -100,17 +100,61 @@ class SaveManager:
         
         logger.info(f"SaveManagerを初期化しました: {self.save_dir}")
     
+    def _get_file_path(self, slot_id: int, file_type: str = 'save') -> Path:
+        """ファイルパス取得の統一メソッド"""
+        file_patterns = {
+            'save': f"save_{slot_id:02d}.json",
+            'backup': f"save_{slot_id:02d}.bak"
+        }
+        
+        if file_type not in file_patterns:
+            raise ValueError(f"不正なファイルタイプ: {file_type}")
+            
+        return self.save_dir / file_patterns[file_type]
+    
     def get_save_path(self, slot_id: int) -> Path:
         """セーブファイルのパスを取得"""
-        return self.save_dir / f"save_{slot_id:02d}.json"
+        return self._get_file_path(slot_id, 'save')
     
     def get_backup_path(self, slot_id: int) -> Path:
         """バックアップファイルのパスを取得"""
-        return self.save_dir / f"save_{slot_id:02d}.bak"
+        return self._get_file_path(slot_id, 'backup')
     
     def get_metadata_path(self) -> Path:
         """メタデータファイルのパスを取得"""
         return self.save_dir / "saves_metadata.json"
+    
+    def _execute_file_operation(self, operation_type: str, file_path: Path, **kwargs) -> Optional[Any]:
+        """ファイル操作の統一インターフェース"""
+        try:
+            if operation_type == 'read_json':
+                if not file_path.exists():
+                    logger.warning(f"ファイルが見つかりません: {file_path}")
+                    return None
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+                    
+            elif operation_type == 'write_json':
+                data = kwargs.get('data')
+                if data is None:
+                    raise ValueError("書き込みデータが指定されていません")
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                return True
+                
+            elif operation_type == 'copy':
+                source_path = kwargs.get('source_path')
+                if source_path is None:
+                    raise ValueError("コピー元パスが指定されていません")
+                shutil.copy2(source_path, file_path)
+                return True
+                
+            else:
+                raise ValueError(f"未知の操作タイプ: {operation_type}")
+                
+        except Exception as e:
+            logger.error(f"ファイル操作エラー({operation_type}): {e}")
+            return None
     
     def save_game(
         self, 
@@ -152,21 +196,14 @@ class SaveManager:
             )
             
             # JSONファイルに保存
-            try:
-                save_data = game_save.to_dict()
-                logger.debug(f"セーブデータの変換に成功: {type(save_data)}")
+            save_data = game_save.to_dict()
+            logger.debug(f"セーブデータの変換に成功: {type(save_data)}")
+            
+            success = self._execute_file_operation('write_json', save_path, data=save_data)
+            if not success:
+                raise RuntimeError("セーブデータの書き込みに失敗しました")
                 
-                with open(save_path, 'w', encoding='utf-8') as f:
-                    json.dump(save_data, f, ensure_ascii=False, indent=2)
-                    
-                logger.debug(f"ファイル書き込み完了: {save_path}")
-                
-            except TypeError as te:
-                logger.error(f"JSONシリアライゼーションエラー: {te}")
-                raise te
-            except Exception as fe:
-                logger.error(f"ファイル書き込みエラー: {fe}")
-                raise fe
+            logger.debug(f"ファイル書き込み完了: {save_path}")
             
             # メタデータ更新
             self._update_metadata(save_slot)
@@ -186,12 +223,10 @@ class SaveManager:
         try:
             save_path = self.get_save_path(slot_id)
             
-            if not save_path.exists():
-                logger.warning(f"セーブファイルが見つかりません: スロット {slot_id}")
+            data = self._execute_file_operation('read_json', save_path)
+            if data is None:
+                logger.warning(f"セーブファイルが見つからないか読み込みに失敗: スロット {slot_id}")
                 return None
-            
-            with open(save_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
             
             game_save = GameSave.from_dict(data)
             self.current_save = game_save

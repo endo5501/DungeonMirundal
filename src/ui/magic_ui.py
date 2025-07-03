@@ -1,15 +1,13 @@
 """魔法管理UIシステム（WindowSystem統合版）"""
 
-from typing import Dict, List, Optional, Any, Tuple, Callable
+from typing import Optional, Callable
 from enum import Enum
-import pygame
 
 from src.ui.window_system import WindowManager
 from src.ui.window_system.magic_window import MagicWindow
-from src.magic.spells import SpellBook, SpellSlot, Spell, SpellManager, spell_manager, SpellSchool, SpellType
+from src.magic.spells import SpellBook, Spell
 from src.character.party import Party
 from src.character.character import Character
-from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
 
@@ -80,55 +78,49 @@ class MagicUI:
         except Exception as e:
             logger.error(f"魔法メニュー表示エラー: {e}")
     
-    def show_spellbook_management(self):
-        """魔法書管理を表示（WindowSystem版）"""
+    def _show_magic_interface(self, interface_type: str, mode: MagicUIMode, log_message: str):
+        """魔法インターフェース表示の共通実装"""
         try:
             magic_window = self._get_magic_window()
-            magic_window.show_spellbook_management()
-            self.current_mode = MagicUIMode.SPELLBOOK
-            logger.info("魔法書管理を表示")
+            
+            # インターフェースタイプに応じた処理を実行
+            interface_methods = {
+                'spellbook': magic_window.show_spellbook_management,
+                'slot': magic_window.show_slot_management,
+                'learning': magic_window.show_spell_learning,
+                'casting': magic_window.show_spell_casting,
+                'overview': magic_window.show_party_overview
+            }
+            
+            if interface_type in interface_methods:
+                interface_methods[interface_type]()
+                self.current_mode = mode
+                logger.info(log_message)
+            else:
+                logger.error(f"未知のインターフェースタイプ: {interface_type}")
+                
         except Exception as e:
-            logger.error(f"魔法書管理表示エラー: {e}")
+            logger.error(f"{log_message}エラー: {e}")
+    
+    def show_spellbook_management(self):
+        """魔法書管理を表示（WindowSystem版）"""
+        self._show_magic_interface('spellbook', MagicUIMode.SPELLBOOK, "魔法書管理を表示")
     
     def show_slot_management(self):
         """スロット管理を表示（WindowSystem版）"""
-        try:
-            magic_window = self._get_magic_window()
-            magic_window.show_slot_management()
-            self.current_mode = MagicUIMode.SLOT_MANAGEMENT
-            logger.info("スロット管理を表示")
-        except Exception as e:
-            logger.error(f"スロット管理表示エラー: {e}")
+        self._show_magic_interface('slot', MagicUIMode.SLOT_MANAGEMENT, "スロット管理を表示")
     
     def show_spell_learning(self):
         """魔法習得を表示（WindowSystem版）"""
-        try:
-            magic_window = self._get_magic_window()
-            magic_window.show_spell_learning()
-            self.current_mode = MagicUIMode.SPELL_LEARNING
-            logger.info("魔法習得を表示")
-        except Exception as e:
-            logger.error(f"魔法習得表示エラー: {e}")
+        self._show_magic_interface('learning', MagicUIMode.SPELL_LEARNING, "魔法習得を表示")
     
     def show_spell_casting(self):
         """魔法詠唱を表示（WindowSystem版）"""
-        try:
-            magic_window = self._get_magic_window()
-            magic_window.show_spell_casting()
-            self.current_mode = MagicUIMode.SPELL_CASTING
-            logger.info("魔法詠唱を表示")
-        except Exception as e:
-            logger.error(f"魔法詠唱表示エラー: {e}")
+        self._show_magic_interface('casting', MagicUIMode.SPELL_CASTING, "魔法詠唱を表示")
     
     def show_party_magic_overview(self):
         """パーティ魔法概要を表示（WindowSystem版）"""
-        try:
-            magic_window = self._get_magic_window()
-            magic_window.show_party_overview()
-            self.current_mode = MagicUIMode.OVERVIEW
-            logger.info("パーティ魔法概要を表示")
-        except Exception as e:
-            logger.error(f"パーティ魔法概要表示エラー: {e}")
+        self._show_magic_interface('overview', MagicUIMode.OVERVIEW, "パーティ魔法概要を表示")
     
     def show_character_magic_detail(self, character: Character):
         """キャラクター魔法詳細を表示（WindowSystem版）"""
@@ -140,37 +132,43 @@ class MagicUI:
         except Exception as e:
             logger.error(f"キャラクター魔法詳細表示エラー: {e}")
     
-    def equip_spell_to_slot(self, spell: Spell, slot_index: int):
-        """魔法をスロットに装備（WindowSystem版）"""
+    def _execute_slot_operation(self, operation_type: str, slot_index: int, spell: Optional[Spell] = None) -> bool:
+        """スロット操作の共通実装"""
         try:
             if not self.current_character:
                 logger.warning("キャラクターが設定されていません")
                 return False
             
             magic_window = self._get_magic_window()
-            success = magic_window.equip_spell_to_slot(spell, slot_index)
-            if success:
-                logger.info(f"魔法をスロットに装備: {spell.name} -> スロット{slot_index}")
+            
+            if operation_type == 'equip':
+                if spell is None:
+                    logger.error("装備操作には魔法が必要です")
+                    return False
+                success = magic_window.equip_spell_to_slot(spell, slot_index)
+                if success:
+                    logger.info(f"魔法をスロットに装備: {spell.name} -> スロット{slot_index}")
+            elif operation_type == 'unequip':
+                success = magic_window.unequip_spell_from_slot(slot_index)
+                if success:
+                    logger.info(f"スロットから魔法を外しました: スロット{slot_index}")
+            else:
+                logger.error(f"未知のスロット操作: {operation_type}")
+                return False
+                
             return success
+            
         except Exception as e:
-            logger.error(f"魔法装備エラー: {e}")
+            logger.error(f"スロット操作エラー({operation_type}): {e}")
             return False
+    
+    def equip_spell_to_slot(self, spell: Spell, slot_index: int):
+        """魔法をスロットに装備（WindowSystem版）"""
+        return self._execute_slot_operation('equip', slot_index, spell)
     
     def unequip_spell_from_slot(self, slot_index: int):
         """スロットから魔法を外す（WindowSystem版）"""
-        try:
-            if not self.current_character:
-                logger.warning("キャラクターが設定されていません")
-                return False
-            
-            magic_window = self._get_magic_window()
-            success = magic_window.unequip_spell_from_slot(slot_index)
-            if success:
-                logger.info(f"スロットから魔法を外しました: スロット{slot_index}")
-            return success
-        except Exception as e:
-            logger.error(f"魔法装備解除エラー: {e}")
-            return False
+        return self._execute_slot_operation('unequip', slot_index)
     
     def hide(self):
         """魔法UIを非表示（WindowSystem版）"""
