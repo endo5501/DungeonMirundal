@@ -194,6 +194,28 @@ class GameDebugClient:
             color = self.analyze_background_color()
         r, g, b = color
         return b > r and b > g and r < 70 and g < 70 and b > 60
+    
+    def get_ui_hierarchy(self) -> Optional[Dict[str, Any]]:
+        """
+        UI階層情報を取得
+        
+        Returns:
+            UI階層情報の辞書、失敗時はNone
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/ui/hierarchy",
+                timeout=self.timeout
+            )
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('hierarchy', {})
+            else:
+                logger.error(f"Failed to get UI hierarchy: {response.status_code}")
+                return None
+        except Exception as e:
+            logger.error(f"Error getting UI hierarchy: {e}")
+            return None
 
 
 def main():

@@ -215,6 +215,39 @@ def send_mouse_input(x: int, y: int, button: int = 1, action: str = "down"):
         )
 
 # 追加エンドポイント
+@app.get("/ui/hierarchy",
+         summary="Get UI hierarchy",
+         description="Returns the current UI hierarchy including windows and elements")
+def get_ui_hierarchy():
+    """UI階層情報を取得"""
+    try:
+        from src.debug.ui_debug_helper import UIDebugHelper
+        from src.ui.window_system import WindowManager
+        from src.ui.base_ui_pygame import ui_manager
+        
+        # pygame-guiのUIManagerを取得
+        pygame_ui_manager = None
+        if hasattr(ui_manager, 'pygame_gui_manager'):
+            pygame_ui_manager = ui_manager.pygame_gui_manager
+        
+        # UIヘルパーを作成してUI階層を取得
+        ui_helper = UIDebugHelper(ui_manager=pygame_ui_manager)
+        hierarchy = ui_helper.dump_ui_hierarchy(format='json')
+        
+        logger.info("UI hierarchy fetched successfully")
+        
+        return {
+            "hierarchy": hierarchy,
+            "timestamp": get_timestamp()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get UI hierarchy: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get UI hierarchy: {str(e)}"
+        )
+
 @app.get("/history",
          summary="Get input history",
          description="Returns the history of recent input events")
