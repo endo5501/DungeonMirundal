@@ -1,8 +1,9 @@
-"""宿屋（リファクタリング版）"""
+"""宿屋（リファクタリング版・InnFacilityHandler統合）"""
 
 import pygame
 from typing import Dict, List, Optional, Any
 from src.overworld.base_facility import BaseFacility, FacilityType
+from src.overworld.facilities.inn_facility_handler import InnFacilityHandler
 from src.character.party import Party
 from src.ui.window_system import WindowManager
 from src.ui.window_system.facility_menu_window import FacilityMenuWindow
@@ -31,8 +32,13 @@ class Inn(BaseFacility):
             name_key="facility.inn"
         )
         
-        # UI要素
+        # InnFacilityHandler統合
+        self.handler = InnFacilityHandler()
+        
+        # UI要素（レガシー互換性）
         self.storage_view_list: Optional[ItemSelectionList] = None
+        
+        logger.info("Inn（InnFacilityHandler統合版）初期化完了")
     
     def _create_inn_menu_config(self):
         """Inn用のFacilityMenuWindow設定を作成"""
@@ -91,8 +97,10 @@ class Inn(BaseFacility):
         }
     
     def _create_facility_menu_config(self) -> Dict[str, Any]:
-        """施設メニュー設定を作成（WindowManager用）- BaseFacilityをオーバーライド"""
-        return self._create_inn_menu_config()
+        """施設メニュー設定を作成（WindowManager用）- InnFacilityHandlerに委譲"""
+        # ハンドラーにパーティを設定
+        self.handler.set_party(self.current_party)
+        return self.handler.get_inn_menu_config()
     
     def show_menu(self):
         """Innメインメニューを表示（FacilityMenuWindow使用）"""
@@ -117,26 +125,29 @@ class Inn(BaseFacility):
         logger.info(config_manager.get_text("app_log.entered_inn"))
     
     def handle_facility_message(self, message_type: str, data: dict) -> bool:
-        """FacilityMenuWindowからのメッセージを処理"""
+        """FacilityMenuWindowからのメッセージを処理（InnFacilityHandler統合版）"""
         logger.info(f"Inn received message: {message_type}, data: {data}")
         
         if message_type == 'menu_item_selected':
             item_id = data.get('item_id')
             logger.info(f"Inn menu item selected: {item_id}")
             
-            if item_id == 'adventure_preparation':
-                return self._show_adventure_service()
-            elif item_id == 'item_storage':
-                return self._show_item_service()
-            elif item_id == 'talk_innkeeper':
-                logger.info("宿屋の主人と話すボタンが押されました")
-                return self._talk_to_innkeeper()
-            elif item_id == 'travel_info':
-                return self._show_travel_info()
-            elif item_id == 'tavern_rumors':
-                return self._show_tavern_rumors()
-            elif item_id == 'change_party_name':
-                return self._change_party_name()
+            # InnFacilityHandlerに委譲
+            operation_mapping = {
+                'adventure_preparation': 'show_adventure_preparation',
+                'item_storage': 'show_item_management',
+                'talk_innkeeper': 'talk_to_innkeeper',
+                'travel_info': 'show_travel_info',
+                'tavern_rumors': 'show_tavern_rumors',
+                'change_party_name': 'change_party_name'
+            }
+            
+            if item_id in operation_mapping:
+                operation = operation_mapping[item_id]
+                # ハンドラーにパーティを設定
+                self.handler.set_party(self.current_party)
+                result = self.handler.execute_facility_operation(operation)
+                return result.success
                 
         elif message_type == 'facility_exit_requested':
             logger.info("「出る」ボタンが押されました - facility_exit_requested受信")
