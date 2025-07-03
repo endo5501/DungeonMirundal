@@ -932,16 +932,23 @@ class OverworldManager:
             logger.error("UIマネージャーが設定されていません")
             return
         
-        # 設定メニューを隠す（WindowSystem移行により不要）
-        # if self.settings_menu:
-        #     self.ui_manager.hide_menu(self.settings_menu.menu_id)
-        
-        # セーブスロット選択メニューをWindowSystemで作成
-        # UIMenuは削除済み - OverworldMainWindowのSAVE_LOADメニューを使用
-        logger.info("セーブスロット選択はWindowSystemメニューで実装されています")
-        
-        # UIMenuベースの実装は削除済み - WindowSystemメニューを使用してください
-        pass
+        # WindowSystemでセーブスロット選択画面を表示
+        if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
+            from src.ui.window_system.overworld_main_window import OverworldMenuType
+            
+            # セーブスロット選択用の設定を作成
+            save_slot_config = {
+                'title': 'セーブスロット選択',
+                'operation': 'save',
+                'max_slots': 5,
+                'callback': self._on_save_slot_selected
+            }
+            
+            # SAVE_LOADメニューを表示
+            self.overworld_main_window.show_menu(OverworldMenuType.SAVE_LOAD, save_slot_config)
+            logger.info("WindowSystemでセーブスロット選択画面を表示しました")
+        else:
+            logger.error("OverworldMainWindowが利用できません")
     
     def _show_load_slot_selection(self):
         """ロードスロット選択画面を表示"""
@@ -951,16 +958,23 @@ class OverworldManager:
             logger.error("UIマネージャーが設定されていません")
             return
         
-        # 設定メニューを隠す（WindowSystem移行により不要）
-        # if self.settings_menu:
-        #     self.ui_manager.hide_menu(self.settings_menu.menu_id)
-        
-        # ロードスロット選択メニューをWindowSystemで作成
-        # UIMenuは削除済み - OverworldMainWindowのSAVE_LOADメニューを使用
-        logger.info("ロードスロット選択はWindowSystemメニューで実装されています")
-        
-        # UIMenuベースの実装は削除済み - WindowSystemメニューを使用してください
-        pass
+        # WindowSystemでロードスロット選択画面を表示
+        if hasattr(self, 'overworld_main_window') and self.overworld_main_window:
+            from src.ui.window_system.overworld_main_window import OverworldMenuType
+            
+            # ロードスロット選択用の設定を作成
+            load_slot_config = {
+                'title': 'セーブデータ選択',
+                'operation': 'load',
+                'max_slots': 5,
+                'callback': self._on_load_slot_selected
+            }
+            
+            # SAVE_LOADメニューを表示
+            self.overworld_main_window.show_menu(OverworldMenuType.SAVE_LOAD, load_slot_config)
+            logger.info("WindowSystemでロードスロット選択画面を表示しました")
+        else:
+            logger.error("OverworldMainWindowが利用できません")
     
     def _get_save_slots(self):
         """セーブスロット情報を取得"""
@@ -1016,6 +1030,14 @@ class OverworldManager:
             return f"スロット {slot['slot_id']}: {slot['party_name']} ({slot['save_time']})"
         else:
             return f"スロット {slot['slot_id']}: [空き]"
+    
+    def _on_save_slot_selected(self, slot_id):
+        """セーブスロット選択時のコールバック"""
+        self._save_to_slot(slot_id)
+    
+    def _on_load_slot_selected(self, slot_id):
+        """ロードスロット選択時のコールバック"""
+        self._load_from_slot(slot_id)
     
     def _save_to_slot(self, slot_id):
         """指定されたスロットにセーブ"""
