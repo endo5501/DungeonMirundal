@@ -402,10 +402,14 @@ class OverworldMainWindow(Window):
             })
         
         # 設定メニューアクション
-        elif action in ['party_status', 'save_game', 'load_game', 'back']:
+        elif action in ['party_status', 'save_game', 'load_game']:
             return self._send_message('menu_item_selected', {
                 'item_id': action
             })
+        
+        # 戻るアクション
+        elif action == 'back':
+            return self._go_back()
         
         # パーティ関連アクション
         elif action == 'party_overview':

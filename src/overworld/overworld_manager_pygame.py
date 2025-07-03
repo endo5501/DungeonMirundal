@@ -322,9 +322,11 @@ class OverworldManager:
             slot_id = data.get('slot_id')
             if operation == 'save':
                 self._save_to_slot(slot_id)
+                # セーブ処理内でメニューが閉じられる
                 return True
             elif operation == 'load':
                 self._load_from_slot(slot_id)
+                # ロード処理内でメニューが閉じられる
                 return True
         
         elif message_type == 'back_requested':
@@ -1095,8 +1097,8 @@ class OverworldManager:
         
         if success:
             logger.info(f"スロット {slot_id} からゲームをロードしました")
-            # ロード成功後は設定画面を閉じる
-            self._close_load_slot_selection()
+            # ロード成功後はセーブ/ロード画面を閉じる（WindowSystemベース）
+            self._close_save_load_menu()
         else:
             logger.error(f"スロット {slot_id} からのゲームロードに失敗しました")
             # エラーメッセージを表示
@@ -1105,20 +1107,20 @@ class OverworldManager:
     def _show_save_success(self, slot_id):
         """セーブ成功メッセージを表示"""
         logger.info(f"セーブ成功メッセージを表示: スロット {slot_id}")
-        # メニューを閉じて設定画面に戻る
-        self._close_save_slot_selection()
+        # メニューを閉じて設定画面に戻る（WindowSystemベース）
+        self._close_save_load_menu()
     
     def _show_save_error(self, slot_id):
         """セーブエラーメッセージを表示"""
         logger.error(f"セーブエラーメッセージを表示: スロット {slot_id}")
-        # メニューに戻る
-        self._show_save_slot_selection()
+        # エラー時はセーブ/ロードメニューにとどまる（戻る処理は行わない）
+        logger.warning("セーブに失敗したため、セーブ/ロードメニューにとどまります")
     
     def _show_load_error(self, slot_id):
         """ロードエラーメッセージを表示"""
         logger.error(f"ロードエラーメッセージを表示: スロット {slot_id}")
-        # メニューに戻る
-        self._show_load_slot_selection()
+        # エラー時はセーブ/ロードメニューにとどまる（戻る処理は行わない）
+        logger.warning("ロードに失敗したため、セーブ/ロードメニューにとどまります")
     
     def _close_save_slot_selection(self):
         """セーブスロット選択メニューを閉じて設定画面に戻る"""
@@ -1141,6 +1143,23 @@ class OverworldManager:
         # 設定メニューを再表示（WindowSystem移行により不要）
         # if self.settings_menu:
         #     self.ui_manager.show_menu(self.settings_menu.menu_id, modal=True)
+    
+    def _close_save_load_menu(self):
+        """セーブ/ロードメニューを閉じて設定画面に戻る"""
+        logger.info("セーブ/ロードメニューを閉じます")
+        
+        # WindowManagerベースでセーブ/ロードウィンドウを閉じて設定画面に戻る
+        if self.window_manager:
+            # 現在表示されているsave_loadウィンドウを取得して閉じる
+            save_load_window = self.window_manager.window_registry.get("save_load")
+            if save_load_window:
+                self.window_manager.close_window(save_load_window)
+            
+            # 設定画面を再表示
+            self._show_settings_menu()
+            logger.info("WindowSystemベースでセーブ/ロードメニューを閉じて設定画面に戻りました")
+        else:
+            logger.error("WindowManagerが利用できません")
     
     def _on_save_game_old(self):
         """ゲームを保存（旧実装）"""
@@ -1477,9 +1496,46 @@ class OverworldManager:
     def save_overworld_state(self, slot_id: str) -> bool:
         """地上部状態を保存"""
         try:
-            # 簡易実装（実際の保存処理は後で実装）
-            logger.info(f"地上部状態を保存しました: スロット{slot_id}")
-            return True
+            # slot_idから数値スロットIDを抽出
+            if slot_id.startswith('save_slot_'):
+                numeric_slot_id = int(slot_id.replace('save_slot_', ''))
+            else:
+                # レガシー形式への対応
+                numeric_slot_id = int(slot_id) if slot_id.isdigit() else 1
+            
+            # SaveManagerを使用して実際にセーブファイルを保存
+            from src.core.save_manager import save_manager
+            
+            if not self.current_party:
+                logger.error("パーティが設定されていないため保存できません")
+                return False
+            
+            # ゲーム状態データを構築
+            game_state = {
+                'location': 'overworld',
+                'current_area': 'town',
+                'overworld_state': {
+                    'facilities_visited': getattr(self, 'facilities_visited', []),
+                    'settings_active': self.settings_active,
+                    'is_active': self.is_active
+                }
+            }
+            
+            # SaveManagerでセーブを実行
+            success = save_manager.save_game(
+                party=self.current_party,
+                slot_id=numeric_slot_id,
+                save_name=f"{self.current_party.name}",
+                game_state=game_state
+            )
+            
+            if success:
+                logger.info(f"地上部状態を保存しました: スロット{slot_id}")
+                return True
+            else:
+                logger.error(f"SaveManagerによる保存に失敗: スロット{slot_id}")
+                return False
+                
         except Exception as e:
             logger.error(f"地上部状態保存エラー: {e}")
             return False
@@ -1487,9 +1543,35 @@ class OverworldManager:
     def load_overworld_state(self, slot_id: str) -> bool:
         """地上部状態を読み込み"""
         try:
-            # 簡易実装（実際の読み込み処理は後で実装）
-            logger.info(f"地上部状態を読み込みました: スロット{slot_id}")
-            return True
+            # slot_idから数値スロットIDを抽出
+            if slot_id.startswith('save_slot_'):
+                numeric_slot_id = int(slot_id.replace('save_slot_', ''))
+            else:
+                # レガシー形式への対応
+                numeric_slot_id = int(slot_id) if slot_id.isdigit() else 1
+            
+            # SaveManagerを使用して実際にセーブファイルを読み込み
+            from src.core.save_manager import save_manager
+            
+            # SaveManagerでロードを実行
+            game_save = save_manager.load_game(numeric_slot_id)
+            
+            if game_save:
+                # パーティを復元
+                self.current_party = game_save.party
+                
+                # ゲーム状態を復元
+                overworld_state = game_save.game_state.get('overworld_state', {})
+                self.facilities_visited = overworld_state.get('facilities_visited', [])
+                self.settings_active = overworld_state.get('settings_active', False)
+                self.is_active = overworld_state.get('is_active', True)
+                
+                logger.info(f"地上部状態を読み込みました: スロット{slot_id}")
+                return True
+            else:
+                logger.error(f"SaveManagerによる読み込みに失敗: スロット{slot_id}")
+                return False
+                
         except Exception as e:
             logger.error(f"地上部状態読み込みエラー: {e}")
             return False
