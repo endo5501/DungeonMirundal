@@ -19,6 +19,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 @docs/how_to_debug_game.md
 
+### ソースコード類似度確認
+
+@docs/how_to_plan_refactoring_by_similarity.md
+
 ## プロジェクト構成
 
 ### アーキテクチャ概要
