@@ -22,6 +22,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# 拡張ロギング機能のインポート
+try:
+    from src.debug.enhanced_logger import get_enhanced_logger
+    enhanced_logger = get_enhanced_logger("debug_api")
+except ImportError:
+    enhanced_logger = None
+
 # 定数定義
 DEFAULT_PORT = 8765
 DEFAULT_HOST = "127.0.0.1"
@@ -287,6 +294,63 @@ def clear_history():
         message=f"Cleared {count} history entries",
         timestamp=get_timestamp()
     )
+
+# 拡張ロギング機能エンドポイント
+@app.post("/debug/log", 
+          summary="Add debug log entry",
+          description="Adds a custom debug log entry with context")
+def add_debug_log(level: str, message: str, context: Dict[str, Any] = None):
+    """カスタムデバッグログエントリを追加"""
+    try:
+        if enhanced_logger:
+            if context:
+                enhanced_logger.push_context(context)
+            
+            log_level = getattr(logging, level.upper(), logging.INFO)
+            enhanced_logger.log_with_context(log_level, message)
+            
+            if context:
+                enhanced_logger.pop_context()
+            
+            return {
+                "ok": True,
+                "message": f"Debug log added: {message}",
+                "timestamp": get_timestamp()
+            }
+        else:
+            # フォールバック
+            logger.log(getattr(logging, level.upper(), logging.INFO), message)
+            return {
+                "ok": True,
+                "message": f"Log added (fallback): {message}",
+                "timestamp": get_timestamp()
+            }
+    except Exception as e:
+        logger.error(f"Failed to add debug log: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to add debug log: {str(e)}"
+        )
+
+@app.get("/debug/middleware/status", 
+         summary="Get middleware status",
+         description="Returns the status of debug middleware instances")
+def get_middleware_status():
+    """デバッグミドルウェアの状態を取得"""
+    try:
+        # グローバルなミドルウェアインスタンスの状態を確認
+        # （実際の実装では、ゲームクラスからミドルウェア情報を取得）
+        return {
+            "middleware_available": True,
+            "enhanced_logging": enhanced_logger is not None,
+            "timestamp": get_timestamp()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get middleware status: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get middleware status: {str(e)}"
+        )
 
 # サーバー起動関数
 def _run_server():

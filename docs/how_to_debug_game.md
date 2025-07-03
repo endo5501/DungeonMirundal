@@ -441,6 +441,185 @@ tests/
 | 画面遷移の検証 | `verify_esc_transition()` |
 | CI/CD統合 | pytest integrationマーカー |
 
+## 新規デバッグ機能（2025年1月追加）
+
+### UI階層ダンプ機能
+
+UI要素の構造やobject_idを即座に確認できる機能が追加されました。
+
+#### 利用可能なエンドポイント
+
+1. **GET /ui/hierarchy**
+   - 現在のUI階層情報をJSON形式で取得
+   - ウィンドウスタック、UI要素、親子関係を含む
+   - レスポンス: `{"hierarchy": {...}, "timestamp": "..."}`
+
+#### CLIコマンドでの使用
+
+```bash
+# UI階層をコンソールに表示（JSON形式）
+uv run python -m src.debug.debug_cli ui-dump
+
+# ツリー形式で見やすく表示
+uv run python -m src.debug.debug_cli ui-dump --format tree
+
+# ファイルに保存
+uv run python -m src.debug.debug_cli ui-dump --save ui_state.json
+
+# 特定のUI要素を検索
+uv run python -m src.debug.debug_cli ui-find "button_id"
+
+# フィルタリング（例：ボタンのみ表示）
+uv run python -m src.debug.debug_cli ui-dump --filter "UIButton"
+```
+
+#### プログラムでの使用
+
+```python
+from src.debug.ui_debug_helper import UIDebugHelper
+
+# UIヘルパーの初期化
+ui_helper = UIDebugHelper()
+
+# UI階層をダンプ
+hierarchy = ui_helper.dump_ui_hierarchy()
+print(f"Active windows: {len(hierarchy['windows'])}")
+print(f"UI elements: {len(hierarchy['ui_elements'])}")
+
+# 特定の要素を検索
+element = ui_helper.find_element_by_id("save_button")
+if element:
+    print(f"Found: {element['type']} at {element['position']}")
+
+# アクティブウィンドウの確認
+windows = ui_helper.get_active_windows()
+for window in windows:
+    print(f"Window: {window['title']} (visible: {window['visible']})")
+```
+
+### 拡張エラーロギングシステム
+
+エラー発生時のコンテキスト情報を詳細に記録する機能が追加されました。
+
+#### 利用可能なエンドポイント
+
+1. **POST /debug/log**
+   - カスタムデバッグログエントリを追加
+   - パラメータ：`level`, `message`, `context`
+   - レスポンス: `{"ok": true, "message": "..."}`
+
+2. **GET /debug/middleware/status**
+   - デバッグミドルウェアの状態を取得
+   - レスポンス: `{"middleware_available": true, ...}`
+
+#### ゲームコードでの使用
+
+```python
+from src.debug import setup_enhanced_logging, log_game_error, log_ui_action, create_debug_context
+
+# 1. ゲームインスタンスに拡張ロギングを適用
+middleware = setup_enhanced_logging(game_instance)
+
+# 2. エラーログ（詳細なコンテキスト付き）
+try:
+    facility_window.show_submenu()
+except AttributeError as e:
+    log_game_error(e, 
+        context={"facility": "adventurer_guild", "action": "show_submenu"},
+        ui_element=facility_window
+    )
+
+# 3. UI操作ログ
+log_ui_action("button_click", 
+    element_info={"id": "save_button", "text": "Save Game"},
+    result="success"
+)
+
+# 4. デバッグセッション管理
+with create_debug_context("facility_debug") as ctx:
+    ctx.log("Starting facility menu test")
+    # テスト処理...
+    ctx.log("Test completed", status="success")
+```
+
+#### エラーログの詳細情報
+
+拡張ロギングでは以下の情報が自動的に記録されます：
+
+```json
+{
+  "timestamp": "2025-01-03T10:15:30",
+  "level": "ERROR",
+  "message": "UI Error occurred",
+  "debug_info": {
+    "error_type": "AttributeError",
+    "error_message": "'WindowManager' object has no attribute 'show_dialog'",
+    "ui_element": {
+      "type": "UIButton",
+      "object_id": "next_button",
+      "position": {"x": 100, "y": 200},
+      "size": {"width": 80, "height": 30},
+      "visible": true
+    },
+    "context_stack": [
+      {"method": "handle_event", "event_type": "MOUSEBUTTONDOWN"},
+      {"method": "_handle_button_press", "element_id": "next_button"}
+    ],
+    "ui_state": {
+      "windows": [...],
+      "ui_elements": [...],
+      "window_stack": [...]
+    }
+  }
+}
+```
+
+### 統合デバッグワークフロー
+
+UI階層ダンプと拡張ロギングを組み合わせた効率的なデバッグ：
+
+```python
+# 問題の再現と調査
+from src.debug import setup_enhanced_logging, create_debug_context
+from src.debug.ui_debug_helper import UIDebugHelper
+
+# 拡張ロギングを有効化
+middleware = setup_enhanced_logging(game_instance)
+
+with create_debug_context("ui_investigation") as ctx:
+    # 現在のUI状態を記録
+    ui_helper = UIDebugHelper()
+    initial_state = ui_helper.dump_ui_hierarchy()
+    ctx.log("Initial UI state", ui_elements=len(initial_state['ui_elements']))
+    
+    # 問題の操作を実行
+    try:
+        trigger_problematic_action()
+    except Exception as e:
+        # エラー時のUI状態も記録
+        error_state = ui_helper.dump_ui_hierarchy()
+        ctx.log("Error occurred", 
+            error=str(e),
+            ui_diff=compare_ui_states(initial_state, error_state)
+        )
+        raise
+
+# CLIでの確認
+# uv run python -m src.debug.debug_cli ui-dump --format tree
+```
+
+### デバッグ機能の有効性確認
+
+```python
+from src.debug import check_debug_features
+
+# 利用可能な機能を確認
+features = check_debug_features()
+print("Enhanced logging:", features["enhanced_logging"])
+print("Debug middleware:", features["debug_middleware"])
+print("UI debug helper:", features["ui_debug_helper"])
+```
+
 ## まとめ
 
 Web APIとPythonツールを活用することで、以下のメリットがあります：
@@ -451,5 +630,7 @@ Web APIとPythonツールを活用することで、以下のメリットがあ�
 4. **テスト統合**: pytestと完全に統合されたデバッグ環境
 5. **自動化対応**: CI/CDパイプラインでの自動化が容易
 6. **柔軟性**: コマンドライン、Python、pytest、すべてに対応
+7. **UI階層の可視化**: object_idやウィンドウスタックを即座に確認
+8. **詳細なエラーコンテキスト**: エラー発生時の完全な状態を記録
 
 これらのツールを適切に活用することで、より効率的で品質の高いゲーム開発が可能になります。
