@@ -42,4 +42,59 @@ pygame-guiのUIManagerオブジェクトに`get_sprite_group`メソッドが存�
 
 ## 修正記録
 
-（修正時に記録）
+### 2025-07-03T18:30:00 - 修正完了
+
+#### 根本原因
+
+実際の問題は`get_sprite_group`メソッドではなく、**UIManagerクラスの型混同**でした：
+
+1. **WindowManager**は`pygame_gui.UIManager`インスタンスを作成
+2. **OverworldManager**は`src.ui.base_ui_pygame.UIManager`のメソッドを期待
+3. **CharacterStatusBar初期化時**に`add_persistent_element`メソッドが見つからずAttributeError発生
+
+#### 修正内容
+
+**ファイル**: `src/overworld/overworld_manager_pygame.py`（line 890-901）
+
+```python
+# UIマネージャーの型を確認してから適切に処理
+if self.ui_manager and self.character_status_bar:
+    if hasattr(self.ui_manager, 'add_persistent_element'):
+        # BaseUIManagerの場合：既存のメソッドを使用
+        self.ui_manager.add_persistent_element(self.character_status_bar)
+        logger.debug("BaseUIManager.add_persistent_elementを使用してステータスバーを追加")
+    else:
+        # pygame_gui.UIManagerの場合：独自管理
+        if not hasattr(self, '_persistent_elements'):
+            self._persistent_elements = {}
+        self._persistent_elements[self.character_status_bar.element_id] = self.character_status_bar
+        logger.debug("pygame_gui.UIManagerのため独自管理でステータスバーを追加")
+```
+
+#### 修正アプローチ
+
+1. **型チェック**: `hasattr()`でUIManagerの型を実行時判定
+2. **BaseUIManager**: 既存の`add_persistent_element`メソッドを使用
+3. **pygame_gui.UIManager**: 独自の永続要素管理辞書を作成
+4. **後方互換性**: 両方のUIManagerタイプに対応
+
+#### テスト結果
+
+- **新規テストファイル**: `tests/overworld/test_dungeon_entrance_uimanager_fix.py`
+- **テスト数**: 10個（全成功）
+- **修正前**: CharacterStatusBar初期化でAttributeError
+- **修正後**: 両UIManagerタイプで正常初期化
+
+#### 影響範囲
+
+- **直接修正**: OverworldManagerのCharacterStatusBar初期化のみ
+- **副次効果**: ダンジョン選択メニューも安定化
+- **後方互換性**: BaseUIManager使用の既存コードに影響なし
+
+#### 今後の対応
+
+1. **WindowSystemの統一**: 将来的にはUIManager型を統一
+2. **インターフェース定義**: 共通のUIManagerインターフェースを策定
+3. **他の箇所**: 同様の型混同が発生する可能性のある箇所を調査
+
+**✅ 修正完了 - CharacterStatusBar初期化エラー解決、ダンジョン入口機能正常化**

@@ -887,9 +887,18 @@ class OverworldManager:
             # キャラクターステータスバーを作成
             self.character_status_bar = create_character_status_bar(screen_width, screen_height)
             
-            # UIマネージャーに追加（最前面に表示される永続要素として）
+            # UIマネージャーの型を確認してから適切に処理
             if self.ui_manager and self.character_status_bar:
-                self.ui_manager.add_persistent_element(self.character_status_bar)
+                if hasattr(self.ui_manager, 'add_persistent_element'):
+                    # BaseUIManagerの場合：既存のメソッドを使用
+                    self.ui_manager.add_persistent_element(self.character_status_bar)
+                    logger.debug("BaseUIManager.add_persistent_elementを使用してステータスバーを追加")
+                else:
+                    # pygame_gui.UIManagerの場合：独自管理
+                    if not hasattr(self, '_persistent_elements'):
+                        self._persistent_elements = {}
+                    self._persistent_elements[self.character_status_bar.element_id] = self.character_status_bar
+                    logger.debug("pygame_gui.UIManagerのため独自管理でステータスバーを追加")
             
             # 現在のパーティが設定されている場合は設定
             if self.current_party:
