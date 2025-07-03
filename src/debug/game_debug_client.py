@@ -71,7 +71,7 @@ class GameDebugClient:
         
         if save_path:
             image.save(save_path)
-            print(f"Screenshot saved to: {save_path}")
+            logger.info(f"Screenshot saved to: {save_path}")
         
         return image
     
@@ -236,7 +236,7 @@ def main():
     
     # API待機
     if not client.wait_for_api():
-        print("Error: Game API is not available")
+        logger.error("Game API is not available")
         sys.exit(1)
     
     # 待機
@@ -247,40 +247,40 @@ def main():
     if args.command == "screenshot":
         image = client.screenshot(args.save)
         if not args.save:
-            print(f"Screenshot captured: {image.size}")
+            logger.info(f"Screenshot captured: {image.size}")
     
     elif args.command == "key":
         if args.code is None:
-            print("Error: --code is required for key command")
+            logger.error("--code is required for key command")
             sys.exit(1)
         result = client.send_key(args.code)
-        print(f"Key sent: {result}")
+        logger.info(f"Key sent: {result}")
     
     elif args.command == "mouse":
         if args.x is None or args.y is None:
-            print("Error: --x and --y are required for mouse command")
+            logger.error("--x and --y are required for mouse command")
             sys.exit(1)
         result = client.send_mouse(args.x, args.y, args.action)
-        print(f"Mouse action sent: {result}")
+        logger.info(f"Mouse action sent: {result}")
     
     elif args.command == "escape":
         client.press_escape()
-        print("ESC key pressed")
+        logger.info("ESC key pressed")
     
     elif args.command == "enter":
         client.press_enter()
-        print("Enter key pressed")
+        logger.info("Enter key pressed")
     
     elif args.command == "space":
         client.press_space()
-        print("Space key pressed")
+        logger.info("Space key pressed")
     
     elif args.command == "analyze":
         client.screenshot()
         color = client.analyze_background_color()
-        print(f"Average color: RGB{color}")
-        print(f"Is overworld: {client.is_overworld_background(color)}")
-        print(f"Is settings: {client.is_settings_background(color)}")
+        logger.info(f"Average color: RGB{color}")
+        logger.info(f"Is overworld: {client.is_overworld_background(color)}")
+        logger.info(f"Is settings: {client.is_settings_background(color)}")
 
 
 if __name__ == "__main__":

@@ -289,14 +289,14 @@ def quick_debug_esc_issue():
         helper = DebugHelper(client)
         results = helper.verify_esc_transition(save_screenshots=True)
         
-        print("\n=== ESC Transition Debug Results ===")
-        print(f"Initial state: {results['initial_state']}")
-        print(f"After 1st ESC: {results['after_first_esc']}")
-        print(f"After 2nd ESC: {results['after_second_esc']}")
-        print(f"Transitions correct: {results['transitions_correct']}")
+        logger.info("\n=== ESC Transition Debug Results ===")
+        logger.info(f"Initial state: {results['initial_state']}")
+        logger.info(f"After 1st ESC: {results['after_first_esc']}")
+        logger.info(f"After 2nd ESC: {results['after_second_esc']}")
+        logger.info(f"Transitions correct: {results['transitions_correct']}")
         
         if results['error']:
-            print(f"Error: {results['error']}")
+            logger.error(f"Error: {results['error']}")
         
         return results
 
