@@ -103,20 +103,24 @@ class TestInnFacilityMigration:
         # UI作成メソッドをモック化してUI関連エラーを完全回避
         from unittest.mock import Mock, patch
         
-        with patch.object(inn_facility, '_show_adventure_service', return_value=True) as mock_adventure, \
-             patch.object(inn_facility, '_show_item_service', return_value=True) as mock_storage, \
-             patch.object(inn_facility, '_talk_to_innkeeper', return_value=True) as mock_innkeeper, \
+        # InnFacilityHandler統合版のテスト
+        from src.overworld.facilities.base_facility_handler import FacilityOperationResult
+        
+        with patch.object(inn_facility.handler, 'execute_facility_operation') as mock_handler, \
              patch.object(inn_facility, '_handle_exit', return_value=True) as mock_exit:
+            
+            # ハンドラーが成功を返すように設定
+            mock_handler.return_value = FacilityOperationResult(success=True)
             
             # 各種メッセージタイプのハンドリング確認
             test_cases = [
-                ('menu_item_selected', {'item_id': 'adventure_preparation'}, mock_adventure),
-                ('menu_item_selected', {'item_id': 'item_storage'}, mock_storage), 
-                ('menu_item_selected', {'item_id': 'talk_innkeeper'}, mock_innkeeper),
-                ('facility_exit_requested', {'facility_type': FacilityType.INN.value}, mock_exit)
+                ('menu_item_selected', {'item_id': 'adventure_preparation'}, 'show_adventure_preparation'),
+                ('menu_item_selected', {'item_id': 'item_storage'}, 'show_item_management'), 
+                ('menu_item_selected', {'item_id': 'talk_innkeeper'}, 'talk_to_innkeeper'),
+                ('facility_exit_requested', {'facility_type': FacilityType.INN.value}, None)  # exitは別処理
             ]
             
-            for message_type, data, expected_mock in test_cases:
+            for message_type, data, expected_operation in test_cases:
                 # メッセージハンドリング実行
                 result = inn_facility.handle_facility_message(message_type, data)
                 
@@ -124,9 +128,14 @@ class TestInnFacilityMigration:
                 assert isinstance(result, bool), f"メッセージハンドラーはboolを返す必要があります: {message_type}"
                 assert result is True, f"メッセージハンドリングが成功する必要があります: {message_type}"
                 
-                # 対応するメソッドが呼び出されたことを確認
-                expected_mock.assert_called_once()
-                expected_mock.reset_mock()
+                # 対応する操作が呼び出されたことを確認
+                if expected_operation:
+                    mock_handler.assert_called_with(expected_operation)
+                else:
+                    mock_exit.assert_called_once()
+                
+                mock_handler.reset_mock()
+                mock_exit.reset_mock()
     
     def test_inn_must_have_facility_menu_config_method(self):
         """InnがFacilityMenuWindow用設定メソッドを持つことを確認"""

@@ -138,20 +138,27 @@ class TestInnFacilityHandler:
         handler = InnFacilityHandler()
         handler.set_party(self.mock_party)
         
-        # モック: ダイアログ表示
-        with patch.object(handler, 'show_dialog') as mock_dialog:
-            mock_dialog.return_value = FacilityOperationResult(success=True)
+        # モック: InnFacilityHandlerのconfig_manager
+        with patch('src.overworld.facilities.inn_facility_handler.config_manager') as mock_config:
+            mock_config.get_text.side_effect = lambda key: {
+                'inn.innkeeper_dialog': 'Test Innkeeper Message',
+                'inn.innkeeper_title': 'Test Innkeeper Title'
+            }.get(key, 'Test Text')
             
-            # When: 宿屋主人との会話を実行
-            result = handler._handle_talk_to_innkeeper()
-            
-            # Then: 情報ダイアログが表示される
-            assert result.success is True
-            mock_dialog.assert_called_once_with(
-                'information',
-                'Test Text',  # innkeeper_title
-                'Test Text'   # greeting
-            )
+            # モック: ダイアログ表示
+            with patch.object(handler, 'show_dialog') as mock_dialog:
+                mock_dialog.return_value = FacilityOperationResult(success=True)
+                
+                # When: 宿屋主人との会話を実行
+                result = handler._handle_talk_to_innkeeper()
+                
+                # Then: 情報ダイアログが表示される
+                assert result.success is True
+                mock_dialog.assert_called_once_with(
+                    'information',
+                    'Test Innkeeper Title',
+                    'Test Innkeeper Message'
+                )
     
     def test_party_name_change_validation(self):
         """パーティ名変更の検証を確認"""

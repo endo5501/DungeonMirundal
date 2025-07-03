@@ -134,8 +134,9 @@ class TestBaseFacilityHandler:
             handler=handler
         )
         
-        # モック: 操作実行
-        with patch.object(handler, '_execute_operation', return_value=True):
+        # モック: 操作実行がFacilityOperationResultを返すように
+        mock_result = FacilityOperationResult(success=True, message="コマンド実行完了")
+        with patch.object(handler, '_execute_operation', return_value=mock_result):
             # When: コマンドを実行
             result = command.execute()
             
