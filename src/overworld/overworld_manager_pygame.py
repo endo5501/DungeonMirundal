@@ -518,12 +518,16 @@ class OverworldManager:
         if self.main_menu:
             self.ui_manager.hide_menu(self.main_menu.menu_id)
         
+        # WindowManagerのUIManagerを使用（pygame_gui.UIManager互換）
+        window_manager_ui = self.window_manager.ui_manager if hasattr(self, 'window_manager') and self.window_manager else self.ui_manager
+        logger.info(f"ダンジョン選択リスト用UIManager: {type(window_manager_ui)}")
+        
         # UISelectionListを使用したダンジョン選択
         list_rect = pygame.Rect(DUNGEON_SELECTION_RECT_X, DUNGEON_SELECTION_RECT_Y, DUNGEON_SELECTION_RECT_WIDTH, DUNGEON_SELECTION_RECT_HEIGHT)
         
         self.dungeon_selection_list = CustomSelectionList(
             relative_rect=list_rect,
-            manager=self.ui_manager,
+            manager=window_manager_ui,
             title="ダンジョン選択"
         )
         
