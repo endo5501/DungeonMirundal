@@ -225,6 +225,10 @@ class DebugHelper:
                 self.client.press_enter()
             elif action == "space":
                 self.client.press_space()
+            elif action == "number":
+                self.client.click_button_by_number(params)
+            elif action == "button_text":
+                self.client.click_button_by_text(params)
             elif action == "wait":
                 time.sleep(params)
             
@@ -297,8 +301,136 @@ def quick_debug_esc_issue():
         
         if results['error']:
             logger.error(f"Error: {results['error']}")
+
+
+def quick_test_button_navigation():
+    """ボタンナビゲーション機能を素早くテスト"""
+    with debug_game_session() as client:
+        logger.info("\n=== Button Navigation Test ===")
+        
+        # ボタン一覧を表示
+        buttons_info = client.get_visible_buttons()
+        client.show_button_shortcuts(buttons_info)
+        
+        # 最初のボタンをテスト（存在する場合）
+        buttons = buttons_info.get("buttons", [])
+        if buttons:
+            first_button = buttons[0]
+            shortcut_key = first_button.get("shortcut_key")
+            button_text = first_button.get("text", "Unknown")
+            
+            if shortcut_key:
+                logger.info(f"Testing button {shortcut_key}: {button_text}")
+                
+                # スクリーンショット（前）
+                before_path = "debug_button_before.jpg"
+                client.screenshot(before_path)
+                
+                # ボタンクリック
+                success = client.click_button_by_number(int(shortcut_key))
+                
+                # 遷移待機
+                client.wait_for_transition()
+                
+                # スクリーンショット（後）
+                after_path = "debug_button_after.jpg"
+                client.screenshot(after_path)
+                
+                logger.info(f"Button click {'successful' if success else 'failed'}")
+                logger.info(f"Screenshots saved: {before_path}, {after_path}")
+                
+                return success
+            else:
+                logger.info("No buttons with shortcuts found")
+                return False
+        else:
+            logger.info("No buttons found")
+            return False
+
+
+def test_all_visible_buttons():
+    """すべての表示ボタンをテスト"""
+    with debug_game_session() as client:
+        logger.info("\n=== Testing All Visible Buttons ===")
+        
+        buttons_info = client.get_visible_buttons()
+        buttons = buttons_info.get("buttons", [])
+        
+        results = []
+        
+        for button in buttons:
+            shortcut_key = button.get("shortcut_key")
+            button_text = button.get("text", "Unknown")
+            
+            if shortcut_key:
+                logger.info(f"Testing button {shortcut_key}: {button_text}")
+                
+                # 初期スクリーンショット
+                before_path = f"debug_button_{shortcut_key}_before.jpg"
+                client.screenshot(before_path)
+                
+                # ボタンクリック
+                success = client.click_button_by_number(int(shortcut_key))
+                
+                # 遷移待機
+                client.wait_for_transition(1.0)
+                
+                # 結果スクリーンショット
+                after_path = f"debug_button_{shortcut_key}_after.jpg"
+                client.screenshot(after_path)
+                
+                results.append({
+                    "button_number": shortcut_key,
+                    "button_text": button_text,
+                    "success": success,
+                    "before_image": before_path,
+                    "after_image": after_path
+                })
+                
+                # ESCで戻る（次のテストのため）
+                client.press_escape()
+                client.wait_for_transition(0.5)
+        
+        # 結果サマリー
+        logger.info("\n=== Button Test Results ===")
+        for result in results:
+            status = "✓" if result["success"] else "✗"
+            logger.info(f"{status} Button {result['button_number']}: {result['button_text']}")
+        
+        successful_count = sum(1 for r in results if r["success"])
+        total_count = len(results)
+        logger.info(f"Success rate: {successful_count}/{total_count}")
         
         return results
+
+
+def demonstrate_number_key_navigation():
+    """数字キーナビゲーションのデモンストレーション"""
+    with debug_game_session() as client:
+        logger.info("\n=== Number Key Navigation Demo ===")
+        
+        # シーケンス: 1 -> ESC -> 2 -> ESC -> 1
+        demo_sequence = [
+            ("number", 1),
+            ("wait", 1),
+            ("escape", None),
+            ("wait", 1),
+            ("number", 2),
+            ("wait", 1),
+            ("escape", None),
+            ("wait", 1),
+            ("number", 1),
+            ("wait", 1)
+        ]
+        
+        helper = DebugHelper(client)
+        captured_files = helper.capture_transition_sequence(demo_sequence, "demo_navigation")
+        
+        logger.info(f"Demo completed. Captured {len(captured_files)} screenshots:")
+        for file_path in captured_files:
+            logger.info(f"  - {file_path}")
+        
+        return captured_files
 
 
 if __name__ == "__main__":

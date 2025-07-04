@@ -391,6 +391,13 @@ class WindowManager:
                 if self.handle_escape_key():
                     continue
             
+            # 数字キー（1-9）の処理：ボタンショートカット
+            if (event.type == pygame.KEYDOWN and 
+                pygame.K_1 <= event.key <= pygame.K_9):
+                button_number = event.key - pygame.K_1 + 1  # 1-9
+                if self.handle_button_shortcut(button_number):
+                    continue
+            
             # アクティブウィンドウにイベントをルーティング
             active_window = self.get_active_window()
             if active_window:
@@ -421,6 +428,114 @@ class WindowManager:
         if active_window:
             if active_window.handle_escape():
                 return True
+    
+    def handle_button_shortcut(self, button_number: int) -> bool:
+        """
+        数字キーによるボタンショートカットを処理
+        
+        Args:
+            button_number: ボタン番号（1-9）
+            
+        Returns:
+            bool: 処理された場合True
+        """
+        try:
+            # 現在表示されているボタンを取得
+            visible_buttons = self.get_visible_buttons()
+            
+            # 指定された番号のボタンを検索
+            target_button = None
+            for button in visible_buttons:
+                if hasattr(button, '_shortcut_number') and button._shortcut_number == button_number:
+                    target_button = button
+                    break
+            
+            if target_button:
+                # ボタンクリックイベントを生成して送信
+                button_rect = target_button.rect
+                click_pos = button_rect.center
+                
+                # マウスクリックイベントを生成
+                click_event = pygame.event.Event(
+                    pygame.MOUSEBUTTONDOWN,
+                    pos=click_pos,
+                    button=1
+                )
+                
+                # UIManagerに送信
+                if self.ui_manager:
+                    self.ui_manager.process_events(click_event)
+                
+                # クリック解除イベントも送信
+                release_event = pygame.event.Event(
+                    pygame.MOUSEBUTTONUP,
+                    pos=click_pos,
+                    button=1
+                )
+                
+                if self.ui_manager:
+                    self.ui_manager.process_events(release_event)
+                
+                logger.debug(f"ボタンショートカット {button_number} が実行されました")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"ボタンショートカット処理エラー: {e}")
+            return False
+    
+    def get_visible_buttons(self) -> List[Any]:
+        """
+        現在表示されているボタンを取得
+        
+        Returns:
+            List[Any]: 表示中のボタンリスト
+        """
+        buttons = []
+        
+        if not self.ui_manager:
+            return buttons
+        
+        try:
+            # UIManagerの全要素を探索してボタンを検索
+            root_container = self.ui_manager.get_root_container()
+            if root_container:
+                self._collect_buttons_recursive(root_container, buttons)
+            
+            # ボタンに番号を割り当て
+            for i, button in enumerate(buttons):
+                if i < 9:  # 1-9の数字キーのみ対応
+                    button._shortcut_number = i + 1
+                else:
+                    button._shortcut_number = None
+            
+        except Exception as e:
+            logger.error(f"ボタン収集エラー: {e}")
+        
+        return buttons
+    
+    def _collect_buttons_recursive(self, element: Any, buttons: List[Any]) -> None:
+        """
+        UI要素を再帰的に探索してボタンを収集
+        
+        Args:
+            element: UI要素
+            buttons: ボタンリスト（参照渡し）
+        """
+        try:
+            # ボタンかどうかチェック
+            if (hasattr(element, 'rect') and hasattr(element, 'visible') and 
+                element.visible and 'Button' in type(element).__name__):
+                buttons.append(element)
+            
+            # 子要素を探索
+            if hasattr(element, 'elements'):
+                for child in element.elements:
+                    self._collect_buttons_recursive(child, buttons)
+                    
+        except Exception as e:
+            logger.debug(f"ボタン収集中のエラー（要素: {type(element).__name__}）: {e}")
         
         # デフォルトのESC処理（戻る）
         return self.go_back()

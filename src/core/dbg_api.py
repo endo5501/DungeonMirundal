@@ -396,6 +396,13 @@ def get_visible_buttons():
                     
                     find_buttons(root)
         
+        # ボタンにショートカットキー番号を割り当て
+        for i, button in enumerate(buttons):
+            if i < 9:  # 1-9の数字キーのみ対応
+                button["shortcut_key"] = str(i + 1)
+            else:
+                button["shortcut_key"] = None
+        
         return {
             "buttons": buttons,
             "count": len(buttons),
@@ -407,6 +414,89 @@ def get_visible_buttons():
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get visible buttons: {str(e)}"
+        )
+
+@app.post("/input/shortcut_key",
+          operation_id="shortcut_key_input_post",
+          response_model=InputResponse,
+          summary="Click button by shortcut key",
+          description="Clicks a button using its assigned shortcut key number (1-9)")
+def click_button_by_shortcut_key(key: str):
+    """ショートカットキーでボタンをクリック"""
+    try:
+        # 入力値の検証
+        if not key.isdigit() or not (1 <= int(key) <= 9):
+            raise HTTPException(
+                status_code=400,
+                detail="Shortcut key must be a number between 1 and 9"
+            )
+        
+        # 現在表示されているボタンを取得
+        buttons_info = get_visible_buttons()
+        buttons = buttons_info.get("buttons", [])
+        
+        # 指定されたキー番号のボタンを検索
+        target_button = None
+        for button in buttons:
+            if button.get("shortcut_key") == key:
+                target_button = button
+                break
+        
+        if not target_button:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No button found for shortcut key '{key}'"
+            )
+        
+        # ボタンの中心座標を取得
+        center = target_button.get("center", {})
+        x, y = center.get("x"), center.get("y")
+        
+        if x is None or y is None:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Invalid button coordinates for shortcut key '{key}'"
+            )
+        
+        # マウスクリックをシミュレート
+        click_event_down = pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN,
+            pos=(x, y),
+            button=1
+        )
+        click_event_up = pygame.event.Event(
+            pygame.MOUSEBUTTONUP,
+            pos=(x, y),
+            button=1
+        )
+        
+        pygame.event.post(click_event_down)
+        pygame.event.post(click_event_up)
+        
+        # 履歴に記録
+        add_to_history("shortcut_key", {
+            "key": key,
+            "button_text": target_button.get("text", ""),
+            "x": x,
+            "y": y
+        })
+        
+        button_text = target_button.get("text", "")
+        logger.info(f"Shortcut key {key} clicked button '{button_text}' at ({x}, {y})")
+        
+        return InputResponse(
+            ok=True,
+            message=f"Button '{button_text}' clicked via shortcut key {key}",
+            timestamp=get_timestamp()
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to click button by shortcut key: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to click button by shortcut key: {str(e)}"
         )
 
 @app.delete("/history",

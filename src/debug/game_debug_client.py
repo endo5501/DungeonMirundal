@@ -244,6 +244,85 @@ class GameDebugClient:
         logger.warning(f"Button with text '{text}' not found")
         return False
     
+    def click_button_by_number(self, number: int) -> bool:
+        """
+        数字キーでボタンをクリック
+        
+        Args:
+            number: ボタン番号（1-9）
+            
+        Returns:
+            クリックできたかどうか
+        """
+        if not (1 <= number <= 9):
+            logger.error(f"Invalid button number: {number}. Must be between 1 and 9")
+            return False
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}/input/shortcut_key",
+                params={"key": str(number)},
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            if result.get("ok"):
+                logger.info(f"Successfully clicked button {number}: {result.get('message')}")
+                return True
+            else:
+                logger.error(f"Failed to click button {number}: {result}")
+                return False
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error clicking button {number}: {str(e)}")
+            return False
+        except Exception as e:
+            logger.error(f"Error clicking button {number}: {str(e)}")
+            return False
+    
+    def show_button_shortcuts(self, buttons_info: Optional[Dict[str, Any]] = None) -> None:
+        """
+        現在のボタンとショートカットキーを表示
+        
+        Args:
+            buttons_info: ボタン情報（Noneの場合は自動取得）
+        """
+        if buttons_info is None:
+            buttons_info = self.get_visible_buttons()
+        
+        buttons = buttons_info.get("buttons", [])
+        
+        print("=== Available Buttons ===")
+        for button in buttons:
+            shortcut_key = button.get("shortcut_key")
+            text = button.get("text", "")
+            if shortcut_key:
+                print(f"  {shortcut_key}: {text}")
+            else:
+                print(f"  -: {text}")
+        
+        total_count = len(buttons)
+        shortcut_count = sum(1 for b in buttons if b.get("shortcut_key"))
+        print(f"\nTotal buttons: {total_count}, With shortcuts: {shortcut_count}")
+    
+    def press_number_key(self, number: int) -> Dict[str, Any]:
+        """
+        数字キーを直接押す（ショートカットキー機能を使わない場合）
+        
+        Args:
+            number: 数字（1-9）
+            
+        Returns:
+            APIレスポンス
+        """
+        if not (1 <= number <= 9):
+            raise ValueError(f"Invalid number: {number}. Must be between 1 and 9")
+        
+        # 数字キーのキーコードは 49-57 (1-9)
+        key_code = 48 + number  # 0は48、1は49...
+        return self.send_key(key_code)
+    
     def get_ui_hierarchy(self) -> Optional[Dict[str, Any]]:
         """
         UI階層情報を取得
@@ -270,7 +349,7 @@ class GameDebugClient:
 def main():
     """コマンドライン実行"""
     parser = argparse.ArgumentParser(description="Game Debug API Client")
-    parser.add_argument("command", choices=["screenshot", "key", "mouse", "escape", "enter", "space", "analyze"],
+    parser.add_argument("command", choices=["screenshot", "key", "mouse", "escape", "enter", "space", "analyze", "buttons", "click"],
                       help="実行するコマンド")
     parser.add_argument("--save", "-s", help="スクリーンショット保存先")
     parser.add_argument("--code", "-c", type=int, help="キーコード")
@@ -278,6 +357,8 @@ def main():
     parser.add_argument("--y", type=int, help="マウスY座標")
     parser.add_argument("--action", default="click", help="マウスアクション")
     parser.add_argument("--wait", "-w", type=float, default=0, help="実行前の待機時間")
+    parser.add_argument("--number", "-n", type=int, help="ボタン番号（1-9）")
+    parser.add_argument("--text", "-t", help="ボタンテキスト")
     
     args = parser.parse_args()
     
@@ -330,6 +411,29 @@ def main():
         logger.info(f"Average color: RGB{color}")
         logger.info(f"Is overworld: {client.is_overworld_background(color)}")
         logger.info(f"Is settings: {client.is_settings_background(color)}")
+    
+    elif args.command == "buttons":
+        buttons_info = client.get_visible_buttons()
+        client.show_button_shortcuts(buttons_info)
+    
+    elif args.command == "click":
+        if args.number is not None:
+            success = client.click_button_by_number(args.number)
+            if success:
+                logger.info(f"Successfully clicked button {args.number}")
+            else:
+                logger.error(f"Failed to click button {args.number}")
+                sys.exit(1)
+        elif args.text is not None:
+            success = client.click_button_by_text(args.text)
+            if success:
+                logger.info(f"Successfully clicked button '{args.text}'")
+            else:
+                logger.error(f"Failed to click button '{args.text}'")
+                sys.exit(1)
+        else:
+            logger.error("--number or --text is required for click command")
+            sys.exit(1)
 
 
 if __name__ == "__main__":
