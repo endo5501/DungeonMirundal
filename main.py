@@ -11,15 +11,18 @@ from src.core.game_manager import create_game
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
+# グローバル変数（デバッグAPI用）
+game_manager = None
 
 def main():
     """メイン関数"""
+    global game_manager
     try:
         logger.info(config_manager.get_text("app_log.startup"))
         
         # ゲームインスタンスの作成と実行
-        game = create_game()
-        game.run_game()
+        game_manager = create_game()
+        game_manager.run_game()
         
     except KeyboardInterrupt:
         logger.info(config_manager.get_text("app_log.user_interrupt"))

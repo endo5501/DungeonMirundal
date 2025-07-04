@@ -124,7 +124,10 @@ class BaseFacility(ABC):
         try:
             from src.ui.window_system.facility_menu_window import FacilityMenuWindow
             
+            logger.info(f"[DEBUG] 施設メニュー表示開始: {self.facility_id}")
+            
             menu_config = self._create_facility_menu_config()
+            logger.info(f"[DEBUG] 施設 {self.facility_id} のメニュー設定: {menu_config}")
             
             # WindowManagerの正しい使用パターン: create_window -> show_window
             facility_window = self.window_manager.create_window(
@@ -135,6 +138,8 @@ class BaseFacility(ABC):
             )
             facility_window.message_handler = self.handle_facility_message
             self.window_manager.show_window(facility_window, push_to_stack=True)
+            
+            logger.info(f"[DEBUG] 施設メニュー表示完了: {self.facility_id}")
             
         except ImportError:
             logger.warning("FacilityMenuWindow未実装、フォールバックが必要")

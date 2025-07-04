@@ -278,6 +278,137 @@ def get_server_status():
         "timestamp": get_timestamp()
     }
 
+@app.get("/game/state",
+         summary="Get game state",
+         description="Returns the current game state including active windows and facilities")
+def get_game_state():
+    """ゲームの現在の状態を取得"""
+    try:
+        # GameManagerのインスタンスを取得
+        from main import game_manager
+        
+        game_state = {
+            "current_state": None,
+            "current_facility": None,
+            "active_window": None,
+            "window_stack": [],
+            "timestamp": get_timestamp()
+        }
+        
+        # ゲーム状態を取得
+        if hasattr(game_manager, 'current_state'):
+            game_state["current_state"] = str(game_manager.current_state)
+        
+        # 現在の施設を取得
+        if hasattr(game_manager, 'overworld_manager') and game_manager.overworld_manager:
+            if hasattr(game_manager.overworld_manager, 'facility_manager'):
+                fm = game_manager.overworld_manager.facility_manager
+                if hasattr(fm, 'current_facility') and fm.current_facility:
+                    game_state["current_facility"] = fm.current_facility
+        
+        # WindowManagerから情報を取得
+        if hasattr(game_manager, 'window_manager') and game_manager.window_manager:
+            wm = game_manager.window_manager
+            if hasattr(wm, 'get_active_window'):
+                active = wm.get_active_window()
+                if active:
+                    game_state["active_window"] = {
+                        "id": active.window_id if hasattr(active, 'window_id') else str(active),
+                        "type": type(active).__name__
+                    }
+            
+            if hasattr(wm, 'window_stack'):
+                game_state["window_stack"] = [
+                    {
+                        "id": w.window_id if hasattr(w, 'window_id') else str(w),
+                        "type": type(w).__name__
+                    } for w in wm.window_stack
+                ]
+        
+        logger.info(f"Game state fetched: {game_state}")
+        return game_state
+        
+    except Exception as e:
+        logger.error(f"Failed to get game state: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get game state: {str(e)}"
+        )
+
+@app.get("/game/visible_buttons",
+         summary="Get visible buttons",
+         description="Returns information about currently visible buttons on screen")
+def get_visible_buttons():
+    """現在表示されているボタンの情報を取得"""
+    try:
+        buttons = []
+        
+        # pygame_guiのUIManagerから情報を取得
+        from src.ui.window_system import WindowManager
+        
+        # GameManagerのインスタンスを取得
+        from main import game_manager
+        
+        if hasattr(game_manager, 'window_manager') and game_manager.window_manager:
+            wm = game_manager.window_manager
+            if hasattr(wm, 'ui_manager') and wm.ui_manager:
+                ui_manager = wm.ui_manager
+                
+                # すべてのUI要素を取得
+                if hasattr(ui_manager, 'get_root_container'):
+                    root = ui_manager.get_root_container()
+                    
+                    # UI要素を再帰的に探索
+                    def find_buttons(element, parent_path=""):
+                        nonlocal buttons
+                        
+                        # ボタンかどうかチェック
+                        if hasattr(element, 'text') and hasattr(element, 'rect'):
+                            if element.visible:
+                                button_info = {
+                                    "text": str(element.text) if hasattr(element, 'text') else "",
+                                    "rect": {
+                                        "x": element.rect.x,
+                                        "y": element.rect.y,
+                                        "width": element.rect.width,
+                                        "height": element.rect.height
+                                    },
+                                    "center": {
+                                        "x": element.rect.centerx,
+                                        "y": element.rect.centery
+                                    },
+                                    "type": type(element).__name__,
+                                    "visible": element.visible
+                                }
+                                
+                                # object_idがある場合は追加
+                                if hasattr(element, 'object_ids'):
+                                    button_info["object_ids"] = element.object_ids
+                                elif hasattr(element, 'object_id'):
+                                    button_info["object_id"] = element.object_id
+                                    
+                                buttons.append(button_info)
+                        
+                        # 子要素を探索
+                        if hasattr(element, 'elements'):
+                            for child in element.elements:
+                                find_buttons(child, f"{parent_path}/{type(element).__name__}")
+                    
+                    find_buttons(root)
+        
+        return {
+            "buttons": buttons,
+            "count": len(buttons),
+            "timestamp": get_timestamp()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get visible buttons: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get visible buttons: {str(e)}"
+        )
+
 @app.delete("/history",
             response_model=InputResponse,
             summary="Clear input history",

@@ -349,14 +349,20 @@ class OverworldMainWindow(Window):
         if self.state != WindowState.SHOWN:
             return False
         
+        # マウスクリックのデバッグログ
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            logger.info(f"[DEBUG] マウスクリック検出: pos={event.pos}, button={event.button}")
+        
         # pygame-guiイベント処理
         if self.ui_manager:
             handled = self.ui_manager.process_events(event)
             if handled:
+                logger.info(f"[DEBUG] pygame-guiがイベントを処理しました: {event.type}")
                 return True
         
         # ボタンクリック処理
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            logger.info(f"[DEBUG] UI_BUTTON_PRESSED検出: {event.ui_element}")
             for button in self.menu_items:
                 if event.ui_element == button:
                     return self._handle_button_click(button)
@@ -376,10 +382,14 @@ class OverworldMainWindow(Window):
     
     def _handle_button_click(self, button: pygame_gui.elements.UIButton) -> bool:
         """ボタンクリック処理"""
+        logger.info(f"[DEBUG] ボタンクリック: {button.text}")
+        
         if not hasattr(button, 'menu_item_data'):
+            logger.warning(f"[DEBUG] ボタンにmenu_item_dataがありません: {button.text}")
             return False
         
         item_data = button.menu_item_data
+        logger.info(f"[DEBUG] ボタンのmenu_item_data: {item_data}")
         return self._process_menu_action(item_data)
     
     def _process_menu_action(self, item_data: Dict[str, Any]) -> bool:
@@ -390,6 +400,7 @@ class OverworldMainWindow(Window):
         # 施設アクセス
         if item_type == 'facility':
             facility_id = item_data.get('facility_id')
+            logger.info(f"[DEBUG] 施設クリック検出: facility_id={facility_id}")
             return self._send_message('menu_item_selected', {
                 'item_id': facility_id,
                 'facility_id': facility_id

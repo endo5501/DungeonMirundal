@@ -258,7 +258,6 @@ class WindowManager:
         
         # ウィンドウを表示
         window.show()
-        logger.info(f"ウィンドウ.show()完了: {window.window_id}, state={window.state}")
         
         # スタックに追加
         if push_to_stack:
@@ -267,22 +266,9 @@ class WindowManager:
         
         # フォーカスを設定
         self.focus_manager.set_focus(window)
-        logger.info(f"フォーカス設定完了: {window.window_id}")
-        
         # モーダルウィンドウの場合はフォーカスをロック
         if window.modal:
             self.focus_manager.lock_focus(window)
-            logger.info(f"モーダルウィンドウのフォーカスロック: {window.window_id}")
-        
-        # デバッグ: UIManagerの状態を確認
-        if self.ui_manager and hasattr(self.ui_manager, 'get_root_container'):
-            element_count = len(self.ui_manager.get_root_container().elements)
-            logger.info(f"ウィンドウ表示後のUIManager要素数: {element_count}")
-        
-        logger.info(f"ウィンドウ表示完了: {window.window_id}, スタックサイズ: {self.window_stack.size()}")
-        active = self.get_active_window()
-        if active:
-            logger.info(f"現在のアクティブウィンドウ: {active.window_id}")
     
     def hide_window(self, window: Window, remove_from_stack: bool = True) -> None:
         """
@@ -337,7 +323,6 @@ class WindowManager:
         # レジストリから削除
         if window.window_id in self.window_registry:
             del self.window_registry[window.window_id]
-            logger.info(f"ウィンドウをレジストリから削除: {window.window_id}")
         else:
             logger.warning(f"破棄対象ウィンドウがレジストリに存在しません: {window.window_id}")
         
@@ -518,12 +503,6 @@ class WindowManager:
         
         # UIManagerの描画
         if self.ui_manager:
-            # デバッグ: UI要素数を確認
-            if hasattr(self.ui_manager, 'get_root_container'):
-                element_count = len(self.ui_manager.get_root_container().elements)
-                if element_count > 0:
-                    logger.debug(f"WindowManager.draw(): UI要素数={element_count}")
-            
             self.ui_manager.draw_ui(surface)
         else:
             logger.warning("WindowManager.draw(): UIManagerがありません")

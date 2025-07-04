@@ -28,6 +28,16 @@
      - `button`: ボタン番号（デフォルト: 1）
    - レスポンス: `{"ok": true}`
 
+4. **GET /game/state** （新機能）
+   - ゲームの現在の状態を取得
+   - 現在のゲーム状態、施設、アクティブウィンドウなどの情報
+   - レスポンス: `{"current_state": "...", "current_facility": "...", "active_window": {...}}`
+
+5. **GET /game/visible_buttons** （新機能）
+   - 現在表示されているボタンの情報を取得
+   - ボタンのテキスト、位置、サイズなどの詳細情報
+   - レスポンス: `{"buttons": [...], "count": 5}`
+
 ### APIサーバー情報
 
 - **ベースURL**: `http://localhost:8765`
@@ -67,6 +77,19 @@ if client.wait_for_api():
     # 背景色分析
     color = client.analyze_background_color()
     print(f"Background color: {color}")
+    
+    # ゲーム状態の確認（新機能）
+    state = client.get_game_state()
+    print(f"Current facility: {state.get('current_facility')}")
+    print(f"Active window: {state.get('active_window')}")
+    
+    # 表示されているボタンを確認（新機能）
+    buttons = client.get_visible_buttons()
+    for button in buttons.get('buttons', []):
+        print(f"Button: '{button['text']}' at {button['center']}")
+    
+    # テキストでボタンをクリック（新機能）
+    client.click_button_by_text("冒険者ギルド")
 ```
 
 #### C. コマンドライン経由

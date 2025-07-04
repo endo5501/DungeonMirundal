@@ -16,7 +16,9 @@ from typing import Optional, Dict, Any, Tuple
 from PIL import Image
 from io import BytesIO
 from pathlib import Path
+import logging
 
+logger = logging.getLogger(__name__)
 
 class GameDebugClient:
     """ゲームデバッグAPIクライアント"""
@@ -194,6 +196,53 @@ class GameDebugClient:
             color = self.analyze_background_color()
         r, g, b = color
         return b > r and b > g and r < 70 and g < 70 and b > 60
+    
+    def get_game_state(self) -> Dict[str, Any]:
+        """
+        ゲームの現在の状態を取得
+        
+        Returns:
+            ゲーム状態情報
+        """
+        response = requests.get(f"{self.base_url}/game/state", timeout=self.timeout)
+        response.raise_for_status()
+        return response.json()
+    
+    def get_visible_buttons(self) -> Dict[str, Any]:
+        """
+        現在表示されているボタンの情報を取得
+        
+        Returns:
+            ボタン情報のリスト
+        """
+        response = requests.get(f"{self.base_url}/game/visible_buttons", timeout=self.timeout)
+        response.raise_for_status()
+        return response.json()
+    
+    def click_button_by_text(self, text: str) -> bool:
+        """
+        テキストでボタンを検索してクリック
+        
+        Args:
+            text: ボタンのテキスト
+            
+        Returns:
+            クリックできたかどうか
+        """
+        buttons_info = self.get_visible_buttons()
+        buttons = buttons_info.get("buttons", [])
+        
+        for button in buttons:
+            if text in button.get("text", ""):
+                center = button.get("center", {})
+                x, y = center.get("x"), center.get("y")
+                if x and y:
+                    self.send_mouse(x, y, "click")
+                    logger.info(f"Clicked button '{text}' at ({x}, {y})")
+                    return True
+        
+        logger.warning(f"Button with text '{text}' not found")
+        return False
     
     def get_ui_hierarchy(self) -> Optional[Dict[str, Any]]:
         """
