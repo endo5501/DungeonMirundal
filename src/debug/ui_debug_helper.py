@@ -89,11 +89,20 @@ class UIDebugHelper:
         
         if self.ui_manager:
             try:
-                all_elements = self.ui_manager.get_all_ui_elements()
-                for element in all_elements:
-                    elements.append(self._extract_element_info(element))
-            except AttributeError:
-                logger.warning("UIManager does not have get_all_ui_elements method")
+                # pygame-guiのスプライトグループから要素を取得
+                sprite_group = self.ui_manager.get_sprite_group()
+                # LayeredGUIGroupのspritesメソッドまたはプロパティを使用
+                if hasattr(sprite_group, 'sprites'):
+                    sprites = sprite_group.sprites()
+                else:
+                    sprites = list(sprite_group)
+                    
+                for sprite in sprites:
+                    # UIElementのインスタンスのみを対象にする
+                    if hasattr(sprite, 'object_ids'):
+                        elements.append(self._extract_element_info(sprite))
+            except Exception as e:
+                logger.warning(f"Error getting UI elements: {e}")
         
         return elements
     
@@ -103,13 +112,19 @@ class UIDebugHelper:
             return None
         
         try:
-            all_elements = self.ui_manager.get_all_ui_elements()
-            for element in all_elements:
-                element_ids = getattr(element, 'object_ids', [])
-                if object_id in element_ids:
-                    return self._extract_element_info(element)
-        except AttributeError:
-            logger.warning("UIManager does not have get_all_ui_elements method")
+            sprite_group = self.ui_manager.get_sprite_group()
+            if hasattr(sprite_group, 'sprites'):
+                sprites = sprite_group.sprites()
+            else:
+                sprites = list(sprite_group)
+                
+            for sprite in sprites:
+                if hasattr(sprite, 'object_ids'):
+                    element_ids = getattr(sprite, 'object_ids', [])
+                    if object_id in element_ids:
+                        return self._extract_element_info(sprite)
+        except Exception as e:
+            logger.warning(f"Error finding element by ID: {e}")
         
         return None
     
@@ -123,7 +138,12 @@ class UIDebugHelper:
         all_elements = []
         
         try:
-            raw_elements = self.ui_manager.get_all_ui_elements()
+            sprite_group = self.ui_manager.get_sprite_group()
+            if hasattr(sprite_group, 'sprites'):
+                sprites = sprite_group.sprites()
+            else:
+                sprites = list(sprite_group)
+            raw_elements = [sprite for sprite in sprites if hasattr(sprite, 'object_ids')]
             
             # 要素情報を抽出
             for element in raw_elements:
@@ -173,9 +193,15 @@ class UIDebugHelper:
         elements = []
         
         try:
-            all_elements = self.ui_manager.get_all_ui_elements()
-            for element in all_elements:
-                elements.append(self._extract_element_info(element))
+            sprite_group = self.ui_manager.get_sprite_group()
+            if hasattr(sprite_group, 'sprites'):
+                sprites = sprite_group.sprites()
+            else:
+                sprites = list(sprite_group)
+                
+            for sprite in sprites:
+                if hasattr(sprite, 'object_ids'):
+                    elements.append(self._extract_element_info(sprite))
         except Exception as e:
             # エラーを再発生させて上位でキャッチ
             raise e
@@ -236,18 +262,31 @@ class UIDebugHelper:
         
         windows = hierarchy.get('windows', [])
         ui_elements = hierarchy.get('ui_elements', [])
+        window_stack = hierarchy.get('window_stack', [])
+        
+        # window_stackが存在する場合は、それを表示
+        if window_stack:
+            lines.append("├── Window Stack:")
+            for i, window_str in enumerate(window_stack):
+                is_last = i == len(window_stack) - 1
+                prefix = "│   └── " if is_last else "│   ├── "
+                lines.append(f"{prefix}{window_str}")
         
         # ウィンドウをツリー表示
+        has_content_above = bool(window_stack)
         for i, window in enumerate(windows):
-            is_last_window = i == len(windows) - 1
-            window_prefix = "└── " if is_last_window else "├── "
+            is_last_window = i == len(windows) - 1 and not ui_elements
+            if has_content_above:
+                window_prefix = "├── " if not is_last_window or ui_elements else "└── "
+            else:
+                window_prefix = "└── " if is_last_window and not ui_elements else "├── "
             window_status = "[visible]" if window.get('visible') else "[hidden]"
             lines.append(f"{window_prefix}{window['type']} ({window['id']}) {window_status}")
             
             # そのウィンドウに属するUI要素を表示
             for j, element in enumerate(ui_elements):
                 is_last_element = j == len(ui_elements) - 1
-                if is_last_window:
+                if is_last_window and not has_content_above:
                     elem_prefix = "    └── " if is_last_element else "    ├── "
                 else:
                     elem_prefix = "│   └── " if is_last_element else "│   ├── "
@@ -256,11 +295,20 @@ class UIDebugHelper:
         
         # ウィンドウがない場合は、UI要素のみを表示
         if not windows and ui_elements:
+            ui_prefix = "├── " if window_stack else "└── "
+            lines.append(f"{ui_prefix}UI Elements:")
             for i, element in enumerate(ui_elements):
                 is_last = i == len(ui_elements) - 1
-                prefix = "└── " if is_last else "├── "
+                if window_stack:
+                    prefix = "│   └── " if is_last else "│   ├── "
+                else:
+                    prefix = "    └── " if is_last else "    ├── "
                 status = "[visible]" if element.get('visible') else "[hidden]"
                 lines.append(f"{prefix}{element['type']} ({element['object_id']}) {status}")
+        
+        # 何も表示する内容がない場合
+        if not window_stack and not windows and not ui_elements:
+            lines.append("└── (No UI information available)")
         
         return "\n".join(lines)
     
