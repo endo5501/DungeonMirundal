@@ -8,6 +8,8 @@ from src.core.input_manager import InputManager
 from src.core.save_manager import SaveManager
 from src.overworld.overworld_manager import OverworldManager
 from src.dungeon.dungeon_manager import DungeonManager
+from src.combat.combat_manager import CombatManager
+from src.encounter.encounter_manager import EncounterManager
 from src.character.party import Party
 from src.rendering.dungeon_renderer_pygame import DungeonRendererPygame
 from src.ui.dungeon_ui_pygame import create_pygame_dungeon_ui
@@ -38,6 +40,8 @@ class GameManager:
         self.input_manager = InputManager()
         self.overworld_manager = None
         self.dungeon_manager = None
+        self.combat_manager = None
+        self.encounter_manager = None
         self.dungeon_renderer = None
         
         # 現在のパーティ
@@ -411,6 +415,12 @@ class GameManager:
         self.dungeon_manager = DungeonManager()
         self.dungeon_manager.set_return_to_overworld_callback(self.transition_to_overworld)
         
+        # 戦闘・エンカウンターマネージャーの初期化
+        self.combat_manager = CombatManager()
+        self.encounter_manager = EncounterManager()
+        
+        logger.info("戦闘・エンカウンターシステム初期化完了")
+        
         # ダンジョンレンダラーの初期化
         try:
             self.dungeon_renderer = DungeonRendererPygame(screen=self.screen)
@@ -444,6 +454,10 @@ class GameManager:
     def set_current_party(self, party: Party):
         """現在のパーティを設定"""
         self.current_party = party
+        
+        # 戦闘・エンカウンターマネージャーにもパーティを設定
+        if self.encounter_manager:
+            self.encounter_manager.set_party(party)
         
         # ダンジョンレンダラーにもパーティを設定（無効化されていても設定）
         if self.dungeon_renderer:
@@ -487,6 +501,12 @@ class GameManager:
                 
                 self.current_location = GameLocation.DUNGEON
                 self.set_game_state("dungeon_exploration")
+                
+                # エンカウンターマネージャーにダンジョン状態を設定
+                current_dungeon = self.dungeon_manager.current_dungeon
+                if current_dungeon and self.encounter_manager:
+                    self.encounter_manager.set_dungeon(current_dungeon)
+                    logger.info("エンカウンターマネージャーにダンジョン状態を設定しました")
                 
                 # ダンジョンUIマネージャーにダンジョン状態を設定（小地図の初期化）
                 if self.dungeon_renderer and hasattr(self.dungeon_renderer, 'dungeon_ui_manager'):
@@ -771,6 +791,9 @@ class GameManager:
                 if hasattr(self, 'ui_manager') and self.ui_manager:
                     self.ui_manager.update(time_delta)
             
+            # Phase 5: 戦闘状態の監視
+            self.check_combat_state()
+            
             # 画面をクリア
             self.screen.fill((0, 0, 0))
             
@@ -982,6 +1005,132 @@ class GameManager:
         
         self.set_current_party(fallback_party)
         logger.info(self.game_config.get_text("game_manager.fallback_party_created"))
+    
+    # === Phase 5: 戦闘・エンカウンター統合メソッド ===
+    
+    def trigger_encounter(self, encounter_type: str = "normal", level: int = 1):
+        """エンカウンターを発生させる"""
+        if not self.encounter_manager or not self.current_party:
+            logger.error("エンカウンター発生に必要な条件が満たされていません")
+            return False
+        
+        if not self.dungeon_manager.current_dungeon:
+            logger.error("ダンジョンが設定されていません")
+            return False
+        
+        try:
+            # ダンジョン情報取得
+            current_dungeon = self.dungeon_manager.current_dungeon
+            player_pos = current_dungeon.player_position
+            dungeon_level = current_dungeon.levels.get(player_pos.level)
+            
+            if not dungeon_level:
+                logger.error(f"レベル {player_pos.level} が見つかりません")
+                return False
+            
+            # エンカウンター生成
+            location = (player_pos.x, player_pos.y, player_pos.level)
+            encounter_event = self.encounter_manager.generate_encounter(
+                encounter_type, 
+                level, 
+                dungeon_level.attribute,
+                location
+            )
+            
+            # 戦闘開始
+            if encounter_event and encounter_event.monster_group:
+                return self.start_combat(encounter_event.monster_group.monsters)
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"エンカウンター発生エラー: {e}")
+            return False
+    
+    def start_combat(self, monsters):
+        """戦闘開始"""
+        if not self.combat_manager or not self.current_party:
+            logger.error("戦闘開始に必要な条件が満たされていません")
+            return False
+        
+        try:
+            # 戦闘開始
+            success = self.combat_manager.start_combat(self.current_party, monsters)
+            
+            if success:
+                # ゲーム状態を戦闘に変更
+                self.set_game_state("combat")
+                logger.info(f"戦闘開始: {len(monsters)}体のモンスターと戦闘")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"戦闘開始エラー: {e}")
+            return False
+    
+    def check_combat_state(self):
+        """戦闘状態の確認・戦闘終了処理"""
+        if not self.combat_manager or self.game_state != "combat":
+            return
+        
+        try:
+            from src.combat.combat_manager import CombatState
+            
+            # 戦闘が終了しているかチェック
+            if self.combat_manager.combat_state in [CombatState.VICTORY, CombatState.DEFEAT, 
+                                                   CombatState.FLED, CombatState.NEGOTIATED]:
+                self.end_combat()
+                
+        except Exception as e:
+            logger.error(f"戦闘状態確認エラー: {e}")
+    
+    def end_combat(self):
+        """戦闘終了処理"""
+        if not self.combat_manager:
+            return
+        
+        try:
+            from src.combat.combat_manager import CombatState
+            
+            combat_result = self.combat_manager.combat_state
+            logger.info(f"戦闘終了: {combat_result.value}")
+            
+            # 戦闘結果に応じた処理
+            if combat_result == CombatState.VICTORY:
+                self._handle_combat_victory()
+            elif combat_result == CombatState.DEFEAT:
+                self._handle_combat_defeat()
+            elif combat_result == CombatState.FLED:
+                self._handle_combat_fled()
+            elif combat_result == CombatState.NEGOTIATED:
+                self._handle_combat_negotiated()
+            
+            # ダンジョン探索に戻る
+            self.set_game_state("dungeon_exploration")
+            
+        except Exception as e:
+            logger.error(f"戦闘終了処理エラー: {e}")
+    
+    def _handle_combat_victory(self):
+        """戦闘勝利時の処理"""
+        logger.info("戦闘勝利!")
+        # TODO: 経験値・金・アイテム獲得処理
+    
+    def _handle_combat_defeat(self):
+        """戦闘敗北時の処理"""
+        logger.info("戦闘敗北...")
+        # TODO: パーティ全滅処理・地上部帰還
+    
+    def _handle_combat_fled(self):
+        """戦闘逃走時の処理"""
+        logger.info("戦闘から逃走しました")
+        # TODO: 位置移動処理
+    
+    def _handle_combat_negotiated(self):
+        """戦闘交渉成功時の処理"""
+        logger.info("交渉成功!")
+        # TODO: 交渉報酬処理
 
 
 def create_game() -> GameManager:
