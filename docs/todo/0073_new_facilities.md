@@ -594,16 +594,16 @@ facility_registry = FacilityRegistry.get_instance()
 ### Phase 3: 他施設実装（8日間）
 
 **Day 10-11: 宿屋**
-- [ ] `InnService` 実装
-- [ ] 休息・回復ロジック
-- [ ] 冒険準備統合パネル
-- [ ] アイテム/装備/魔法管理
+- [x] `InnService` 実装
+- [x] 休息・回復ロジック
+- [x] 冒険準備統合パネル
+- [x] アイテム/装備/魔法管理
 
 **Day 12-13: 商店**
-- [ ] `ShopService` 実装
-- [ ] 売買ロジック分離
-- [ ] 商品リスト表示
-- [ ] 取引確認UI
+- [x] `ShopService` 実装
+- [x] 売買ロジック分離
+- [x] 商品リスト表示
+- [x] 取引確認UI
 
 **Day 14-15: 教会**
 - [ ] `TempleService` 実装
