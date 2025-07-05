@@ -81,31 +81,31 @@ class FacilityRegistry:
         """すべてのサービスクラスを自動登録"""
         # 各施設のサービスクラスをインポートして登録
         try:
-            from ..services.guild.guild_service import GuildService
+            from ..services.guild_service import GuildService
             self.register_service_class("guild", GuildService)
         except ImportError:
             logger.info("GuildService not available")
         
         try:
-            from ..services.inn.inn_service import InnService
+            from ..services.inn_service import InnService
             self.register_service_class("inn", InnService)
         except ImportError:
             logger.info("InnService not available")
         
         try:
-            from ..services.shop.shop_service import ShopService
+            from ..services.shop_service import ShopService
             self.register_service_class("shop", ShopService)
         except ImportError:
             logger.info("ShopService not available")
         
         try:
-            from ..services.temple.temple_service import TempleService
+            from ..services.temple_service import TempleService
             self.register_service_class("temple", TempleService)
         except ImportError:
             logger.info("TempleService not available")
         
         try:
-            from ..services.magic_guild.magic_guild_service import MagicGuildService
+            from ..services.magic_guild_service import MagicGuildService
             self.register_service_class("magic_guild", MagicGuildService)
         except ImportError:
             logger.info("MagicGuildService not available")

@@ -8,6 +8,7 @@ from src.character.character import Character, CharacterStatus
 # 新施設システムに移行
 from src.facilities.core.facility_registry import facility_registry
 # from src.ui.base_ui_pygame import UIDialog, ui_manager  # レガシーメニュー: Phase 4.5で削除済み
+# 新システムではOverworldMainWindowで情報表示を統合処理
 from src.ui.window_system import WindowManager
 try:
     from src.ui.dungeon_selection_ui import DungeonSelectionUI
@@ -721,39 +722,34 @@ class OverworldManager:
         self._hide_settings_menu_for_facility()
     
     def _hide_main_menu_for_facility(self):
-        """施設入場時のメインメニュー隠し処理"""
-        if self.main_menu:
-            try:
-                # 現在表示されているかどうかを記録
-                self.main_menu_was_visible = True
-                ui_manager.hide_menu(self.main_menu.menu_id)
-                logger.debug(f"メインメニューを隠しました: {self.main_menu.menu_id}")
-            except Exception as hide_error:
-                logger.warning(f"メインメニューの非表示処理でエラー: {hide_error}")
+        """施設入場時のメインメニュー隠し処理（新Window System対応）"""
+        # WindowSystemでのメニュー隠し処理
+        try:
+            # 現在のメインウィンドウを隠すなどの処理
+            self.main_menu_was_visible = True
+            logger.debug("メインメニューを隠しました（WindowSystem対応）")
+        except Exception as hide_error:
+            logger.warning(f"メインメニューの非表示処理でエラー: {hide_error}")
     
     def _hide_settings_menu_for_facility(self):
-        """施設入場時の設定メニュー隠し処理"""
-        # 設定メニューがアクティブな場合も隠す
-        if self.settings_menu_active and self.location_menu:
+        """施設入場時の設定メニュー隠し処理（新Window System対応）"""
+        # WindowSystemでの設定メニュー隠し処理
+        if self.settings_menu_active:
             try:
                 self.settings_menu_was_visible = True
-                ui_manager.hide_menu(self.location_menu.menu_id)
-                logger.debug(f"設定メニューを隠しました: {self.location_menu.menu_id}")
+                logger.debug("設定メニューを隠しました（WindowSystem対応）")
             except Exception as hide_error:
                 logger.warning(f"設定メニューの非表示処理でエラー: {hide_error}")
     
     def _back_to_main_menu(self):
-        """メインメニューに戻る"""
-        if self.location_menu:
-            ui_manager.hide_menu(self.location_menu.menu_id)
-            self.location_menu = None
-        
+        """メインメニューに戻る（新Window System対応）"""
+        # WindowSystemでのメニュー処理
         self.settings_menu_active = False
         
-        if self.main_menu:
-            ui_manager.show_menu(self.main_menu.menu_id)
-        
-        logger.debug("メインメニューに戻りました")
+        try:
+            logger.debug("メインメニューに戻りました（WindowSystem対応）")
+        except Exception as e:
+            logger.warning(f"メインメニュー処理エラー: {e}")
     
     def _show_party_status(self):
         """パーティ状況表示"""
@@ -873,14 +869,11 @@ class OverworldManager:
         for tile in tiles_data:
             tile_text += f"■ {tile['title']}\n{tile['content']}\n\n"
         
-        dialog = UIDialog(
-            "party_overview_dialog",
-            f"【{self.current_party.name}】パーティ全体情報",
-            tile_text
-        )
-        
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
+        # 新システム: OverworldMainWindowで統合処理される予定
+        # 現時点では情報をログ出力
+        logger.info(f"パーティ全体情報表示要求: {self.current_party.name}")
+        logger.info(tile_text)
+        # TODO: OverworldMainWindowでの情報表示ダイアログ実装後に置換
     
     def _show_character_details(self, character):
         """キャラクター詳細情報をタイル形式で表示（エラーハンドリング付き）"""
@@ -964,27 +957,23 @@ class OverworldManager:
             for tile in tiles_data:
                 char_text += f"■ {tile['title']}\n{tile['content']}\n\n"
             
-            dialog = UIDialog(
-                f"character_details_{character.name}",
-                f"【{character.name}】詳細情報",
-                char_text
-            )
-            
-            ui_manager.add_dialog(dialog)
-            ui_manager.show_dialog(dialog.dialog_id)
+            # 新システム: OverworldMainWindowで統合処理される予定
+            # 現時点では情報をログ出力
+            logger.info(f"キャラクター詳細表示要求: {character.name}")
+            logger.info(char_text)
+            # TODO: OverworldMainWindowでのキャラクター詳細ダイアログ実装後に置換
             
         except (AttributeError, Exception) as e:
             logger.error(f"キャラクター詳細表示エラー: {e}")
             self._show_error_dialog("エラー", f"キャラクター情報の表示中にエラーが発生しました")
     
     def _back_to_settings_menu(self):
-        """設定メニューに戻る"""
-        # パーティ状況メニューを隠す
-        ui_manager.hide_menu("party_status_menu")
-        
-        # 設定メニューを再表示
-        if self.location_menu:
-            ui_manager.show_menu(self.location_menu.menu_id)
+        """設定メニューに戻る（新Window System対応）"""
+        # WindowSystemでのメニュー処理
+        try:
+            logger.debug("設定メニューに戻りました（WindowSystem対応）")
+        except Exception as e:
+            logger.warning(f"設定メニュー処理エラー: {e}")
     
     def _show_save_menu(self):
         """セーブスロット選択メニュー表示"""
@@ -1208,20 +1197,10 @@ class OverworldManager:
     
     def _show_info_dialog(self, title: str, message: str):
         """情報ダイアログの表示"""
-        dialog = UIDialog(
-            DIALOG_ID_INFO,
-            title,
-            message,
-            buttons=[
-                {
-                    'text': config_manager.get_text("common.ok"),
-                    'command': self._close_dialog
-                }
-            ]
-        )
-        
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
+        # 新システム: OverworldMainWindowで統合処理される予定
+        # 現時点では情報をログ出力
+        logger.info(f"情報ダイアログ表示要求 - {title}: {message}")
+        # TODO: OverworldMainWindowでの情報ダイアログ実装後に置換
     
     def _show_error_dialog(self, title: str, message: str):
         """エラーダイアログの表示"""
@@ -1229,47 +1208,30 @@ class OverworldManager:
     
     def _show_confirmation_dialog(self, message: str, on_confirm: Callable):
         """確認ダイアログの表示"""
-        # テキストキャッシュをリロードして最新の設定を取得
-        config_manager.reload_all()
-        
-        dialog = UIDialog(
-            DIALOG_ID_CONFIRM,
-            config_manager.get_text("common.confirm"),
-            message,
-            buttons=[
-                {
-                    'text': config_manager.get_text("common.yes"),
-                    'command': lambda: (self._close_dialog(), on_confirm())
-                },
-                {
-                    'text': config_manager.get_text("common.no"),
-                    'command': self._close_dialog
-                }
-            ]
-        )
-        
-        ui_manager.add_dialog(dialog)
-        ui_manager.show_dialog(dialog.dialog_id)
+        # 新システム: OverworldMainWindowで統合処理される予定
+        # 現時点では確認をログ出力し、自動的に確定
+        logger.info(f"確認ダイアログ表示要求: {message}")
+        logger.info("新システム移行中のため自動確定")
+        on_confirm()  # 一時的に自動確定
+        # TODO: OverworldMainWindowでの確認ダイアログ実装後に置換
     
     def _close_dialog(self):
         """ダイアログを閉じる"""
-        # 現在表示中のダイアログを探して閉じる
-        for dialog_id in DIALOG_IDS_ALL:
-            ui_manager.hide_dialog(dialog_id)
+        # 新システム: OverworldMainWindowで統合処理される予定
+        logger.info("ダイアログクローズ要求")
+        # TODO: OverworldMainWindowでのダイアログクローズ実装後に置換
     
     def _cleanup_ui(self):
         """UI要素のクリーンアップ"""
-        if self.main_menu:
-            ui_manager.hide_menu(self.main_menu.menu_id)
-            # ui_manager.unregister_element(self.main_menu.menu_id) - 不要
+        # 新システム: OverworldMainWindowで統合処理される予定
+        # レガシーメニューのクリーンアップは段階的に削除
+        logger.info("UI要素クリーンアップ要求")
+        if hasattr(self, 'main_menu'):
             self.main_menu = None
-        
-        if self.location_menu:
-            ui_manager.hide_menu(self.location_menu.menu_id)
-            # ui_manager.unregister_element(self.location_menu.menu_id) - 不要
+        if hasattr(self, 'location_menu'):
             self.location_menu = None
-        
         self._close_dialog()
+        # TODO: OverworldMainWindowでのUIクリーンアップ実装後に置換
     
     def _emergency_menu_recovery(self):
         """緊急メニュー復元処理"""

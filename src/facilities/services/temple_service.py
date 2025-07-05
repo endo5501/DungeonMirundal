@@ -4,9 +4,14 @@ import logging
 from typing import List, Dict, Any, Optional
 from ..core.facility_service import FacilityService, MenuItem
 from ..core.service_result import ServiceResult, ResultType
-from game.game import Game
-from game.party import Party
-from game.character import Character
+# 正しいインポートパスに修正
+try:
+    from src.core.game_manager import GameManager as Game
+except ImportError:
+    Game = None
+
+from src.character.party import Party
+from src.character.character import Character
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +25,8 @@ class TempleService(FacilityService):
     def __init__(self):
         """初期化"""
         super().__init__("temple")
-        self.game = Game.get_instance()
+        # GameManagerはシングルトンではないため、必要時に別途設定
+        self.game = None
         
         # 料金設定
         self.heal_cost_per_level = 10  # レベルあたりの治療費

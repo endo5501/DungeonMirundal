@@ -24,7 +24,7 @@ class FacilityController:
             service_class: サービスクラス
         """
         self.facility_id = facility_id
-        self.service = service_class(facility_id)
+        self.service = service_class()  # サービスクラスは引数なしで初期化
         self.window = None  # FacilityWindowは後で設定
         self.is_active = False
         self._party: Optional[Party] = None

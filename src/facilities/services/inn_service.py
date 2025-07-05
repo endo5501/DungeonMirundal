@@ -4,11 +4,18 @@ import logging
 from typing import List, Dict, Any, Optional
 from ..core.facility_service import FacilityService, MenuItem
 from ..core.service_result import ServiceResult, ResultType
-from game.game import Game
-from game.party import Party
-from game.character import Character
-from models.item_model import ItemModel
-from models.spell_model import SpellModel
+# 正しいインポートパスに修正
+try:
+    from src.core.game_manager import GameManager as Game
+except ImportError:
+    Game = None
+
+from src.character.party import Party
+from src.character.character import Character
+
+# モデルクラスは必要に応じて後で実装
+ItemModel = None
+SpellModel = None
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +29,10 @@ class InnService(FacilityService):
     def __init__(self):
         """初期化"""
         super().__init__("inn")
-        self.game = Game.get_instance()
-        self.item_model = ItemModel()
-        self.spell_model = SpellModel()
+        # GameManagerはシングルトンではないため、必要時に別途設定
+        self.game = None
+        self.item_model = ItemModel() if ItemModel else None
+        self.spell_model = SpellModel() if SpellModel else None
         
         # 休憩料金の基本価格
         self.base_rest_cost = 10
@@ -81,6 +89,11 @@ class InnService(FacilityService):
         ))
         
         return items
+    
+    def can_execute(self, action_id: str) -> bool:
+        """アクション実行可能かチェック"""
+        valid_actions = ["rest", "adventure_prep", "storage", "party_name", "exit"]
+        return action_id in valid_actions
     
     def execute_action(self, action_id: str, params: Dict[str, Any]) -> ServiceResult:
         """アクションを実行"""

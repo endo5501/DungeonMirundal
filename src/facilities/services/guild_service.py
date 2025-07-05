@@ -4,11 +4,19 @@ import logging
 from typing import List, Dict, Any, Optional
 from ..core.facility_service import FacilityService, MenuItem
 from ..core.service_result import ServiceResult, ResultType
-from game.game import Game
-from game.character import Character
-from game.party import Party
-from models.character_model import CharacterModel
-from models.party_model import PartyModel
+# 正しいインポートパスに修正
+try:
+    from src.core.game_manager import GameManager as Game
+except ImportError:
+    # テスト時のフォールバック
+    Game = None
+
+from src.character.character import Character
+from src.character.party import Party
+
+# モデルクラスは必要に応じて後で実装
+CharacterModel = None
+PartyModel = None
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +31,10 @@ class GuildService(FacilityService):
     def __init__(self):
         """初期化"""
         super().__init__("guild")
-        self.game = Game.get_instance()
-        self.character_model = CharacterModel()
-        self.party_model = PartyModel()
+        # GameManagerはシングルトンではないため、必要時に別途設定
+        self.game = None
+        self.character_model = CharacterModel() if CharacterModel else None
+        self.party_model = PartyModel() if PartyModel else None
         
         # キャラクター作成の一時データ
         self._creation_data: Dict[str, Any] = {}
@@ -82,6 +91,13 @@ class GuildService(FacilityService):
         ))
         
         return items
+    
+    def can_execute(self, action_id: str) -> bool:
+        """アクション実行可能かチェック"""
+        # 基本的にすべてのアクションが実行可能
+        valid_actions = ["character_creation", "character_creation_complete", 
+                        "party_formation", "class_change", "character_list", "exit"]
+        return action_id in valid_actions
     
     def execute_action(self, action_id: str, params: Dict[str, Any]) -> ServiceResult:
         """アクションを実行"""

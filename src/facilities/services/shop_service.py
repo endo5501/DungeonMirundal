@@ -5,11 +5,18 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from ..core.facility_service import FacilityService, MenuItem
 from ..core.service_result import ServiceResult, ResultType
-from game.game import Game
-from game.party import Party
-from game.character import Character
-from models.item_model import ItemModel
-from game.items.item import Item
+# 正しいインポートパスに修正
+try:
+    from src.core.game_manager import GameManager as Game
+except ImportError:
+    Game = None
+
+from src.character.party import Party
+from src.character.character import Character
+
+# モデルクラスは必要に応じて後で実装
+ItemModel = None
+Item = None
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +30,9 @@ class ShopService(FacilityService):
     def __init__(self):
         """初期化"""
         super().__init__("shop")
-        self.game = Game.get_instance()
-        self.item_model = ItemModel()
+        # GameManagerはシングルトンではないため、必要時に別途設定
+        self.game = None
+        self.item_model = ItemModel() if ItemModel else None
         
         # 商店の在庫
         self._shop_inventory: Dict[str, Dict[str, Any]] = {}
@@ -80,6 +88,11 @@ class ShopService(FacilityService):
         ))
         
         return items
+    
+    def can_execute(self, action_id: str) -> bool:
+        """アクション実行可能かチェック"""
+        valid_actions = ["buy", "sell", "identify", "exit"]
+        return action_id in valid_actions
     
     def execute_action(self, action_id: str, params: Dict[str, Any]) -> ServiceResult:
         """アクションを実行"""
