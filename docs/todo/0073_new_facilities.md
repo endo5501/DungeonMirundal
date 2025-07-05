@@ -606,10 +606,10 @@ facility_registry = FacilityRegistry.get_instance()
 - [x] 取引確認UI
 
 **Day 14-15: 教会**
-- [ ] `TempleService` 実装
-- [ ] 治療・蘇生ロジック
-- [ ] サービス選択UI
-- [ ] 料金計算・表示
+- [x] `TempleService` 実装
+- [x] 治療・蘇生ロジック
+- [x] サービス選択UI
+- [x] 料金計算・表示
 
 **Day 16-17: 魔法ギルド**
 - [ ] `MagicGuildService` 実装
@@ -648,6 +648,17 @@ src/ui/window_system/facility_menu_window.py  # 旧メニューウィンドウ
 src/ui/window_system/facility_sub_window.py   # 旧サブウィンドウ基底
 src/ui/window_system/*_service_window.py      # 各種サービスウィンドウ
 ```
+
+## 実装状況
+
+### 完了した施設
+1. **ギルド** (Phase 2): キャラクター作成、パーティ編成、クラス変更、冒険者一覧
+2. **宿屋** (Phase 3 Day 10-11): 休息、冒険準備、保管、パーティ名変更
+3. **商店** (Phase 3 Day 12-13): 購入、売却、鑑定
+4. **教会** (Phase 3 Day 14-15): 治療、蘇生、状態回復、祝福、寄付
+
+### 残りの施設
+1. **魔法ギルド** (Phase 3 Day 16-17): 魔法学習、魔法鑑定、魔法分析
 
 ## 成功指標
 
