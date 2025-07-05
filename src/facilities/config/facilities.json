@@ -1,0 +1,246 @@
+{
+  "$schema": "./facilities_schema.json",
+  "version": "1.0.0",
+  "facilities": {
+    "guild": {
+      "id": "guild",
+      "name": "冒険者ギルド",
+      "service_class": "GuildService",
+      "icon": "assets/icons/guild_icon.png",
+      "welcome_message": "冒険者ギルドへようこそ！新たな冒険者よ、何かお手伝いできることはありますか？",
+      "background_music": "guild_theme.mp3",
+      "services": {
+        "character_creation": {
+          "type": "wizard",
+          "name": "キャラクター作成",
+          "description": "新しいキャラクターを作成します",
+          "steps": [
+            {
+              "id": "name",
+              "label": "名前入力",
+              "description": "キャラクターの名前を入力してください",
+              "required_fields": ["name"],
+              "validation": {
+                "min_length": 1,
+                "max_length": 20,
+                "pattern": "^[a-zA-Z0-9ぁ-んァ-ン一-龥]+$"
+              }
+            },
+            {
+              "id": "race",
+              "label": "種族選択",
+              "description": "キャラクターの種族を選択してください",
+              "required_fields": ["race"],
+              "options": ["human", "elf", "dwarf", "gnome", "hobbit"]
+            },
+            {
+              "id": "stats",
+              "label": "能力値決定",
+              "description": "キャラクターの能力値を決定します",
+              "required_fields": ["stats"],
+              "roll_method": "3d6"
+            },
+            {
+              "id": "class",
+              "label": "職業選択",
+              "description": "キャラクターの職業を選択してください",
+              "required_fields": ["class"],
+              "options": ["fighter", "priest", "thief", "mage", "bishop", "samurai", "lord", "ninja"]
+            },
+            {
+              "id": "confirm",
+              "label": "確認",
+              "description": "入力内容を確認してください"
+            }
+          ]
+        },
+        "party_formation": {
+          "type": "panel",
+          "name": "パーティ編成",
+          "description": "パーティメンバーを編成します",
+          "max_party_size": 6
+        },
+        "class_change": {
+          "type": "action",
+          "name": "クラス変更",
+          "description": "キャラクターのクラスを変更します",
+          "requirements": {
+            "min_level": 5
+          }
+        },
+        "character_list": {
+          "type": "list",
+          "name": "冒険者一覧",
+          "description": "登録されている冒険者の一覧を表示します"
+        }
+      }
+    },
+    "inn": {
+      "id": "inn",
+      "name": "宿屋",
+      "service_class": "InnService",
+      "icon": "assets/icons/inn_icon.png",
+      "welcome_message": "お疲れ様です。ゆっくりお休みください。",
+      "background_music": "inn_theme.mp3",
+      "services": {
+        "rest": {
+          "type": "action",
+          "name": "休憩",
+          "description": "パーティを休ませてHPとMPを回復します",
+          "cost": 10,
+          "cost_type": "per_level"
+        },
+        "adventure_prep": {
+          "type": "panel",
+          "name": "冒険準備",
+          "description": "冒険の準備を整えます",
+          "sub_services": ["item_management", "spell_management", "equipment_management"]
+        },
+        "storage": {
+          "type": "panel",
+          "name": "アイテム保管",
+          "description": "アイテムを保管庫に預けます",
+          "storage_limit": 100
+        },
+        "party_name": {
+          "type": "action",
+          "name": "パーティ名変更",
+          "description": "パーティの名前を変更します"
+        }
+      }
+    },
+    "shop": {
+      "id": "shop",
+      "name": "商店",
+      "service_class": "ShopService",
+      "icon": "assets/icons/shop_icon.png",
+      "welcome_message": "いらっしゃいませ！良い品が入ってますよ。",
+      "background_music": "shop_theme.mp3",
+      "services": {
+        "buy": {
+          "type": "panel",
+          "name": "購入",
+          "description": "アイテムを購入します",
+          "categories": ["weapons", "armor", "items", "special"],
+          "stock_refresh_rate": "daily"
+        },
+        "sell": {
+          "type": "panel",
+          "name": "売却",
+          "description": "アイテムを売却します",
+          "sell_rate": 0.5
+        },
+        "identify": {
+          "type": "action",
+          "name": "鑑定",
+          "description": "未鑑定のアイテムを鑑定します",
+          "cost": 100
+        }
+      }
+    },
+    "temple": {
+      "id": "temple",
+      "name": "教会",
+      "service_class": "TempleService",
+      "icon": "assets/icons/temple_icon.png",
+      "welcome_message": "神の祝福がありますように。",
+      "background_music": "temple_theme.mp3",
+      "services": {
+        "heal": {
+          "type": "action",
+          "name": "治療",
+          "description": "キャラクターを治療します",
+          "cost_formula": "level * 10"
+        },
+        "resurrect": {
+          "type": "action",
+          "name": "蘇生",
+          "description": "死亡したキャラクターを蘇生させます",
+          "cost_formula": "level * 100",
+          "vitality_cost": 1
+        },
+        "cure": {
+          "type": "panel",
+          "name": "状態回復",
+          "description": "状態異常を回復します",
+          "status_costs": {
+            "poison": 50,
+            "paralysis": 100,
+            "petrification": 500,
+            "curse": 200
+          }
+        },
+        "blessing": {
+          "type": "action",
+          "name": "祝福",
+          "description": "パーティに祝福を与えます",
+          "cost": 500,
+          "duration": "next_battle"
+        },
+        "donation": {
+          "type": "action",
+          "name": "寄付",
+          "description": "教会に寄付をします",
+          "karma_bonus": true
+        }
+      }
+    },
+    "magic_guild": {
+      "id": "magic_guild",
+      "name": "魔法ギルド",
+      "service_class": "MagicGuildService",
+      "icon": "assets/icons/magic_guild_icon.png",
+      "welcome_message": "魔術の探求者よ、ようこそ。",
+      "background_music": "magic_guild_theme.mp3",
+      "services": {
+        "spellbook_shop": {
+          "type": "panel",
+          "name": "魔術書店",
+          "description": "魔法書を購入します",
+          "categories": ["offensive", "defensive", "healing", "utility", "special"],
+          "level_requirements": true
+        },
+        "spell_learning": {
+          "type": "wizard",
+          "name": "魔法習得",
+          "description": "新しい魔法を習得します",
+          "requirements": {
+            "check_class": true,
+            "check_level": true,
+            "check_intelligence": true
+          }
+        },
+        "identification": {
+          "type": "action",
+          "name": "魔法鑑定",
+          "description": "魔法的なアイテムを鑑定します",
+          "cost": 200,
+          "success_rate": 0.95
+        },
+        "analysis": {
+          "type": "panel",
+          "name": "魔法分析",
+          "description": "魔法の詳細を分析します",
+          "services": ["spell_analysis", "item_analysis", "character_analysis"]
+        },
+        "enchantment": {
+          "type": "wizard",
+          "name": "魔法付与",
+          "description": "アイテムに魔法を付与します",
+          "cost_formula": "item_level * 1000",
+          "success_rate_formula": "0.5 + (caster_level * 0.02)"
+        }
+      }
+    }
+  },
+  "common_settings": {
+    "ui_theme": "default",
+    "transition_effect": "fade",
+    "sound_effects": {
+      "enter": "door_open.wav",
+      "exit": "door_close.wav",
+      "service_select": "menu_select.wav",
+      "transaction_complete": "coin.wav"
+    }
+  }
+}

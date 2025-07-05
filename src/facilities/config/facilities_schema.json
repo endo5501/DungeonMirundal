@@ -1,0 +1,178 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Facilities Configuration Schema",
+  "description": "Schema definition for facility configuration in the Dungeon game",
+  "type": "object",
+  "required": ["version", "facilities"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Configuration version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "facilities": {
+      "type": "object",
+      "description": "Facility definitions",
+      "patternProperties": {
+        "^[a-z_]+$": {
+          "$ref": "#/definitions/facility"
+        }
+      }
+    },
+    "common_settings": {
+      "type": "object",
+      "description": "Common settings for all facilities",
+      "properties": {
+        "ui_theme": {
+          "type": "string",
+          "description": "UI theme name"
+        },
+        "transition_effect": {
+          "type": "string",
+          "enum": ["none", "fade", "slide", "zoom"],
+          "description": "Transition effect between screens"
+        },
+        "sound_effects": {
+          "type": "object",
+          "description": "Common sound effects",
+          "properties": {
+            "enter": {"type": "string"},
+            "exit": {"type": "string"},
+            "service_select": {"type": "string"},
+            "transaction_complete": {"type": "string"}
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "facility": {
+      "type": "object",
+      "required": ["id", "name", "service_class"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique facility identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the facility"
+        },
+        "service_class": {
+          "type": "string",
+          "description": "Python class name for the facility service"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Path to facility icon"
+        },
+        "welcome_message": {
+          "type": "string",
+          "description": "Message displayed when entering the facility"
+        },
+        "background_music": {
+          "type": "string",
+          "description": "Background music file"
+        },
+        "services": {
+          "type": "object",
+          "description": "Available services in this facility",
+          "patternProperties": {
+            "^[a-z_]+$": {
+              "$ref": "#/definitions/service"
+            }
+          }
+        }
+      }
+    },
+    "service": {
+      "type": "object",
+      "required": ["type", "name"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["action", "wizard", "panel", "list"],
+          "description": "Service type"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the service"
+        },
+        "description": {
+          "type": "string",
+          "description": "Service description"
+        },
+        "cost": {
+          "type": ["number", "string"],
+          "description": "Service cost (number or formula)"
+        },
+        "cost_type": {
+          "type": "string",
+          "enum": ["fixed", "per_level", "formula"],
+          "description": "How cost is calculated"
+        },
+        "requirements": {
+          "type": "object",
+          "description": "Requirements to use this service"
+        },
+        "steps": {
+          "type": "array",
+          "description": "Steps for wizard-type services",
+          "items": {
+            "$ref": "#/definitions/wizard_step"
+          }
+        },
+        "categories": {
+          "type": "array",
+          "description": "Categories for panel-type services",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sub_services": {
+          "type": "array",
+          "description": "Sub-services for panel-type services",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "wizard_step": {
+      "type": "object",
+      "required": ["id", "label"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique step identifier"
+        },
+        "label": {
+          "type": "string",
+          "description": "Display label for the step"
+        },
+        "description": {
+          "type": "string",
+          "description": "Step description"
+        },
+        "required_fields": {
+          "type": "array",
+          "description": "Required fields for this step",
+          "items": {
+            "type": "string"
+          }
+        },
+        "validation": {
+          "type": "object",
+          "description": "Validation rules for step inputs"
+        },
+        "options": {
+          "type": "array",
+          "description": "Available options for selection steps",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

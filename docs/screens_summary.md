@@ -325,6 +325,227 @@ dungeon_renderer_pygame.py  # ダンジョン疑似3D描画
 2. **パーティ状態:** `current_party`の確認
 3. **設定ファイル:** 各施設の設定データ確認
 
+## 🏢 施設内メニュー詳細
+
+### 施設メインメニューからサービスへの遷移
+
+#### 基本遷移パターン
+```python
+# 1. 施設入場（共通）
+facility.enter() → _show_main_menu() → FacilityMenuWindow表示
+↓
+# 2. メニュー項目選択
+FacilityMenuWindow._handle_menu_selection()
+↓
+# 3. メッセージ送信
+send_message('menu_item_selected', {'item_id': service_id})
+↓
+# 4. 施設でのメッセージ処理
+BaseFacility.handle_facility_message()
+↓
+# 5. サービス固有処理
+facility._handle_facility_action() → サービスウィンドウ表示
+```
+
+### 施設別サービスウィンドウ
+
+#### ギルド（Guild）
+**メインメニュー項目:**
+- キャラクター作成 (`character_creation`)
+- パーティ編成 (`party_formation`)
+- クラス変更 (`class_change`)
+- 冒険者登録確認 (`registration_check`)
+
+**特殊処理:** `src/overworld/facilities/guild.py`
+- キャラクター作成ウィザード
+- パーティ編成インターフェース
+- クラス変更システム
+
+#### 宿屋（Inn）
+**サービスウィンドウ:** `InnServiceWindow`  
+**ファイル:** `src/ui/window_system/inn_service_window.py`
+
+**サービスタイプ:**
+- `adventure_prep` - 冒険準備
+- `item_management` - アイテム管理
+- `magic_management` - 魔術管理
+- `equipment_management` - 装備管理
+- `spell_slot_management` - 魔法スロット管理
+- `party_status` - パーティ状況
+
+**宿屋ハンドラー:** `InnFacilityHandler`  
+**ファイル:** `src/overworld/facilities/inn_facility_handler.py`
+
+**統合メニュー数:** 12箇所のレガシーメニューを統合
+
+#### 商店（Shop）
+**取引ウィンドウ:** `ShopTransactionWindow`  
+**ファイル:** `src/ui/window_system/shop_transaction_window.py`
+
+**取引タイプ:**
+- アイテム購入 (`purchase`)
+- アイテム売却 (`sell`)
+- カテゴリフィルター (`category_filter`)
+- 数量選択 (`quantity_selection`)
+
+**主要メソッド:**
+- `get_purchasable_items()` - 購入可能アイテム
+- `get_sellable_items()` - 売却可能アイテム
+- `calculate_purchase_cost()` - 購入費用計算
+- `calculate_sell_price()` - 売却価格計算
+
+#### 教会（Temple）
+**サービスウィンドウ:** `TempleServiceWindow`  
+**ファイル:** `src/ui/window_system/temple_service_window.py`
+
+**サービス:**
+- キャラクター治療 (`healing`)
+- キャラクター蘇生 (`resurrection`)
+- 状態異常回復 (`status_cure`)
+- 祝福 (`blessing`)
+- 祈祷書販売 (`prayer_book_shop`)
+
+#### 魔法ギルド（MagicGuild）
+**サービスウィンドウ:** `MagicGuildServiceWindow`  
+**ファイル:** `src/ui/window_system/magic_guild_service_window.py`
+
+**サービスタイプ:**
+- `spellbook_shop` - 魔術書店
+- `spell_learning` - 魔法習得
+- `identification` - アイテム鑑定
+- `analysis` - 魔法分析
+- `character_analysis` - キャラクター分析
+- `spell_usage_check` - 魔法使用回数確認
+
+**主要メソッド:**
+- `get_spellbook_categories()` - 魔術書カテゴリ
+- `get_available_spells_for_character()` - 習得可能魔法
+- `get_identifiable_items()` - 鑑定可能アイテム
+- `get_analyzable_spells()` - 分析可能魔法
+
+### 施設サブウィンドウの基底クラス
+
+**基底クラス:** `FacilitySubWindow`  
+**ファイル:** `src/ui/window_system/facility_sub_window.py`
+
+**共通機能:**
+- `handle_back_navigation()` - 戻り処理
+- `get_available_services()` - 利用可能サービス
+- `update_context()` / `get_context()` - コンテキスト管理
+- `has_party()` / `get_party_members()` - パーティ管理
+- `can_provide_service()` - サービス提供可能性
+- `handle_service_request()` - サービスリクエスト処理（抽象）
+
+## 🚪 施設退出処理の完全フロー
+
+### 退出のトリガー
+1. **「出る」ボタンクリック** - FacilityMenuWindow内のexitボタン
+2. **ESCキー押下** - `handle_escape()` → `_handle_exit_selection()`
+
+### 退出処理の流れ
+
+#### 1. FacilityMenuWindow での処理
+**ファイル:** `src/ui/window_system/facility_menu_window.py`
+```python
+def _handle_exit_selection(self) -> bool:
+    """「出る」選択を処理"""
+    self.send_message('facility_exit_requested', {
+        'facility_type': self.facility_type.value
+    })
+    return True
+
+def handle_escape(self) -> bool:
+    """ESCキー処理"""
+    return self._handle_exit_selection()
+```
+
+#### 2. BaseFacility でのメッセージ処理
+**ファイル:** `src/overworld/base_facility.py`
+```python
+def handle_facility_message(self, message_type: str, data: dict) -> bool:
+    if message_type == 'menu_item_selected':
+        item_id = data.get('item_id')
+        if item_id == 'exit':
+            self._exit_facility()
+            return True
+
+def _exit_facility(self):
+    """施設から出る処理"""
+    facility_manager.exit_current_facility()
+```
+
+#### 3. FacilityManager での退出管理
+**ファイル:** `src/overworld/base_facility.py`
+```python
+def exit_current_facility(self) -> bool:
+    """現在の施設から出る"""
+    if self._validate_exit_conditions():
+        facility = self.facilities[self.current_facility]
+        if facility.exit():
+            return self._handle_successful_exit()
+
+def _handle_successful_exit(self) -> bool:
+    """成功した退出処理"""
+    self.current_facility = None
+    if self.on_facility_exit_callback:
+        self.on_facility_exit_callback()  # OverworldManagerのコールバック
+    return True
+```
+
+#### 4. OverworldManager での退出コールバック
+**ファイル:** `src/overworld/overworld_manager_pygame.py`
+```python
+def on_facility_exit(self):
+    """施設退場時のコールバック"""
+    if self.window_manager:
+        success = self.window_manager.go_back()
+        if not success:
+            self._show_main_menu_unified()  # フォールバック
+```
+
+#### 5. WindowManager での画面遷移
+**ファイル:** `src/ui/window_system/window_manager.py` / `window_stack.py`
+```python
+def go_back(self) -> bool:
+    """前のウィンドウに戻る"""
+    if len(self.stack) <= 1:
+        return False
+    
+    current_window = self.pop()  # 現在のウィンドウをスタックから除去
+    current_window.destroy()     # ウィンドウ破棄
+    return True
+```
+
+### 退出時のクリーンアップ
+
+#### UI要素のクリーンアップ
+**ファイル:** `src/overworld/base_facility.py`
+```python
+def _cleanup_ui_windows(self):
+    """WindowSystem関連のクリーンアップ"""
+    possible_window_ids = [
+        f"{self.facility_id}_main",
+        f"{self.facility_id}_main_menu"
+    ]
+    
+    for window_id in possible_window_ids:
+        window = self.window_manager.get_window(window_id)
+        if window:
+            self.window_manager.close_window(window)
+```
+
+### 重要な実装上の注意
+
+1. **メッセージの二重処理**
+   - `facility_exit_requested`メッセージは送信されるが直接処理されない
+   - 実際の処理は`menu_item_selected`で`item_id='exit'`として処理
+
+2. **コールバックベースの設計**
+   - FacilityManager → OverworldManager → WindowManager の階層的コールバック
+
+3. **フォールバック機能**
+   - `window_manager.go_back()`が失敗した場合の`_show_main_menu_unified()`
+
 ## 💡 今後の開発・修正時の指針
 
 ### 新しい画面追加時
@@ -333,16 +554,29 @@ dungeon_renderer_pygame.py  # ダンジョン疑似3D描画
 3. 遷移元でメッセージ送信の実装
 4. 遷移先でメッセージ受信ハンドラー実装
 
+### 新しい施設サービス追加時
+1. `FacilitySubWindow`を継承したServiceWindow作成
+2. `handle_service_request()`の実装
+3. 施設クラスでサービス固有の`_handle_facility_action()`追加
+4. メニュー設定へのサービス項目追加
+
 ### 画面遷移の修正時
 1. メッセージタイプの確認
 2. 送信元と受信先の確認
 3. WindowStackの状態確認
 4. ESCキー処理の確認
 
+### 施設退出処理の修正時
+1. `_handle_exit_selection()`の動作確認
+2. `facility_manager.exit_current_facility()`の実行確認
+3. `on_facility_exit_callback`の設定確認
+4. `window_manager.go_back()`の結果確認
+
 ### パフォーマンス最適化時
 1. UI要素の適切な破棄（`cleanup_ui()`）
 2. WindowPoolの活用
 3. 不要なUIManagerの重複回避
+4. 施設切り替え時のリソースクリーンアップ
 
 ---
 
