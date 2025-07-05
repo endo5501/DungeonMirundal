@@ -230,10 +230,16 @@ class WindowManager:
         # 既存のウィンドウIDと重複チェック
         if window_id in self.window_registry:
             existing_window = self.window_registry[window_id]
-            logger.error(f"ウィンドウID重複エラー: '{window_id}' は既に使用中")
-            logger.error(f"既存ウィンドウ状態: {existing_window.state}")
-            logger.error(f"スタック内の存在: {window_id in [w.window_id for w in self.window_stack.stack]}")
-            raise ValueError(f"ウィンドウID '{window_id}' は既に使用されています")
+            
+            # 破棄されたウィンドウの場合は、レジストリから削除
+            if existing_window.state == WindowState.DESTROYED:
+                logger.debug(f"破棄されたウィンドウをレジストリから削除: {window_id}")
+                del self.window_registry[window_id]
+            else:
+                logger.error(f"ウィンドウID重複エラー: '{window_id}' は既に使用中")
+                logger.error(f"既存ウィンドウ状態: {existing_window.state}")
+                logger.error(f"スタック内の存在: {window_id in [w.window_id for w in self.window_stack.stack]}")
+                raise ValueError(f"ウィンドウID '{window_id}' は既に使用されています")
         
         # ウィンドウを作成（プールから再利用または新規作成）
         window = self.window_pool.get_window(window_class, window_id, parent=parent, **kwargs)

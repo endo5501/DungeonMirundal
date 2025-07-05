@@ -94,9 +94,16 @@ class SettingsWindow(Window):
     
     def _initialize_ui_manager(self) -> None:
         """UIManagerを初期化"""
-        screen_width = 1024
-        screen_height = 768
-        self.ui_manager = pygame_gui.UIManager((screen_width, screen_height))
+        # WindowManagerのUIManagerを使用
+        from .window_manager import WindowManager
+        window_manager = WindowManager()
+        if window_manager.ui_manager is not None:
+            self.ui_manager = window_manager.ui_manager
+        else:
+            # フォールバック: 独自のUIManagerを作成
+            screen_width = 1024
+            screen_height = 768
+            self.ui_manager = pygame_gui.UIManager((screen_width, screen_height))
     
     def _calculate_layout(self) -> None:
         """設定画面のレイアウトを計算"""
@@ -289,6 +296,13 @@ class SettingsWindow(Window):
                 manager=self.ui_manager,
                 container=self.content_container
             )
+        elif field_type == SettingsFieldType.BUTTON:
+            return pygame_gui.elements.UIButton(
+                relative_rect=rect,
+                text=config.get('name', config.get('label', 'Button')),
+                manager=self.ui_manager,
+                container=self.content_container
+            )
         else:
             raise ValueError(f"Unsupported field type: {field_type}")
     
@@ -307,6 +321,9 @@ class SettingsWindow(Window):
             ui_element.set_text(prefix + label)
         elif field_type == SettingsFieldType.TEXT_INPUT and hasattr(ui_element, 'set_text'):
             ui_element.set_text(str(value) if value is not None else '')
+        elif field_type == SettingsFieldType.BUTTON:
+            # ボタンは値を設定する必要がない（クリック時のアクションのみ）
+            pass
     
     def _create_action_buttons(self) -> None:
         """アクションボタンを作成"""

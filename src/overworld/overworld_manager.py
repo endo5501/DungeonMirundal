@@ -515,28 +515,28 @@ class OverworldManager:
                     {
                         'id': 'party_status',
                         'name': config_manager.get_text("menu.party_status"),
-                        'type': 'action',
+                        'type': 'button',
                         'enabled': self.current_party is not None,
                         'action': 'party_status'
                     },
                     {
                         'id': 'save_game',
                         'name': config_manager.get_text("menu.save_game"),
-                        'type': 'action',
+                        'type': 'button',
                         'enabled': self.current_party is not None,
                         'action': 'save_game'
                     },
                     {
                         'id': 'load_game',
                         'name': config_manager.get_text("menu.load_game"),
-                        'type': 'action',
+                        'type': 'button',
                         'enabled': True,
                         'action': 'load_game'
                     },
                     {
                         'id': 'back',
                         'name': config_manager.get_text("menu.back"),
-                        'type': 'action',
+                        'type': 'button',
                         'enabled': True,
                         'action': 'back'
                     }
@@ -582,7 +582,11 @@ class OverworldManager:
             from src.ui.window_system.settings_window import SettingsWindow
             
             config = self._create_settings_menu_config()
-            settings_window = SettingsWindow('settings_menu', config)
+            settings_window = self.window_manager.create_window(
+                SettingsWindow, 
+                'settings_menu', 
+                settings_config=config
+            )
             settings_window.message_handler = self.handle_settings_message
             
             self.window_manager.show_window(settings_window, push_to_stack=True)
