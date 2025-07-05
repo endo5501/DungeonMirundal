@@ -89,7 +89,10 @@ class TestUIDebugHelper:
         mock_text_box.rect = Mock(x=200, y=100, width=200, height=100)
         mock_text_box.__class__.__name__ = "UITextBox"
         
-        mock_ui_manager.get_all_ui_elements.return_value = [mock_button, mock_text_box]
+        # スプライトグループのモックを作成
+        mock_sprite_group = Mock()
+        mock_sprite_group.sprites.return_value = [mock_button, mock_text_box]
+        mock_ui_manager.get_sprite_group.return_value = mock_sprite_group
         
         result = ui_debug_helper.dump_ui_hierarchy()
         
@@ -142,7 +145,10 @@ class TestUIDebugHelper:
         mock_element.rect = Mock(x=10, y=20, width=30, height=40)
         mock_element.__class__.__name__ = "UIElement"
         
-        mock_ui_manager.get_all_ui_elements.return_value = [mock_element]
+        # スプライトグループのモックを作成
+        mock_sprite_group = Mock()
+        mock_sprite_group.sprites.return_value = [mock_element]
+        mock_ui_manager.get_sprite_group.return_value = mock_sprite_group
         
         ui_elements = ui_debug_helper.get_ui_elements()
         
@@ -165,7 +171,10 @@ class TestUIDebugHelper:
         mock_button2.rect = Mock(x=100, y=0, width=100, height=50)
         mock_button2.__class__.__name__ = "UIButton"
         
-        mock_ui_manager.get_all_ui_elements.return_value = [mock_button1, mock_button2]
+        # スプライトグループのモックを作成
+        mock_sprite_group = Mock()
+        mock_sprite_group.sprites.return_value = [mock_button1, mock_button2]
+        mock_ui_manager.get_sprite_group.return_value = mock_sprite_group
         
         # 存在するIDで検索
         result = ui_debug_helper.find_element_by_id('button1')
@@ -197,7 +206,10 @@ class TestUIDebugHelper:
         mock_button.__class__.__name__ = "UIButton"
         
         mock_window_manager.windows = {"main_window": mock_window}
-        mock_ui_manager.get_all_ui_elements.return_value = [mock_button]
+        # スプライトグループのモックを作成
+        mock_sprite_group = Mock()
+        mock_sprite_group.sprites.return_value = [mock_button]
+        mock_ui_manager.get_sprite_group.return_value = mock_sprite_group
         
         # ツリー形式でダンプ
         tree_result = ui_debug_helper.dump_ui_hierarchy(format='tree')
@@ -210,7 +222,7 @@ class TestUIDebugHelper:
     def test_dump_ui_hierarchy_with_error_handling(self, mock_ui_manager, mock_window_manager):
         """エラーハンドリングのテスト"""
         # UI要素の取得時にエラーを発生させる
-        mock_ui_manager.get_all_ui_elements.side_effect = AttributeError("Test error")
+        mock_ui_manager.get_sprite_group.side_effect = AttributeError("Test error")
         
         helper = UIDebugHelper(ui_manager=mock_ui_manager)
         helper._window_manager = mock_window_manager
@@ -239,7 +251,10 @@ class TestUIDebugHelper:
         mock_child.__class__.__name__ = "UIButton"
         mock_child.ui_container = mock_parent  # 親への参照
         
-        mock_ui_manager.get_all_ui_elements.return_value = [mock_parent, mock_child]
+        # スプライトグループのモックを作成
+        mock_sprite_group = Mock()
+        mock_sprite_group.sprites.return_value = [mock_parent, mock_child]
+        mock_ui_manager.get_sprite_group.return_value = mock_sprite_group
         
         helper = UIDebugHelper(ui_manager=mock_ui_manager)
         helper._window_manager = mock_window_manager
