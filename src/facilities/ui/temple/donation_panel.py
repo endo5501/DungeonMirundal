@@ -14,7 +14,7 @@ class DonationPanel:
     教会への寄付を行うパネル。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  ui_manager: pygame_gui.UIManager, controller, service):
         """初期化"""
         self.rect = rect
@@ -24,7 +24,7 @@ class DonationPanel:
         self.service = service
         
         # UI要素
-        self.container: Optional[pygame_gui.UIPanel] = None
+        self.container: Optional[pygame_gui.elements.UIPanel] = None
         self.title_label: Optional[pygame_gui.elements.UILabel] = None
         self.description_box: Optional[pygame_gui.elements.UITextBox] = None
         self.amount_input: Optional[pygame_gui.elements.UITextEntryLine] = None
@@ -38,7 +38,7 @@ class DonationPanel:
     
     def _create_ui(self) -> None:
         """UI要素を作成"""
-        self.container = pygame_gui.UIPanel(
+        self.container = pygame_gui.elements.UIPanel(
             relative_rect=self.rect,
             manager=self.ui_manager,
             container=self.parent

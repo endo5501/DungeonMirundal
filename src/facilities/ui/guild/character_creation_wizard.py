@@ -17,7 +17,7 @@ class CharacterCreationWizard(WizardServicePanel):
     複数ステップでキャラクターを作成するウィザード形式のUI。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
         # ウィザード固有のUI要素
@@ -70,7 +70,7 @@ class CharacterCreationWizard(WizardServicePanel):
             )
         ]
     
-    def _create_step_content(self, step: WizardStep, panel: pygame_gui.UIPanel) -> None:
+    def _create_step_content(self, step: WizardStep, panel: pygame_gui.elements.UIPanel) -> None:
         """ステップ固有のコンテンツを作成"""
         if step.id == "name":
             self._create_name_input_content(panel)
@@ -83,7 +83,7 @@ class CharacterCreationWizard(WizardServicePanel):
         elif step.id == "confirm":
             self._create_confirmation_content(panel)
     
-    def _create_name_input_content(self, panel: pygame_gui.UIPanel) -> None:
+    def _create_name_input_content(self, panel: pygame_gui.elements.UIPanel) -> None:
         """名前入力コンテンツを作成"""
         # 名前入力フィールド
         input_rect = pygame.Rect(10, 60, 300, 40)
@@ -111,7 +111,7 @@ class CharacterCreationWizard(WizardServicePanel):
         )
         self.ui_elements.append(info_label)
     
-    def _create_race_selection_content(self, panel: pygame_gui.UIPanel) -> None:
+    def _create_race_selection_content(self, panel: pygame_gui.elements.UIPanel) -> None:
         """種族選択コンテンツを作成"""
         races = [
             ("human", "人間", "バランスの取れた種族"),
@@ -144,7 +144,7 @@ class CharacterCreationWizard(WizardServicePanel):
             
             y_offset += button_height + button_spacing
     
-    def _create_stats_roll_content(self, panel: pygame_gui.UIPanel) -> None:
+    def _create_stats_roll_content(self, panel: pygame_gui.elements.UIPanel) -> None:
         """能力値決定コンテンツを作成"""
         # ロールボタン
         roll_rect = pygame.Rect(150, 60, 100, 40)
@@ -189,7 +189,7 @@ class CharacterCreationWizard(WizardServicePanel):
         if "stats" in self.wizard_data:
             self._display_stats(self.wizard_data["stats"])
     
-    def _create_class_selection_content(self, panel: pygame_gui.UIPanel) -> None:
+    def _create_class_selection_content(self, panel: pygame_gui.elements.UIPanel) -> None:
         """職業選択コンテンツを作成"""
         # 能力値に基づいて選択可能な職業を判定
         available_classes = self._get_available_classes()
@@ -232,7 +232,7 @@ class CharacterCreationWizard(WizardServicePanel):
             
             y_offset += button_height + button_spacing
     
-    def _create_confirmation_content(self, panel: pygame_gui.UIPanel) -> None:
+    def _create_confirmation_content(self, panel: pygame_gui.elements.UIPanel) -> None:
         """確認画面コンテンツを作成"""
         # キャラクター情報のサマリー
         summary_text = self._create_character_summary()

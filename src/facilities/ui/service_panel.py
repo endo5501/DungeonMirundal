@@ -18,7 +18,7 @@ class ServicePanel(ABC):
     サービス固有のUIを作成し、ユーザーインタラクションを処理する。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel, 
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel, 
                  controller: FacilityController, service_id: str,
                  ui_manager: pygame_gui.UIManager):
         """初期化
@@ -37,7 +37,7 @@ class ServicePanel(ABC):
         self.ui_manager = ui_manager
         
         # メインコンテナ
-        self.container = pygame_gui.UIPanel(
+        self.container = pygame_gui.elements.UIPanel(
             relative_rect=rect,
             manager=ui_manager,
             container=parent,
@@ -117,7 +117,7 @@ class ServicePanel(ABC):
         return self.controller.execute_service(action_id, params)
     
     def _create_label(self, text: str, rect: pygame.Rect, 
-                     container: Optional[pygame_gui.UIContainer] = None) -> pygame_gui.elements.UILabel:
+                     container: Optional[pygame_gui.core.UIContainer] = None) -> pygame_gui.elements.UILabel:
         """ラベルを作成
         
         Args:
@@ -141,7 +141,7 @@ class ServicePanel(ABC):
         return label
     
     def _create_button(self, text: str, rect: pygame.Rect,
-                      container: Optional[pygame_gui.UIContainer] = None,
+                      container: Optional[pygame_gui.core.UIContainer] = None,
                       object_id: Optional[str] = None) -> pygame_gui.elements.UIButton:
         """ボタンを作成
         
@@ -168,7 +168,7 @@ class ServicePanel(ABC):
         return button
     
     def _create_text_box(self, initial_text: str, rect: pygame.Rect,
-                        container: Optional[pygame_gui.UIContainer] = None) -> pygame_gui.elements.UITextBox:
+                        container: Optional[pygame_gui.core.UIContainer] = None) -> pygame_gui.elements.UITextBox:
         """テキストボックスを作成
         
         Args:

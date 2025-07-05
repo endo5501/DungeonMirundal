@@ -15,7 +15,7 @@ class NavigationPanel:
     施設内の各サービスへのナビゲーションを提供するタブ形式のパネル。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  menu_items: List[MenuItem], on_select_callback: Callable[[str], None],
                  ui_manager: pygame_gui.UIManager):
         """初期化
@@ -34,7 +34,7 @@ class NavigationPanel:
         self.ui_manager = ui_manager
         
         # UI要素
-        self.container: Optional[pygame_gui.UIPanel] = None
+        self.container: Optional[pygame_gui.elements.UIPanel] = None
         self.nav_buttons: Dict[str, pygame_gui.elements.UIButton] = {}
         self.selected_item_id: Optional[str] = None
         
@@ -51,7 +51,7 @@ class NavigationPanel:
     def _create_ui(self) -> None:
         """UI要素を作成"""
         # コンテナパネル
-        self.container = pygame_gui.UIPanel(
+        self.container = pygame_gui.elements.UIPanel(
             relative_rect=self.rect,
             manager=self.ui_manager,
             container=self.parent,

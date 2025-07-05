@@ -16,7 +16,7 @@ class CharacterListPanel(ServicePanel):
     登録されているキャラクターの一覧表示と詳細情報を提供するパネル。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
         super().__init__(rect, parent, controller, "character_list", ui_manager)

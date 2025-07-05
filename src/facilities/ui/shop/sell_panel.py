@@ -16,7 +16,7 @@ class SellPanel(ServicePanel):
     所持アイテムの売却処理を管理する。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
         super().__init__(rect, parent, controller, "sell", ui_manager)

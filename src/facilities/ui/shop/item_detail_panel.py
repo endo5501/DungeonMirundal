@@ -14,7 +14,7 @@ class ItemDetailPanel:
     アイテムの詳細情報を表示する共通パネル。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  ui_manager: pygame_gui.UIManager):
         """初期化"""
         self.rect = rect
@@ -22,7 +22,7 @@ class ItemDetailPanel:
         self.ui_manager = ui_manager
         
         # UI要素
-        self.container: Optional[pygame_gui.UIPanel] = None
+        self.container: Optional[pygame_gui.elements.UIPanel] = None
         self.name_label: Optional[pygame_gui.elements.UILabel] = None
         self.icon_image: Optional[pygame_gui.elements.UIImage] = None
         self.description_box: Optional[pygame_gui.elements.UITextBox] = None
@@ -32,7 +32,7 @@ class ItemDetailPanel:
     
     def _create_ui(self) -> None:
         """UI要素を作成"""
-        self.container = pygame_gui.UIPanel(
+        self.container = pygame_gui.elements.UIPanel(
             relative_rect=self.rect,
             manager=self.ui_manager,
             container=self.parent

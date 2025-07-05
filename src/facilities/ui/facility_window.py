@@ -30,7 +30,7 @@ class FacilityWindow(Window):
         super().__init__(window_id, parent=None, modal=False)
         
         self.controller = controller
-        self.main_panel: Optional[pygame_gui.UIPanel] = None
+        self.main_panel: Optional[pygame_gui.elements.UIPanel] = None
         self.navigation_panel = None  # NavigationPanel
         self.service_panels: Dict[str, Any] = {}  # ServicePanel instances
         self.current_service_id: Optional[str] = None
@@ -79,7 +79,7 @@ class FacilityWindow(Window):
     
     def _create_main_panel(self) -> None:
         """メインパネルを作成"""
-        self.main_panel = pygame_gui.UIPanel(
+        self.main_panel = pygame_gui.elements.UIPanel(
             relative_rect=self.rect,
             manager=self.ui_manager,
             element_id=f"{self.controller.facility_id}_main_panel"
@@ -255,9 +255,9 @@ class FacilityWindow(Window):
             # フォールバック：シンプルなパネル
             return self._create_fallback_panel(content_rect, service_id)
     
-    def _create_fallback_panel(self, rect: pygame.Rect, service_id: str) -> pygame_gui.UIPanel:
+    def _create_fallback_panel(self, rect: pygame.Rect, service_id: str) -> pygame_gui.elements.UIPanel:
         """フォールバック用のシンプルなパネルを作成"""
-        panel = pygame_gui.UIPanel(
+        panel = pygame_gui.elements.UIPanel(
             relative_rect=rect,
             manager=self.ui_manager,
             container=self.main_panel

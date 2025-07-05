@@ -42,7 +42,7 @@ class WizardServicePanel(ServicePanel):
     キャラクター作成などの複雑なプロセスに対応。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller: FacilityController, service_id: str,
                  ui_manager: pygame_gui.UIManager):
         """初期化"""
@@ -50,13 +50,13 @@ class WizardServicePanel(ServicePanel):
         self.wizard_data: Dict[str, Any] = {}
         self.steps: List[WizardStep] = []
         self.current_step_index = 0
-        self.step_panels: Dict[str, pygame_gui.UIPanel] = {}
+        self.step_panels: Dict[str, pygame_gui.elements.UIPanel] = {}
         self.step_validators: Dict[str, Callable] = {}
         
         # UI要素
-        self.indicator_panel: Optional[pygame_gui.UIPanel] = None
-        self.content_area: Optional[pygame_gui.UIPanel] = None
-        self.nav_button_panel: Optional[pygame_gui.UIPanel] = None
+        self.indicator_panel: Optional[pygame_gui.elements.UIPanel] = None
+        self.content_area: Optional[pygame_gui.elements.UIPanel] = None
+        self.nav_button_panel: Optional[pygame_gui.elements.UIPanel] = None
         self.back_button: Optional[pygame_gui.elements.UIButton] = None
         self.next_button: Optional[pygame_gui.elements.UIButton] = None
         self.cancel_button: Optional[pygame_gui.elements.UIButton] = None
@@ -84,7 +84,7 @@ class WizardServicePanel(ServicePanel):
             10, indicator_height + 10,
             self.rect.width - 20, content_height
         )
-        self.content_area = pygame_gui.UIPanel(
+        self.content_area = pygame_gui.elements.UIPanel(
             relative_rect=content_rect,
             manager=self.ui_manager,
             container=self.container
@@ -123,7 +123,7 @@ class WizardServicePanel(ServicePanel):
     def _create_step_indicator(self, height: int) -> None:
         """ステップインジケーターを作成"""
         indicator_rect = pygame.Rect(10, 10, self.rect.width - 20, height)
-        self.indicator_panel = pygame_gui.UIPanel(
+        self.indicator_panel = pygame_gui.elements.UIPanel(
             relative_rect=indicator_rect,
             manager=self.ui_manager,
             container=self.container
@@ -168,7 +168,7 @@ class WizardServicePanel(ServicePanel):
             10, self.rect.height - height - 10,
             self.rect.width - 20, height
         )
-        self.nav_button_panel = pygame_gui.UIPanel(
+        self.nav_button_panel = pygame_gui.elements.UIPanel(
             relative_rect=nav_rect,
             manager=self.ui_manager,
             container=self.container
@@ -251,7 +251,7 @@ class WizardServicePanel(ServicePanel):
     
     def _create_step_panel(self, step: WizardStep) -> None:
         """ステップパネルを作成"""
-        panel = pygame_gui.UIPanel(
+        panel = pygame_gui.elements.UIPanel(
             relative_rect=pygame.Rect(0, 0, self.content_area.relative_rect.width,
                                     self.content_area.relative_rect.height),
             manager=self.ui_manager,
@@ -273,7 +273,7 @@ class WizardServicePanel(ServicePanel):
         
         self.step_panels[step.id] = panel
     
-    def _create_step_content(self, step: WizardStep, panel: pygame_gui.UIPanel) -> None:
+    def _create_step_content(self, step: WizardStep, panel: pygame_gui.elements.UIPanel) -> None:
         """ステップ固有のコンテンツを作成（サブクラスでオーバーライド）"""
         # デフォルト実装：シンプルなテキスト入力
         if step.id == "name":
@@ -288,7 +288,7 @@ class WizardServicePanel(ServicePanel):
             )
             self.ui_elements.append(placeholder)
     
-    def _create_name_input_content(self, panel: pygame_gui.UIPanel) -> None:
+    def _create_name_input_content(self, panel: pygame_gui.elements.UIPanel) -> None:
         """名前入力コンテンツを作成"""
         # 名前入力フィールド
         input_rect = pygame.Rect(10, 60, 300, 40)

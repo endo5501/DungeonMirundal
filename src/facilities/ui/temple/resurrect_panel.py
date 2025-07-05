@@ -14,7 +14,7 @@ class ResurrectPanel:
     死亡したキャラクターの蘇生を行うパネル。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  ui_manager: pygame_gui.UIManager, controller, service):
         """初期化"""
         self.rect = rect
@@ -24,7 +24,7 @@ class ResurrectPanel:
         self.service = service
         
         # UI要素
-        self.container: Optional[pygame_gui.UIPanel] = None
+        self.container: Optional[pygame_gui.elements.UIPanel] = None
         self.title_label: Optional[pygame_gui.elements.UILabel] = None
         self.members_list: Optional[pygame_gui.elements.UISelectionList] = None
         self.resurrect_button: Optional[pygame_gui.elements.UIButton] = None
@@ -42,7 +42,7 @@ class ResurrectPanel:
     
     def _create_ui(self) -> None:
         """UI要素を作成"""
-        self.container = pygame_gui.UIPanel(
+        self.container = pygame_gui.elements.UIPanel(
             relative_rect=self.rect,
             manager=self.ui_manager,
             container=self.parent

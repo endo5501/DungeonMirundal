@@ -23,7 +23,7 @@ class MagicResearchWizard:
     高度な魔法研究をウィザード形式で行うパネル。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  ui_manager: pygame_gui.UIManager, controller, service):
         """初期化"""
         self.rect = rect
@@ -33,9 +33,9 @@ class MagicResearchWizard:
         self.service = service
         
         # UI要素
-        self.container: Optional[pygame_gui.UIPanel] = None
-        self.step_indicator: Optional[pygame_gui.UIPanel] = None
-        self.content_panel: Optional[pygame_gui.UIPanel] = None
+        self.container: Optional[pygame_gui.elements.UIPanel] = None
+        self.step_indicator: Optional[pygame_gui.elements.UIPanel] = None
+        self.content_panel: Optional[pygame_gui.elements.UIPanel] = None
         self.next_button: Optional[pygame_gui.elements.UIButton] = None
         self.back_button: Optional[pygame_gui.elements.UIButton] = None
         self.cancel_button: Optional[pygame_gui.elements.UIButton] = None
@@ -52,7 +52,7 @@ class MagicResearchWizard:
     
     def _create_ui(self) -> None:
         """UI要素を作成"""
-        self.container = pygame_gui.UIPanel(
+        self.container = pygame_gui.elements.UIPanel(
             relative_rect=self.rect,
             manager=self.ui_manager,
             container=self.parent
@@ -62,7 +62,7 @@ class MagicResearchWizard:
         self._create_step_indicator()
         
         # コンテンツエリア
-        self.content_panel = pygame_gui.UIPanel(
+        self.content_panel = pygame_gui.elements.UIPanel(
             relative_rect=pygame.Rect(10, 80, 410, 280),
             manager=self.ui_manager,
             container=self.container
@@ -96,7 +96,7 @@ class MagicResearchWizard:
     
     def _create_step_indicator(self) -> None:
         """ステップインジケーターを作成"""
-        self.step_indicator = pygame_gui.UIPanel(
+        self.step_indicator = pygame_gui.elements.UIPanel(
             relative_rect=pygame.Rect(10, 10, 410, 60),
             manager=self.ui_manager,
             container=self.container

@@ -16,7 +16,7 @@ class StoragePanel(ServicePanel):
     宿屋の保管庫にアイテムを預け入れ・引き出しする機能を提供。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
         super().__init__(rect, parent, controller, "storage", ui_manager)

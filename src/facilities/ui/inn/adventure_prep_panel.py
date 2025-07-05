@@ -16,7 +16,7 @@ class AdventurePrepPanel(ServicePanel):
     アイテム管理、魔法管理、装備管理のサブサービスへのナビゲーションを提供。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
         super().__init__(rect, parent, controller, "adventure_prep", ui_manager)

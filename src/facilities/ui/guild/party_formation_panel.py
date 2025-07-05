@@ -16,7 +16,7 @@ class PartyFormationPanel(ServicePanel):
     パーティメンバーの追加、削除、並び替えを行うパネル。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
         super().__init__(rect, parent, controller, "party_formation", ui_manager)

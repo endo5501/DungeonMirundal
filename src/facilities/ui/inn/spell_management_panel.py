@@ -15,7 +15,7 @@ class SpellManagementPanel(ServicePanel):
     魔法の装備・解除を管理する。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
         super().__init__(rect, parent, controller, "spell_management", ui_manager)

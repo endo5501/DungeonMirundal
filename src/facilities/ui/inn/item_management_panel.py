@@ -16,7 +16,7 @@ class ItemManagementPanel(ServicePanel):
     パーティメンバー間でのアイテムの移動、使用、破棄を管理する。
     """
     
-    def __init__(self, rect: pygame.Rect, parent: pygame_gui.UIPanel,
+    def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
         super().__init__(rect, parent, controller, "item_management", ui_manager)

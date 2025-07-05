@@ -219,7 +219,7 @@ class FacilityController:
         """地上画面に戻る"""
         try:
             # OverworldManagerに直接アクセス（シンプルな処理）
-            from src.overworld.overworld_manager_pygame import OverworldManager
+            from src.overworld.overworld_manager import OverworldManager
             overworld_manager = OverworldManager.get_instance()
             if overworld_manager:
                 overworld_manager.show_main_menu()
