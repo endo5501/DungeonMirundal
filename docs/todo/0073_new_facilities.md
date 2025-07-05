@@ -619,17 +619,28 @@ facility_registry = FacilityRegistry.get_instance()
 
 ### Phase 4: 統合・移行（3日間）
 
-**Day 18: レガシーコード削除**
-- [ ] 旧 `BaseFacility` 関連コード削除
-- [ ] 旧メニューシステム削除
-- [ ] 未使用メッセージハンドラー削除
-- [ ] 旧UI要素の完全削除
+**Day 18: レガシーコード削除** ✅ **完了**
+- [x] 旧 `BaseFacility` 関連コード削除（936行）
+- [x] 旧メニューシステム削除（facility_menu_*.py 全削除）
+- [x] 未使用メッセージハンドラー削除
+- [x] 旧UI要素の完全削除（約11,460行削除）
+- [x] 削除対象レガシーファイル：
+  - `src/overworld/base_facility.py`
+  - `src/overworld/facilities/*.py` (guild.py, inn.py, shop.py, temple.py, magic_guild.py)
+  - `src/overworld/facilities/*_handler.py`
+  - `src/ui/window_system/facility_*.py`
+  - `src/ui/window_system/*_service_window.py`
+- [x] レガシーテストファイルをアーカイブに移動
+- [x] 機能再現性確認完了（docs/phase4_legacy_functionality_migration_analysis.md）
 
-**Day 19: 最終統合**
-- [ ] `OverworldManager` との統合
-- [ ] 地上画面からの施設入場処理
-- [ ] ESCキー/退出処理の統一
-- [ ] セーブ/ロード対応
+**Day 19: 最終統合** 🔄 **進行中**
+- [x] `OverworldManager` との統合（新施設システムに移行済み）
+- [x] game_manager.pyで新システム使用に変更
+- [ ] 地上画面からの施設入場処理の動作確認
+- [ ] ESCキー/退出処理の統一確認
+- [ ] セーブ/ロード対応確認
+- [ ] 残存インポートエラー修正
+- [ ] UIDialog呼び出しの新システム移行
 
 **Day 20: 最終確認**
 - [ ] 全施設の動作確認

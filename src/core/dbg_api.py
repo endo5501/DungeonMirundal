@@ -350,8 +350,8 @@ def get_game_state():
         
         # 現在の施設を取得
         if hasattr(game_manager, 'overworld_manager') and game_manager.overworld_manager:
-            if hasattr(game_manager.overworld_manager, 'facility_manager'):
-                fm = game_manager.overworld_manager.facility_manager
+            if hasattr(game_manager.overworld_manager, 'facility_registry'):
+                fm = game_manager.overworld_manager.facility_registry
                 if hasattr(fm, 'current_facility') and fm.current_facility:
                     game_state["current_facility"] = fm.current_facility
         

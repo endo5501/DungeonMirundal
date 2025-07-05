@@ -5,7 +5,8 @@ from enum import Enum
 
 from src.character.party import Party
 from src.character.character import Character, CharacterStatus
-from src.overworld.base_facility import BaseFacility, FacilityManager, facility_manager
+# 新施設システムに移行
+from src.facilities.core.facility_registry import facility_registry
 # from src.ui.base_ui_pygame import UIDialog, ui_manager  # レガシーメニュー: Phase 4.5で削除済み
 from src.ui.window_system import WindowManager
 try:
@@ -78,9 +79,10 @@ class OverworldManager:
         self.on_exit_game: Optional[Callable] = None
         self.input_manager_ref: Optional[Any] = None
         
-        self.facility_manager = facility_manager
-        # 施設退場時のコールバックを設定
-        self.facility_manager.set_facility_exit_callback(self.on_facility_exit)
+        # 新施設システムを使用
+        self.facility_registry = facility_registry
+        # すべての施設サービスを登録
+        self.facility_registry.register_all_services()
         
         # 施設入場前のメニュー状態を記録するフラグ
         self.main_menu_was_visible = False
@@ -125,8 +127,8 @@ class OverworldManager:
         # UI要素のクリーンアップ
         self._cleanup_ui()
         
-        # 現在の施設から出る
-        self.facility_manager.exit_current_facility()
+        # 現在の施設から出る（新システム）
+        self.facility_registry.exit_current_facility()
         
         self.current_party = None
         self.current_location = OverworldLocation.TOWN_CENTER
@@ -325,8 +327,8 @@ class OverworldManager:
             facility_id = data.get('facility_id')
             
             if facility_id:
-                # 施設入場
-                return self._enter_facility(facility_id)
+                # 施設入場（新システム）
+                return self._enter_facility_new(facility_id)
             elif item_id == 'dungeon_entrance':
                 # ダンジョン入場
                 return self._enter_dungeon()
@@ -691,19 +693,23 @@ class OverworldManager:
         
         logger.info("設定画面を表示しました")
     
-    def _enter_facility(self, facility_id: str):
-        """施設に入る"""
+    def _enter_facility_new(self, facility_id: str):
+        """施設に入る（新システム）"""
         if not self.current_party:
-            return
+            logger.warning("パーティが設定されていません")
+            return False
         
-        logger.info(f"FacilityManagerの状態: 登録済み施設={list(self.facility_manager.facilities.keys())}")
-        success = self.facility_manager.enter_facility(facility_id, self.current_party)
+        logger.info(f"新施設システムで施設に入場: {facility_id}")
+        success = self.facility_registry.enter_facility(facility_id, self.current_party)
         
         if success:
             self._hide_menus_for_facility_entry()
-            logger.info(f"施設に入りました: {facility_id} (main_menu_was_visible: {self.main_menu_was_visible}, settings_menu_was_visible: {self.settings_menu_was_visible})")
+            logger.info(f"施設に入りました: {facility_id}")
+            return True
         else:
+            logger.error(f"施設入場失敗: {facility_id}")
             self._show_error_dialog("エラー", f"施設 '{facility_id}' に入れませんでした。")
+            return False
     
     def _hide_menus_for_facility_entry(self):
         """施設入場時のメニュー隠し処理"""
@@ -1320,97 +1326,8 @@ class OverworldManager:
             logger.critical(f"緊急地上部リセットでエラー: {e}")
             # 最終的にアプリケーションの終了も検討する必要がある
     
-    def on_facility_exit(self):
-        """施設退場時のコールバック"""
-        # 施設から出たら地上部メニューに戻る
-        if not self.is_active:
-            return
-        
-        logger.info("【重要】施設退場処理を開始します - コールバックが正常に呼ばれました")
-        logger.debug("施設退場処理を開始します")
-        
-        try:
-            # 最初に確実にメニューが表示されることを保証する
-            menu_restored = False
-            
-            logger.debug(f"施設退場前の状態: main_menu_was_visible={self.main_menu_was_visible}, settings_menu_was_visible={self.settings_menu_was_visible}, settings_menu_active={self.settings_menu_active}")
-            
-            # 設定画面が表示されている場合はそちらを表示
-            if self.settings_menu_active and self.location_menu:
-                # 設定メニューが正常に存在するか確認
-                if self.location_menu.menu_id in ui_manager.menus:
-                    try:
-                        ui_manager.show_menu(self.location_menu.menu_id)
-                        menu_restored = True
-                        logger.debug("設定メニューに戻りました")
-                    except Exception as show_error:
-                        logger.warning(f"設定メニューの表示に失敗: {show_error}")
-                        # 設定メニューが破損している場合は状態をリセット
-                        self.settings_menu_active = False
-                        self.location_menu = None
-                else:
-                    # 設定メニューが破棄されている場合は状態をリセット
-                    logger.warning("設定メニューが見つからないため状態をリセットします")
-                    self.settings_menu_active = False
-                    self.location_menu = None
-            
-            # 設定メニューが表示できなかった場合、またはそもそも設定メニューが非アクティブの場合
-            if not menu_restored:
-                # 施設入場前の状態に基づいてメニューを復元
-                if self.main_menu_was_visible and self.main_menu:
-                    # メインメニューが入場前に表示されていた場合
-                    if self.main_menu.menu_id in ui_manager.menus:
-                        try:
-                            # 強制的に表示
-                            ui_manager.show_menu(self.main_menu.menu_id)
-                            menu_restored = True
-                            logger.debug("メインメニューを復元しました（入場前状態に基づく）")
-                        except Exception as show_error:
-                            logger.warning(f"メインメニューの復元に失敗: {show_error}")
-                    else:
-                        logger.warning("復元すべきメインメニューがUIManagerに見つかりません")
-                
-                # メインメニューの復元に失敗した場合、または入場前に表示されていなかった場合
-                if not menu_restored:
-                    logger.warning("メインメニューの復元に失敗または不要なため、新しいメニューを表示します")
-                    try:
-                        # 既存のメニューをクリーンアップしてから再生成
-                        if self.main_menu:
-                            try:
-                                ui_manager.hide_menu(self.main_menu.menu_id)
-                                # ui_manager.unregister_element(self.main_menu.menu_id) - 不要
-                            except:
-                                pass  # クリーンアップに失敗しても続行
-                        
-                        self._show_main_menu()
-                        menu_restored = True
-                        logger.info("メインメニューを再生成しました")
-                    except Exception as regen_error:
-                        logger.error(f"メインメニュー再生成に失敗: {regen_error}")
-            
-            # 状態フラグをリセット
-            self.main_menu_was_visible = False
-            self.settings_menu_was_visible = False
-            
-            # 何らかの方法でメニューが復元されたかを確認
-            if not menu_restored:
-                logger.error("全てのメニュー復元方法が失敗しました")
-                raise RuntimeError("メニューの復元に完全に失敗しました")
-            
-        except Exception as e:
-            # 全ての復元処理が失敗した場合の最終的なフェイルセーフ
-            logger.error(f"施設退場時のメニュー復元でエラーが発生: {e}")
-            logger.info("緊急メニュー復元を実行します")
-            
-            try:
-                # UI状態をクリアして再生成
-                self._emergency_menu_recovery()
-                logger.info("緊急メニュー復元が完了しました")
-            except Exception as recovery_error:
-                logger.critical(f"緊急メニュー復元も失敗: {recovery_error}")
-                # 最後の手段：地上部をリセット
-                logger.critical("最終手段として地上部リセットを実行します")
-                self._emergency_overworld_reset()
+    # 新施設システムでは施設退場時の処理はFacilityRegistryが管理
+    # レガシーのon_facility_exit()コールバックは削除
     
     def get_current_party(self) -> Optional[Party]:
         """現在のパーティを取得"""

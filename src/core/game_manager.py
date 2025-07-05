@@ -6,7 +6,7 @@ from . import dbg_api
 from src.core.config_manager import config_manager
 from src.core.input_manager import InputManager
 from src.core.save_manager import SaveManager
-from src.overworld.overworld_manager_pygame import OverworldManager
+from src.overworld.overworld_manager import OverworldManager
 from src.dungeon.dungeon_manager import DungeonManager
 from src.character.party import Party
 from src.rendering.dungeon_renderer_pygame import DungeonRendererPygame
