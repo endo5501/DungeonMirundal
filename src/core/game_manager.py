@@ -2,6 +2,7 @@
 
 import pygame
 import sys
+import random
 from . import dbg_api
 from src.core.config_manager import config_manager
 from src.core.input_manager import InputManager
@@ -414,6 +415,7 @@ class GameManager:
         # ダンジョンマネージャーの初期化
         self.dungeon_manager = DungeonManager()
         self.dungeon_manager.set_return_to_overworld_callback(self.transition_to_overworld)
+        self.dungeon_manager.set_force_retreat_callback(self._handle_force_retreat)
         
         # 戦闘・エンカウンターマネージャーの初期化
         self.combat_manager = CombatManager()
@@ -794,6 +796,9 @@ class GameManager:
             # Phase 5: 戦闘状態の監視
             self.check_combat_state()
             
+            # Phase 5: ダンジョン内パーティ状態監視
+            self.check_party_status_in_dungeon()
+            
             # 画面をクリア
             self.screen.fill((0, 0, 0))
             
@@ -1099,8 +1104,14 @@ class GameManager:
             # 戦闘結果に応じた処理
             if combat_result == CombatState.VICTORY:
                 self._handle_combat_victory()
+                # ボス戦完了処理
+                if hasattr(self, 'current_boss_encounter') and self.current_boss_encounter:
+                    self.handle_boss_encounter_completion(True)
             elif combat_result == CombatState.DEFEAT:
                 self._handle_combat_defeat()
+                # ボス戦完了処理
+                if hasattr(self, 'current_boss_encounter') and self.current_boss_encounter:
+                    self.handle_boss_encounter_completion(False)
             elif combat_result == CombatState.FLED:
                 self._handle_combat_fled()
             elif combat_result == CombatState.NEGOTIATED:
@@ -1282,6 +1293,211 @@ class GameManager:
             
         except Exception as e:
             logger.error(f"強制帰還処理エラー: {e}")
+    
+    def _handle_force_retreat(self, reason: str):
+        """ダンジョンマネージャーからの強制撤退処理"""
+        logger.critical(f"ダンジョン強制撤退: {reason}")
+        
+        if not self.current_party:
+            return
+        
+        try:
+            # 撤退による救済処理
+            if reason == "パーティ全滅":
+                # 全員のHPを1に設定して救済
+                for member in self.current_party.members:
+                    if member.derived_stats.current_hp <= 0:
+                        member.derived_stats.current_hp = 1
+                        member.status = "normal"
+                
+                # 金の半分を失う
+                lost_gold = self.current_party.gold // 2
+                self.current_party.gold -= lost_gold
+                if lost_gold > 0:
+                    logger.info(f"撤退により金 {lost_gold} を失いました")
+            
+            elif reason == "残り1名が重傷":
+                # 軽微な救済処理
+                for member in self.current_party.members:
+                    if member.derived_stats.current_hp <= 0:
+                        member.derived_stats.current_hp = 1
+                
+                # 金の1/4を失う
+                lost_gold = self.current_party.gold // 4
+                self.current_party.gold -= lost_gold
+                if lost_gold > 0:
+                    logger.info(f"緊急撤退により金 {lost_gold} を失いました")
+            
+            # 地上部に強制帰還
+            self._force_return_to_overworld(f"緊急撤退: {reason}")
+            
+        except Exception as e:
+            logger.error(f"強制撤退処理エラー: {e}")
+    
+    def check_party_status_in_dungeon(self):
+        """ダンジョン内でのパーティ状態監視"""
+        if (self.current_location != GameLocation.DUNGEON or 
+            not self.dungeon_manager or 
+            not self.current_party):
+            return
+        
+        try:
+            # ダンジョンマネージャーでパーティ状態をチェック
+            status = self.dungeon_manager.check_party_status(self.current_party)
+            
+            # 状態に応じた警告
+            if status["needs_healing"] and status["critically_injured"]:
+                logger.warning(f"重傷者がいます: {', '.join(status['critically_injured'])}")
+            
+            if status["dead_members"]:
+                logger.warning(f"死亡メンバー: {', '.join(status['dead_members'])}")
+                
+                # 強制撤退チェック
+                should_retreat, retreat_reason = self.dungeon_manager.should_force_retreat(self.current_party)
+                if should_retreat:
+                    self._handle_force_retreat(retreat_reason)
+            
+        except Exception as e:
+            logger.error(f"パーティ状態チェックエラー: {e}")
+    
+    # === Phase 5 Day 25-26: ダンジョンインタラクション統合 ===
+    
+    def interact_with_dungeon_cell(self, character = None) -> Dict[str, Any]:
+        """現在位置のダンジョンセルとインタラクション"""
+        if (self.current_location != GameLocation.DUNGEON or 
+            not self.dungeon_manager or 
+            not self.current_party):
+            return {"success": False, "message": "ダンジョンにいません"}
+        
+        try:
+            # ダンジョンマネージャーでセルインタラクションを実行
+            result = self.dungeon_manager.interact_with_current_cell(self.current_party, character)
+            
+            # インタラクション結果の処理
+            for interaction in result.get("interactions", []):
+                self._process_interaction_result(interaction)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"ダンジョンセルインタラクションエラー: {e}")
+            return {"success": False, "message": f"インタラクションエラー: {e}"}
+    
+    def _process_interaction_result(self, interaction: Dict[str, Any]):
+        """インタラクション結果の処理"""
+        interaction_type = interaction.get("type")
+        
+        if interaction_type == "trap":
+            self._process_trap_result(interaction)
+        elif interaction_type == "treasure":
+            self._process_treasure_result(interaction)
+        elif interaction_type == "boss":
+            self._process_boss_result(interaction)
+    
+    def _process_trap_result(self, trap_result: Dict[str, Any]):
+        """トラップ結果の処理"""
+        if trap_result.get("teleport"):
+            # テレポートトラップの場合、ランダム位置に移動
+            self._handle_teleport_trap()
+        
+        # その他のトラップ効果は既にtrap_systemで処理済み
+        logger.info(f"トラップ処理完了: {trap_result.get('message', '')}")
+    
+    def _process_treasure_result(self, treasure_result: Dict[str, Any]):
+        """宝箱結果の処理"""
+        if treasure_result.get("start_combat") and treasure_result.get("mimic_monster"):
+            # ミミック戦闘開始
+            mimic = treasure_result["mimic_monster"]
+            self.start_combat([mimic])
+            logger.info("ミミックとの戦闘開始！")
+    
+    def _process_boss_result(self, boss_result: Dict[str, Any]):
+        """ボス戦結果の処理"""
+        if boss_result.get("start_combat") and boss_result.get("boss_monster"):
+            # ボス戦開始
+            boss_monster = boss_result["boss_monster"]
+            boss_encounter = boss_result.get("boss_encounter")
+            encounter_id = boss_result.get("encounter_id")
+            
+            # 現在のエンカウンター情報を保存
+            if hasattr(self, 'current_boss_encounter'):
+                self.current_boss_encounter = {
+                    "encounter": boss_encounter,
+                    "encounter_id": encounter_id
+                }
+            
+            self.start_combat([boss_monster])
+            logger.info(f"ボス戦開始: {boss_result.get('message', '')}")
+    
+    def _handle_teleport_trap(self):
+        """テレポートトラップの処理"""
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
+            return
+        
+        try:
+            current_dungeon = self.dungeon_manager.current_dungeon
+            player_pos = current_dungeon.player_position
+            current_level = current_dungeon.levels.get(player_pos.level)
+            
+            if not current_level:
+                return
+            
+            # ランダムな歩行可能位置を探す
+            walkable_cells = []
+            for x in range(current_level.width):
+                for y in range(current_level.height):
+                    if current_level.is_walkable(x, y):
+                        walkable_cells.append((x, y))
+            
+            if walkable_cells:
+                new_x, new_y = random.choice(walkable_cells)
+                player_pos.x = new_x
+                player_pos.y = new_y
+                logger.info(f"テレポートトラップにより位置が移動: ({new_x}, {new_y})")
+                
+        except Exception as e:
+            logger.error(f"テレポートトラップ処理エラー: {e}")
+    
+    def search_for_secrets(self) -> Dict[str, Any]:
+        """隠された要素の探索"""
+        if (self.current_location != GameLocation.DUNGEON or 
+            not self.dungeon_manager or 
+            not self.current_party):
+            return {"success": False, "message": "ダンジョンにいません"}
+        
+        try:
+            # 隠し要素の探索
+            result = self.dungeon_manager.check_for_secret_interactions(self.current_party)
+            
+            if result.get("interactions"):
+                for interaction in result["interactions"]:
+                    logger.info(f"隠し要素発見: {interaction['message']}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"隠し要素探索エラー: {e}")
+            return {"success": False, "message": f"探索エラー: {e}"}
+    
+    def handle_boss_encounter_completion(self, victory: bool):
+        """ボス戦完了処理"""
+        if not hasattr(self, 'current_boss_encounter') or not self.current_boss_encounter:
+            return
+        
+        try:
+            encounter_id = self.current_boss_encounter["encounter_id"]
+            result = self.dungeon_manager.complete_boss_encounter(encounter_id, victory, self.current_party)
+            
+            logger.info(f"ボス戦完了: {result.get('message', '')}")
+            
+            # エンカウンター情報をクリア
+            self.current_boss_encounter = None
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"ボス戦完了処理エラー: {e}")
+            return {"success": False, "message": f"ボス戦完了エラー: {e}"}
 
 
 def create_game() -> GameManager:
