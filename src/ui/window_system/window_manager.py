@@ -759,6 +759,19 @@ class WindowManager:
         self.running = False
         logger.info("WindowManagerをクリーンアップしました")
     
+    def render(self, screen):
+        """描画処理
+        
+        Args:
+            screen: 描画対象のスクリーン
+        """
+        # 背景をクリア
+        screen.fill((0, 0, 0))
+        
+        # pygame-guiのUIManagerに描画を委譲
+        if hasattr(self, 'ui_manager') and self.ui_manager:
+            self.ui_manager.draw_ui(screen)
+    
     def shutdown(self) -> None:
         """システムをシャットダウン"""
         self.cleanup()

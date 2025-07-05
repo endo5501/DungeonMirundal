@@ -248,8 +248,10 @@ class OverworldManager:
             # メニュー設定を作成
             menu_config = self._create_main_menu_config()
             
-            # OverworldMainWindowを作成
-            self.main_window = OverworldMainWindow('overworld_main', menu_config)
+            # OverworldMainWindowを作成（WindowManager経由で登録）
+            self.main_window = self.window_manager.create_window(
+                OverworldMainWindow, 'overworld_main', config=menu_config
+            )
             
             # メッセージハンドラーを設定
             self.main_window.message_handler = self.handle_main_menu_message
@@ -1302,6 +1304,19 @@ class OverworldManager:
     def set_exit_game_callback(self, callback: Callable):
         """ゲーム終了コールバックを設定"""
         self.on_exit_game = callback
+    
+    def render(self, screen):
+        """地上部の描画処理
+        
+        Args:
+            screen: 描画対象のスクリーン
+        """
+        # Window Systemを使用している場合はWindowManagerに委譲
+        if hasattr(self, 'window_manager') and self.window_manager:
+            self.window_manager.render(screen)
+        else:
+            # レガシーシステムの場合はデフォルト処理
+            screen.fill((0, 0, 0))  # 黒い背景
 
 
 # グローバルインスタンス
