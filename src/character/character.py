@@ -483,7 +483,7 @@ class Character:
         try:
             effect_type = StatusEffectType(effect)
             if effect_type in effect_registry:
-                effect_instance = effect_registry[effect_type](effect_type, duration=3, strength=1)
+                effect_instance = effect_registry[effect_type](duration=3, strength=1)
                 character_manager = status_effect_manager.get_character_effects(self.character_id)
                 success, result = character_manager.add_effect(effect_instance, self)
                 logger.debug(f"{self.name}に{effect}が付与されました")
