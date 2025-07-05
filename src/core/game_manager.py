@@ -1115,22 +1115,173 @@ class GameManager:
     def _handle_combat_victory(self):
         """戦闘勝利時の処理"""
         logger.info("戦闘勝利!")
-        # TODO: 経験値・金・アイテム獲得処理
+        
+        if not self.current_party or not self.combat_manager:
+            return
+        
+        try:
+            # 戦闘統計から報酬情報を取得
+            combat_stats = self.combat_manager.monster_stats
+            
+            # 経験値獲得
+            total_exp = getattr(combat_stats, 'total_experience', 0)
+            if total_exp > 0:
+                for character in self.current_party.get_living_characters():
+                    character.gain_experience(total_exp)
+                logger.info(f"経験値 {total_exp} を獲得しました")
+            
+            # 金獲得
+            total_gold = getattr(combat_stats, 'total_gold', 0)
+            if total_gold > 0:
+                self.current_party.gold += total_gold
+                logger.info(f"金 {total_gold} を獲得しました")
+            
+            # アイテム獲得
+            dropped_items = getattr(combat_stats, 'dropped_items', [])
+            if dropped_items:
+                for item in dropped_items:
+                    # パーティインベントリに追加
+                    if hasattr(self.current_party, 'shared_inventory'):
+                        self.current_party.shared_inventory.add_item(item)
+                    logger.info(f"アイテム「{item.name}」を獲得しました")
+            
+        except Exception as e:
+            logger.error(f"戦闘勝利処理エラー: {e}")
     
     def _handle_combat_defeat(self):
         """戦闘敗北時の処理"""
         logger.info("戦闘敗北...")
-        # TODO: パーティ全滅処理・地上部帰還
+        
+        if not self.current_party:
+            return
+        
+        try:
+            # パーティ全滅チェック
+            living_characters = self.current_party.get_living_characters()
+            
+            if not living_characters:
+                # 全滅時の処理
+                logger.info("パーティが全滅しました")
+                
+                # 金の半分を失う
+                lost_gold = self.current_party.gold // 2
+                self.current_party.gold -= lost_gold
+                if lost_gold > 0:
+                    logger.info(f"金 {lost_gold} を失いました")
+                
+                # 全キャラクターのHPを1に設定（死亡状態から救済）
+                for character in self.current_party.members:
+                    if character.hp <= 0:
+                        character.hp = 1
+                        character.status = "normal"  # 状態異常も回復
+                
+                # 地上部に強制帰還
+                self._force_return_to_overworld("パーティ全滅のため地上に帰還しました")
+            else:
+                # 生存者がいる場合は通常の敗北処理
+                logger.info("戦闘に敗北しましたが、生存者がいます")
+                
+        except Exception as e:
+            logger.error(f"戦闘敗北処理エラー: {e}")
     
     def _handle_combat_fled(self):
         """戦闘逃走時の処理"""
         logger.info("戦闘から逃走しました")
-        # TODO: 位置移動処理
+        
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
+            return
+        
+        try:
+            # 現在位置から後退（来た方向に1マス戻る）
+            current_dungeon = self.dungeon_manager.current_dungeon
+            player_pos = current_dungeon.player_position
+            
+            # 逃走方向を決定（現在の向きと逆方向）
+            from src.dungeon.dungeon_generator import Direction
+            
+            escape_direction = {
+                Direction.NORTH: Direction.SOUTH,
+                Direction.SOUTH: Direction.NORTH,
+                Direction.EAST: Direction.WEST,
+                Direction.WEST: Direction.EAST
+            }.get(player_pos.facing, Direction.SOUTH)
+            
+            # 逃走先の座標計算
+            direction_offsets = {
+                Direction.NORTH: (0, -1),
+                Direction.SOUTH: (0, 1),
+                Direction.EAST: (1, 0),
+                Direction.WEST: (-1, 0)
+            }
+            
+            offset_x, offset_y = direction_offsets[escape_direction]
+            new_x = player_pos.x + offset_x
+            new_y = player_pos.y + offset_y
+            
+            # 移動可能かチェック
+            current_level = current_dungeon.levels.get(player_pos.level)
+            if current_level and self.dungeon_manager.can_move_to(new_x, new_y, player_pos.level):
+                # 移動実行
+                self.dungeon_manager.move_player(escape_direction)
+                logger.info(f"逃走により位置が移動しました: ({new_x}, {new_y})")
+            else:
+                logger.info("逃走したが、移動できませんでした")
+                
+        except Exception as e:
+            logger.error(f"戦闘逃走処理エラー: {e}")
     
     def _handle_combat_negotiated(self):
         """戦闘交渉成功時の処理"""
         logger.info("交渉成功!")
-        # TODO: 交渉報酬処理
+        
+        if not self.current_party or not self.combat_manager:
+            return
+        
+        try:
+            # 交渉による特別報酬（戦闘せずに報酬獲得）
+            combat_stats = self.combat_manager.monster_stats
+            
+            # 経験値は半分程度
+            negotiation_exp = getattr(combat_stats, 'total_experience', 0) // 2
+            if negotiation_exp > 0:
+                for character in self.current_party.get_living_characters():
+                    character.gain_experience(negotiation_exp)
+                logger.info(f"交渉により経験値 {negotiation_exp} を獲得しました")
+            
+            # 金は通常通り
+            negotiation_gold = getattr(combat_stats, 'total_gold', 0)
+            if negotiation_gold > 0:
+                self.current_party.gold += negotiation_gold
+                logger.info(f"交渉により金 {negotiation_gold} を獲得しました")
+            
+            # 特別なアイテムが手に入る可能性
+            import random
+            if random.random() < 0.3:  # 30%の確率で特別アイテム
+                logger.info("交渉により特別な情報を得ました")
+                # TODO: 特別アイテムやヒントの実装
+                
+        except Exception as e:
+            logger.error(f"戦闘交渉処理エラー: {e}")
+    
+    def _force_return_to_overworld(self, reason: str = ""):
+        """地上部への強制帰還"""
+        try:
+            logger.info(f"地上部へ強制帰還: {reason}")
+            
+            # ダンジョン状態をクリア
+            if self.dungeon_manager and self.dungeon_manager.current_dungeon:
+                self.dungeon_manager.exit_dungeon()
+            
+            # 地上部に遷移
+            self.current_location = GameLocation.OVERWORLD
+            self.set_game_state("overworld")
+            
+            # 地上部マネージャーを表示
+            if self.overworld_manager:
+                self.overworld_manager.enter_overworld()
+            
+        except Exception as e:
+            logger.error(f"強制帰還処理エラー: {e}")
 
 
 def create_game() -> GameManager:

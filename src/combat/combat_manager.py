@@ -433,19 +433,16 @@ class CombatManager:
                          target: Union[Character, Monster]) -> int:
         """ダメージ計算"""
         if isinstance(attacker, Character):
-            # キャラクターの攻撃力計算
-            base_damage = attacker.base_stats.strength // 2
-            weapon_damage = 0  # 武器ダメージ（装備システムから取得）
-            if attacker.get_equipment().equipped_items.get('weapon'):
-                weapon_damage = 5  # 仮の値
-            damage = base_damage + weapon_damage
+            # Phase 4装備システムと統合された攻撃力を使用
+            damage = attacker.get_attack_power()
         else:
             # モンスターの攻撃力計算
             damage = attacker.get_attack_damage()
         
         # 対象の防御力
         if isinstance(target, Character):
-            defense = target.derived_stats.armor_class - 10  # AC10が基準
+            # Phase 4装備システムと統合された防御力を使用
+            defense = target.get_defense()
         else:
             defense = target.stats.armor_class - 10
         
