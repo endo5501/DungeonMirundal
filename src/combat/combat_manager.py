@@ -665,6 +665,20 @@ class CombatManager:
         self.monster_stats = CombatStats()
         
         logger.info("戦闘をリセットしました")
+    
+    def cleanup(self):
+        """リソースのクリーンアップ"""
+        try:
+            # 戦闘データをリセット
+            self.reset_combat()
+            
+            # 追加のクリーンアップ
+            self.turn_order.clear()
+            self.combat_log.clear()
+            
+            logger.info("CombatManager リソースをクリーンアップしました")
+        except Exception as e:
+            logger.error(f"CombatManager クリーンアップ中にエラー: {e}")
 
 
 # グローバルインスタンス

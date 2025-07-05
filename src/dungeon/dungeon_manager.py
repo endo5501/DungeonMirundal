@@ -758,5 +758,31 @@ class DungeonManager:
         return result
 
 
+    def cleanup(self):
+        """リソースのクリーンアップ"""
+        try:
+            # アクティブなダンジョンを保存
+            for dungeon_id in list(self.active_dungeons.keys()):
+                self.save_dungeon(dungeon_id)
+            
+            # 現在のダンジョンをクリア
+            self.current_dungeon = None
+            
+            # アクティブダンジョンをクリア
+            self.active_dungeons.clear()
+            
+            # ジェネレーターをクリア
+            self.generator = None
+            
+            # コールバックをクリア
+            self.return_to_overworld_callback = None
+            if hasattr(self, 'force_retreat_callback'):
+                self.force_retreat_callback = None
+            
+            logger.info("DungeonManager リソースをクリーンアップしました")
+        except Exception as e:
+            logger.error(f"DungeonManager クリーンアップ中にエラー: {e}")
+
+
 # グローバルインスタンス
 dungeon_manager = DungeonManager()

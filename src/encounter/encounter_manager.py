@@ -109,10 +109,13 @@ class EncounterManager:
         
         logger.info("EncounterManager初期化完了")
     
-    def set_party(self, party: Party):
+    def set_party(self, party: Optional[Party]):
         """パーティ設定"""
         self.current_party = party
-        logger.info(f"パーティ{party.name}を設定しました")
+        if party is not None:
+            logger.info(f"パーティ{party.name}を設定しました")
+        else:
+            logger.info("パーティをクリアしました")
     
     def set_dungeon(self, dungeon_state: DungeonState):
         """ダンジョン設定"""
@@ -526,6 +529,33 @@ class EncounterManager:
             'combat_victory_rate': (self.encounter_statistics['combat_victories'] / 
                                    max(1, self.encounter_statistics['total_encounters']))
         }
+    
+    def cleanup(self):
+        """リソースのクリーンアップ"""
+        try:
+            # パーティ参照をクリア
+            self.current_party = None
+            
+            # ダンジョン参照をクリア
+            self.current_dungeon = None
+            
+            # アクティブエンカウンターをクリア
+            self.active_encounters.clear()
+            
+            # テーブルをクリア
+            self.encounter_tables.clear()
+            
+            # 統計をリセット
+            self.encounter_statistics = {
+                'total_encounters': 0,
+                'combat_victories': 0,
+                'fled_encounters': 0,
+                'avoided_encounters': 0
+            }
+            
+            logger.info("EncounterManager リソースをクリーンアップしました")
+        except Exception as e:
+            logger.error(f"EncounterManager クリーンアップ中にエラー: {e}")
 
 
 # グローバルインスタンス

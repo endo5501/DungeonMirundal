@@ -3,6 +3,7 @@
 import pygame
 import sys
 import random
+from typing import Dict, List, Any, Optional
 from . import dbg_api
 from src.core.config_manager import config_manager
 from src.core.input_manager import InputManager
@@ -402,7 +403,7 @@ class GameManager:
         # 地上部マネージャーの初期化
         try:
             self.overworld_manager = OverworldManager()
-            self.overworld_manager.set_ui_manager(self.ui_manager)
+            # set_ui_managerメソッドは存在しないため削除
             self.overworld_manager.set_enter_dungeon_callback(self.transition_to_dungeon)
             self.overworld_manager.set_exit_game_callback(self.exit_game)
             self.overworld_manager.set_input_manager(self.input_manager)
@@ -469,11 +470,19 @@ class GameManager:
             if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
                 self.dungeon_renderer.dungeon_ui_manager.set_party(party)
         
-        logger.info(self.game_config.get_text("app_log.party_set").format(name=party.name, count=len(party.get_living_characters())))
+        if party is not None:
+            logger.info(self.game_config.get_text("app_log.party_set").format(name=party.name, count=len(party.get_living_characters())))
+        else:
+            logger.info("パーティをクリアしました")
     
     def get_current_party(self) -> Party:
         """現在のパーティを取得"""
         return self.current_party
+    
+    @property
+    def in_dungeon(self) -> bool:
+        """ダンジョン内にいるかどうか"""
+        return self.current_location == GameLocation.DUNGEON
     
     def transition_to_dungeon(self, dungeon_id: str = "main_dungeon"):
         """ダンジョンへの遷移"""

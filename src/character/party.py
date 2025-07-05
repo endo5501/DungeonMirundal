@@ -107,6 +107,11 @@ class PartyFormation:
         """アクティブなキャラクター一覧"""
         return [char_id for char_id in self.positions.values() if char_id is not None]
     
+    def reset(self):
+        """フォーメーションをリセット"""
+        for position in self.positions:
+            self.positions[position] = None
+    
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式でシリアライズ"""
         return {pos.value: char_id for pos, char_id in self.positions.items()}
@@ -197,6 +202,11 @@ class Party:
     def get_all_characters(self) -> List[Character]:
         """全キャラクターのリストを取得"""
         return list(self.characters.values())
+    
+    @property 
+    def members(self) -> List[Character]:
+        """全キャラクターのリストを取得（後方互換性のため）"""
+        return self.get_all_characters()
     
     def get_living_characters(self) -> List[Character]:
         """生存しているキャラクターのリストを取得"""
@@ -321,3 +331,29 @@ class Party:
         from src.ui.inventory_ui import inventory_ui
         inventory_ui.show_party_inventory_menu(self)
         logger.info(f"パーティ {self.name} のインベントリUIを表示")
+    
+    def cleanup(self):
+        """リソースのクリーンアップ"""
+        try:
+            # 全キャラクターのクリーンアップ
+            for character in self.characters.values():
+                if hasattr(character, 'cleanup'):
+                    character.cleanup()
+            
+            # キャラクター辞書をクリア
+            self.characters.clear()
+            
+            # メンバーリストをクリア
+            if hasattr(self, 'members'):
+                self.members.clear()
+            
+            # フォーメーションをリセット
+            if self.formation:
+                self.formation.reset()
+            
+            # ゴールドをリセット
+            self.gold = 0
+            
+            logger.debug(f"Party {self.name} のリソースをクリーンアップしました")
+        except Exception as e:
+            logger.error(f"Party {self.name} クリーンアップ中にエラー: {e}")

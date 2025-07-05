@@ -142,7 +142,10 @@ class DungeonUIManagerPygame:
             # BattleUIWindowの設定更新（実際の実装では適切なメソッドを使用）
             pass
         
-        logger.info(config_manager.get_text("dungeon_ui.party_set").format(party_name=party.name))
+        if party is not None:
+            logger.info(config_manager.get_text("dungeon_ui.party_set").format(party_name=party.name))
+        else:
+            logger.info("ダンジョンUIのパーティをクリアしました")
     
     def set_callback(self, action: str, callback: Callable):
         """コールバックを設定"""

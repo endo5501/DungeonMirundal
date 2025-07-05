@@ -87,7 +87,10 @@ class DungeonRendererPygame:
         if self.dungeon_ui_manager:
             self.dungeon_ui_manager.set_party(party)
         
-        logger.info(f"パーティ{party.name}を設定しました")
+        if party is not None:
+            logger.info(f"パーティ{party.name}を設定しました")
+        else:
+            logger.info("ダンジョンレンダラーのパーティをクリアしました")
     
     def set_dungeon_ui_manager(self, dungeon_ui_manager):
         """ダンジョンUIマネージャーを設定"""

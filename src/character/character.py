@@ -573,3 +573,28 @@ class Character:
         """個人インベントリを取得（新インベントリシステム）"""
         return self.get_inventory()
     
+    def cleanup(self):
+        """リソースのクリーンアップ"""
+        try:
+            # インベントリをクリア
+            if hasattr(self, 'inventory'):
+                self.inventory.clear()
+            
+            # 装備品をクリア
+            if hasattr(self, 'equipped_items'):
+                self.equipped_items.clear()
+            
+            # モック装備品をクリア
+            if hasattr(self, '_mock_equipment'):
+                delattr(self, '_mock_equipment')
+            
+            # システム初期化フラグをリセット
+            self._inventory_initialized = False
+            self._equipment_initialized = False
+            self._status_effects_initialized = False
+            self._spellbook_initialized = False
+            
+            logger.debug(f"Character {self.name} のリソースをクリーンアップしました")
+        except Exception as e:
+            logger.error(f"Character {self.name} クリーンアップ中にエラー: {e}")
+    
