@@ -551,6 +551,14 @@ class SettingsWindow(Window):
     def cancel_changes(self) -> None:
         """変更をキャンセル"""
         self._execute_settings_operation('cancel')
+        
+        # キャンセル時はウィンドウを非表示にする（破棄しない）
+        if self.message_handler:
+            self.message_handler('settings_cancelled', {'window_id': self.window_id})
+        
+        from .window_manager import WindowManager
+        window_manager = WindowManager()
+        window_manager.hide_window(self, remove_from_stack=True)
     
     def reset_to_defaults(self) -> None:
         """デフォルト値にリセット"""
@@ -558,6 +566,7 @@ class SettingsWindow(Window):
     
     def handle_escape(self) -> bool:
         """ESCキーの処理"""
+        # 変更をキャンセル（ウィンドウのクローズも実行される）
         self.cancel_changes()
         return True
     
@@ -578,3 +587,85 @@ class SettingsWindow(Window):
             self.ui_manager = None
         
         logger.debug(f"SettingsWindow UI要素をクリーンアップ: {self.window_id}")
+    
+    def hide_ui_elements(self) -> None:
+        """UI要素を非表示にする"""
+        if not self.ui_manager:
+            return
+        
+        # すべてのUI要素を非表示にする
+        if hasattr(self, 'panel') and self.panel:
+            self.panel.hide()
+            
+        # タブ関連要素を非表示
+        if hasattr(self, 'tab_container') and self.tab_container:
+            self.tab_container.hide()
+            
+        # コンテンツコンテナを非表示
+        if hasattr(self, 'content_container') and self.content_container:
+            self.content_container.hide()
+            
+        # ボタンコンテナを非表示
+        if hasattr(self, 'button_container') and self.button_container:
+            self.button_container.hide()
+            
+        # 個別のUI要素を非表示
+        for tab in self.tabs:
+            if hasattr(tab, 'ui_element') and tab.ui_element:
+                tab.ui_element.hide()
+            for field in tab.fields:
+                if hasattr(field, 'ui_element') and field.ui_element:
+                    field.ui_element.hide()
+                if hasattr(field, 'label_element') and field.label_element:
+                    field.label_element.hide()
+                    
+        # アクションボタンを非表示
+        if hasattr(self, 'apply_button') and self.apply_button:
+            self.apply_button.hide()
+        if hasattr(self, 'cancel_button') and self.cancel_button:
+            self.cancel_button.hide()
+        if hasattr(self, 'reset_button') and self.reset_button:
+            self.reset_button.hide()
+        
+        logger.debug(f"SettingsWindow UI要素を非表示: {self.window_id}")
+    
+    def show_ui_elements(self) -> None:
+        """UI要素を表示する"""
+        if not self.ui_manager:
+            return
+        
+        # すべてのUI要素を表示する
+        if hasattr(self, 'panel') and self.panel:
+            self.panel.show()
+            
+        # タブ関連要素を表示
+        if hasattr(self, 'tab_container') and self.tab_container:
+            self.tab_container.show()
+            
+        # コンテンツコンテナを表示
+        if hasattr(self, 'content_container') and self.content_container:
+            self.content_container.show()
+            
+        # ボタンコンテナを表示
+        if hasattr(self, 'button_container') and self.button_container:
+            self.button_container.show()
+            
+        # 個別のUI要素を表示
+        for tab in self.tabs:
+            if hasattr(tab, 'ui_element') and tab.ui_element:
+                tab.ui_element.show()
+            for field in tab.fields:
+                if hasattr(field, 'ui_element') and field.ui_element:
+                    field.ui_element.show()
+                if hasattr(field, 'label_element') and field.label_element:
+                    field.label_element.show()
+                    
+        # アクションボタンを表示
+        if hasattr(self, 'apply_button') and self.apply_button:
+            self.apply_button.show()
+        if hasattr(self, 'cancel_button') and self.cancel_button:
+            self.cancel_button.show()
+        if hasattr(self, 'reset_button') and self.reset_button:
+            self.reset_button.show()
+        
+        logger.debug(f"SettingsWindow UI要素を表示: {self.window_id}")

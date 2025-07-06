@@ -92,7 +92,6 @@ class SettingsUI:
             # SettingsWindowの初期化
             self.settings_window = SettingsWindow(
                 window_id="settings_main",
-                title="設定",
                 settings_config=self._create_settings_config()
             )
         return self.settings_window
@@ -100,6 +99,7 @@ class SettingsUI:
     def _create_settings_config(self) -> Dict[str, Any]:
         """設定ウィンドウ用設定を作成"""
         return {
+            'title': '設定',
             'categories': [
                 {
                     'id': 'gameplay',

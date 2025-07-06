@@ -195,15 +195,18 @@ class TestOverworldManagerMessageHandling:
     
     def test_handle_main_menu_message_settings(self):
         """設定メニューメッセージ処理テスト"""
-        try:
-            # 設定メニューメッセージの処理
-            result = self.overworld_manager.handle_main_menu_message(
-                'settings_menu_requested', {}
-            )
-            # 戻り値の型は実装依存
-        except (TypeError, AttributeError, KeyError, ValueError):
-            # パラメータや実装の違いによりエラーが発生する場合はスキップ
-            pass
+        # _show_settings_menu_windowメソッドをモック
+        with patch.object(self.overworld_manager, '_show_settings_menu_window', return_value=True):
+            try:
+                # 設定メニューメッセージの処理
+                result = self.overworld_manager.handle_main_menu_message(
+                    'settings_menu_requested', {}
+                )
+                # 戻り値がboolまたはNoneであることを確認
+                assert result is True or result is None
+            except (TypeError, AttributeError, KeyError, ValueError):
+                # パラメータや実装の違いによりエラーが発生する場合はスキップ
+                pass
 
 
 class TestOverworldManagerConfiguration:

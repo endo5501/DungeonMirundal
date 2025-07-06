@@ -10,6 +10,7 @@ from src.facilities.core.facility_registry import facility_registry
 # from src.ui.base_ui_pygame import UIDialog, ui_manager  # レガシーメニュー: Phase 4.5で削除済み
 # 新システムではOverworldMainWindowで情報表示を統合処理
 from src.ui.window_system import WindowManager
+from src.ui.window_system.window import WindowState
 try:
     from src.ui.dungeon_selection_ui import DungeonSelectionUI
 except ImportError:
@@ -581,14 +582,27 @@ class OverworldManager:
         try:
             from src.ui.window_system.settings_window import SettingsWindow
             
-            config = self._create_settings_menu_config()
-            settings_window = self.window_manager.create_window(
-                SettingsWindow, 
-                'settings_menu', 
-                settings_config=config
-            )
-            settings_window.message_handler = self.handle_settings_message
+            # 既存の設定ウィンドウがあるかチェック
+            existing_window = None
+            if 'settings_menu' in self.window_manager.window_registry:
+                existing_window = self.window_manager.window_registry['settings_menu']
+                logger.debug(f"既存の設定ウィンドウを発見: 状態={existing_window.state}")
             
+            if existing_window and existing_window.state == WindowState.HIDDEN:
+                # 既存の非表示ウィンドウを再表示
+                settings_window = existing_window
+                logger.debug("既存の設定ウィンドウを再表示します")
+            else:
+                # 新しいウィンドウを作成
+                config = self._create_settings_menu_config()
+                settings_window = self.window_manager.create_window(
+                    SettingsWindow, 
+                    'settings_menu', 
+                    settings_config=config
+                )
+                logger.debug("新しい設定ウィンドウを作成しました")
+            
+            settings_window.message_handler = self.handle_settings_message
             self.window_manager.show_window(settings_window, push_to_stack=True)
             
         except ImportError:
@@ -609,6 +623,11 @@ class OverworldManager:
                 return self._show_load_menu()
             elif item_id == 'back':
                 return self._back_to_main_menu()
+        
+        elif message_type == 'settings_cancelled':
+            # 設定メニューがキャンセルされた時の処理
+            logger.debug("設定メニューがキャンセルされました")
+            return self._back_to_main_menu()
                 
         return False
     
@@ -629,9 +648,13 @@ class OverworldManager:
         if not self.is_active:
             return False
         
-        # 設定メニューが表示されている場合は戻る
-        if self.settings_menu_active:
-            return self._back_to_main_menu()
+        # WindowManagerのスタックを確認し、現在のウィンドウでESCキー処理を行う
+        current_window = self.window_manager.window_stack.peek()
+        if current_window and hasattr(current_window, 'handle_escape'):
+            # 現在のウィンドウがESCキーを処理できる場合はそちらに委譲
+            if current_window.window_id == 'settings_menu':
+                logger.debug("設定メニューでESCキー処理を委譲")
+                return current_window.handle_escape()
         
         # 通常状態では設定メニューを表示
         self._show_settings_menu_window()

@@ -231,9 +231,9 @@ class WindowManager:
         if window_id in self.window_registry:
             existing_window = self.window_registry[window_id]
             
-            # 破棄されたウィンドウの場合は、レジストリから削除
-            if existing_window.state == WindowState.DESTROYED:
-                logger.debug(f"破棄されたウィンドウをレジストリから削除: {window_id}")
+            # 破棄されたまたは非表示ウィンドウの場合は、レジストリから削除
+            if existing_window.state in [WindowState.DESTROYED, WindowState.HIDDEN]:
+                logger.debug(f"非アクティブウィンドウをレジストリから削除: {window_id} (状態: {existing_window.state})")
                 del self.window_registry[window_id]
             else:
                 logger.error(f"ウィンドウID重複エラー: '{window_id}' は既に使用中")
@@ -284,6 +284,10 @@ class WindowManager:
             window: 非表示にするウィンドウ
             remove_from_stack: スタックから削除するかどうか
         """
+        # 隠すウィンドウのUI要素を明示的に非表示にする
+        if hasattr(window, 'hide_ui_elements'):
+            window.hide_ui_elements()
+        
         window.hide()
         
         # スタックから削除
@@ -294,10 +298,15 @@ class WindowManager:
         if window.modal and self.focus_manager.is_focus_locked():
             self.focus_manager.unlock_focus()
         
-        # 新しいトップウィンドウにフォーカスを設定
+        # 新しいトップウィンドウにフォーカスを設定し、再表示
         new_top = self.get_active_window()
         if new_top:
             self.focus_manager.set_focus(new_top)
+            # 背後のウィンドウを明示的に再表示
+            if hasattr(new_top, 'show_ui_elements'):
+                new_top.show_ui_elements()
+            new_top.show()
+            logger.debug(f"背後のウィンドウを再表示: {new_top.window_id}")
         
         logger.debug(f"ウィンドウを非表示: {window.window_id}")
     

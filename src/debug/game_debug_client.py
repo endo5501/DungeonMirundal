@@ -138,9 +138,13 @@ class GameDebugClient:
         response.raise_for_status()
         return response.json()
     
-    def press_escape(self) -> None:
+    def press_escape(self) -> bool:
         """ESCキーを押す"""
-        self.send_key(27)
+        try:
+            result = self.send_key(27)
+            return result.get("ok", False)
+        except Exception:
+            return False
     
     def press_enter(self) -> None:
         """Enterキーを押す"""
