@@ -801,6 +801,50 @@ class WindowManager:
         WindowManager._instance = None
         logger.info("WindowManagerをシャットダウンしました")
     
+    def handle_global_events(self, events: List[pygame.event.Event]) -> bool:
+        """
+        グローバルイベントを処理し、ウィンドウシステムで処理されたかを返す
+        
+        Args:
+            events: 処理するイベントのリスト
+            
+        Returns:
+            bool: イベントがウィンドウシステムで処理された場合True
+        """
+        handled = False
+        
+        for event in events:
+            # アクティブなウィンドウがある場合は、そのウィンドウに優先的にイベントを送る
+            active_window = self.get_active_window()
+            if active_window:
+                # ウィンドウのhandle_eventメソッドを呼び出す
+                if hasattr(active_window, 'handle_event'):
+                    if active_window.handle_event(event):
+                        handled = True
+                        continue
+                
+                # ショートカットキー処理（数字キー1-9）
+                if event.type == pygame.KEYDOWN:
+                    # 数字キー1-9の検出（event.unicodeの代わりにevent.keyを使用）
+                    if pygame.K_1 <= event.key <= pygame.K_9:
+                        button_number = event.key - pygame.K_1 + 1
+                        if self.handle_button_shortcut(button_number):
+                            handled = True
+                            continue
+                
+                # ESCキー処理
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    if self.handle_escape():
+                        handled = True
+                        continue
+                
+                # UIManagerでのイベント処理
+                if self.ui_manager:
+                    self.ui_manager.process_events(event)
+                    handled = True
+        
+        return handled
+    
     def __str__(self) -> str:
         stats = self.get_statistics()
         return f"WindowManager(windows: {stats['total_windows']}, active: {stats['active_windows']}, stack: {stats['stack_size']})"
