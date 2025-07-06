@@ -530,6 +530,9 @@ class SettingsWindow(Window):
         if not self.ui_manager:
             return
         
+        # pygame-guiの展開されたドロップダウンメニューを強制的に閉じる
+        self._force_close_dropdowns()
+        
         # すべてのUI要素を非表示にする
         if hasattr(self, 'panel') and self.panel:
             self.panel.hide()
@@ -553,6 +556,39 @@ class SettingsWindow(Window):
                     field.label_element.hide()
         
         logger.debug(f"SettingsWindow UI要素を非表示: {self.window_id}")
+    
+    def _force_close_dropdowns(self) -> None:
+        """pygame-guiのドロップダウンメニューを強制的に閉じる"""
+        if not self.ui_manager:
+            return
+        
+        try:
+            # すべてのUI要素を調査してドロップダウンメニューを探す
+            for tab in self.tabs:
+                for field in tab.fields:
+                    if (hasattr(field, 'ui_element') and 
+                        hasattr(field.ui_element, 'drop_down_menu_ui') and
+                        field.ui_element.drop_down_menu_ui is not None):
+                        # ドロップダウンメニューが展開されている場合、強制的に閉じる
+                        field.ui_element.drop_down_menu_ui.kill()
+                        field.ui_element.drop_down_menu_ui = None
+                        logger.debug(f"強制的にドロップダウンを閉じました: {field.field_id}")
+            
+            # UIManagerのすべての要素から展開されたドロップダウンを探す
+            all_elements = list(self.ui_manager.get_root_container().elements)
+            for element in all_elements:
+                # ドロップダウンメニュー関連のクラス名をチェック
+                element_class_name = element.__class__.__name__
+                if ('DropDown' in element_class_name or 
+                    'drop_down' in str(element.__class__).lower()):
+                    try:
+                        element.kill()
+                        logger.debug(f"ドロップダウン関連要素を削除: {element_class_name}")
+                    except Exception as e:
+                        logger.warning(f"ドロップダウン要素削除エラー: {e}")
+                        
+        except Exception as e:
+            logger.warning(f"ドロップダウンメニュー強制クローズでエラー: {e}")
     
     def show_ui_elements(self) -> None:
         """UI要素を表示する"""
