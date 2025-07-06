@@ -4,6 +4,12 @@ import logging
 from typing import List, Dict, Any, Optional
 from ..core.facility_service import FacilityService, MenuItem
 from ..core.service_result import ServiceResult, ResultType
+from .service_utils import (
+    ServiceResultFactory,
+    PartyMemberUtility,
+    ConfirmationFlowUtility,
+    ActionExecutorMixin
+)
 # 正しいインポートパスに修正
 try:
     from src.core.game_manager import GameManager as Game
@@ -21,7 +27,7 @@ PartyModel = None
 logger = logging.getLogger(__name__)
 
 
-class GuildService(FacilityService):
+class GuildService(FacilityService, ActionExecutorMixin):
     """冒険者ギルドサービス
     
     キャラクター作成、パーティ編成、クラス変更などの
@@ -38,6 +44,9 @@ class GuildService(FacilityService):
         
         # キャラクター作成の一時データ
         self._creation_data: Dict[str, Any] = {}
+        
+        # ユーティリティクラス
+        self.party_utility = None  # パーティが設定されたときに初期化
         
         logger.info("GuildService initialized")
     
@@ -101,27 +110,16 @@ class GuildService(FacilityService):
     
     def execute_action(self, action_id: str, params: Dict[str, Any]) -> ServiceResult:
         """アクションを実行"""
-        logger.info(f"Executing action: {action_id} with params: {params}")
+        action_map = {
+            "character_creation": self._handle_character_creation,
+            "character_creation_complete": self._complete_character_creation,
+            "party_formation": self._handle_party_formation,
+            "class_change": self._handle_class_change,
+            "character_list": self._handle_character_list,
+            "exit": lambda p: ServiceResultFactory.success("ギルドから退出しました")
+        }
         
-        try:
-            if action_id == "character_creation":
-                return self._handle_character_creation(params)
-            elif action_id == "character_creation_complete":
-                return self._complete_character_creation(params)
-            elif action_id == "party_formation":
-                return self._handle_party_formation(params)
-            elif action_id == "class_change":
-                return self._handle_class_change(params)
-            elif action_id == "character_list":
-                return self._handle_character_list(params)
-            elif action_id == "exit":
-                return ServiceResult(True, "ギルドから退出しました")
-            else:
-                return ServiceResult(False, f"不明なアクション: {action_id}")
-                
-        except Exception as e:
-            logger.error(f"Action execution failed: {e}")
-            return ServiceResult(False, f"エラーが発生しました: {str(e)}")
+        return self.execute_with_error_handling(action_map, action_id, params)
     
     # キャラクター作成関連
     
@@ -130,10 +128,8 @@ class GuildService(FacilityService):
         # ウィザードの初期化
         self._creation_data = {}
         
-        return ServiceResult(
-            success=True,
-            message="キャラクター作成を開始します",
-            result_type=ResultType.INFO,
+        return ServiceResultFactory.info(
+            "キャラクター作成を開始します",
             data={"wizard_started": True}
         )
     
@@ -144,41 +140,29 @@ class GuildService(FacilityService):
             required = ["name", "race", "class", "stats"]
             for field in required:
                 if field not in params:
-                    return ServiceResult(
-                        success=False,
-                        message=f"必須項目が不足しています: {field}",
-                        result_type=ResultType.ERROR
-                    )
+                    return ServiceResultFactory.error(f"必須項目が不足しています: {field}")
             
             # キャラクターを作成
             character = self._create_character_from_params(params)
             if not character:
-                return ServiceResult(
-                    success=False,
-                    message="キャラクターの作成に失敗しました",
-                    result_type=ResultType.ERROR
-                )
+                return ServiceResultFactory.error("キャラクターの作成に失敗しました")
             
             # データベースに保存
-            self.character_model.create(character)
+            if self.character_model:
+                self.character_model.create(character)
             
             # キャラクターをゲームに登録
-            self.game.add_character(character)
+            if self.game:
+                self.game.add_character(character)
             
-            return ServiceResult(
-                success=True,
-                message=f"キャラクター「{character.name}」を作成しました！",
-                result_type=ResultType.SUCCESS,
+            return ServiceResultFactory.success(
+                f"キャラクター「{character.name}」を作成しました！",
                 data={"character_id": character.id}
             )
             
         except Exception as e:
             logger.error(f"Character creation failed: {e}")
-            return ServiceResult(
-                success=False,
-                message="キャラクター作成中にエラーが発生しました",
-                result_type=ResultType.ERROR
-            )
+            return ServiceResultFactory.error("キャラクター作成中にエラーが発生しました")
     
     def _create_character_from_params(self, params: Dict[str, Any]) -> Optional[Character]:
         """パラメータからキャラクターを作成"""
@@ -223,9 +207,8 @@ class GuildService(FacilityService):
         elif action == "get_info":
             return self._get_party_info()
         else:
-            return ServiceResult(
-                success=True,
-                message="パーティ編成画面を表示します",
+            return ServiceResultFactory.success(
+                "パーティ編成画面を表示します",
                 data={"panel_type": "party_formation"}
             )
     
@@ -233,16 +216,19 @@ class GuildService(FacilityService):
         """パーティにメンバーを追加"""
         character_id = params.get("character_id")
         if not character_id:
-            return ServiceResult(False, "キャラクターIDが指定されていません")
+            return ServiceResultFactory.error("キャラクターIDが指定されていません")
         
         # キャラクターを取得
+        if not self.character_model:
+            return ServiceResultFactory.error("キャラクターモデルが利用できません")
+        
         character = self.character_model.get(character_id)
         if not character:
-            return ServiceResult(False, "キャラクターが見つかりません")
+            return ServiceResultFactory.error("キャラクターが見つかりません")
         
         # パーティに追加
         if self.party and len(self.party.members) >= 6:
-            return ServiceResult(False, "パーティは満員です（最大6人）")
+            return ServiceResultFactory.error("パーティは満員です（最大6人）")
         
         if not self.party:
             # 新しいパーティを作成
@@ -250,58 +236,52 @@ class GuildService(FacilityService):
             self.game.set_party(self.party)
         
         if self.party.add_member(character):
-            return ServiceResult(
-                success=True,
-                message=f"{character.name}をパーティに追加しました",
+            return ServiceResultFactory.success(
+                f"{character.name}をパーティに追加しました",
                 data={"party_size": len(self.party.members)}
             )
         else:
-            return ServiceResult(False, "パーティへの追加に失敗しました")
+            return ServiceResultFactory.error("パーティへの追加に失敗しました")
     
     def _remove_party_member(self, params: Dict[str, Any]) -> ServiceResult:
         """パーティからメンバーを削除"""
         character_id = params.get("character_id")
         if not character_id:
-            return ServiceResult(False, "キャラクターIDが指定されていません")
+            return ServiceResultFactory.error("キャラクターIDが指定されていません")
         
         if not self.party:
-            return ServiceResult(False, "パーティが存在しません")
+            return ServiceResultFactory.error("パーティが存在しません")
         
         # メンバーを削除
         for i, member in enumerate(self.party.members):
             if member.id == character_id:
                 removed = self.party.remove_member(i)
                 if removed:
-                    return ServiceResult(
-                        success=True,
-                        message=f"{removed.name}をパーティから外しました",
+                    return ServiceResultFactory.success(
+                        f"{removed.name}をパーティから外しました",
                         data={"party_size": len(self.party.members)}
                     )
         
-        return ServiceResult(False, "指定されたキャラクターはパーティにいません")
+        return ServiceResultFactory.error("指定されたキャラクターはパーティにいません")
     
     def _reorder_party(self, params: Dict[str, Any]) -> ServiceResult:
         """パーティの並び順を変更"""
         new_order = params.get("order", [])
         
         if not self.party:
-            return ServiceResult(False, "パーティが存在しません")
+            return ServiceResultFactory.error("パーティが存在しません")
         
         # 並び替えを実行
         if self.party.reorder_members(new_order):
-            return ServiceResult(
-                success=True,
-                message="パーティの並び順を変更しました"
-            )
+            return ServiceResultFactory.success("パーティの並び順を変更しました")
         else:
-            return ServiceResult(False, "並び順の変更に失敗しました")
+            return ServiceResultFactory.error("並び順の変更に失敗しました")
     
     def _get_party_info(self) -> ServiceResult:
         """パーティ情報を取得"""
         if not self.party:
-            return ServiceResult(
-                success=True,
-                message="パーティが編成されていません",
+            return ServiceResultFactory.info(
+                "パーティが編成されていません",
                 data={"party": None, "members": []}
             )
         
@@ -317,9 +297,8 @@ class GuildService(FacilityService):
                 "status": member.status
             })
         
-        return ServiceResult(
-            success=True,
-            message="パーティ情報",
+        return ServiceResultFactory.success(
+            "パーティ情報",
             data={
                 "party_name": self.party.name,
                 "members": members_info,
@@ -335,95 +314,107 @@ class GuildService(FacilityService):
         new_class = params.get("new_class")
         
         if not character_id or not new_class:
-            return ServiceResult(
-                success=True,
-                message="クラス変更画面を表示します",
+            return ServiceResultFactory.success(
+                "クラス変更画面を表示します",
                 data={"available_classes": self._get_available_classes()}
             )
         
         # キャラクターを取得
+        if not self.character_model:
+            return ServiceResultFactory.error("キャラクターモデルが利用できません")
+        
         character = self.character_model.get(character_id)
         if not character:
-            return ServiceResult(False, "キャラクターが見つかりません")
+            return ServiceResultFactory.error("キャラクターが見つかりません")
         
         # クラス変更の条件をチェック
         if character.level < 5:
-            return ServiceResult(
-                success=False,
-                message="クラス変更にはレベル5以上が必要です",
+            return ServiceResultFactory.error(
+                "クラス変更にはレベル5以上が必要です",
                 result_type=ResultType.WARNING
             )
         
         # クラス変更を実行
         old_class = character.char_class
         if character.change_class(new_class):
-            self.character_model.update(character)
-            return ServiceResult(
-                success=True,
-                message=f"{character.name}のクラスを{old_class}から{new_class}に変更しました",
-                result_type=ResultType.SUCCESS
+            if self.character_model:
+                self.character_model.update(character)
+            return ServiceResultFactory.success(
+                f"{character.name}のクラスを{old_class}から{new_class}に変更しました"
             )
         else:
-            return ServiceResult(False, "クラス変更に失敗しました")
+            return ServiceResultFactory.error("クラス変更に失敗しました")
     
     # キャラクター一覧関連
     
     def _handle_character_list(self, params: Dict[str, Any]) -> ServiceResult:
         """キャラクター一覧を処理"""
+        self._ensure_party_utility()
+        
         # フィルタオプション
         filter_by = params.get("filter", "all")
         sort_by = params.get("sort", "name")
         
         # 全キャラクターを取得
-        all_characters = self.character_model.get_all()
+        if self.character_model:
+            all_characters = self.character_model.get_all()
+        else:
+            # モデルがない場合は空リスト
+            all_characters = []
         
         # フィルタリング
         if filter_by == "available":
             # パーティに入っていないキャラクターのみ
-            if self.party:
+            if self.party_utility.has_party():
                 party_ids = [m.id for m in self.party.members]
                 characters = [c for c in all_characters if c.id not in party_ids]
             else:
                 characters = all_characters
         elif filter_by == "in_party":
             # パーティメンバーのみ
-            characters = self.party.members if self.party else []
+            characters = self.party.members if self.party_utility.has_party() else []
         else:
             characters = all_characters
         
         # ソート
-        if sort_by == "level":
-            characters.sort(key=lambda c: c.level, reverse=True)
-        elif sort_by == "class":
-            characters.sort(key=lambda c: c.char_class)
-        else:  # name
-            characters.sort(key=lambda c: c.name)
+        self._sort_characters(characters, sort_by)
         
-        # 結果を構築
+        # PartyMemberUtilityを使用してキャラクター情報辞書を作成
         character_list = []
         for char in characters:
-            character_list.append({
-                "id": char.id,
-                "name": char.name,
-                "level": char.level,
-                "race": char.race,
-                "class": char.char_class,
-                "hp": f"{char.hp}/{char.max_hp}",
-                "mp": f"{char.mp}/{char.max_mp}",
-                "status": char.status,
-                "in_party": self.party and char in self.party.members
-            })
+            char_info = self.party_utility.create_member_info_dict(
+                char,
+                additional_fields={
+                    "race": char.race,
+                    "class": char.char_class,
+                    "in_party": self.party_utility.has_party() and char in self.party.members
+                }
+            )
+            character_list.append(char_info)
         
-        return ServiceResult(
-            success=True,
-            message=f"冒険者一覧（{len(character_list)}人）",
+        return ServiceResultFactory.success(
+            f"冒険者一覧（{len(character_list)}人）",
             data={
                 "characters": character_list,
                 "total": len(character_list)
             }
         )
     
+    def _sort_characters(self, characters: List, sort_by: str) -> None:
+        """キャラクターリストをソート"""
+        if sort_by == "level":
+            characters.sort(key=lambda c: c.level, reverse=True)
+        elif sort_by == "class":
+            characters.sort(key=lambda c: c.char_class)
+        else:  # name
+            characters.sort(key=lambda c: c.name)
+    
     # ヘルパーメソッド
+    
+    def _ensure_party_utility(self) -> None:
+        """PartyMemberUtilityを初期化（必要時）"""
+        if self.party_utility is None:
+            self.party_utility = PartyMemberUtility(self.party)
     
     def _can_create_character(self) -> bool:
         """キャラクター作成が可能かチェック"""
