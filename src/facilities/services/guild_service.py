@@ -429,18 +429,43 @@ class GuildService(FacilityService):
         """キャラクター作成が可能かチェック"""
         # 最大キャラクター数などの制限をチェック
         max_characters = 20  # 仮の値
-        current_count = len(self.character_model.get_all())
+        
+        # モデルが利用できない場合は、パーティから推定
+        if self.character_model is None:
+            if self.party:
+                current_count = len(self.party.get_all_characters())
+            else:
+                current_count = 0
+        else:
+            current_count = len(self.character_model.get_all())
+        
         return current_count < max_characters
     
     def _has_characters(self) -> bool:
         """キャラクターが存在するかチェック"""
-        return len(self.character_model.get_all()) > 0
+        # モデルが利用できない場合は、パーティから推定
+        if self.character_model is None:
+            if self.party:
+                return len(self.party.get_all_characters()) > 0
+            else:
+                return False
+        else:
+            return len(self.character_model.get_all()) > 0
     
     def _can_change_class(self) -> bool:
         """クラス変更が可能なキャラクターがいるかチェック"""
         # レベル5以上のキャラクターがいるかチェック
-        characters = self.character_model.get_all()
-        return any(c.level >= 5 for c in characters)
+        
+        # モデルが利用できない場合は、パーティから推定
+        if self.character_model is None:
+            if self.party:
+                characters = self.party.get_all_characters()
+                return any(c.experience.level >= 5 for c in characters)
+            else:
+                return False
+        else:
+            characters = self.character_model.get_all()
+            return any(c.level >= 5 for c in characters)
     
     def _get_available_classes(self) -> List[str]:
         """利用可能なクラスのリストを取得"""

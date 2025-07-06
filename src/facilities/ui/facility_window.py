@@ -19,17 +19,22 @@ class FacilityWindow(Window):
     タブベースのナビゲーションで各サービスにアクセス。
     """
     
-    def __init__(self, controller: FacilityController):
+    def __init__(self, window_id: str, controller: FacilityController = None, facility_controller: FacilityController = None, **kwargs):
         """初期化
         
         Args:
-            controller: 施設コントローラー
+            window_id: ウィンドウID（WindowManager経由の場合は自動設定）
+            controller: 施設コントローラー（直接作成時）
+            facility_controller: 施設コントローラー（WindowManager経由作成時）
+            **kwargs: その他の引数
         """
-        # ウィンドウIDを施設IDから生成
-        window_id = f"{controller.facility_id}_window"
-        super().__init__(window_id, parent=None, modal=False)
+        # コントローラーを正規化
+        self.controller = controller or facility_controller
+        if not self.controller:
+            raise ValueError("FacilityController is required")
         
-        self.controller = controller
+        # ウィンドウを初期化
+        super().__init__(window_id, parent=kwargs.get('parent'), modal=False)
         self.main_panel: Optional[pygame_gui.elements.UIPanel] = None
         self.navigation_panel = None  # NavigationPanel
         self.service_panels: Dict[str, Any] = {}  # ServicePanel instances
@@ -65,6 +70,9 @@ class FacilityWindow(Window):
         else:
             logger.error("WindowManager not available")
             return
+        
+        # Window基底クラスのcreate処理を呼び出し
+        super().create()
         
         # メインパネル作成
         self._create_main_panel()
@@ -110,6 +118,7 @@ class FacilityWindow(Window):
             
             # メニュー項目を取得
             menu_items = self.controller.get_menu_items()
+            logger.info(f"[DEBUG] NavigationPanel: controller.is_active={self.controller.is_active}, menu_items count={len(menu_items)}")
             
             self.navigation_panel = NavigationPanel(
                 rect=nav_rect,
@@ -241,19 +250,68 @@ class FacilityWindow(Window):
                     ui_manager=self.ui_manager
                 )
             else:
-                from .service_panel import ServicePanel
-                return ServicePanel(
-                    rect=content_rect,
-                    parent=self.main_panel,
-                    controller=self.controller,
-                    service_id=service_id,
-                    ui_manager=self.ui_manager
-                )
+                # ServicePanelは抽象クラスなので具体的な実装を作成
+                return self._create_generic_service_panel(content_rect, service_id, menu_item)
                 
         except ImportError as e:
             logger.error(f"Failed to import service panel: {e}")
             # フォールバック：シンプルなパネル
             return self._create_fallback_panel(content_rect, service_id)
+    
+    def _create_generic_service_panel(self, rect: pygame.Rect, service_id: str, menu_item) -> pygame_gui.elements.UIPanel:
+        """汎用サービスパネルを作成"""
+        panel = pygame_gui.elements.UIPanel(
+            relative_rect=rect,
+            manager=self.ui_manager,
+            container=self.main_panel,
+            element_id=f"{service_id}_panel"
+        )
+        
+        # サービス名を表示
+        title_label = pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect(10, 10, rect.width - 20, 40),
+            text=menu_item.label,
+            manager=self.ui_manager,
+            container=panel
+        )
+        
+        # サービス説明を表示
+        if hasattr(menu_item, 'description') and menu_item.description:
+            desc_label = pygame_gui.elements.UILabel(
+                relative_rect=pygame.Rect(10, 60, rect.width - 20, 60),
+                text=menu_item.description,
+                manager=self.ui_manager,
+                container=panel
+            )
+        
+        # 実装予定メッセージ
+        status_label = pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect(10, 140, rect.width - 20, 30),
+            text="このサービスは現在実装中です。",
+            manager=self.ui_manager,
+            container=panel
+        )
+        
+        # パネルにカスタム属性を追加（show/hideメソッド用）
+        panel.is_visible = True
+        
+        # 元のshow/hideメソッドを保存
+        original_show = panel.show
+        original_hide = panel.hide
+        
+        def show_panel():
+            original_show()
+            panel.is_visible = True
+            
+        def hide_panel():
+            original_hide()
+            panel.is_visible = False
+            
+        panel.show = show_panel
+        panel.hide = hide_panel
+        
+        logger.info(f"Generic service panel created: {service_id}")
+        return panel
     
     def _create_fallback_panel(self, rect: pygame.Rect, service_id: str) -> pygame_gui.elements.UIPanel:
         """フォールバック用のシンプルなパネルを作成"""
@@ -264,7 +322,7 @@ class FacilityWindow(Window):
         )
         
         # サービス名を表示
-        label = pygame_gui.elements.UILabel(
+        pygame_gui.elements.UILabel(
             relative_rect=pygame.Rect(10, 10, rect.width - 20, 30),
             text=f"Service: {service_id}",
             manager=self.ui_manager,
@@ -357,7 +415,12 @@ class FacilityWindow(Window):
             self.controller.exit()
             return True
         
-        # シンプルナビゲーションのボタンクリック処理
+        # NavigationPanelのボタンクリック処理
+        if self.navigation_panel and hasattr(self.navigation_panel, 'handle_button_click'):
+            if self.navigation_panel.handle_button_click(event):
+                return True
+        
+        # シンプルナビゲーションのボタンクリック処理（フォールバック）
         if hasattr(self, 'nav_buttons') and event.type == pygame_gui.UI_BUTTON_PRESSED:
             for button in self.nav_buttons:
                 if event.ui_element == button:

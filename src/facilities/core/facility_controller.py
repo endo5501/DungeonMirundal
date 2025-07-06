@@ -49,16 +49,24 @@ class FacilityController:
         self._party = party
         self.service.set_party(party)
         
+        # 施設をアクティブ状態に設定（ウィンドウ作成前に必要）
+        self.is_active = True
+        
         # ウィンドウを作成・表示（UIモジュールがある場合）
-        if self._create_and_show_window():
-            self.is_active = True
-            logger.info(f"Entered facility: {self.facility_id}")
-            return True
-        else:
-            # UIなしでも施設は利用可能（テスト用など）
-            self.is_active = True
-            logger.info(f"Entered facility (no UI): {self.facility_id}")
-            return True
+        try:
+            if self._create_and_show_window():
+                logger.info(f"Entered facility: {self.facility_id}")
+                return True
+            else:
+                # UIなしでも施設は利用可能（テスト用など）
+                logger.info(f"Entered facility (no UI): {self.facility_id}")
+                return True
+        except Exception as e:
+            # ウィンドウ作成に失敗した場合、状態をリセット
+            logger.error(f"Failed to create facility window: {self.facility_id}", exc_info=True)
+            self.is_active = False
+            self._party = None
+            return False
     
     def exit(self) -> bool:
         """施設から出る - シンプルな直接処理
@@ -131,11 +139,15 @@ class FacilityController:
         Returns:
             メニュー項目のリスト
         """
+        logger.info(f"[DEBUG] get_menu_items called: is_active={self.is_active}, facility_id={self.facility_id}")
         if not self.is_active:
+            logger.warning(f"[DEBUG] get_menu_items: facility not active, returning empty list")
             return []
         
         try:
-            return self.service.get_menu_items()
+            menu_items = self.service.get_menu_items()
+            logger.info(f"[DEBUG] get_menu_items: service returned {len(menu_items)} items")
+            return menu_items
         except Exception as e:
             logger.error(f"Failed to get menu items: {self.facility_id}", exc_info=True)
             return []
@@ -185,9 +197,29 @@ class FacilityController:
         try:
             # UI モジュールを遅延インポート（循環参照回避）
             from ..ui.facility_window import FacilityWindow
+            from src.ui.window_system.window_manager import WindowManager
             
-            self.window = FacilityWindow(self)
-            self.window.show()
+            # WindowManagerを通してウィンドウを作成・表示
+            window_manager = WindowManager.get_instance()
+            if window_manager:
+                # WindowManagerでウィンドウを作成（自動的に登録される）
+                window_id = f"facility_{self.facility_id}_window"
+                self.window = window_manager.create_window(
+                    FacilityWindow, 
+                    window_id=window_id,
+                    facility_controller=self
+                )
+                logger.info(f"FacilityWindow created via WindowManager: {self.window.window_id}")
+                
+                # ウィンドウを表示
+                window_manager.show_window(self.window)
+                logger.info(f"FacilityWindow shown via WindowManager: {self.window.window_id}")
+            else:
+                # フォールバック: 直接作成・表示
+                self.window = FacilityWindow(self)
+                self.window.show()
+                logger.warning("WindowManager not available, creating window directly")
+            
             return True
             
         except ImportError:
@@ -201,7 +233,16 @@ class FacilityController:
         """ウィンドウを閉じる"""
         if self.window:
             try:
-                self.window.close()
+                # WindowManagerを通してウィンドウを閉じる
+                from src.ui.window_system.window_manager import WindowManager
+                window_manager = WindowManager.get_instance()
+                if window_manager:
+                    window_manager.hide_window(self.window, remove_from_stack=True)
+                    logger.info(f"FacilityWindow removed from WindowManager: {self.window.window_id}")
+                else:
+                    # フォールバック: 直接閉じる
+                    self.window.close()
+                    logger.warning("WindowManager not available, closing window directly")
             except Exception as e:
                 logger.error(f"Failed to close window: {self.facility_id}", exc_info=True)
             finally:
@@ -218,14 +259,8 @@ class FacilityController:
     def _return_to_overworld(self) -> None:
         """地上画面に戻る"""
         try:
-            # OverworldManagerに直接アクセス（シンプルな処理）
-            from src.overworld.overworld_manager import OverworldManager
-            overworld_manager = OverworldManager.get_instance()
-            if overworld_manager:
-                overworld_manager.show_main_menu()
-            else:
-                logger.warning("OverworldManager not available")
-        except ImportError:
-            logger.info("OverworldManager not available")
+            # WindowManagerで施設ウィンドウが閉じられると、
+            # 自動的に前のウィンドウ（地上画面）に戻る
+            logger.info("Facility exit completed, returned to overworld")
         except Exception as e:
             logger.error("Failed to return to overworld", exc_info=True)

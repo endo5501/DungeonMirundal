@@ -65,7 +65,9 @@ class NavigationPanel:
         """ナビゲーションボタンを作成"""
         # ボタンの合計幅を計算
         total_buttons = len(self.menu_items)
+        logger.info(f"NavigationPanel: Creating {total_buttons} navigation buttons")
         if total_buttons == 0:
+            logger.warning("NavigationPanel: No menu items to create buttons for")
             return
         
         # 横並びレイアウト
@@ -106,6 +108,9 @@ class NavigationPanel:
             button.item_id = item.id
             
             self.nav_buttons[item.id] = button
+            logger.info(f"NavigationPanel: Created button '{item.label}' at ({x}, {y}) size ({button_width}, {self.button_height})")
+        
+        logger.info(f"NavigationPanel: Successfully created {len(self.nav_buttons)} buttons")
     
     def _get_button_style(self, item: MenuItem) -> Dict[str, str]:
         """ボタンのスタイルを取得
@@ -191,22 +196,29 @@ class NavigationPanel:
             処理したらTrue
         """
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            logger.info(f"NavigationPanel: UI_BUTTON_PRESSED event detected")
             # クリックされたボタンを特定
             for item_id, button in self.nav_buttons.items():
                 if event.ui_element == button:
+                    logger.info(f"NavigationPanel: Button clicked - {item_id}")
                     # 無効なボタンはクリックできない
                     if not button.is_enabled:
+                        logger.warning(f"NavigationPanel: Button {item_id} is disabled")
                         return False
                     
                     # コールバックを呼び出し
                     if self.on_select_callback:
+                        logger.info(f"NavigationPanel: Calling callback for {item_id}")
                         self.on_select_callback(item_id)
+                    else:
+                        logger.warning("NavigationPanel: No callback set")
                     
                     # exitボタン以外は選択状態を更新
                     if item_id != "exit":
                         self.set_selected(item_id)
                     
                     return True
+            logger.warning("NavigationPanel: UI_BUTTON_PRESSED but no matching button found")
         
         return False
     
