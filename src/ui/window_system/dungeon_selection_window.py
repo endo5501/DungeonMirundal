@@ -188,6 +188,11 @@ class DungeonSelectionWindow(Window):
         
         self._update_button_states()
         
+        # デバッグ: ボタンの状態を確認
+        logger.info(f"新規作成ボタン状態: visible={self.create_button.visible}, enabled={self.create_button.is_enabled}")
+        logger.info(f"街に戻るボタン状態: visible={self.back_button.visible}, enabled={self.back_button.is_enabled}")
+        logger.info(f"選択ボタン状態: visible={self.select_button.visible}, enabled={self.select_button.is_enabled}")
+        
         self.state = WindowState.SHOWN
         logger.info("DungeonSelectionWindowのUI要素を作成しました")
     
@@ -218,18 +223,26 @@ class DungeonSelectionWindow(Window):
         if self.state != WindowState.SHOWN:
             return False
         
+        # デバッグ: イベント検出をログ
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            logger.info(f"DungeonSelectionWindow: UI_BUTTON_PRESSED検出: {event.ui_element}")
+        
         # pygame-guiイベント処理
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.select_button:
+                logger.info("選択ボタンがクリックされました")
                 self._on_select_dungeon()
                 return True
             elif event.ui_element == self.create_button:
+                logger.info("新規作成ボタンがクリックされました")
                 self._on_create_dungeon()
                 return True
             elif event.ui_element == self.delete_button:
+                logger.info("削除ボタンがクリックされました")
                 self._on_delete_dungeon()
                 return True
             elif event.ui_element == self.back_button:
+                logger.info("街に戻るボタンがクリックされました")
                 self._on_back_to_town()
                 return True
         
@@ -240,6 +253,12 @@ class DungeonSelectionWindow(Window):
                 return True
         
         return False
+    
+    def handle_escape(self) -> bool:
+        """ESCキーの処理"""
+        logger.info("ESCキーでダンジョン選択ウィンドウを閉じます")
+        self._on_back_to_town()
+        return True
     
     def _get_dungeon_list_items(self) -> List[str]:
         """ダンジョンリスト表示用の文字列を生成"""
@@ -274,7 +293,7 @@ class DungeonSelectionWindow(Window):
         
         # ランダム階数（難易度に応じて調整、5-25階）
         min_floors = max(5, difficulty)
-        max_floors = min(25, difficulty * 3)
+        max_floors = max(min_floors, min(25, difficulty * 3))
         floors = random.randint(min_floors, max_floors)
         
         return DungeonInfo(hash_value, difficulty, floors)
