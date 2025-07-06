@@ -527,23 +527,30 @@ class SettingsWindow(Window):
     
     def hide_ui_elements(self) -> None:
         """UI要素を非表示にする"""
+        logger.info(f"SettingsWindow.hide_ui_elements() 開始: {self.window_id}")
+        
         if not self.ui_manager:
+            logger.warning(f"UIManagerが存在しません: {self.window_id}")
             return
         
         # pygame-guiの展開されたドロップダウンメニューを強制的に閉じる
+        logger.info("ドロップダウンメニューの強制クローズを実行")
         self._force_close_dropdowns()
         
         # すべてのUI要素を非表示にする
         if hasattr(self, 'panel') and self.panel:
             self.panel.hide()
+            logger.debug("パネルを非表示にしました")
             
         # タブ関連要素を非表示
         if hasattr(self, 'tab_container') and self.tab_container:
             self.tab_container.hide()
+            logger.debug("タブコンテナを非表示にしました")
             
         # コンテンツコンテナを非表示
         if hasattr(self, 'content_container') and self.content_container:
             self.content_container.hide()
+            logger.debug("コンテンツコンテナを非表示にしました")
             
         # 個別のUI要素を非表示
         for tab in self.tabs:
@@ -555,7 +562,7 @@ class SettingsWindow(Window):
                 if hasattr(field, 'label_element') and field.label_element:
                     field.label_element.hide()
         
-        logger.debug(f"SettingsWindow UI要素を非表示: {self.window_id}")
+        logger.info(f"SettingsWindow UI要素の非表示完了: {self.window_id}")
     
     def _force_close_dropdowns(self) -> None:
         """pygame-guiのドロップダウンメニューを強制的に閉じる"""
@@ -563,32 +570,113 @@ class SettingsWindow(Window):
             return
         
         try:
-            # すべてのUI要素を調査してドロップダウンメニューを探す
+            dropdown_killed_count = 0
+            
+            # 方法1: フィールドのドロップダウンを直接チェック
             for tab in self.tabs:
                 for field in tab.fields:
-                    if (hasattr(field, 'ui_element') and 
-                        hasattr(field.ui_element, 'drop_down_menu_ui') and
-                        field.ui_element.drop_down_menu_ui is not None):
-                        # ドロップダウンメニューが展開されている場合、強制的に閉じる
-                        field.ui_element.drop_down_menu_ui.kill()
-                        field.ui_element.drop_down_menu_ui = None
-                        logger.debug(f"強制的にドロップダウンを閉じました: {field.field_id}")
+                    if hasattr(field, 'ui_element') and field.ui_element:
+                        ui_element = field.ui_element
+                        
+                        # pygame-guiのUIDropDownMenuの場合
+                        if hasattr(ui_element, 'drop_down_menu_ui'):
+                            if ui_element.drop_down_menu_ui is not None:
+                                logger.debug(f"ドロップダウンメニューUI発見: {field.field_id}")
+                                ui_element.drop_down_menu_ui.kill()
+                                ui_element.drop_down_menu_ui = None
+                                dropdown_killed_count += 1
+                        
+                        # 展開状態をリセット
+                        if hasattr(ui_element, 'is_expanded'):
+                            ui_element.is_expanded = False
+                        if hasattr(ui_element, 'menu_states'):
+                            ui_element.menu_states.clear()
             
-            # UIManagerのすべての要素から展開されたドロップダウンを探す
-            all_elements = list(self.ui_manager.get_root_container().elements)
-            for element in all_elements:
-                # ドロップダウンメニュー関連のクラス名をチェック
-                element_class_name = element.__class__.__name__
-                if ('DropDown' in element_class_name or 
-                    'drop_down' in str(element.__class__).lower()):
+            # 方法2: UIManagerの全要素をスキャンして孤立したドロップダウンを削除
+            if hasattr(self.ui_manager, 'ui_group'):
+                all_sprites = list(self.ui_manager.ui_group.sprites())
+                for sprite in all_sprites:
+                    class_name = sprite.__class__.__name__
+                    
+                    # ドロップダウン関連クラスを特定
+                    if any(keyword in class_name.lower() for keyword in 
+                          ['dropdown', 'drop_down', 'menu_ui', 'selection_list']):
+                        try:
+                            # ウィンドウ所有権チェック: 自分の要素ではない場合はkill
+                            owner_belongs_to_settings = False
+                            if hasattr(sprite, 'container'):
+                                current = sprite.container
+                                while current:
+                                    if current == self.panel:
+                                        owner_belongs_to_settings = True
+                                        break
+                                    current = getattr(current, 'container', None)
+                            
+                            if not owner_belongs_to_settings:
+                                logger.debug(f"孤立したドロップダウン要素を削除: {class_name}")
+                                sprite.kill()
+                                dropdown_killed_count += 1
+                                
+                        except Exception as e:
+                            logger.warning(f"ドロップダウンスプライト削除エラー ({class_name}): {e}")
+            
+            # 方法3: UIManagerの要素コンテナから直接削除
+            try:
+                root_container = self.ui_manager.get_root_container()
+                elements_to_kill = []
+                
+                def scan_container(container):
+                    if hasattr(container, 'elements'):
+                        for element in container.elements:
+                            class_name = element.__class__.__name__
+                            if any(keyword in class_name.lower() for keyword in 
+                                  ['dropdown', 'drop_down', 'menu_ui', 'selection_list']):
+                                # 自分のパネル配下ではない要素をマーク
+                                if not self._is_element_owned_by_settings(element):
+                                    elements_to_kill.append(element)
+                            
+                            # 再帰的にコンテナをスキャン
+                            if hasattr(element, 'elements'):
+                                scan_container(element)
+                
+                scan_container(root_container)
+                
+                for element in elements_to_kill:
                     try:
+                        logger.debug(f"ルートコンテナから孤立要素を削除: {element.__class__.__name__}")
                         element.kill()
-                        logger.debug(f"ドロップダウン関連要素を削除: {element_class_name}")
+                        dropdown_killed_count += 1
                     except Exception as e:
-                        logger.warning(f"ドロップダウン要素削除エラー: {e}")
+                        logger.warning(f"要素削除エラー: {e}")
+                        
+            except Exception as e:
+                logger.warning(f"ルートコンテナスキャンエラー: {e}")
+            
+            if dropdown_killed_count > 0:
+                logger.info(f"ドロップダウン要素を{dropdown_killed_count}個削除しました")
+            else:
+                logger.debug("削除対象のドロップダウン要素が見つかりませんでした")
                         
         except Exception as e:
             logger.warning(f"ドロップダウンメニュー強制クローズでエラー: {e}")
+    
+    def _is_element_owned_by_settings(self, element) -> bool:
+        """要素が設定ウィンドウに所属するかチェック"""
+        try:
+            if not hasattr(element, 'container'):
+                return False
+            
+            current = element.container
+            while current:
+                if current == self.panel:
+                    return True
+                if hasattr(current, 'container'):
+                    current = current.container
+                else:
+                    break
+            return False
+        except:
+            return False
     
     def show_ui_elements(self) -> None:
         """UI要素を表示する"""

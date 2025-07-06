@@ -145,10 +145,14 @@ class GameMenuWindow(Window):
         
         # ボタンクリック処理
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
-            for button in self.menu_buttons:
+            logger.info(f"GameMenuWindow: ボタンクリック検出! 要素={event.ui_element}")
+            for i, button in enumerate(self.menu_buttons):
+                logger.debug(f"ボタン{i}: {button} (menu_item: {getattr(button, 'menu_item', 'なし')})")
                 if event.ui_element == button:
+                    logger.info(f"GameMenuWindow: ボタン{i}がクリックされました")
                     self._handle_menu_selection(button.menu_item)
                     return True
+            logger.warning("GameMenuWindow: クリックされたボタンが見つかりませんでした")
         
         return False
     
@@ -156,14 +160,23 @@ class GameMenuWindow(Window):
         """メニュー選択を処理"""
         action = menu_item.get('action')
         
+        logger.info(f"=== GameMenuWindow: メニューアイテム選択 ===")
+        logger.info(f"アクション: {action}")
+        logger.info(f"メニューアイテム: {menu_item}")
+        logger.info(f"メッセージハンドラ存在: {self.message_handler is not None}")
+        
         if self.message_handler:
+            logger.info("メッセージハンドラに送信中...")
             self.message_handler('menu_item_selected', {
                 'action': action,
                 'menu_item': menu_item,
                 'window_id': self.window_id
             })
+            logger.info("メッセージハンドラに送信完了")
+        else:
+            logger.warning("メッセージハンドラが設定されていません")
         
-        logger.debug(f"メニューアイテム選択: {action}")
+        logger.info(f"メニューアイテム選択処理完了: {action}")
     
     def handle_escape(self) -> bool:
         """ESCキーの処理"""

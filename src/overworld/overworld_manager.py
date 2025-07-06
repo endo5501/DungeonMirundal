@@ -741,35 +741,46 @@ class OverworldManager:
     
     def _handle_settings(self) -> bool:
         """詳細設定画面表示"""
+        logger.info("=== _handle_settings() 呼び出し開始 ===")
         try:
             from src.ui.window_system.settings_window import SettingsWindow
+            logger.info("SettingsWindowのインポート成功")
             
             # 既存の設定ウィンドウがあるかチェック
             existing_window = None
             if 'settings_menu' in self.window_manager.window_registry:
                 existing_window = self.window_manager.window_registry['settings_menu']
-                logger.debug(f"既存の設定ウィンドウを発見: 状態={existing_window.state}")
+                logger.info(f"既存の設定ウィンドウを発見: 状態={existing_window.state}")
+            else:
+                logger.info("既存の設定ウィンドウなし")
             
             if existing_window and existing_window.state == WindowState.HIDDEN:
                 # 既存の非表示ウィンドウを再表示
                 settings_window = existing_window
-                logger.debug("既存の設定ウィンドウを再表示します")
+                logger.info("既存の設定ウィンドウを再表示します")
             else:
                 # 新しいウィンドウを作成
+                logger.info("新しい設定ウィンドウを作成開始")
                 config = self._create_settings_menu_config()
+                logger.info(f"設定コンフィグ作成完了: {len(config.get('categories', []))}カテゴリ")
                 settings_window = self.window_manager.create_window(
                     SettingsWindow, 
                     'settings_menu', 
                     settings_config=config
                 )
-                logger.debug("新しい設定ウィンドウを作成しました")
+                logger.info("新しい設定ウィンドウを作成しました")
             
             settings_window.message_handler = self.handle_settings_message
+            logger.info("設定ウィンドウにメッセージハンドラを設定")
             self.window_manager.show_window(settings_window, push_to_stack=True)
+            logger.info("設定ウィンドウを表示しました")
             return True
             
-        except ImportError:
-            logger.warning("SettingsWindow未実装")
+        except ImportError as e:
+            logger.error(f"SettingsWindow未実装: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"設定ウィンドウ表示エラー: {e}")
             return False
     
     def _show_dungeon_selection_window(self):
