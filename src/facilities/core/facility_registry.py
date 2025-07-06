@@ -156,7 +156,7 @@ class FacilityRegistry:
             logger.error(f"Failed to create facility controller: {facility_id}", exc_info=True)
             return None
     
-    def enter_facility(self, facility_id: str, party: Party) -> ServiceResult:
+    def enter_facility(self, facility_id: str, party: Party) -> bool:
         """施設に入る
         
         Args:
@@ -164,33 +164,39 @@ class FacilityRegistry:
             party: 現在のパーティ
             
         Returns:
-            実行結果
+            成功したらTrue
         """
-        # 既存の施設から退出
+        # 既存の施設から退出（エラーでも続行）
         if self.current_facility_id:
             exit_result = self.exit_current_facility()
             if not exit_result.is_success():
-                return exit_result
+                logger.warning(f"Failed to exit current facility cleanly, continuing: {exit_result.message}")
+                # 状態を強制的にクリア
+                self.current_facility_id = None
+                self.current_party = None
         
         # 施設コントローラーを取得/作成
         controller = self.get_facility_controller(facility_id)
         if not controller:
             controller = self.create_facility_controller(facility_id)
             if not controller:
-                return ServiceResult.error(f"Failed to create facility: {facility_id}")
+                logger.error(f"Failed to create facility: {facility_id}")
+                return False
         
         # 施設に入る
         try:
             if controller.enter(party):
                 self.current_facility_id = facility_id
                 self.current_party = party
-                return ServiceResult.ok(f"Entered {facility_id}")
+                logger.info(f"Successfully entered facility: {facility_id}")
+                return True
             else:
-                return ServiceResult.error(f"Failed to enter {facility_id}")
+                logger.error(f"Failed to enter facility: {facility_id}")
+                return False
                 
         except Exception as e:
             logger.error(f"Exception entering facility: {facility_id}", exc_info=True)
-            return ServiceResult.error(f"Exception: {str(e)}")
+            return False
     
     def exit_current_facility(self) -> ServiceResult:
         """現在の施設から退出

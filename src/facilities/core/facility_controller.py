@@ -61,7 +61,7 @@ class FacilityController:
                 # UIなしでも施設は利用可能（テスト用など）
                 logger.info(f"Entered facility (no UI): {self.facility_id}")
                 return True
-        except Exception as e:
+        except Exception:
             # ウィンドウ作成に失敗した場合、状態をリセット
             logger.error(f"Failed to create facility window: {self.facility_id}", exc_info=True)
             self.is_active = False
@@ -75,8 +75,12 @@ class FacilityController:
             成功したらTrue
         """
         if not self.is_active:
-            logger.warning(f"Not in facility: {self.facility_id}")
-            return False
+            logger.info(f"Facility already inactive, clearing state: {self.facility_id}")
+            # 既に非アクティブでも、状態をクリアして成功とみなす
+            self._party = None
+            if self.window:
+                self._close_window()
+            return True
         
         # ウィンドウを閉じる
         if self.window:
@@ -148,7 +152,7 @@ class FacilityController:
             menu_items = self.service.get_menu_items()
             logger.info(f"[DEBUG] get_menu_items: service returned {len(menu_items)} items")
             return menu_items
-        except Exception as e:
+        except Exception:
             logger.error(f"Failed to get menu items: {self.facility_id}", exc_info=True)
             return []
     
@@ -202,21 +206,30 @@ class FacilityController:
             # WindowManagerを通してウィンドウを作成・表示
             window_manager = WindowManager.get_instance()
             if window_manager:
-                # WindowManagerでウィンドウを作成（自動的に登録される）
                 window_id = f"facility_{self.facility_id}_window"
-                self.window = window_manager.create_window(
-                    FacilityWindow, 
-                    window_id=window_id,
-                    facility_controller=self
-                )
-                logger.info(f"FacilityWindow created via WindowManager: {self.window.window_id}")
+                
+                # 既存のウィンドウをチェック
+                existing_window = window_manager.get_window(window_id)
+                if existing_window and self.window is None:
+                    # 既存のウィンドウを再利用
+                    self.window = existing_window
+                    logger.info(f"Reusing existing FacilityWindow: {window_id}")
+                elif self.window is None:
+                    # 新しいウィンドウを作成
+                    self.window = window_manager.create_window(
+                        FacilityWindow, 
+                        window_id=window_id,
+                        facility_controller=self
+                    )
+                    logger.info(f"FacilityWindow created via WindowManager: {self.window.window_id}")
                 
                 # ウィンドウを表示
                 window_manager.show_window(self.window)
                 logger.info(f"FacilityWindow shown via WindowManager: {self.window.window_id}")
             else:
                 # フォールバック: 直接作成・表示
-                self.window = FacilityWindow(self)
+                if self.window is None:
+                    self.window = FacilityWindow(self)
                 self.window.show()
                 logger.warning("WindowManager not available, creating window directly")
             
@@ -225,7 +238,7 @@ class FacilityController:
         except ImportError:
             logger.info("FacilityWindow not available, running without UI")
             return False
-        except Exception as e:
+        except Exception:
             logger.error(f"Failed to create window: {self.facility_id}", exc_info=True)
             return False
     
@@ -233,27 +246,26 @@ class FacilityController:
         """ウィンドウを閉じる"""
         if self.window:
             try:
-                # WindowManagerを通してウィンドウを閉じる
+                # WindowManagerを通してウィンドウを隠す（インスタンスは保持）
                 from src.ui.window_system.window_manager import WindowManager
                 window_manager = WindowManager.get_instance()
                 if window_manager:
                     window_manager.hide_window(self.window, remove_from_stack=True)
-                    logger.info(f"FacilityWindow removed from WindowManager: {self.window.window_id}")
+                    logger.info(f"FacilityWindow hidden via WindowManager: {self.window.window_id}")
                 else:
-                    # フォールバック: 直接閉じる
-                    self.window.close()
-                    logger.warning("WindowManager not available, closing window directly")
-            except Exception as e:
+                    # フォールバック: 直接隠す
+                    self.window.hide()
+                    logger.warning("WindowManager not available, hiding window directly")
+            except Exception:
                 logger.error(f"Failed to close window: {self.facility_id}", exc_info=True)
-            finally:
-                self.window = None
+            # NOTE: windowインスタンスは保持して再利用する（self.window = None しない）
     
     def _update_window(self) -> None:
         """ウィンドウを更新"""
         if self.window:
             try:
                 self.window.refresh_content()
-            except Exception as e:
+            except Exception:
                 logger.error(f"Failed to update window: {self.facility_id}", exc_info=True)
     
     def _return_to_overworld(self) -> None:
@@ -262,5 +274,5 @@ class FacilityController:
             # WindowManagerで施設ウィンドウが閉じられると、
             # 自動的に前のウィンドウ（地上画面）に戻る
             logger.info("Facility exit completed, returned to overworld")
-        except Exception as e:
+        except Exception:
             logger.error("Failed to return to overworld", exc_info=True)
