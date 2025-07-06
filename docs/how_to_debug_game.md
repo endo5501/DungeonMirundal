@@ -47,6 +47,12 @@ uv run python src/debug/game_debug_client.py escape
 
 # 特定キーコード送信
 uv run python src/debug/game_debug_client.py key --code 27
+
+# UI階層をJSON形式で表示
+uv run python -m src.debug.debug_cli ui-dump --format json
+
+# UI階層をツリー形式で表示
+uv run python -m src.debug.debug_cli ui-dump --format tree
 ```
 
 ### 3. 便利関数
