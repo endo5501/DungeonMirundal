@@ -428,9 +428,10 @@ class WindowManager:
         for event in events:
             self.statistics_manager.increment_counter('events_processed')
             
-            # UIManagerでのイベント処理
-            if self.ui_manager:
-                self.ui_manager.process_events(event)
+            # UIManagerでのイベント処理は各ウィンドウで行うため、ここでは実行しない
+            # 理由：グローバル処理と個別ウィンドウ処理が重複し、テキスト入力で二重入力が発生する
+            # if self.ui_manager:
+            #     self.ui_manager.process_events(event)
             
             # ESCキーの処理
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
