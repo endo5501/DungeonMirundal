@@ -83,7 +83,8 @@ class PartyMemberUtility:
             return None
         
         for member in self.party.members:
-            if member.id == character_id:
+            member_id = getattr(member, 'character_id', getattr(member, 'id', ''))
+            if member_id == character_id:
                 return member
         return None
     
@@ -91,14 +92,14 @@ class PartyMemberUtility:
                                additional_fields: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """キャラクター情報辞書を作成"""
         info = {
-            "id": member.id,
+            "id": getattr(member, 'character_id', getattr(member, 'id', '')),
             "name": member.name,
-            "level": member.level,
+            "level": getattr(member.experience, 'level', getattr(member, 'level', 1)),
             "race": member.race,
-            "class": member.char_class,
-            "hp": f"{member.hp}/{member.max_hp}",
-            "mp": f"{member.mp}/{member.max_mp}",
-            "status": member.status
+            "class": getattr(member, 'character_class', getattr(member, 'char_class', '')),
+            "hp": f"{getattr(member.derived_stats, 'current_hp', getattr(member, 'hp', 0))}/{getattr(member.derived_stats, 'max_hp', getattr(member, 'max_hp', 0))}",
+            "mp": f"{getattr(member.derived_stats, 'current_mp', getattr(member, 'mp', 0))}/{getattr(member.derived_stats, 'max_mp', getattr(member, 'max_mp', 0))}",
+            "status": getattr(member.status, 'value', str(member.status)) if hasattr(member, 'status') else 'normal'
         }
         
         if additional_fields:

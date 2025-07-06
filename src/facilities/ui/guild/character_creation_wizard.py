@@ -157,7 +157,7 @@ class CharacterCreationWizard(WizardServicePanel):
         self.ui_elements.append(self.roll_button)
         
         # 能力値表示
-        stats = ["strength", "intelligence", "piety", "vitality", "agility", "luck"]
+        stats = ["strength", "intelligence", "faith", "vitality", "agility", "luck"]
         stat_names = ["筋力", "知力", "信仰心", "生命力", "敏捷性", "幸運"]
         
         y_offset = 120
@@ -271,7 +271,7 @@ class CharacterCreationWizard(WizardServicePanel):
         summary += f"<b>能力値:</b><br>"
         summary += f"筋力: {stats.get('strength', '--')}<br>"
         summary += f"知力: {stats.get('intelligence', '--')}<br>"
-        summary += f"信仰心: {stats.get('piety', '--')}<br>"
+        summary += f"信仰心: {stats.get('faith', '--')}<br>"
         summary += f"生命力: {stats.get('vitality', '--')}<br>"
         summary += f"敏捷性: {stats.get('agility', '--')}<br>"
         summary += f"幸運: {stats.get('luck', '--')}<br>"
@@ -306,7 +306,7 @@ class CharacterCreationWizard(WizardServicePanel):
     def _roll_stats(self) -> None:
         """能力値をロール"""
         stats = {}
-        stat_types = ["strength", "intelligence", "piety", "vitality", "agility", "luck"]
+        stat_types = ["strength", "intelligence", "faith", "vitality", "agility", "luck"]
         
         for stat in stat_types:
             # 3d6をロール
@@ -361,25 +361,25 @@ class CharacterCreationWizard(WizardServicePanel):
         
         # 上級職の条件判定
         if (stats.get("intelligence", 0) >= 15 and 
-            stats.get("piety", 0) >= 15):
+            stats.get("faith", 0) >= 15):
             available.append("bishop")
         
         if (stats.get("strength", 0) >= 15 and
             stats.get("intelligence", 0) >= 11 and
-            stats.get("piety", 0) >= 10 and
+            stats.get("faith", 0) >= 10 and
             stats.get("vitality", 0) >= 14 and
             stats.get("agility", 0) >= 10):
             available.append("samurai")
         
         if (stats.get("strength", 0) >= 15 and
-            stats.get("piety", 0) >= 15 and
+            stats.get("faith", 0) >= 15 and
             stats.get("vitality", 0) >= 15 and
             stats.get("agility", 0) >= 14):
             available.append("lord")
         
         if (stats.get("strength", 0) >= 17 and
             stats.get("intelligence", 0) >= 17 and
-            stats.get("piety", 0) >= 17 and
+            stats.get("faith", 0) >= 17 and
             stats.get("vitality", 0) >= 17 and
             stats.get("agility", 0) >= 17 and
             stats.get("luck", 0) >= 17):
@@ -434,7 +434,7 @@ class CharacterCreationWizard(WizardServicePanel):
             self._show_message("能力値を決定してください", "warning")
             return False
         
-        required_stats = ["strength", "intelligence", "piety", "vitality", "agility", "luck"]
+        required_stats = ["strength", "intelligence", "faith", "vitality", "agility", "luck"]
         for stat in required_stats:
             if stat not in stats:
                 self._show_message(f"能力値が不完全です: {stat}", "error")

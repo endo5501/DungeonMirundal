@@ -132,8 +132,8 @@ class FacilityController:
         try:
             result = self.service.execute_action(action_id, params)
             
-            # 成功時はUIを更新
-            if result.is_success() and self.window:
+            # 成功時はUIを更新（ただし情報取得系のアクションは除く）
+            if result.is_success() and self.window and not self._is_info_action(action_id, params):
                 self._update_window()
             
             return result
@@ -251,19 +251,43 @@ class FacilityController:
         """ウィンドウを閉じる"""
         if self.window:
             try:
-                # WindowManagerを通してウィンドウを隠す（インスタンスは保持）
+                # WindowManagerを通してウィンドウを適切に削除
                 from src.ui.window_system.window_manager import WindowManager
                 window_manager = WindowManager.get_instance()
                 if window_manager:
-                    window_manager.hide_window(self.window, remove_from_stack=True)
-                    logger.info(f"FacilityWindow hidden via WindowManager: {self.window.window_id}")
+                    # close_window()は破棄とウィンドウスタック管理を含む
+                    window_manager.close_window(self.window)
+                    logger.info(f"FacilityWindow closed via WindowManager: {self.window.window_id}")
                 else:
-                    # フォールバック: 直接隠す
-                    self.window.hide()
-                    logger.warning("WindowManager not available, hiding window directly")
+                    # フォールバック: 直接削除
+                    self.window.close()
+                    logger.warning("WindowManager not available, closing window directly")
+                
+                # ウィンドウインスタンスを削除
+                self.window = None
+                
             except Exception:
                 logger.error(f"Failed to close window: {self.facility_id}", exc_info=True)
-            # NOTE: windowインスタンスは保持して再利用する（self.window = None しない）
+                # エラーが発生した場合でもウィンドウインスタンスを削除
+                self.window = None
+    
+    def _is_info_action(self, action_id: str, params: Dict[str, Any]) -> bool:
+        """情報取得系のアクションかどうかを判定
+        
+        Args:
+            action_id: アクションID
+            params: パラメータ
+            
+        Returns:
+            情報取得系のアクションならTrue
+        """
+        # パラメータにactionがある場合、情報取得系の操作をチェック
+        if params and params.get("action") in ["get_info", "get_list", "get_data"]:
+            return True
+        
+        # アクションIDが情報取得系の場合
+        info_actions = ["character_list", "party_info", "get_info"]
+        return action_id in info_actions
     
     def _update_window(self) -> None:
         """ウィンドウを更新"""

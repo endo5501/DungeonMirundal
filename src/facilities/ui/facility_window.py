@@ -368,27 +368,84 @@ class FacilityWindow(Window):
     
     def close(self) -> None:
         """ウィンドウを閉じる"""
-        # すべてのサービスパネルを破棄
-        for panel in self.service_panels.values():
-            if hasattr(panel, 'destroy'):
-                panel.destroy()
-            elif hasattr(panel, 'kill'):
-                panel.kill()
+        logger.info(f"FacilityWindow closing: {self.window_id}")
+        
+        # すべてのサービスパネルを詳細に破棄
+        for service_id, panel in self.service_panels.items():
+            try:
+                logger.info(f"Destroying service panel: {service_id}")
+                # パネル内のすべてのUI要素を再帰的に削除
+                self._recursive_kill_children(panel)
+                if hasattr(panel, 'destroy'):
+                    panel.destroy()
+                elif hasattr(panel, 'kill'):
+                    panel.kill()
+            except Exception as e:
+                logger.error(f"Failed to destroy service panel {service_id}: {e}")
         self.service_panels.clear()
         
-        # ナビゲーションパネルを破棄
+        # ナビゲーションパネルを詳細に破棄
         if self.navigation_panel:
-            if hasattr(self.navigation_panel, 'destroy'):
-                self.navigation_panel.destroy()
+            try:
+                logger.info("Destroying navigation panel")
+                self._recursive_kill_children(self.navigation_panel)
+                if hasattr(self.navigation_panel, 'destroy'):
+                    self.navigation_panel.destroy()
+                elif hasattr(self.navigation_panel, 'kill'):
+                    self.navigation_panel.kill()
+            except Exception as e:
+                logger.error(f"Failed to destroy navigation panel: {e}")
+            self.navigation_panel = None
         
-        # メインパネルを破棄
+        # メインパネルを詳細に破棄
         if self.main_panel:
-            self.main_panel.kill()
+            try:
+                logger.info("Destroying main panel")
+                self._recursive_kill_children(self.main_panel)
+                self.main_panel.kill()
+            except Exception as e:
+                logger.error(f"Failed to destroy main panel: {e}")
+            self.main_panel = None
         
         # 親クラスのclose処理
-        super().destroy()
+        try:
+            super().destroy()
+        except Exception as e:
+            logger.error(f"Failed to destroy window: {e}")
         
         logger.info(f"FacilityWindow closed: {self.window_id}")
+    
+    def destroy(self) -> None:
+        """WindowManagerから呼び出されるdestroy処理"""
+        logger.info(f"FacilityWindow destroy called: {self.window_id}")
+        self.close()
+    
+    def _recursive_kill_children(self, element) -> None:
+        """UI要素の子要素を再帰的に削除"""
+        if hasattr(element, 'get_container') and element.get_container():
+            container = element.get_container()
+            if hasattr(container, '_layer_thickness'):
+                # pygame_guiのUIContainerの場合
+                for layer_elements in container._layer_thickness.values():
+                    for child_element in list(layer_elements):
+                        try:
+                            self._recursive_kill_children(child_element)
+                            if hasattr(child_element, 'kill'):
+                                child_element.kill()
+                        except Exception as e:
+                            logger.warning(f"Failed to kill child element: {e}")
+        
+        # 直接の子要素も削除
+        if hasattr(element, 'get_container') and element.get_container():
+            container = element.get_container()
+            if hasattr(container, 'elements'):
+                for child in list(container.elements):
+                    try:
+                        self._recursive_kill_children(child)
+                        if hasattr(child, 'kill'):
+                            child.kill()
+                    except Exception as e:
+                        logger.warning(f"Failed to kill container child: {e}")
     
     def refresh_content(self) -> None:
         """コンテンツを更新"""
