@@ -26,7 +26,7 @@
 │   ├── InnService (宿屋)
 │   ├── ShopService (商店)
 │   ├── TempleService (教会)
-│   └── MagicGuildService (魔法ギルド)
+│   └── MagicGuildService (魔術師ギルド)
 └── 🎨 UI Layer
     ├── FacilityWindow (施設ウィンドウ)
     ├── ServicePanel (サービスパネル)
@@ -93,7 +93,7 @@ def validate_action_params(self, action_id: str, params: Dict[str, Any]) -> bool
 - **特徴**: レベル別料金システム、状態異常治療
 - **メニュー項目**: 6項目
 
-### 5. 魔法ギルド (MagicGuildService)
+### 5. 魔術師ギルド (MagicGuildService)
 - **機能**: 魔法学習、魔法鑑定、魔法分析、魔法研究
 - **特徴**: レベル別学習コスト、魔法レベル制限
 - **メニュー項目**: 5項目
@@ -199,7 +199,7 @@ src/facilities/
 │   ├── inn_service.py           # 宿屋サービス
 │   ├── shop_service.py          # 商店サービス
 │   ├── temple_service.py        # 教会サービス
-│   └── magic_guild_service.py   # 魔法ギルドサービス
+│   └── magic_guild_service.py   # 魔術師ギルドサービス
 ├── ui/
 │   ├── facility_window.py       # 施設ウィンドウ
 │   ├── service_panel.py         # サービスパネル

@@ -27,10 +27,10 @@
 | 教会 - 状態回復 | `TempleService.execute_action("status_recovery")` | ✅ 実装済み |
 | 教会 - 祝福 | `TempleService.execute_action("blessing")` | ✅ 実装済み |
 | 教会 - 寄付 | `TempleService.execute_action("donation")` | ✅ 実装済み |
-| 魔法ギルド - 魔法学習 | `MagicGuildService.execute_action("learn_spells")` | ✅ ウィザード形式で実装済み |
-| 魔法ギルド - 魔法鑑定 | `MagicGuildService.execute_action("identify_magic")` | ✅ 実装済み |
-| 魔法ギルド - 魔法分析 | `MagicGuildService.execute_action("analyze_magic")` | ✅ 実装済み |
-| 魔法ギルド - 魔法研究 | `MagicGuildService.execute_action("magic_research")` | ✅ ウィザード形式で実装済み |
+| 魔術師ギルド - 魔法学習 | `MagicGuildService.execute_action("learn_spells")` | ✅ ウィザード形式で実装済み |
+| 魔術師ギルド - 魔法鑑定 | `MagicGuildService.execute_action("identify_magic")` | ✅ 実装済み |
+| 魔術師ギルド - 魔法分析 | `MagicGuildService.execute_action("analyze_magic")` | ✅ 実装済み |
+| 魔術師ギルド - 魔法研究 | `MagicGuildService.execute_action("magic_research")` | ✅ ウィザード形式で実装済み |
 
 ### 2. UI・UX機能
 
@@ -162,7 +162,7 @@ src/overworld/facilities/guild.py                 # 2047行 - レガシーギル
 src/overworld/facilities/inn.py                   # 1308行 - レガシー宿屋実装
 src/overworld/facilities/shop.py                  # 1556行 - レガシー商店実装
 src/overworld/facilities/temple.py                # 1024行 - レガシー教会実装
-src/overworld/facilities/magic_guild.py           # 1751行 - レガシー魔法ギルド実装
+src/overworld/facilities/magic_guild.py           # 1751行 - レガシー魔術師ギルド実装
 src/overworld/facilities/base_facility_handler.py # 461行 - ハンドラー基底
 src/overworld/facilities/inn_facility_handler.py  # 520行 - 宿屋ハンドラー
 src/ui/window_system/facility_menu_window.py      # 596行 - レガシーメニューウィンドウ

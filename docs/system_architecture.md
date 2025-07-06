@@ -135,7 +135,7 @@ class GameState(Enum):
 - Guild (ギルド): キャラクター作成・管理
 - Inn (宿屋): 休息・パーティ編成
 - Shop (商店): アイテム売買
-- MagicGuild (魔法ギルド): 魔法習得・識別
+- MagicGuild (魔術師ギルド): 魔法習得・識別
 - Temple (寺院): 回復・蘇生
 
 #### DungeonManager
