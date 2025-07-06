@@ -42,6 +42,7 @@ class FacilityService(ABC):
             facility_id: 施設ID (例: 'guild', 'inn')
         """
         self.facility_id = facility_id
+        self.service_id = facility_id  # service_idとfacility_idは同じ
         self.party: Optional[Party] = None
         self._service_data: Dict[str, Any] = {}
     
@@ -78,6 +79,20 @@ class FacilityService(ABC):
             実行可能ならTrue
         """
         pass
+    
+    def create_service_panel(self, service_id: str, rect, parent, ui_manager) -> Optional[Any]:
+        """サービス専用のUIパネルを作成
+        
+        Args:
+            service_id: サービスID
+            rect: パネルの矩形領域
+            parent: 親UIコンテナ
+            ui_manager: UIマネージャー
+            
+        Returns:
+            作成されたパネル（作成しない場合はNone）
+        """
+        return None  # デフォルトは汎用パネルを使用
     
     def set_party(self, party: Party) -> None:
         """パーティを設定

@@ -2,12 +2,11 @@
 
 import pygame
 import pygame_gui
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, Any
 import logging
 from src.ui.window_system.window import Window
 from src.ui.window_system.window_manager import WindowManager
 from ..core.facility_controller import FacilityController
-from ..core.service_result import ServiceResult
 
 logger = logging.getLogger(__name__)
 
@@ -239,7 +238,14 @@ class FacilityWindow(Window):
             return None
         
         try:
-            # サービスタイプに応じてパネルを作成
+            # サービス自体に専用パネル作成を委任
+            custom_panel = self.controller.service.create_service_panel(
+                service_id, content_rect, self.main_panel, self.ui_manager
+            )
+            if custom_panel:
+                return custom_panel
+            
+            # 汎用サービスタイプに応じてパネルを作成
             if menu_item.service_type == "wizard":
                 from .wizard_service_panel import WizardServicePanel
                 return WizardServicePanel(
@@ -268,7 +274,7 @@ class FacilityWindow(Window):
         )
         
         # サービス名を表示
-        title_label = pygame_gui.elements.UILabel(
+        pygame_gui.elements.UILabel(
             relative_rect=pygame.Rect(10, 10, rect.width - 20, 40),
             text=menu_item.label,
             manager=self.ui_manager,
@@ -277,7 +283,7 @@ class FacilityWindow(Window):
         
         # サービス説明を表示
         if hasattr(menu_item, 'description') and menu_item.description:
-            desc_label = pygame_gui.elements.UILabel(
+            pygame_gui.elements.UILabel(
                 relative_rect=pygame.Rect(10, 60, rect.width - 20, 60),
                 text=menu_item.description,
                 manager=self.ui_manager,
@@ -285,7 +291,7 @@ class FacilityWindow(Window):
             )
         
         # 実装予定メッセージ
-        status_label = pygame_gui.elements.UILabel(
+        pygame_gui.elements.UILabel(
             relative_rect=pygame.Rect(10, 140, rect.width - 20, 30),
             text="このサービスは現在実装中です。",
             manager=self.ui_manager,

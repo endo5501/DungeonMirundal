@@ -174,16 +174,22 @@ class GuildService(FacilityService, ActionExecutorMixin):
             stats = params["stats"]
             
             # キャラクターインスタンスを作成
-            character = Character(
-                name=name,
-                race=race,
-                char_class=char_class,
+            from src.character.stats import BaseStats
+            
+            base_stats = BaseStats(
                 strength=stats.get("strength", 10),
                 intelligence=stats.get("intelligence", 10),
-                piety=stats.get("piety", 10),
+                faith=stats.get("piety", stats.get("faith", 10)),  # pietyからfaithへ変換
                 vitality=stats.get("vitality", 10),
                 agility=stats.get("agility", 10),
                 luck=stats.get("luck", 10)
+            )
+            
+            character = Character(
+                name=name,
+                race=race,
+                character_class=char_class,
+                base_stats=base_stats
             )
             
             return character
@@ -218,27 +224,28 @@ class GuildService(FacilityService, ActionExecutorMixin):
         if not character_id:
             return ServiceResultFactory.error("キャラクターIDが指定されていません")
         
-        # キャラクターを取得
-        if not self.character_model:
-            return ServiceResultFactory.error("キャラクターモデルが利用できません")
+        # GameManagerからパーティを取得
+        party = self._get_current_party()
         
-        character = self.character_model.get(character_id)
+        # キャラクターを取得（仮実装）
+        character = self._get_character_by_id(character_id)
         if not character:
             return ServiceResultFactory.error("キャラクターが見つかりません")
         
         # パーティに追加
-        if self.party and len(self.party.members) >= 6:
+        if party and len(party.members) >= 6:
             return ServiceResultFactory.error("パーティは満員です（最大6人）")
         
-        if not self.party:
+        if not party:
             # 新しいパーティを作成
-            self.party = Party()
-            self.game.set_party(self.party)
+            party = Party()
+            if self.game:
+                self.game.set_party(party)
         
-        if self.party.add_member(character):
+        if party.add_character(character):
             return ServiceResultFactory.success(
                 f"{character.name}をパーティに追加しました",
-                data={"party_size": len(self.party.members)}
+                data={"party_size": len(party.members)}
             )
         else:
             return ServiceResultFactory.error("パーティへの追加に失敗しました")
@@ -249,18 +256,18 @@ class GuildService(FacilityService, ActionExecutorMixin):
         if not character_id:
             return ServiceResultFactory.error("キャラクターIDが指定されていません")
         
-        if not self.party:
+        party = self._get_current_party()
+        if not party:
             return ServiceResultFactory.error("パーティが存在しません")
         
         # メンバーを削除
-        for i, member in enumerate(self.party.members):
-            if member.id == character_id:
-                removed = self.party.remove_member(i)
-                if removed:
-                    return ServiceResultFactory.success(
-                        f"{removed.name}をパーティから外しました",
-                        data={"party_size": len(self.party.members)}
-                    )
+        character = party.get_character(character_id)
+        if character:
+            if party.remove_character(character_id):
+                return ServiceResultFactory.success(
+                    f"{character.name}をパーティから外しました",
+                    data={"party_size": len(party.members)}
+                )
         
         return ServiceResultFactory.error("指定されたキャラクターはパーティにいません")
     
@@ -268,41 +275,63 @@ class GuildService(FacilityService, ActionExecutorMixin):
         """パーティの並び順を変更"""
         new_order = params.get("order", [])
         
-        if not self.party:
+        party = self._get_current_party()
+        if not party:
             return ServiceResultFactory.error("パーティが存在しません")
         
-        # 並び替えを実行
-        if self.party.reorder_members(new_order):
+        # 並び替えを実行（フォーメーション変更）
+        try:
+            # 新しい順序でフォーメーションを再構築
+            from src.character.party import PartyPosition
+            positions = list(PartyPosition)
+            
+            # 現在のフォーメーションをクリア
+            party.formation.reset()
+            
+            # 新しい順序でメンバーを配置
+            for i, character_id in enumerate(new_order):
+                if i < len(positions) and character_id in party.characters:
+                    party.formation.add_character(character_id, positions[i])
+            
             return ServiceResultFactory.success("パーティの並び順を変更しました")
-        else:
+        except Exception as e:
+            logger.error(f"Failed to reorder party: {e}")
             return ServiceResultFactory.error("並び順の変更に失敗しました")
     
     def _get_party_info(self) -> ServiceResult:
         """パーティ情報を取得"""
-        if not self.party:
+        party = self._get_current_party()
+        if not party:
             return ServiceResultFactory.info(
                 "パーティが編成されていません",
                 data={"party": None, "members": []}
             )
         
-        # パーティ情報を構築
+        # パーティ情報を構築（フォーメーション順）
         members_info = []
-        for member in self.party.members:
-            members_info.append({
-                "id": member.id,
-                "name": member.name,
-                "level": member.level,
-                "class": member.char_class,
-                "hp": f"{member.hp}/{member.max_hp}",
-                "status": member.status
-            })
+        from src.character.party import PartyPosition
+        
+        # フォーメーション順でメンバーを取得
+        for position in PartyPosition:
+            character_id = party.formation.positions.get(position)
+            if character_id and character_id in party.characters:
+                member = party.characters[character_id]
+                members_info.append({
+                    "id": member.character_id,
+                    "name": member.name,
+                    "level": member.experience.level,
+                    "class": member.character_class,
+                    "hp": f"{member.derived_stats.current_hp}/{member.derived_stats.max_hp}",
+                    "status": member.status.value if hasattr(member.status, 'value') else str(member.status),
+                    "position": position.value
+                })
         
         return ServiceResultFactory.success(
             "パーティ情報",
             data={
-                "party_name": self.party.name,
+                "party_name": party.name,
                 "members": members_info,
-                "size": len(self.party.members)
+                "size": len(members_info)
             }
         )
     
@@ -312,67 +341,171 @@ class GuildService(FacilityService, ActionExecutorMixin):
         """クラス変更を処理"""
         character_id = params.get("character_id")
         new_class = params.get("new_class")
+        confirmed = params.get("confirmed", False)
         
-        if not character_id or not new_class:
-            return ServiceResultFactory.success(
-                "クラス変更画面を表示します",
-                data={"available_classes": self._get_available_classes()}
-            )
+        # キャラクターIDがない場合は対象選択画面を表示
+        if not character_id:
+            return self._get_class_change_candidates()
         
         # キャラクターを取得
-        if not self.character_model:
-            return ServiceResultFactory.error("キャラクターモデルが利用できません")
-        
-        character = self.character_model.get(character_id)
+        character = self._get_character_by_id(character_id)
         if not character:
             return ServiceResultFactory.error("キャラクターが見つかりません")
         
-        # クラス変更の条件をチェック
-        if character.level < 5:
-            return ServiceResultFactory.error(
-                "クラス変更にはレベル5以上が必要です",
-                result_type=ResultType.WARNING
-            )
+        # 新しいクラスが指定されていない場合は利用可能クラス一覧を表示
+        if not new_class:
+            return self._get_available_classes_for_character(character)
+        
+        # 確認が必要な場合
+        if not confirmed:
+            return self._confirm_class_change(character, new_class)
         
         # クラス変更を実行
-        old_class = character.char_class
-        if character.change_class(new_class):
+        return self._execute_class_change(character, new_class)
+    
+    def _get_class_change_candidates(self) -> ServiceResult:
+        """クラス変更対象キャラクター一覧を取得"""
+        all_characters = self._get_all_available_characters()
+        
+        # レベル5以上のキャラクターのみ
+        candidates = [char for char in all_characters if char.experience.level >= 5]
+        
+        if not candidates:
+            return ServiceResultFactory.info("クラス変更可能なキャラクターがいません（レベル5以上が必要）")
+        
+        character_list = []
+        party = self._get_current_party()
+        utility = PartyMemberUtility(party)
+        
+        for char in candidates:
+            char_info = utility.create_member_info_dict(
+                char,
+                additional_fields={
+                    "race": char.race,
+                    "class": char.character_class,
+                    "can_change_class": True
+                }
+            )
+            character_list.append(char_info)
+        
+        return ServiceResultFactory.success(
+            f"クラス変更可能なキャラクター（{len(candidates)}人）",
+            data={
+                "characters": character_list,
+                "action": "select_character_for_class_change"
+            }
+        )
+    
+    def _get_available_classes_for_character(self, character: Character) -> ServiceResult:
+        """キャラクターが変更可能なクラス一覧を取得"""
+        from src.character.class_change import ClassChangeValidator
+        
+        # 利用可能クラスを取得
+        available_classes = ClassChangeValidator.get_available_classes(character)
+        
+        if not available_classes:
+            return ServiceResultFactory.info(
+                f"{character.name}は他のクラスに変更できません",
+                data={"character": character.name}
+            )
+        
+        # クラス情報を構築
+        class_info = []
+        for class_name in available_classes:
+            from src.character.class_change import ClassChangeManager
+            info = ClassChangeManager.get_class_change_info(character, class_name)
+            
+            class_info.append({
+                "id": class_name,
+                "name": info.get("target_name", class_name),
+                "description": f"HP倍率: {info.get('hp_multiplier', 1.0)}, MP倍率: {info.get('mp_multiplier', 1.0)}",
+                "requirements": info.get("requirements", {}),
+                "weapon_types": info.get("weapon_types", []),
+                "armor_types": info.get("armor_types", [])
+            })
+        
+        return ServiceResultFactory.success(
+            f"{character.name}が変更可能なクラス",
+            data={
+                "character_id": character.character_id,
+                "character_name": character.name,
+                "current_class": character.character_class,
+                "available_classes": class_info,
+                "action": "select_new_class"
+            }
+        )
+    
+    def _confirm_class_change(self, character: Character, new_class: str) -> ServiceResult:
+        """クラス変更の確認"""
+        from src.character.class_change import ClassChangeValidator, ClassChangeManager
+        
+        # 変更可能かチェック
+        can_change, errors = ClassChangeValidator.can_change_class(character, new_class)
+        if not can_change:
+            return ServiceResultFactory.error(f"クラス変更できません: {', '.join(errors)}")
+        
+        # クラス変更情報を取得
+        info = ClassChangeManager.get_class_change_info(character, new_class)
+        
+        old_class_name = info.get("current_name", character.character_class)
+        new_class_name = info.get("target_name", new_class)
+        
+        confirm_message = f"{character.name}のクラスを{old_class_name}から{new_class_name}に変更しますか？"
+        confirm_message += f"\n\n注意: レベルが1にリセットされます"
+        
+        return ServiceResultFactory.confirm(
+            confirm_message,
+            data={
+                "character_id": character.character_id,
+                "new_class": new_class,
+                "character_name": character.name,
+                "old_class": old_class_name,
+                "new_class_name": new_class_name,
+                "action": "execute_class_change"
+            }
+        )
+    
+    def _execute_class_change(self, character: Character, new_class: str) -> ServiceResult:
+        """クラス変更を実行"""
+        from src.character.class_change import ClassChangeManager
+        
+        # クラス変更を実行
+        success, message = ClassChangeManager.change_class(character, new_class)
+        
+        if success:
+            # キャラクターモデルを更新（存在する場合）
             if self.character_model:
                 self.character_model.update(character)
-            return ServiceResultFactory.success(
-                f"{character.name}のクラスを{old_class}から{new_class}に変更しました"
-            )
+            
+            return ServiceResultFactory.success(message)
         else:
-            return ServiceResultFactory.error("クラス変更に失敗しました")
+            return ServiceResultFactory.error(message)
     
     # キャラクター一覧関連
     
     def _handle_character_list(self, params: Dict[str, Any]) -> ServiceResult:
         """キャラクター一覧を処理"""
-        self._ensure_party_utility()
+        party = self._get_current_party()
+        self.party_utility = PartyMemberUtility(party)
         
         # フィルタオプション
         filter_by = params.get("filter", "all")
         sort_by = params.get("sort", "name")
         
         # 全キャラクターを取得
-        if self.character_model:
-            all_characters = self.character_model.get_all()
-        else:
-            # モデルがない場合は空リスト
-            all_characters = []
+        all_characters = self._get_all_available_characters()
         
         # フィルタリング
         if filter_by == "available":
             # パーティに入っていないキャラクターのみ
-            if self.party_utility.has_party():
-                party_ids = [m.id for m in self.party.members]
-                characters = [c for c in all_characters if c.id not in party_ids]
+            if party:
+                party_ids = [char_id for char_id in party.characters.keys()]
+                characters = [c for c in all_characters if c.character_id not in party_ids]
             else:
                 characters = all_characters
         elif filter_by == "in_party":
             # パーティメンバーのみ
-            characters = self.party.members if self.party_utility.has_party() else []
+            characters = list(party.characters.values()) if party else []
         else:
             characters = all_characters
         
@@ -382,12 +515,17 @@ class GuildService(FacilityService, ActionExecutorMixin):
         # PartyMemberUtilityを使用してキャラクター情報辞書を作成
         character_list = []
         for char in characters:
+            # in_party判定
+            in_party = False
+            if party:
+                in_party = char.character_id in party.characters
+            
             char_info = self.party_utility.create_member_info_dict(
                 char,
                 additional_fields={
                     "race": char.race,
-                    "class": char.char_class,
-                    "in_party": self.party_utility.has_party() and char in self.party.members
+                    "class": char.character_class,
+                    "in_party": in_party
                 }
             )
             character_list.append(char_info)
@@ -403,9 +541,9 @@ class GuildService(FacilityService, ActionExecutorMixin):
     def _sort_characters(self, characters: List, sort_by: str) -> None:
         """キャラクターリストをソート"""
         if sort_by == "level":
-            characters.sort(key=lambda c: c.level, reverse=True)
+            characters.sort(key=lambda c: c.experience.level, reverse=True)
         elif sort_by == "class":
-            characters.sort(key=lambda c: c.char_class)
+            characters.sort(key=lambda c: c.character_class)
         else:  # name
             characters.sort(key=lambda c: c.name)
     
@@ -447,16 +585,13 @@ class GuildService(FacilityService, ActionExecutorMixin):
         """クラス変更が可能なキャラクターがいるかチェック"""
         # レベル5以上のキャラクターがいるかチェック
         
-        # モデルが利用できない場合は、パーティから推定
+        # モデルが利用できない場合は、利用可能キャラクターから推定
         if self.character_model is None:
-            if self.party:
-                characters = self.party.get_all_characters()
-                return any(c.experience.level >= 5 for c in characters)
-            else:
-                return False
+            characters = self._get_all_available_characters()
+            return any(c.experience.level >= 5 for c in characters)
         else:
             characters = self.character_model.get_all()
-            return any(c.level >= 5 for c in characters)
+            return any(c.experience.level >= 5 for c in characters)
     
     def _get_available_classes(self) -> List[str]:
         """利用可能なクラスのリストを取得"""
@@ -464,3 +599,122 @@ class GuildService(FacilityService, ActionExecutorMixin):
             "fighter", "priest", "thief", "mage",
             "bishop", "samurai", "lord", "ninja"
         ]
+    
+    def create_service_panel(self, service_id: str, rect, parent, ui_manager):
+        """冒険者ギルド専用のサービスパネルを作成"""
+        try:
+            if service_id == "character_creation":
+                # キャラクター作成ウィザード
+                from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+                return CharacterCreationWizard(
+                    rect=rect,
+                    parent=parent,
+                    controller=self,
+                    ui_manager=ui_manager
+                )
+                
+            elif service_id == "party_formation":
+                # パーティ編成パネル
+                from src.facilities.ui.guild.party_formation_panel import PartyFormationPanel
+                return PartyFormationPanel(
+                    rect=rect,
+                    parent=parent,
+                    controller=self,
+                    ui_manager=ui_manager
+                )
+                
+            elif service_id == "character_list" or service_id == "class_change":
+                # 冒険者一覧パネル（クラス変更機能付き）
+                from src.facilities.ui.guild.character_list_panel import CharacterListPanel
+                return CharacterListPanel(
+                    rect=rect,
+                    parent=parent,
+                    controller=self,
+                    ui_manager=ui_manager
+                )
+                
+        except ImportError as e:
+            logger.error(f"Failed to import guild panel for {service_id}: {e}")
+        
+        # 未対応のサービスまたは失敗時は汎用パネルを使用
+        return None
+    
+    def _get_current_party(self) -> Optional[Party]:
+        """現在のパーティを取得"""
+        if self.game and hasattr(self.game, 'get_party'):
+            return self.game.get_party()
+        return None
+    
+    def _get_character_by_id(self, character_id: str) -> Optional[Character]:
+        """IDでキャラクターを取得（仮実装）"""
+        # 実際の実装では、キャラクターデータベースから取得
+        # 現在は仮のキャラクターを返す
+        if self.character_model:
+            return self.character_model.get(character_id)
+        
+        # フォールバック: パーティからキャラクターを探す
+        party = self._get_current_party()
+        if party:
+            return party.get_character(character_id)
+        
+        # テスト用の仮キャラクター
+        if character_id.startswith("test_"):
+            # テストキャラクターをリストから検索
+            test_characters = self._get_all_available_characters()
+            for char in test_characters:
+                if char.character_id == character_id:
+                    return char
+            
+            # 見つからない場合は新しく作成
+            from src.character.stats import BaseStats
+            base_stats = BaseStats(
+                strength=16, intelligence=16, faith=16,
+                vitality=16, agility=16, luck=16
+            )
+            char = Character(
+                name=f"Test Character {character_id[-1]}",
+                race="human",
+                character_class="fighter",
+                base_stats=base_stats
+            )
+            char.character_id = character_id
+            char.experience.level = 12  # テスト用に高レベル（クラス変更可能）
+            return char
+        
+        return None
+    
+    def _get_all_available_characters(self) -> List[Character]:
+        """利用可能な全キャラクターを取得"""
+        if self.character_model:
+            return self.character_model.get_all()
+        
+        # フォールバック: テスト用キャラクターを返す
+        test_characters = []
+        from src.character.stats import BaseStats
+        
+        for i in range(1, 6):
+            # 高い基本能力値を設定（クラス変更要件を満たすため）
+            base_stats = BaseStats(
+                strength=16,
+                intelligence=16, 
+                faith=16,  # faithに統一
+                vitality=16,
+                agility=16,
+                luck=16
+            )
+            
+            char = Character(
+                name=f"Adventurer {i}",
+                race=["human", "elf", "dwarf"][i % 3],
+                character_class=["fighter", "priest", "mage", "thief"][i % 4],
+                base_stats=base_stats
+            )
+            char.character_id = f"test_char_{i}"
+            
+            # テスト用のため、一部キャラクターのレベルを上げる（クラス変更は最低レベル10が必要）
+            if i <= 3:
+                char.experience.level = 10 + i  # レベル11-13にする
+            
+            test_characters.append(char)
+        
+        return test_characters
