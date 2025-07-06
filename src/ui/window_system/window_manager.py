@@ -262,6 +262,14 @@ class WindowManager:
         if window.window_id not in self.window_registry:
             raise ValueError(f"未登録のウィンドウです: {window.window_id}")
         
+        # 現在表示中のウィンドウを非表示にする
+        current_window = self.get_active_window()
+        if current_window and current_window != window:
+            logger.debug(f"背後のウィンドウを非表示にします: {current_window.window_id}")
+            if hasattr(current_window, 'hide_ui_elements'):
+                current_window.hide_ui_elements()
+            # ウィンドウの状態は変更せず、UI要素のみ非表示
+        
         # ウィンドウを表示
         window.show()
         
@@ -594,44 +602,24 @@ class WindowManager:
     
     def draw(self, surface: pygame.Surface) -> None:
         """
-        全ウィンドウの描画
+        全ウィンドウの描画（階層制御あり）
         
         Args:
             surface: 描画対象のサーフェス
         """
-        # モーダルウィンドウを探す
-        modal_window = None
-        modal_index = -1
-        windows_list = list(self.window_stack.stack)
+        # 最上位ウィンドウのみを描画する
+        top_window = self.get_active_window()
         
-        # 最後（最上位）のモーダルウィンドウを探す
-        for i in range(len(windows_list) - 1, -1, -1):
-            window = windows_list[i]
-            if window.modal and window.state == WindowState.SHOWN:
-                modal_window = window
-                modal_index = i
-                break
-        
-        # モーダルウィンドウがある場合
-        if modal_window:
-            # モーダルより下のウィンドウは描画しない
-            # ただし、デバッグのために背景を描画
-            
-            # 背景を暗くする（モーダルの下のウィンドウの代わり）
-            overlay = pygame.Surface(surface.get_size())
-            overlay.set_alpha(200)  # 80%の透明度
-            overlay.fill((0, 0, 0))
-            surface.blit(overlay, (0, 0))
-            
-            # モーダルウィンドウのみ描画
-            modal_window.draw(surface)
+        if top_window and top_window.state == WindowState.SHOWN:
+            # 最上位ウィンドウのみ描画
+            top_window.draw(surface)
+            logger.debug(f"最上位ウィンドウを描画: {top_window.window_id}")
         else:
-            # モーダルウィンドウがない場合は通常の描画
-            for window in windows_list:
-                if window.state == WindowState.SHOWN:
-                    window.draw(surface)
+            # ウィンドウがない場合は背景をクリア
+            surface.fill((0, 0, 0))
+            logger.debug("ウィンドウなし: 背景をクリア")
         
-        # UIManagerの描画
+        # UIManagerの描画（最上位ウィンドウのUI要素）
         if self.ui_manager:
             self.ui_manager.draw_ui(surface)
         else:
@@ -775,17 +763,13 @@ class WindowManager:
         logger.info("WindowManagerをクリーンアップしました")
     
     def render(self, screen):
-        """描画処理
+        """描画処理（drawメソッドのエイリアス）
         
         Args:
             screen: 描画対象のスクリーン
         """
-        # 背景をクリア
-        screen.fill((0, 0, 0))
-        
-        # pygame-guiのUIManagerに描画を委譲
-        if hasattr(self, 'ui_manager') and self.ui_manager:
-            self.ui_manager.draw_ui(screen)
+        # drawメソッドを呼び出して一貫性を保つ
+        self.draw(screen)
     
     def shutdown(self) -> None:
         """システムをシャットダウン"""
