@@ -1421,8 +1421,9 @@ class OverworldManager:
     
     def _on_dungeon_selection_cancelled(self):
         """ダンジョン選択がキャンセルされた時の処理"""
-        # メインメニューに戻る
-        self._show_main_menu()
+        # DungeonSelectionWindowを閉じれば、背後のOverworldMainWindowが表示される
+        # WindowManagerが自動的に処理するため、特別な処理は不要
+        logger.info("ダンジョン選択がキャンセルされました - 地上メニューに戻ります")
     
     def _confirm_enter_dungeon(self):
         """ダンジョン入場確認（旧バージョン・互換性維持）"""

@@ -383,6 +383,10 @@ class OverworldMainWindow(Window):
                 return self._navigate_menu(1)
             elif event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                 return self._activate_selected_item()
+            # 数字キーナビゲーション（1-9）
+            elif pygame.K_1 <= event.key <= pygame.K_9:
+                number = event.key - pygame.K_1 + 1  # 1-9に変換
+                return self._handle_number_key(number)
         
         return False
     
@@ -467,6 +471,30 @@ class OverworldMainWindow(Window):
         logger.debug(f"メニュー選択: {old_index} -> {self.selected_index}")
         
         return True
+    
+    def _handle_number_key(self, number: int) -> bool:
+        """
+        数字キーナビゲーション処理
+        
+        Args:
+            number: 押された数字（1-9）
+            
+        Returns:
+            bool: 処理されたかどうか
+        """
+        logger.info(f"[DEBUG] 数字キー押下: {number}")
+        
+        # メニューアイテムの範囲チェック
+        if not self.menu_items or number < 1 or number > len(self.menu_items):
+            logger.info(f"[DEBUG] 数字キー範囲外: {number}, メニュー数: {len(self.menu_items) if self.menu_items else 0}")
+            return False
+        
+        # 対象ボタンを取得（1-basedなので-1）
+        target_button = self.menu_items[number - 1]
+        logger.info(f"[DEBUG] 数字キーでボタン選択: {number} -> {target_button.text}")
+        
+        # ボタンクリック処理を呼び出し
+        return self._handle_button_click(target_button)
     
     def _activate_selected_item(self) -> bool:
         """選択されたアイテムを実行"""

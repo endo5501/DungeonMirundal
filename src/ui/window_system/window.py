@@ -143,19 +143,23 @@ class Window(ABC):
     
     def cleanup_ui(self) -> None:
         """UI要素のクリーンアップ"""
-        if self.ui_manager:
-            # pygame-guiの要素を明示的に削除
-            for element in list(self.ui_manager.get_root_container().elements):
-                element.kill()
-            self.ui_manager = None
+        # 子クラスで定義されたUI要素の破棄処理を呼び出し
+        self.destroy_ui_elements()
+        
+        # UIManagerの参照をクリア
+        self.ui_manager = None
     
     def hide_ui_elements(self) -> None:
-        """UI要素を非表示にする（デフォルト実装：何もしない）"""
-        pass
+        """UI要素を非表示にする（子クラスでオーバーライドしてください）"""
+        logger.debug(f"hide_ui_elements called for {self.window_id}")
     
     def show_ui_elements(self) -> None:
-        """UI要素を表示する（デフォルト実装：何もしない）"""
-        pass
+        """UI要素を表示する（子クラスでオーバーライドしてください）"""
+        logger.debug(f"show_ui_elements called for {self.window_id}")
+    
+    def destroy_ui_elements(self) -> None:
+        """UI要素を破棄する（子クラスでオーバーライドしてください）"""
+        logger.debug(f"destroy_ui_elements called for {self.window_id}")
     
     @abstractmethod
     def handle_event(self, event: pygame.event.Event) -> bool:

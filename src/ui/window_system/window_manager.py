@@ -292,10 +292,10 @@ class WindowManager:
             window: 非表示にするウィンドウ
             remove_from_stack: スタックから削除するかどうか
         """
-        # 隠すウィンドウのUI要素を明示的に非表示にする
-        if hasattr(window, 'hide_ui_elements'):
-            window.hide_ui_elements()
+        # ウィンドウのUI要素を非表示にする
+        window.hide_ui_elements()
         
+        # ウィンドウの状態を非表示に変更
         window.hide()
         
         # スタックから削除
@@ -311,8 +311,7 @@ class WindowManager:
         if new_top:
             self.focus_manager.set_focus(new_top)
             # 背後のウィンドウを明示的に再表示
-            if hasattr(new_top, 'show_ui_elements'):
-                new_top.show_ui_elements()
+            new_top.show_ui_elements()
             new_top.show()
             logger.debug(f"背後のウィンドウを再表示: {new_top.window_id}")
         
@@ -325,11 +324,36 @@ class WindowManager:
         Args:
             window: 閉じるウィンドウ
         """
-        # 非表示にしてスタックから削除
-        self.hide_window(window, remove_from_stack=True)
+        # 背後のウィンドウを先に取得（destroy前に取得する必要がある）
+        self.window_stack.remove_window(window)
+        new_top = self.get_active_window()
         
-        # ウィンドウを破棄
-        self.destroy_window(window)
+        # ウィンドウのUI要素を破棄
+        window.destroy()
+        
+        # レジストリから削除
+        if window.window_id in self.window_registry:
+            del self.window_registry[window.window_id]
+        
+        # フォーカスロックを解除（モーダルウィンドウの場合）
+        if window.modal and self.focus_manager.is_focus_locked():
+            self.focus_manager.unlock_focus()
+        
+        # 背後のウィンドウを再表示
+        if new_top:
+            self.focus_manager.set_focus(new_top)
+            new_top.show_ui_elements()
+            new_top.show()
+            logger.debug(f"背後のウィンドウを再表示: {new_top.window_id}")
+        
+        # イベントリスナーをクリーンアップ
+        self.event_router.cleanup_window_listeners(window.window_id)
+        
+        # フォーカス状態をクリーンアップ
+        self.focus_manager.cleanup_destroyed_windows()
+        
+        self.statistics_manager.increment_counter('windows_destroyed')
+        logger.debug(f"ウィンドウを閉じました: {window.window_id}")
     
     def destroy_window(self, window: Window) -> None:
         """
@@ -343,21 +367,20 @@ class WindowManager:
         for child in children_to_destroy:
             self.destroy_window(child)
         
+        # ウィンドウスタックから削除
+        self.window_stack.remove_window(window)
+        
+        # ウィンドウのUI要素を完全に破棄
+        window.destroy()
+        
         # レジストリから削除
         if window.window_id in self.window_registry:
             del self.window_registry[window.window_id]
         else:
             logger.warning(f"破棄対象ウィンドウがレジストリに存在しません: {window.window_id}")
         
-        # ウィンドウスタックから削除
-        self.window_stack.remove_window(window)
-        
         # イベントリスナーをクリーンアップ
         self.event_router.cleanup_window_listeners(window.window_id)
-        
-        # ウィンドウをプールに返却（失敗した場合は破棄）
-        if not self.window_pool.return_window(window):
-            window.destroy()
         
         # フォーカス状態をクリーンアップ
         self.focus_manager.cleanup_destroyed_windows()

@@ -96,6 +96,11 @@ class WindowStack:
                 logger.info(f"前のウィンドウを再表示: {new_top.window_id}")
             else:
                 logger.info(f"前のウィンドウは既に表示済み: {new_top.window_id}")
+            
+            # UI要素も再表示する（重要！）
+            if hasattr(new_top, 'show_ui_elements'):
+                new_top.show_ui_elements()
+                logger.info(f"前のウィンドウのUI要素を再表示: {new_top.window_id}")
         else:
             logger.warning("新しいトップウィンドウがありません")
         

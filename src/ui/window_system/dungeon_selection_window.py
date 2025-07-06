@@ -76,6 +76,7 @@ class DungeonSelectionWindow(Window):
         
         # UI要素
         self.container: Optional[pygame_gui.elements.UIPanel] = None
+        self.title_label: Optional[pygame_gui.elements.UILabel] = None
         self.dungeon_list: Optional[pygame_gui.elements.UISelectionList] = None
         self.select_button: Optional[pygame_gui.elements.UIButton] = None
         self.create_button: Optional[pygame_gui.elements.UIButton] = None
@@ -83,6 +84,52 @@ class DungeonSelectionWindow(Window):
         self.back_button: Optional[pygame_gui.elements.UIButton] = None
         
         logger.info("DungeonSelectionWindowを初期化しました")
+    
+    def hide_ui_elements(self) -> None:
+        """UI要素を非表示にする"""
+        if self.container:
+            self.container.visible = False
+        logger.debug(f"DungeonSelectionWindow UI要素を非表示: {self.window_id}")
+    
+    def show_ui_elements(self) -> None:
+        """UI要素を表示する"""
+        if self.container:
+            self.container.visible = True
+        logger.debug(f"DungeonSelectionWindow UI要素を表示: {self.window_id}")
+    
+    def destroy_ui_elements(self) -> None:
+        """UI要素を破棄する"""
+        # 子要素を明示的に削除
+        if self.title_label:
+            self.title_label.kill()
+            self.title_label = None
+        
+        if self.dungeon_list:
+            self.dungeon_list.kill()
+            self.dungeon_list = None
+        
+        if self.select_button:
+            self.select_button.kill()
+            self.select_button = None
+        
+        if self.create_button:
+            self.create_button.kill()
+            self.create_button = None
+        
+        if self.delete_button:
+            self.delete_button.kill()
+            self.delete_button = None
+        
+        if self.back_button:
+            self.back_button.kill()
+            self.back_button = None
+        
+        # メインコンテナを最後に削除
+        if self.container:
+            self.container.kill()
+            self.container = None
+        
+        logger.debug(f"DungeonSelectionWindow UI要素を破棄: {self.window_id}")
     
     def set_callbacks(self, on_selected: Callable[[str], None], on_cancelled: Callable[[], None]):
         """コールバックを設定
@@ -198,17 +245,8 @@ class DungeonSelectionWindow(Window):
     
     def destroy(self) -> None:
         """UI要素を破棄"""
-        if self.container:
-            self.container.kill()
-            self.container = None
-        
-        self.dungeon_list = None
-        self.select_button = None
-        self.create_button = None
-        self.delete_button = None
-        self.back_button = None
-        
-        self.state = WindowState.DESTROYED
+        # 親クラスのdestroyを呼び出してUI要素を完全に破棄
+        super().destroy()
         logger.info("DungeonSelectionWindowのUI要素を破棄しました")
     
     def handle_event(self, event: pygame.event.Event) -> bool:
@@ -310,8 +348,10 @@ class DungeonSelectionWindow(Window):
         selected_dungeon = self.dungeons[self.selected_index]
         logger.info(f"ダンジョン選択: {selected_dungeon.hash_value}")
         
-        # ウィンドウを閉じる
-        self.hide()
+        # WindowManagerで適切に破棄する
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        window_manager.close_window(self)
         
         if self.on_dungeon_selected:
             self.on_dungeon_selected(selected_dungeon.hash_value)
@@ -354,7 +394,11 @@ class DungeonSelectionWindow(Window):
     def _on_back_to_town(self):
         """街に戻る処理"""
         logger.info("街に戻ります")
-        self.hide()
+        
+        # WindowManagerで適切に破棄する
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        window_manager.close_window(self)
         
         if self.on_cancelled:
             self.on_cancelled()
