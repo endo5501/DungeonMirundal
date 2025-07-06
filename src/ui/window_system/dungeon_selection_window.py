@@ -286,8 +286,20 @@ class DungeonSelectionWindow(Window):
         
         elif event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
             if event.ui_element == self.dungeon_list:
-                self.selected_index = self.dungeon_list.get_single_selection()
-                logger.info(f"ダンジョン選択変更: {self.selected_index}")
+                selection = self.dungeon_list.get_single_selection()
+                if selection:
+                    # 選択されたアイテムのインデックスを取得
+                    try:
+                        self.selected_index = self.dungeon_list.item_list.index(selection)
+                        logger.info(f"ダンジョン選択変更: インデックス={self.selected_index}, アイテム={selection}")
+                    except ValueError:
+                        # アイテムが見つからない場合
+                        self.selected_index = 0
+                        logger.warning(f"選択されたアイテムが見つかりません: {selection}")
+                else:
+                    self.selected_index = None
+                
+                self._update_button_states()
                 return True
         
         return False
