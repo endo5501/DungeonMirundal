@@ -341,7 +341,13 @@ class GameDebugClient:
             )
             if response.status_code == 200:
                 data = response.json()
-                return data.get('hierarchy', {})
+                # 拡張されたAPIエンドポイントは直接階層情報を返す
+                if 'hierarchy' in data:
+                    # 旧形式との互換性
+                    return data['hierarchy']
+                else:
+                    # 新形式（直接レスポンス）
+                    return data
             else:
                 logger.error(f"Failed to get UI hierarchy: {response.status_code}")
                 return None

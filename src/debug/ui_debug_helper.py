@@ -216,6 +216,19 @@ class UIDebugHelper:
             'visible': getattr(window, 'visible', False)
         }
         
+        # WindowState情報を追加
+        if hasattr(window, 'state'):
+            state = window.state
+            info['state'] = str(state) if hasattr(state, 'name') else str(state)
+        
+        # モーダル情報
+        if hasattr(window, 'modal'):
+            info['modal'] = window.modal
+            
+        # UI要素の表示状態
+        if hasattr(window, 'ui_manager'):
+            info['has_ui_manager'] = window.ui_manager is not None
+        
         # 位置とサイズ情報
         if hasattr(window, 'rect'):
             rect = window.rect
@@ -272,37 +285,42 @@ class UIDebugHelper:
                 prefix = "│   └── " if is_last else "│   ├── "
                 lines.append(f"{prefix}{window_str}")
         
-        # ウィンドウをツリー表示
+        # ウィンドウをツリー表示（詳細情報付き）
         has_content_above = bool(window_stack)
-        for i, window in enumerate(windows):
-            is_last_window = i == len(windows) - 1 and not ui_elements
-            if has_content_above:
-                window_prefix = "├── " if not is_last_window or ui_elements else "└── "
-            else:
-                window_prefix = "└── " if is_last_window and not ui_elements else "├── "
-            window_status = "[visible]" if window.get('visible') else "[hidden]"
-            lines.append(f"{window_prefix}{window['type']} ({window['id']}) {window_status}")
+        if windows:
+            window_section_prefix = "├── " if has_content_above else "└── "
+            if not has_content_above and not ui_elements:
+                window_section_prefix = "└── "
+            lines.append(f"{window_section_prefix}Registered Windows:")
             
-            # そのウィンドウに属するUI要素を表示
-            for j, element in enumerate(ui_elements):
-                is_last_element = j == len(ui_elements) - 1
-                if is_last_window and not has_content_above:
-                    elem_prefix = "    └── " if is_last_element else "    ├── "
-                else:
-                    elem_prefix = "│   └── " if is_last_element else "│   ├── "
-                elem_status = "[visible]" if element.get('visible') else "[hidden]"
-                lines.append(f"{elem_prefix}{element['type']} ({element['object_id']}) {elem_status}")
+            for i, window in enumerate(windows):
+                is_last_window = i == len(windows) - 1
+                window_prefix = "│   └── " if is_last_window else "│   ├── "
+                
+                # ウィンドウの詳細状態情報
+                window_status = "[visible]" if window.get('visible') else "[hidden]"
+                state_info = f"state={window.get('state', 'unknown')}" if 'state' in window else ""
+                modal_info = f"modal={window.get('modal', False)}" if 'modal' in window else ""
+                
+                details = []
+                if state_info:
+                    details.append(state_info)
+                if modal_info:
+                    details.append(modal_info)
+                
+                detail_str = f" ({', '.join(details)})" if details else ""
+                lines.append(f"{window_prefix}{window['type']} ({window['id']}) {window_status}{detail_str}")
         
-        # ウィンドウがない場合は、UI要素のみを表示
-        if not windows and ui_elements:
-            ui_prefix = "├── " if window_stack else "└── "
+        # UI要素をツリー表示
+        if ui_elements:
+            if windows or window_stack:
+                ui_prefix = "└── "
+            else:
+                ui_prefix = "└── "
             lines.append(f"{ui_prefix}UI Elements:")
             for i, element in enumerate(ui_elements):
                 is_last = i == len(ui_elements) - 1
-                if window_stack:
-                    prefix = "│   └── " if is_last else "│   ├── "
-                else:
-                    prefix = "    └── " if is_last else "    ├── "
+                prefix = "    └── " if is_last else "    ├── "
                 status = "[visible]" if element.get('visible') else "[hidden]"
                 lines.append(f"{prefix}{element['type']} ({element['object_id']}) {status}")
         

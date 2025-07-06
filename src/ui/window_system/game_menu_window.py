@@ -44,13 +44,21 @@ class GameMenuWindow(Window):
         logger.debug(f"GameMenuWindowを初期化: {window_id}")
     
     def create(self) -> None:
-        """UI要素を作成"""
+        """UI要素を作成（冪等性保証）"""
         if not self.ui_manager:
             self._initialize_ui_manager()
-            self._calculate_layout()
-            self._create_panel()
-            self._create_title()
-            self._create_menu_buttons()
+        
+        # 既にUI要素が存在し、生きている場合はスキップ
+        if (hasattr(self, 'panel') and self.panel and 
+            hasattr(self.panel, 'alive') and self.panel.alive()):
+            logger.debug(f"GameMenuWindow UI要素は既に存在: {self.window_id}")
+            return
+        
+        # UI要素を作成
+        self._calculate_layout()
+        self._create_panel()
+        self._create_title()
+        self._create_menu_buttons()
         
         logger.debug(f"GameMenuWindow UI要素を作成: {self.window_id}")
     
@@ -190,15 +198,28 @@ class GameMenuWindow(Window):
         return True
     
     def cleanup_ui(self) -> None:
-        """UI要素のクリーンアップ"""
-        # ボタンをクリア
+        """UI要素のクリーンアップ（完全終了時のみ）"""
+        # 注意: このメソッドはウィンドウが完全に破棄される時のみ呼び出すべき
+        # hide/show操作では呼び出してはならない
+        
+        # 個別のUI要素を削除
+        if hasattr(self, 'panel') and self.panel:
+            self.panel.kill()
+            self.panel = None
+        
+        if hasattr(self, 'title_label') and self.title_label:
+            self.title_label.kill()
+            self.title_label = None
+        
+        for button in self.menu_buttons:
+            if button and hasattr(button, 'kill'):
+                button.kill()
+        
+        # ボタンリストをクリア
         self.menu_buttons.clear()
         
-        # pygame-guiの要素を削除
-        if self.ui_manager:
-            for element in list(self.ui_manager.get_root_container().elements):
-                element.kill()
-            self.ui_manager = None
+        # UIManagerは削除しない（WindowManagerが管理している）
+        # self.ui_manager = None  # これを削除
         
         logger.debug(f"GameMenuWindow UI要素をクリーンアップ: {self.window_id}")
     
@@ -219,17 +240,25 @@ class GameMenuWindow(Window):
         logger.debug(f"GameMenuWindow UI要素を非表示: {self.window_id}")
     
     def show_ui_elements(self) -> None:
-        """UI要素を表示する"""
+        """UI要素を表示する（必要に応じて再作成）"""
         if not self.ui_manager:
-            return
+            self._initialize_ui_manager()
         
-        # パネルを表示
-        if hasattr(self, 'panel') and self.panel:
-            self.panel.show()
-        
-        # ボタンを表示
-        for button in self.menu_buttons:
-            if button:
-                button.show()
+        # UI要素が削除されている場合は再作成
+        if not hasattr(self, 'panel') or not self.panel or not self.panel.alive():
+            logger.info(f"GameMenuWindow: UI要素が削除されているため再作成します: {self.window_id}")
+            self._calculate_layout()
+            self._create_panel()
+            self._create_title()
+            self._create_menu_buttons()
+        else:
+            # パネルを表示
+            if hasattr(self, 'panel') and self.panel:
+                self.panel.show()
+            
+            # ボタンを表示
+            for button in self.menu_buttons:
+                if button and hasattr(button, 'show'):
+                    button.show()
         
         logger.debug(f"GameMenuWindow UI要素を表示: {self.window_id}")

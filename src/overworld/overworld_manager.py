@@ -390,12 +390,45 @@ class OverworldManager:
         self._show_info_dialog("キャラクター詳細", char_info)
         return True
     
-    def _go_back_to_main_menu(self):
-        """メインメニューに戻る"""
-        if hasattr(self, 'main_window') and self.main_window:
-            # OverworldMainWindowの_go_backメソッドを使用
-            return self.main_window._go_back()
-        return False
+    def _go_back_to_main_menu(self) -> bool:
+        """メインメニューに戻る（GameMenuWindowを復元）"""
+        try:
+            if self.window_manager:
+                # スロット選択画面を閉じてメインメニューに戻る
+                if hasattr(self, 'main_window') and self.main_window:
+                    # OverworldMainWindowの_go_backメソッドでスロット選択画面を閉じる
+                    self.main_window._go_back()
+                
+                # GameMenuWindowを復元してスタックに戻す
+                game_menu_window = self.window_manager.get_window('game_menu')
+                if game_menu_window:
+                    # 非表示状態のGameMenuWindowを再表示可能な状態に戻す
+                    # ただし実際の表示はしない（ESCキーで表示される状態にする）
+                    logger.info("GameMenuWindowをスタックに復元しました")
+                else:
+                    logger.warning("GameMenuWindowが見つかりません")
+                
+                logger.info("メインメニューに戻りました")
+                return True
+            
+            # フォールバック: OverworldMainWindowを使用
+            if hasattr(self, 'main_window') and self.main_window:
+                return self.main_window._go_back()
+            
+            return False
+        except Exception as e:
+            logger.error(f"メインメニューに戻る処理エラー: {e}")
+            return False
+    
+    def _on_save_slot_selected(self, slot_number: int) -> bool:
+        """セーブスロット選択時のコールバック"""
+        logger.info(f"セーブスロット {slot_number} が選択されました")
+        return self._save_to_slot(slot_number)
+    
+    def _on_load_slot_selected(self, slot_number: int) -> bool:
+        """ロードスロット選択時のコールバック"""
+        logger.info(f"ロードスロット {slot_number} が選択されました")
+        return self._load_selected_save(slot_number)
     
     # === WindowManagerベースの新メソッド（パーティ・セーブ・ロード・設定） ===
     
@@ -424,46 +457,68 @@ class OverworldManager:
             logger.error(f"パーティ状況表示エラー: {e}")
             return False
     
-    def _show_save_menu_window(self):
+    def _show_save_menu_window(self) -> bool:
         """セーブメニューをWindowManagerで表示"""
         try:
-            # OverworldMainWindowでセーブメニューを表示
-            save_config = {
-                'menu_type': 'save_load',
-                'operation': 'save',
-                'max_slots': 5
-            }
+            logger.info("セーブスロット選択画面を表示")
             
-            if hasattr(self, 'main_window') and self.main_window:
-                from src.ui.window_system.overworld_main_window import OverworldMenuType
-                self.main_window.show_menu(OverworldMenuType.SAVE_LOAD, save_config)
-                return True
+            # _create_save_menu_config()を使用して適切な設定を生成
+            save_config = self._create_save_menu_config()
+            logger.info(f"セーブ設定作成: operation={save_config.get('operation')}")
             
-            logger.warning("メインウィンドウが見つかりません")
-            return False
-            
+            if self.window_manager:
+                # 現在のゲームメニューを取得して一時的に非表示にする（スタックからは削除しない）
+                game_menu_window = self.window_manager.get_window('game_menu')
+                if game_menu_window:
+                    self.window_manager.hide_window(game_menu_window, remove_from_stack=False)
+                    logger.info("GameMenuWindowを一時的に非表示にしました（スタック保持）")
+                
+                # セーブスロット選択のOverworldMainWindowを表示
+                if hasattr(self, 'main_window') and self.main_window:
+                    from src.ui.window_system.overworld_main_window import OverworldMenuType
+                    self.main_window.show_menu(OverworldMenuType.SAVE_LOAD, save_config)
+                    logger.info("WindowManagerでセーブスロット選択画面を表示")
+                    return True
+                else:
+                    logger.error("メインウィンドウが見つかりません")
+                    return False
+            else:
+                logger.error("WindowManagerが設定されていません")
+                return False
+                
         except Exception as e:
             logger.error(f"セーブメニュー表示エラー: {e}")
             return False
     
-    def _show_load_menu_window(self):
+    def _show_load_menu_window(self) -> bool:
         """ロードメニューをWindowManagerで表示"""
         try:
-            # OverworldMainWindowでロードメニューを表示
-            load_config = {
-                'menu_type': 'save_load',
-                'operation': 'load',
-                'max_slots': 5
-            }
+            logger.info("ロードスロット選択画面を表示")
             
-            if hasattr(self, 'main_window') and self.main_window:
-                from src.ui.window_system.overworld_main_window import OverworldMenuType
-                self.main_window.show_menu(OverworldMenuType.SAVE_LOAD, load_config)
-                return True
+            # _create_load_menu_config()を使用して適切な設定を生成
+            load_config = self._create_load_menu_config()
+            logger.info(f"ロード設定作成: operation={load_config.get('operation')}")
             
-            logger.warning("メインウィンドウが見つかりません")
-            return False
-            
+            if self.window_manager:
+                # 現在のゲームメニューを取得して一時的に非表示にする（スタックからは削除しない）
+                game_menu_window = self.window_manager.get_window('game_menu')
+                if game_menu_window:
+                    self.window_manager.hide_window(game_menu_window, remove_from_stack=False)
+                    logger.info("GameMenuWindowを一時的に非表示にしました（スタック保持）")
+                
+                # ロードスロット選択のOverworldMainWindowを表示
+                if hasattr(self, 'main_window') and self.main_window:
+                    from src.ui.window_system.overworld_main_window import OverworldMenuType
+                    self.main_window.show_menu(OverworldMenuType.SAVE_LOAD, load_config)
+                    logger.info("WindowManagerでロードスロット選択画面を表示")
+                    return True
+                else:
+                    logger.error("メインウィンドウが見つかりません")
+                    return False
+            else:
+                logger.error("WindowManagerが設定されていません")
+                return False
+                
         except Exception as e:
             logger.error(f"ロードメニュー表示エラー: {e}")
             return False
@@ -1196,23 +1251,47 @@ class OverworldManager:
         ui_manager.add_menu(save_menu)
         ui_manager.show_menu(save_menu.menu_id, modal=True)
     
-    def _save_to_slot(self, slot_id: int):
-        """指定されたスロットにセーブ"""
-        if not self.current_party:
-            self._show_error_dialog("エラー", "セーブするパーティがありません")
-            return
-        
-        # 既存のセーブがある場合は確認
-        save_slots = save_manager.get_save_slots()
-        existing_save = next((slot for slot in save_slots if slot.slot_id == slot_id), None)
-        
-        if existing_save:
-            self._show_confirmation_dialog(
-                f"スロット {slot_id} には既にセーブデータがあります。\n上書きしますか？",
-                lambda: self._confirm_save_to_slot(slot_id)
+    def _save_to_slot(self, slot_id: int) -> bool:
+        """指定されたスロットにセーブ - WindowSystem対応版"""
+        try:
+            logger.info(f"スロット {slot_id} にセーブ開始")
+            
+            if not self.current_party:
+                logger.warning("セーブするパーティがありません")
+                return False
+            
+            # GameManagerからセーブ機能を呼び出し
+            from src.core.game_manager import GameManager
+            game_manager = GameManager()
+            
+            # 現在のゲーム状態を構築
+            game_state = {
+                'location': 'overworld',
+                'current_location': self.current_location.value if hasattr(self, 'current_location') else 'town_center',
+                'timestamp': str(datetime.now()),
+                'party_name': self.current_party.name
+            }
+            
+            # セーブを実行
+            success = game_manager.save_manager.save_game(
+                party=self.current_party,
+                slot_id=slot_id,
+                save_name=f"{self.current_party.name} - 町",
+                game_state=game_state
             )
-        else:
-            self._confirm_save_to_slot(slot_id)
+            
+            if success:
+                logger.info(f"スロット {slot_id} にセーブ完了")
+                # セーブ完了後、メインメニューに戻る
+                self._go_back_to_main_menu()
+                return True
+            else:
+                logger.error(f"スロット {slot_id} へのセーブに失敗")
+                return False
+                
+        except Exception as e:
+            logger.error(f"セーブ処理エラー: {e}")
+            return False
     
     def _confirm_save_to_slot(self, slot_id: int):
         """セーブ実行"""
@@ -1270,17 +1349,36 @@ class OverworldManager:
         ui_manager.add_menu(load_menu)
         ui_manager.show_menu(load_menu.menu_id, modal=True)
     
-    def _load_selected_save(self, slot_id: int):
-        """選択されたセーブデータをロード"""
-        game_save = save_manager.load_game(slot_id)
-        
-        if game_save:
-            self.current_party = game_save.party
-            self._show_info_dialog("ロード完了", f"スロット {slot_id} のデータをロードしました")
+    def _load_selected_save(self, slot_id: int) -> bool:
+        """選択されたセーブデータをロード - WindowSystem対応版"""
+        try:
+            logger.info(f"スロット {slot_id} からロード開始")
             
-            # 設定メニューに戻る（メインメニューと重複しないように）
-        else:
-            self._show_error_dialog("ロード失敗", "セーブデータの読み込みに失敗しました")
+            # GameManagerからロード機能を呼び出し
+            from src.core.game_manager import GameManager
+            game_manager = GameManager()
+            
+            # ゲーム状態をロード
+            success = game_manager.load_game_state(str(slot_id))
+            
+            if success:
+                logger.info(f"スロット {slot_id} からロード完了")
+                
+                # ロード完了後、パーティ情報を更新
+                if hasattr(game_manager, 'current_party') and game_manager.current_party:
+                    self.current_party = game_manager.current_party
+                    logger.info(f"パーティを復元: {self.current_party.name}")
+                
+                # ロード完了後、メインメニューに戻る
+                self._go_back_to_main_menu()
+                return True
+            else:
+                logger.error(f"スロット {slot_id} からのロードに失敗")
+                return False
+                
+        except Exception as e:
+            logger.error(f"ロード処理エラー: {e}")
+            return False
     
     def _back_to_settings_menu(self, from_party_status=False, from_save_menu=False, from_load_menu=False):
         """設定メニューに戻る"""

@@ -237,16 +237,19 @@ def send_mouse_input(x: int, y: int, button: int = 1, action: str = "down"):
          summary="Get UI hierarchy",
          description="Returns the current UI hierarchy including windows and elements")
 def get_ui_hierarchy():
-    """UI階層情報を取得（最小限の実装）"""
+    """UI階層情報を取得（拡張版）"""
     try:
-        # 最小限の構造を初期化
+        # 詳細な構造を初期化
         hierarchy = {
+            'windows': [],
+            'ui_elements': [],
             'window_stack': [],
             'window_count': 0,
-            'status': 'minimal_info_only'
+            'status': 'extended_info_available',
+            'debug_info': {}
         }
         
-        # WindowManagerから最小限の情報のみ取得
+        # WindowManagerから詳細情報を取得
         try:
             from src.ui.window_system import WindowManager
             wm = WindowManager.get_instance()
@@ -266,36 +269,107 @@ def get_ui_hierarchy():
                 except Exception as stack_error:
                     hierarchy['window_stack_error'] = str(stack_error)
                 
-                # ウィンドウ数の取得（安全にアクセス）
+                # 詳細なウィンドウ情報を取得
                 try:
                     if hasattr(wm, 'windows'):
                         windows = getattr(wm, 'windows', None)
                         if windows is not None:
                             hierarchy['window_count'] = len(windows)
-                            # ウィンドウIDリストも安全に取得
-                            try:
-                                hierarchy['window_ids'] = list(windows.keys())
-                            except Exception:
-                                hierarchy['window_ids'] = 'enumeration_failed'
+                            hierarchy['window_ids'] = list(windows.keys())
+                            
+                            # 各ウィンドウの詳細情報を取得
+                            for window_id, window in windows.items():
+                                try:
+                                    window_info = {
+                                        'id': window_id,
+                                        'type': window.__class__.__name__,
+                                        'visible': getattr(window, 'visible', False),
+                                        'exists': window is not None
+                                    }
+                                    
+                                    # WindowState情報を追加
+                                    if hasattr(window, 'state'):
+                                        state = window.state
+                                        window_info['state'] = str(state) if hasattr(state, 'name') else str(state)
+                                    
+                                    # モーダル情報
+                                    if hasattr(window, 'modal'):
+                                        window_info['modal'] = window.modal
+                                        
+                                    # UI要素の表示状態
+                                    if hasattr(window, 'ui_manager'):
+                                        window_info['has_ui_manager'] = window.ui_manager is not None
+                                    
+                                    # 位置とサイズ情報
+                                    if hasattr(window, 'rect'):
+                                        rect = window.rect
+                                        window_info['position'] = {'x': rect.x, 'y': rect.y}
+                                        window_info['size'] = {'width': rect.width, 'height': rect.height}
+                                    
+                                    hierarchy['windows'].append(window_info)
+                                    
+                                except Exception as window_error:
+                                    hierarchy['debug_info'][f'window_{window_id}_error'] = str(window_error)
                         else:
                             hierarchy['window_count'] = 0
+                            hierarchy['debug_info']['windows_dict_none'] = True
                     else:
                         hierarchy['window_count'] = 'attribute_not_available'
+                        hierarchy['debug_info']['no_windows_attribute'] = True
                 except Exception as windows_error:
                     hierarchy['windows_error'] = str(windows_error)
+                
+                # UI要素情報を取得（pygame-gui経由）
+                try:
+                    if hasattr(wm, 'ui_manager') and wm.ui_manager:
+                        ui_manager = wm.ui_manager
+                        hierarchy['debug_info']['ui_manager_available'] = True
+                        
+                        # スプライトグループから要素を取得
+                        try:
+                            sprite_group = ui_manager.get_sprite_group()
+                            if hasattr(sprite_group, 'sprites'):
+                                sprites = sprite_group.sprites()
+                            else:
+                                sprites = list(sprite_group)
+                            
+                            hierarchy['debug_info']['ui_element_count'] = len(sprites)
+                            
+                            for sprite in sprites:
+                                if hasattr(sprite, 'object_ids'):
+                                    element_info = {
+                                        'type': sprite.__class__.__name__,
+                                        'visible': bool(getattr(sprite, 'visible', 0))
+                                    }
+                                    
+                                    # object_id情報
+                                    ids = sprite.object_ids
+                                    element_info['object_id'] = ids[0] if ids else 'unknown'
+                                    element_info['object_ids'] = ids
+                                    
+                                    # 位置とサイズ情報
+                                    if hasattr(sprite, 'rect'):
+                                        rect = sprite.rect
+                                        element_info['position'] = {'x': rect.x, 'y': rect.y}
+                                        element_info['size'] = {'width': rect.width, 'height': rect.height}
+                                    
+                                    hierarchy['ui_elements'].append(element_info)
+                        except Exception as ui_error:
+                            hierarchy['debug_info']['ui_elements_error'] = str(ui_error)
+                    else:
+                        hierarchy['debug_info']['ui_manager_available'] = False
+                except Exception as ui_manager_error:
+                    hierarchy['debug_info']['ui_manager_error'] = str(ui_manager_error)
             else:
                 hierarchy['error'] = 'WindowManager instance not found'
                     
         except Exception as e:
-            logger.warning(f"Error getting basic window info: {e}")
+            logger.warning(f"Error getting UI hierarchy info: {e}")
             hierarchy['error'] = str(e)
         
-        logger.info("UI hierarchy fetched successfully (minimal)")
+        logger.info("UI hierarchy fetched successfully (extended)")
         
-        return {
-            "hierarchy": hierarchy,
-            "timestamp": get_timestamp()
-        }
+        return hierarchy
         
     except Exception as e:
         logger.error(f"Failed to get UI hierarchy: {str(e)}")
