@@ -749,28 +749,36 @@ class GameManager:
     def _main_loop(self):
         """Pygameメインループ"""
         while self.running:
-            # イベント処理
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-                else:
-                    # WindowManagerでイベント処理（最優先）
-                    ui_handled = False
-                    from src.ui.window_system import WindowManager
-                    window_manager = WindowManager.get_instance()
+            # イベント処理 - pygame-guiが生成する新しいイベントも同じフレームで処理
+            events_to_process = pygame.event.get()
+            
+            # 最大3回までイベント処理ループを繰り返し（無限ループ防止）
+            for _ in range(3):
+                if not events_to_process:
+                    break
                     
-                    # WindowManagerが初期化されていない場合は初期化
-                    if not window_manager.screen:
-                        window_manager.initialize_pygame(self.screen, self.clock)
-                    
-                    # アクティブなウィンドウがある場合はWindowManagerで処理
-                    if window_manager.get_active_window():
-                        window_manager.handle_global_events([event])
-                        ui_handled = True
+                new_events = []
+                for event in events_to_process:
+                    if event.type == pygame.QUIT:
+                        self.running = False
                     else:
-                        # UIマネージャーでイベント処理
-                        if hasattr(self, 'ui_manager') and self.ui_manager:
-                            ui_handled = self.ui_manager.handle_event(event)
+                        # WindowManagerでイベント処理（最優先）
+                        ui_handled = False
+                        from src.ui.window_system import WindowManager
+                        window_manager = WindowManager.get_instance()
+                        
+                        # WindowManagerが初期化されていない場合は初期化
+                        if not window_manager.screen:
+                            window_manager.initialize_pygame(self.screen, self.clock)
+                        
+                        # アクティブなウィンドウがある場合はWindowManagerで処理
+                        if window_manager.get_active_window():
+                            window_manager.handle_global_events([event])
+                            ui_handled = True
+                        else:
+                            # UIマネージャーでイベント処理
+                            if hasattr(self, 'ui_manager') and self.ui_manager:
+                                ui_handled = self.ui_manager.handle_event(event)
                         
                         # オーバーワールドマネージャーでのイベント処理は不要（Window Systemで統合）
                         
@@ -779,9 +787,13 @@ class GameManager:
                             if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
                                 ui_handled = self.dungeon_renderer.dungeon_ui_manager.handle_input(event)
                     
-                    # UIで処理されなかった場合のみ入力マネージャーに送信
-                    if not ui_handled and hasattr(self, 'input_manager'):
-                        self.input_manager.handle_event(event)
+                        # UIで処理されなかった場合のみ入力マネージャーに送信
+                        if not ui_handled and hasattr(self, 'input_manager'):
+                            self.input_manager.handle_event(event)
+                
+                # pygame-guiが生成した新しいイベントを取得
+                new_events = pygame.event.get()
+                events_to_process = new_events
             
             # 入力マネージャーの更新
             if hasattr(self, 'input_manager'):

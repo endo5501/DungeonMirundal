@@ -209,37 +209,10 @@ class OverworldManager:
         self.input_manager_ref = input_manager
     
     def _show_main_menu(self):
-        """地上マップメニューの表示（直接施設アクセス）"""
-        if self.main_menu:
-            ui_manager.hide_menu(self.main_menu.menu_id)
-        
-        # メインメニュー作成（UIMenu削除済み - WindowSystem移行）
-        # self.main_menu = UIMenu("overworld_main_menu", config_manager.get_text("overworld.surface_map"))  # 削除
-        
-        # 各施設への直接アクセス
-        facilities = [
-            ("guild", config_manager.get_text("facility.guild")),
-            ("inn", config_manager.get_text("facility.inn")),
-            ("shop", config_manager.get_text("facility.shop")),
-            ("temple", config_manager.get_text("facility.temple")),
-            ("magic_guild", config_manager.get_text("facility.magic_guild"))
-        ]
-        
-        for facility_id, facility_name in facilities:
-            self.main_menu.add_menu_item(
-                facility_name,
-                self._enter_facility,
-                [facility_id]
-            )
-        
-        # ダンジョン入口
-        self.main_menu.add_menu_item(
-            config_manager.get_text("facility.dungeon_entrance"),
-            self._enter_dungeon
-        )
-        
-        ui_manager.add_menu(self.main_menu)
-        ui_manager.show_menu(self.main_menu.menu_id, modal=True)
+        """地上マップメニューの表示（WindowSystem統合済み）"""
+        # Window System移行により、メインメニューはOverworldMainWindowで管理される
+        # ここでは特に処理は不要
+        logger.info("メインメニュー表示要求 - WindowSystemで管理済み")
     
     # === WindowManagerベースの新メソッド ===
     
@@ -1416,6 +1389,11 @@ class OverworldManager:
         
         # ダンジョン選択ウィンドウを表示（Window System使用）
         if DungeonSelectionWindow:
+            # 既存のウィンドウがあれば破棄
+            if self.dungeon_selection_window:
+                self.window_manager.destroy_window(self.dungeon_selection_window)
+            
+            # 新しいウィンドウを作成
             self.dungeon_selection_window = DungeonSelectionWindow()
             self.dungeon_selection_window.set_callbacks(
                 self._on_dungeon_selected,
