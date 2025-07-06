@@ -5,6 +5,13 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from ..core.facility_service import FacilityService, MenuItem
 from ..core.service_result import ServiceResult, ResultType
+from .service_utils import (
+    ServiceResultFactory,
+    PartyMemberUtility,
+    ConfirmationFlowUtility,
+    CostCalculationUtility,
+    ActionExecutorMixin
+)
 # 正しいインポートパスに修正
 try:
     from src.core.game_manager import GameManager as Game
@@ -21,7 +28,7 @@ Item = None
 logger = logging.getLogger(__name__)
 
 
-class ShopService(FacilityService):
+class ShopService(FacilityService, ActionExecutorMixin):
     """商店サービス
     
     アイテムの購入、売却、鑑定などの機能を提供する。
@@ -96,42 +103,32 @@ class ShopService(FacilityService):
     
     def execute_action(self, action_id: str, params: Dict[str, Any]) -> ServiceResult:
         """アクションを実行"""
-        logger.info(f"Executing action: {action_id} with params: {params}")
+        action_map = {
+            "buy": self._handle_buy,
+            "sell": self._handle_sell,
+            "identify": self._handle_identify,
+            "exit": lambda p: ServiceResultFactory.success("商店から退出しました")
+        }
         
-        try:
-            if action_id == "buy":
-                return self._handle_buy(params)
-            elif action_id == "sell":
-                return self._handle_sell(params)
-            elif action_id == "identify":
-                return self._handle_identify(params)
-            elif action_id == "exit":
-                return ServiceResult(True, "商店から退出しました")
-            else:
-                return ServiceResult(False, f"不明なアクション: {action_id}")
-                
-        except Exception as e:
-            logger.error(f"Action execution failed: {e}")
-            return ServiceResult(False, f"エラーが発生しました: {str(e)}")
+        return self.execute_with_error_handling(action_map, action_id, params)
     
     # 購入関連
     
     def _handle_buy(self, params: Dict[str, Any]) -> ServiceResult:
         """購入を処理"""
         item_id = params.get("item_id")
-        quantity = params.get("quantity", 1)
         category = params.get("category")
         
         if not item_id:
             # カテゴリ別商品リストを表示
             return self._get_shop_inventory(category)
         
-        # 購入確認
-        if not params.get("confirmed", False):
-            return self._confirm_purchase(item_id, quantity)
-        
-        # 購入実行
-        return self._execute_purchase(item_id, quantity)
+        # 確認→実行フローを使用
+        return ConfirmationFlowUtility.handle_confirmation_flow(
+            params,
+            lambda p: self._confirm_purchase(p.get("item_id"), p.get("quantity", 1)),
+            lambda p: self._execute_purchase(p.get("item_id"), p.get("quantity", 1))
+        )
     
     def _get_shop_inventory(self, category: Optional[str] = None) -> ServiceResult:
         """商店在庫を取得"""
@@ -263,31 +260,27 @@ class ShopService(FacilityService):
     def _confirm_purchase(self, item_id: str, quantity: int) -> ServiceResult:
         """購入確認"""
         if item_id not in self._shop_inventory:
-            return ServiceResult(False, "そのアイテムは取り扱っていません")
+            return ServiceResultFactory.error("そのアイテムは取り扱っていません")
         
         item = self._shop_inventory[item_id]
         total_cost = item["price"] * quantity
         
         # 在庫チェック
         if quantity > item["stock"]:
-            return ServiceResult(
-                success=False,
-                message=f"在庫が不足しています（在庫: {item['stock']}個）",
+            return ServiceResultFactory.error(
+                f"在庫が不足しています（在庫: {item['stock']}個）",
                 result_type=ResultType.WARNING
             )
         
         # 所持金チェック
         if self.party and self.party.gold < total_cost:
-            return ServiceResult(
-                success=False,
-                message=f"所持金が不足しています（必要: {total_cost} G）",
+            return ServiceResultFactory.error(
+                f"所持金が不足しています（必要: {total_cost} G）",
                 result_type=ResultType.WARNING
             )
         
-        return ServiceResult(
-            success=True,
-            message=f"{item['name']}を{quantity}個購入しますか？（{total_cost} G）",
-            result_type=ResultType.CONFIRM,
+        return ServiceResultFactory.confirm(
+            f"{item['name']}を{quantity}個購入しますか？（{total_cost} G）",
             data={
                 "item_id": item_id,
                 "quantity": quantity,
@@ -337,18 +330,17 @@ class ShopService(FacilityService):
     def _handle_sell(self, params: Dict[str, Any]) -> ServiceResult:
         """売却を処理"""
         item_id = params.get("item_id")
-        quantity = params.get("quantity", 1)
         
         if not item_id:
             # 売却可能アイテムリストを表示
             return self._get_sellable_items()
         
-        # 売却確認
-        if not params.get("confirmed", False):
-            return self._confirm_sell(item_id, quantity)
-        
-        # 売却実行
-        return self._execute_sell(item_id, quantity)
+        # 確認→実行フローを使用
+        return ConfirmationFlowUtility.handle_confirmation_flow(
+            params,
+            lambda p: self._confirm_sell(p.get("item_id"), p.get("quantity", 1)),
+            lambda p: self._execute_sell(p.get("item_id"), p.get("quantity", 1))
+        )
     
     def _get_sellable_items(self) -> ServiceResult:
         """売却可能アイテムを取得"""
@@ -437,12 +429,12 @@ class ShopService(FacilityService):
             # 未鑑定アイテムリストを表示
             return self._get_unidentified_items()
         
-        # 鑑定確認
-        if not params.get("confirmed", False):
-            return self._confirm_identify(item_id)
-        
-        # 鑑定実行
-        return self._execute_identify(item_id)
+        # 確認→実行フローを使用
+        return ConfirmationFlowUtility.handle_confirmation_flow(
+            params,
+            lambda p: self._confirm_identify(p.get("item_id")),
+            lambda p: self._execute_identify(p.get("item_id"))
+        )
     
     def _get_unidentified_items(self) -> ServiceResult:
         """未鑑定アイテムを取得"""
