@@ -374,11 +374,11 @@ class GuildService(FacilityService, ActionExecutorMixin):
         """クラス変更対象キャラクター一覧を取得"""
         all_characters = self._get_all_available_characters()
         
-        # レベル5以上のキャラクターのみ
-        candidates = [char for char in all_characters if char.experience.level >= 5]
+        # 全てのキャラクターがクラス変更可能
+        candidates = all_characters
         
         if not candidates:
-            return ServiceResultFactory.info("クラス変更可能なキャラクターがいません（レベル5以上が必要）")
+            return ServiceResultFactory.info("クラス変更可能なキャラクターがいません")
         
         character_list = []
         party = self._get_current_party()
@@ -399,7 +399,8 @@ class GuildService(FacilityService, ActionExecutorMixin):
             f"クラス変更可能なキャラクター（{len(candidates)}人）",
             data={
                 "characters": character_list,
-                "action": "select_character_for_class_change"
+                "action": "select_character_for_class_change",
+                "mode": "class_change"
             }
         )
     
@@ -590,15 +591,15 @@ class GuildService(FacilityService, ActionExecutorMixin):
     
     def _can_change_class(self) -> bool:
         """クラス変更が可能なキャラクターがいるかチェック"""
-        # レベル5以上のキャラクターがいるかチェック
+        # 全てのキャラクターがクラス変更可能
         
         # モデルが利用できない場合は、利用可能キャラクターから推定
         if self.character_model is None:
             characters = self._get_all_available_characters()
-            return any(c.experience.level >= 5 for c in characters)
+            return len(characters) > 0
         else:
             characters = self.character_model.get_all()
-            return any(c.experience.level >= 5 for c in characters)
+            return len(characters) > 0
     
     def _get_available_classes(self) -> List[str]:
         """利用可能なクラスのリストを取得"""
@@ -630,8 +631,8 @@ class GuildService(FacilityService, ActionExecutorMixin):
                     ui_manager=ui_manager
                 )
                 
-            elif service_id == "character_list" or service_id == "class_change":
-                # 冒険者一覧パネル（クラス変更機能付き）
+            elif service_id == "character_list":
+                # 冒険者一覧パネル
                 from src.facilities.ui.guild.character_list_panel import CharacterListPanel
                 return CharacterListPanel(
                     rect=rect,
@@ -640,8 +641,25 @@ class GuildService(FacilityService, ActionExecutorMixin):
                     ui_manager=ui_manager
                 )
                 
-        except ImportError as e:
-            logger.error(f"Failed to import guild panel for {service_id}: {e}")
+            elif service_id == "class_change":
+                # クラス変更パネル（CharacterListPanelをクラス変更モードで使用）
+                from src.facilities.ui.guild.character_list_panel import CharacterListPanel
+                panel = CharacterListPanel(
+                    rect=rect,
+                    parent=parent,
+                    controller=self._controller,
+                    ui_manager=ui_manager
+                )
+                # パネルにモード情報を設定
+                if hasattr(panel, 'set_mode'):
+                    panel.set_mode('class_change')
+                return panel
+                
+        except Exception as e:
+            logger.error(f"Failed to create guild panel for {service_id}: {e}")
+            # デバッグ用に詳細なエラー情報を記録
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
         
         # 未対応のサービスまたは失敗時は汎用パネルを使用
         return None
