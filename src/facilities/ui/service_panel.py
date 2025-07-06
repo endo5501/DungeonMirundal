@@ -48,6 +48,9 @@ class ServicePanel(ABC):
         self.ui_elements: List[pygame_gui.core.UIElement] = []
         self.is_visible = False
         
+        # ボタンインデックスのカウンター（ショートカットキー用）
+        self._button_index_counter = 0
+        
         # 初期化
         self._create_ui()
         
@@ -164,6 +167,13 @@ class ServicePanel(ABC):
             container=container,
             object_id=object_id
         )
+        
+        # ショートカットキー情報を設定
+        if self._button_index_counter < 9:  # 1-9の数字キーまで対応
+            button.button_index = self._button_index_counter
+            button.shortcut_key = str(self._button_index_counter + 1)
+            self._button_index_counter += 1
+        
         self.ui_elements.append(button)
         return button
     

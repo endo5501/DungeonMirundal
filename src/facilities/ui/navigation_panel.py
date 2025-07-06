@@ -107,6 +107,11 @@ class NavigationPanel:
             # カスタム属性として項目IDを保存
             button.item_id = item.id
             
+            # ショートカットキー情報を設定（1-9の数字キー）
+            if i < 9:  # 最大9個のボタンまで数字キー対応
+                button.button_index = i
+                button.shortcut_key = str(i + 1)
+            
             self.nav_buttons[item.id] = button
             logger.info(f"NavigationPanel: Created button '{item.label}' at ({x}, {y}) size ({button_width}, {self.button_height})")
         
