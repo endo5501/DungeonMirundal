@@ -237,11 +237,35 @@ uv run python -m src.debug.debug_cli ui-dump --save ui_hierarchy.json
 ```json
 {
   "windows": [],
-  "ui_elements": [],
+  "ui_elements": [
+    {
+      "object_id": "#root_container",
+      "type": "UIContainer",
+      "visible": true,
+      "children": [
+        {
+          "object_id": "None",
+          "type": "UIButton",
+          "visible": true,
+          "text": "冒険者ギルド",
+          "shortcut_key": "1",
+          "menu": {
+            "label": "冒険者ギルド",
+            "id": "guild",
+            "enabled": true
+          }
+        }
+      ]
+    }
+  ],
   "window_stack": [
-    "OverworldMainWindow(overworld_main, main, stack_depth=0)",
-    "Window(inn_main, hidden, modal=False)"
-  ]
+    "OverworldMainWindow(overworld_main, main, stack_depth=0)"
+  ],
+  "metadata": {
+    "format": "enhanced_json",
+    "includes_shortcuts": true,
+    "includes_hierarchy": true
+  }
 }
 ```
 
@@ -249,8 +273,12 @@ uv run python -m src.debug.debug_cli ui-dump --save ui_hierarchy.json
 ```
 UI Hierarchy Tree:
 ├── Window Stack:
-│   ├── OverworldMainWindow(overworld_main, main, stack_depth=0)
-│   └── Window(inn_main, hidden, modal=False)
+│   └── OverworldMainWindow(overworld_main, main, stack_depth=0)
+└── UI Elements:
+    └── UIContainer (#root_container) [visible]
+        ├── UIButton (None) [visible] (text='冒険者ギルド', key=1, label='冒険者ギルド', id=guild)
+        ├── UIButton (None) [visible] (text='宿屋', key=2, label='宿屋', id=inn)
+        └── UIButton (None) [visible] (text='商店', key=3, label='商店', id=shop)
 ```
 
 ### Python APIでの使用

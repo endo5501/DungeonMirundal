@@ -70,9 +70,9 @@ def ui_dump(save: Optional[str], format: str, filter: Optional[str], verbose: bo
             # 属性情報を含む完全な出力
             click.echo(output)
         elif format == 'json':
-            # 基本情報のみの簡潔な出力
-            simple_hierarchy = _simplify_hierarchy(hierarchy)
-            output = json.dumps(simple_hierarchy, indent=2, ensure_ascii=False)
+            # 詳細情報を含む改良された出力
+            enhanced_hierarchy = _enhance_hierarchy_for_json(hierarchy)
+            output = json.dumps(enhanced_hierarchy, indent=2, ensure_ascii=False)
             click.echo(output)
         else:
             click.echo(output)
@@ -156,47 +156,92 @@ def ui_tree():
         sys.exit(1)
 
 
-def _simplify_hierarchy(hierarchy: dict) -> dict:
-    """階層情報を簡略化（基本情報のみ）"""
-    simple = {
+def _enhance_hierarchy_for_json(hierarchy: dict) -> dict:
+    """JSON出力用に階層情報を拡張（詳細情報と階層構造を保持）"""
+    enhanced = {
         'windows': [],
         'ui_elements': [],
-        'window_stack': hierarchy.get('window_stack', [])
+        'window_stack': hierarchy.get('window_stack', []),
+        'metadata': {
+            'format': 'enhanced_json',
+            'includes_shortcuts': True,
+            'includes_hierarchy': True
+        }
     }
     
-    # ウィンドウ情報の簡略化
+    # ウィンドウ情報の詳細化
     for window in hierarchy.get('windows', []):
-        simple_win = {
+        enhanced_win = {
             'id': window.get('id'),
             'type': window.get('type'),
             'visible': window.get('visible')
         }
-        # 追加のウィンドウ属性
-        if 'state' in window:
-            simple_win['state'] = window['state']
-        if 'modal' in window:
-            simple_win['modal'] = window['modal']
-        simple['windows'].append(simple_win)
+        # 全ての利用可能な属性を保持
+        for key in ['state', 'modal', 'position', 'size', 'has_ui_manager']:
+            if key in window:
+                enhanced_win[key] = window[key]
+        enhanced['windows'].append(enhanced_win)
     
-    # UI要素情報の簡略化
-    for element in hierarchy.get('ui_elements', []):
-        simple_elem = {
-            'object_id': element.get('object_id'),
-            'type': element.get('type'),
-            'visible': element.get('visible')
+    # UI要素情報の拡張（階層構造を保持）
+    enhanced['ui_elements'] = _process_ui_elements_hierarchy(hierarchy.get('ui_elements', []))
+    
+    return enhanced
+
+def _process_ui_elements_hierarchy(elements: list) -> list:
+    """UI要素を階層構造で処理し、ショートカットキー情報を含める"""
+    processed = []
+    
+    for element in elements:
+        enhanced_elem = {
+            'object_id': element.get('object_id', 'unknown'),
+            'type': element.get('type', 'Unknown'),
+            'visible': element.get('visible', False)
         }
+        
+        # 位置とサイズ情報
         if 'position' in element:
-            simple_elem['position'] = element['position']
+            enhanced_elem['position'] = element['position']
         if 'size' in element:
-            simple_elem['size'] = element['size']
+            enhanced_elem['size'] = element['size']
         
-        # 詳細情報を含める
+        # 詳細情報を拡張
         if 'details' in element:
-            simple_elem['details'] = element['details']
+            details = element['details']
+            enhanced_elem['details'] = details.copy()
+            
+            # ショートカットキー情報を明示的に追加
+            if 'shortcut_key' in details:
+                enhanced_elem['shortcut_key'] = details['shortcut_key']
+            elif 'auto_shortcut' in details:
+                enhanced_elem['shortcut_key'] = details['auto_shortcut']
+            
+            # メニューアイテム情報
+            if 'menu_item_data' in details:
+                menu_data = details['menu_item_data']
+                if isinstance(menu_data, dict):
+                    enhanced_elem['menu'] = {
+                        'label': menu_data.get('label'),
+                        'id': menu_data.get('id'),
+                        'enabled': menu_data.get('enabled', True)
+                    }
+            
+            # テキストと状態
+            if 'text' in details:
+                enhanced_elem['text'] = details['text']
+            if 'enabled' in details:
+                enhanced_elem['enabled'] = details['enabled']
         
-        simple['ui_elements'].append(simple_elem)
+        # 子要素を再帰的に処理
+        if 'children' in element:
+            enhanced_elem['children'] = _process_ui_elements_hierarchy(element['children'])
+        
+        processed.append(enhanced_elem)
     
-    return simple
+    return processed
+
+def _simplify_hierarchy(hierarchy: dict) -> dict:
+    """階層情報を簡略化（基本情報のみ）- 後方互換性のために保持"""
+    return _enhance_hierarchy_for_json(hierarchy)
 
 
 def _print_element_tree(element: dict, depth: int) -> None:

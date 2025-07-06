@@ -344,11 +344,16 @@ class UIDebugHelper:
         if 'text' in details:
             detail_parts.append(f"text='{details['text']}'")
         
-        # ショートカットキー
+        # ショートカットキー情報（より詳細に）
         if 'shortcut_key' in details:
             detail_parts.append(f"key={details['shortcut_key']}")
         elif 'auto_shortcut' in details:
             detail_parts.append(f"key={details['auto_shortcut']}")
+        elif 'button_index' in details:
+            # button_indexから自動でショートカットキーを推定
+            btn_idx = details['button_index']
+            if isinstance(btn_idx, int) and 0 <= btn_idx < 9:
+                detail_parts.append(f"key={btn_idx + 1}")
         
         # 有効/無効状態
         if 'enabled' in details:
