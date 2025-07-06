@@ -438,18 +438,18 @@ class WindowManager:
                 if self.handle_escape_key():
                     continue
             
-            # 数字キー（1-9）の処理：ボタンショートカット
-            if (event.type == pygame.KEYDOWN and 
-                pygame.K_1 <= event.key <= pygame.K_9):
-                button_number = event.key - pygame.K_1 + 1  # 1-9
-                if self.handle_button_shortcut(button_number):
-                    continue
-            
-            # アクティブウィンドウにイベントをルーティング
+            # アクティブウィンドウにイベントをルーティング（数字キー処理を含む）
             active_window = self.get_active_window()
             if active_window:
                 # 直接ウィンドウのhandle_eventを呼び出し（EventRouterを迂回）
                 if active_window.handle_event(event):
+                    continue
+            
+            # アクティブウィンドウで処理されなかった数字キー（1-9）の処理：ボタンショートカット
+            if (event.type == pygame.KEYDOWN and 
+                pygame.K_1 <= event.key <= pygame.K_9):
+                button_number = event.key - pygame.K_1 + 1  # 1-9
+                if self.handle_button_shortcut(button_number):
                     continue
         
         # メッセージキューを処理
@@ -823,20 +823,6 @@ class WindowManager:
                         handled = True
                         continue
                 
-                # ショートカットキー処理（数字キー1-9）
-                if event.type == pygame.KEYDOWN:
-                    # 数字キー1-9の検出（event.unicodeの代わりにevent.keyを使用）
-                    if pygame.K_1 <= event.key <= pygame.K_9:
-                        button_number = event.key - pygame.K_1 + 1
-                        if self.handle_button_shortcut(button_number):
-                            handled = True
-                            continue
-                
-                # ESCキー処理
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    if self.handle_escape():
-                        handled = True
-                        continue
                 
                 # UIManagerでのイベント処理
                 if self.ui_manager:

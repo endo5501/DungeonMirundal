@@ -469,6 +469,11 @@ class FacilityWindow(Window):
         Returns:
             イベントを処理したらTrue
         """
+        # デバッグ: 数字キーが来たときのログ
+        if event.type == pygame.KEYDOWN and pygame.K_1 <= event.key <= pygame.K_9:
+            button_number = event.key - pygame.K_1 + 1
+            logger.info(f"[DEBUG] FacilityWindow({self.window_id}) received number key: {button_number}")
+        
         # pygame_gui のイベント処理
         if self.ui_manager:
             self.ui_manager.process_events(event)
@@ -477,6 +482,20 @@ class FacilityWindow(Window):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self.controller.exit()
             return True
+        
+        # 数字キーショートカット処理（1-9）
+        if event.type == pygame.KEYDOWN and pygame.K_1 <= event.key <= pygame.K_9:
+            button_number = event.key - pygame.K_1 + 1
+            menu_items = self.controller.get_menu_items()
+            
+            # メニュー項目の番号と対応（exitを除く）
+            non_exit_items = [item for item in menu_items if item.id != "exit"]
+            
+            if 0 < button_number <= len(non_exit_items):
+                item = non_exit_items[button_number - 1]
+                logger.info(f"[DEBUG] 施設内ショートカット {button_number} -> {item.id} (FacilityWindow処理)")
+                self._on_service_selected(item.id)
+                return True
         
         # NavigationPanelのボタンクリック処理
         if self.navigation_panel and hasattr(self.navigation_panel, 'handle_button_click'):

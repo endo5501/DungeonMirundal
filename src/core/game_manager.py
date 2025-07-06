@@ -771,11 +771,11 @@ class GameManager:
                         if not window_manager.screen:
                             window_manager.initialize_pygame(self.screen, self.clock)
                         
-                        # アクティブなウィンドウがある場合はWindowManagerで処理
-                        if window_manager.get_active_window():
-                            window_manager.handle_global_events([event])
-                            ui_handled = True
-                        else:
+                        # WindowManagerで処理（アクティブなウィンドウがある場合は優先処理）
+                        ui_handled = window_manager.handle_global_events([event])
+                        
+                        # WindowManagerで処理されなかった場合のみ、従来のUIマネージャーで処理
+                        if not ui_handled:
                             # UIマネージャーでイベント処理
                             if hasattr(self, 'ui_manager') and self.ui_manager:
                                 ui_handled = self.ui_manager.handle_event(event)
