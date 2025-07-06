@@ -198,11 +198,13 @@ class InnService(FacilityService):
         
         # 生存メンバーがいて、回復が必要な場合
         for member in self.party.members:
-            if member.is_alive():
-                if member.hp < member.max_hp or member.mp < member.max_mp:
+            if hasattr(member, 'derived_stats') and member.derived_stats:
+                # 新しい統計システム
+                if (member.derived_stats.current_hp < member.derived_stats.max_hp or 
+                    member.derived_stats.current_mp < member.derived_stats.max_mp):
                     return True
-                if member.status != "normal":
-                    return True
+            elif hasattr(member, 'status') and member.status != "normal":
+                return True
         
         return False
     

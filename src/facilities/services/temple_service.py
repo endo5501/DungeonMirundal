@@ -683,8 +683,10 @@ class TempleService(FacilityService):
             return False
         
         for member in self.party.members:
-            if member.is_alive() and member.hp < member.max_hp:
-                return True
+            # 新しい統計システムを使用
+            if hasattr(member, 'derived_stats') and member.derived_stats:
+                if member.derived_stats.current_hp < member.derived_stats.max_hp:
+                    return True
         
         return False
     
@@ -694,8 +696,11 @@ class TempleService(FacilityService):
             return False
         
         for member in self.party.members:
-            if member.status in ["dead", "ashes"]:
-                return True
+            # CharacterStatus列挙型に対応
+            if hasattr(member, 'status'):
+                status_value = member.status.value if hasattr(member.status, 'value') else str(member.status)
+                if status_value in ["dead", "ashes"]:
+                    return True
         
         return False
     
@@ -705,8 +710,10 @@ class TempleService(FacilityService):
             return False
         
         for member in self.party.members:
-            if member.is_alive() and member.status != "normal":
-                return True
+            if hasattr(member, 'status'):
+                status_value = member.status.value if hasattr(member.status, 'value') else str(member.status)
+                if status_value not in ["good", "normal"]:
+                    return True
         
         return False
     

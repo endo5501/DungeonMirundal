@@ -533,10 +533,19 @@ class ShopService(FacilityService):
             return False
         
         for member in self.party.members:
-            if member.is_alive() and hasattr(member, 'inventory'):
-                for item in member.inventory.get_all_items():
-                    if not item.is_key_item():
-                        return True
+            # 新しいインベントリシステムと古いリストシステムの両方に対応
+            if hasattr(member, 'inventory'):
+                if hasattr(member.inventory, 'get_all_items'):
+                    # 新しいインベントリシステム
+                    try:
+                        for item in member.inventory.get_all_items():
+                            if not item.is_key_item():
+                                return True
+                    except Exception:
+                        pass
+                elif isinstance(member.inventory, list) and len(member.inventory) > 0:
+                    # 古いリストシステム
+                    return True
         
         return False
     
