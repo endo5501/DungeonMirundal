@@ -19,21 +19,21 @@ class CharacterListPanel(ServicePanel):
     def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
-        super().__init__(rect, parent, controller, "character_list", ui_manager)
-        
-        # UI要素
+        # UI要素（super().__init__の前に定義）
         self.filter_dropdown: Optional[pygame_gui.elements.UIDropDownMenu] = None
         self.sort_dropdown: Optional[pygame_gui.elements.UIDropDownMenu] = None
         self.character_list: Optional[pygame_gui.elements.UISelectionList] = None
         self.detail_box: Optional[pygame_gui.elements.UITextBox] = None
         self.action_button: Optional[pygame_gui.elements.UIButton] = None
         
-        # データ
+        # データ（super().__init__の前に定義）
         self.characters: List[Dict[str, Any]] = []
         self.selected_character: Optional[Dict[str, Any]] = None
         self.selected_index: Optional[int] = None
         self.current_filter = "all"
         self.current_sort = "name"
+        
+        super().__init__(rect, parent, controller, "character_list", ui_manager)
         
         logger.info("CharacterListPanel initialized")
     
@@ -288,19 +288,59 @@ class CharacterListPanel(ServicePanel):
         if not self.selected_character:
             return
         
-        # TODO: クラス変更ダイアログを表示
-        # 現時点では単純にクラス変更画面への遷移をリクエスト
         character_id = self.selected_character["id"]
+        
+        # まず利用可能なクラス一覧を取得
         result = self._execute_service_action(
             "class_change",
             {"character_id": character_id}
         )
         
-        if result.is_success():
-            self._show_message("クラス変更画面を表示します", "info")
-            # TODO: クラス変更UIの実装
+        if result.is_success() and result.data:
+            available_classes = result.data.get("available_classes", [])
+            
+            if not available_classes:
+                self._show_message(result.message, "info")
+                return
+            
+            # 簡易クラス選択（最初の利用可能クラスを選択）
+            # 実際のUIでは選択ダイアログを表示すべき
+            selected_class = available_classes[0]["id"]
+            character_name = self.selected_character["name"]
+            
+            # 確認処理
+            result = self._execute_service_action(
+                "class_change",
+                {
+                    "character_id": character_id,
+                    "new_class": selected_class
+                }
+            )
+            
+            if result.is_success() and result.result_type.value == "confirm":
+                # 実行確認のメッセージを表示（実際のUIでは確認ダイアログ）
+                self._show_message(f"{character_name}を{selected_class}に変更します", "info")
+                
+                # 実際にクラス変更を実行
+                result = self._execute_service_action(
+                    "class_change",
+                    {
+                        "character_id": character_id,
+                        "new_class": selected_class,
+                        "confirmed": True
+                    }
+                )
+                
+                if result.is_success():
+                    self._show_message(result.message, "info")
+                    # データを再読み込みして表示を更新
+                    self._load_character_data()
+                else:
+                    self._show_message(result.message, "error")
+            else:
+                self._show_message(result.message, "error")
         else:
-            self._show_message(result.message, "error")
+            self._show_message(result.message if result else "クラス変更に失敗しました", "error")
     
     def handle_button_click(self, button: pygame_gui.elements.UIButton) -> bool:
         """ボタンクリックを処理"""

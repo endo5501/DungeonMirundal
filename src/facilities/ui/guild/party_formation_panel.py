@@ -19,9 +19,7 @@ class PartyFormationPanel(ServicePanel):
     def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
-        super().__init__(rect, parent, controller, "party_formation", ui_manager)
-        
-        # UI要素
+        # UI要素（super().__init__の前に定義）
         self.party_list: Optional[pygame_gui.elements.UISelectionList] = None
         self.available_list: Optional[pygame_gui.elements.UISelectionList] = None
         self.add_button: Optional[pygame_gui.elements.UIButton] = None
@@ -30,11 +28,13 @@ class PartyFormationPanel(ServicePanel):
         self.down_button: Optional[pygame_gui.elements.UIButton] = None
         self.party_info_box: Optional[pygame_gui.elements.UITextBox] = None
         
-        # データ
+        # データ（super().__init__の前に定義）
         self.party_members: List[Dict[str, Any]] = []
         self.available_characters: List[Dict[str, Any]] = []
         self.selected_party_index: Optional[int] = None
         self.selected_available_index: Optional[int] = None
+        
+        super().__init__(rect, parent, controller, "party_formation", ui_manager)
         
         logger.info("PartyFormationPanel initialized")
     
