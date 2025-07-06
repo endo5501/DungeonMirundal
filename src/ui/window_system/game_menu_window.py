@@ -154,6 +154,14 @@ class GameMenuWindow(Window):
         if not self.ui_manager:
             return False
         
+        # ESCキーで前のウィンドウに戻る
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            logger.debug(f"GameMenuWindow: ESCキーで前のウィンドウに戻ります")
+            from .window_manager import WindowManager
+            window_manager = WindowManager.get_instance()
+            window_manager.hide_window(self, remove_from_stack=True)
+            return True
+        
         # pygame-guiにイベントを渡す
         self.ui_manager.process_events(event)
         
