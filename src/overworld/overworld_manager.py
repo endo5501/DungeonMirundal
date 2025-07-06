@@ -506,40 +506,108 @@ class OverworldManager:
             logger.error(f"ゲーム終了処理エラー: {e}")
             return False
     
+    def _create_game_menu_config(self):
+        """ゲームメニュー設定を作成"""
+        menu_items = [
+            {
+                'id': 'save_game',
+                'label': 'ゲームをセーブ',
+                'action': 'save_game',
+                'enabled': self.current_party is not None
+            },
+            {
+                'id': 'load_game',
+                'label': 'ゲームをロード',
+                'action': 'load_game',
+                'enabled': True
+            },
+            {
+                'id': 'settings',
+                'label': '設定',
+                'action': 'settings',
+                'enabled': True
+            },
+            {
+                'id': 'exit_game',
+                'label': 'ゲーム終了',
+                'action': 'exit_game',
+                'enabled': True
+            }
+        ]
+        
+        return {
+            'title': 'ゲームメニュー',
+            'menu_items': menu_items
+        }
+    
     def _create_settings_menu_config(self):
-        """設定メニュー設定を作成"""
+        """詳細設定メニュー設定を作成"""
         categories = [
             {
-                'id': 'game_menu',
-                'name': config_manager.get_text("menu.settings"),
+                'id': 'graphics',
+                'label': 'グラフィック',
                 'fields': [
                     {
-                        'id': 'party_status',
-                        'name': config_manager.get_text("menu.party_status"),
-                        'type': 'button',
-                        'enabled': self.current_party is not None,
-                        'action': 'party_status'
+                        'id': 'resolution',
+                        'label': '解像度',
+                        'type': 'dropdown',
+                        'options': ['1024x768', '1280x720', '1920x1080'],
+                        'default': '1024x768'
                     },
                     {
-                        'id': 'save_game',
-                        'name': config_manager.get_text("menu.save_game"),
-                        'type': 'button',
-                        'enabled': self.current_party is not None,
-                        'action': 'save_game'
+                        'id': 'fullscreen',
+                        'label': 'フルスクリーン',
+                        'type': 'checkbox',
+                        'default': False
+                    }
+                ]
+            },
+            {
+                'id': 'audio',
+                'label': 'オーディオ',
+                'fields': [
+                    {
+                        'id': 'master_volume',
+                        'label': 'マスター音量',
+                        'type': 'slider',
+                        'min': 0.0,
+                        'max': 1.0,
+                        'default': 0.8
                     },
                     {
-                        'id': 'load_game',
-                        'name': config_manager.get_text("menu.load_game"),
-                        'type': 'button',
-                        'enabled': True,
-                        'action': 'load_game'
+                        'id': 'music_volume',
+                        'label': 'BGM音量',
+                        'type': 'slider',
+                        'min': 0.0,
+                        'max': 1.0,
+                        'default': 0.7
                     },
                     {
-                        'id': 'back',
-                        'name': config_manager.get_text("menu.back"),
-                        'type': 'button',
-                        'enabled': True,
-                        'action': 'back'
+                        'id': 'sfx_volume',
+                        'label': 'SE音量',
+                        'type': 'slider',
+                        'min': 0.0,
+                        'max': 1.0,
+                        'default': 0.9
+                    }
+                ]
+            },
+            {
+                'id': 'gameplay',
+                'label': 'ゲームプレイ',
+                'fields': [
+                    {
+                        'id': 'auto_save',
+                        'label': 'オートセーブ',
+                        'type': 'checkbox',
+                        'default': True
+                    },
+                    {
+                        'id': 'difficulty',
+                        'label': '難易度',
+                        'type': 'dropdown',
+                        'options': ['Easy', 'Normal', 'Hard'],
+                        'default': 'Normal'
                     }
                 ]
             }
@@ -548,8 +616,7 @@ class OverworldManager:
         return {
             'menu_type': 'settings',
             'categories': categories,
-            'title': config_manager.get_text("menu.settings"),
-            'party': self.current_party
+            'title': '設定'
         }
     
     def _create_party_status_config(self):
@@ -578,7 +645,102 @@ class OverworldManager:
         }
     
     def _show_settings_menu_window(self):
-        """設定メニューをWindowManagerで表示"""
+        """ゲームメニューをWindowManagerで表示"""
+        try:
+            from src.ui.window_system.game_menu_window import GameMenuWindow
+            
+            # 既存のゲームメニューウィンドウがあるかチェック
+            existing_window = None
+            if 'game_menu' in self.window_manager.window_registry:
+                existing_window = self.window_manager.window_registry['game_menu']
+                logger.debug(f"既存のゲームメニューウィンドウを発見: 状態={existing_window.state}")
+            
+            if existing_window and existing_window.state == WindowState.HIDDEN:
+                # 既存の非表示ウィンドウを再表示
+                game_menu_window = existing_window
+                logger.debug("既存のゲームメニューウィンドウを再表示します")
+            else:
+                # 新しいウィンドウを作成
+                config = self._create_game_menu_config()
+                game_menu_window = self.window_manager.create_window(
+                    GameMenuWindow, 
+                    'game_menu', 
+                    menu_config=config
+                )
+                logger.debug("新しいゲームメニューウィンドウを作成しました")
+            
+            game_menu_window.message_handler = self.handle_game_menu_message
+            self.window_manager.show_window(game_menu_window, push_to_stack=True)
+            
+        except ImportError:
+            # SettingsWindowが未実装の場合はレガシーメソッドを使用
+            logger.warning("SettingsWindow未実装、レガシー設定メニューを使用")
+            self.show_settings_menu()
+    
+    def handle_game_menu_message(self, message_type: str, data: Dict[str, Any] = None) -> bool:
+        """ゲームメニューメッセージを処理"""
+        if data is None:
+            data = {}
+        
+        logger.debug(f"ゲームメニューメッセージ処理: {message_type}, データ: {data}")
+        
+        if message_type == 'menu_item_selected':
+            action = data.get('action')
+            
+            if action == 'save_game':
+                return self._handle_save_game()
+            elif action == 'load_game':
+                return self._handle_load_game()
+            elif action == 'settings':
+                return self._handle_settings()
+            elif action == 'exit_game':
+                return self._handle_exit_game()
+            else:
+                logger.warning(f"未知のゲームメニューアクション: {action}")
+                return False
+        
+        elif message_type == 'game_menu_cancelled':
+            # ゲームメニューがキャンセルされた時の処理
+            logger.debug("ゲームメニューがキャンセルされました")
+            return True
+        
+        logger.warning(f"未処理のゲームメニューメッセージタイプ: {message_type}")
+        return False
+    
+    def handle_settings_message(self, message_type: str, data: Dict[str, Any] = None) -> bool:
+        """詳細設定メッセージを処理"""
+        if data is None:
+            data = {}
+        
+        logger.debug(f"設定メッセージ処理: {message_type}, データ: {data}")
+        
+        if message_type == 'settings_cancelled':
+            # 設定がキャンセルされた時の処理
+            logger.debug("設定がキャンセルされました")
+            return True
+        elif message_type == 'settings_applied':
+            # 設定が適用された時の処理
+            settings = data.get('settings', {})
+            logger.debug(f"設定が適用されました: {settings}")
+            return True
+        
+        logger.warning(f"未処理の設定メッセージタイプ: {message_type}")
+        return False
+    
+    def _handle_save_game(self) -> bool:
+        """セーブゲーム処理"""
+        # TODO: セーブ画面の実装
+        logger.info("セーブゲーム処理（実装予定）")
+        return True
+    
+    def _handle_load_game(self) -> bool:
+        """ロードゲーム処理"""
+        # TODO: ロード画面の実装
+        logger.info("ロードゲーム処理（実装予定）")
+        return True
+    
+    def _handle_settings(self) -> bool:
+        """詳細設定画面表示"""
         try:
             from src.ui.window_system.settings_window import SettingsWindow
             
@@ -604,32 +766,11 @@ class OverworldManager:
             
             settings_window.message_handler = self.handle_settings_message
             self.window_manager.show_window(settings_window, push_to_stack=True)
+            return True
             
         except ImportError:
-            # SettingsWindowが未実装の場合はレガシーメソッドを使用
-            logger.warning("SettingsWindow未実装、レガシー設定メニューを使用")
-            self.show_settings_menu()
-    
-    def handle_settings_message(self, message_type: str, data: dict) -> bool:
-        """設定メニューメッセージ処理"""
-        if message_type == 'menu_item_selected':
-            item_id = data.get('item_id')
-            
-            if item_id == 'party_status':
-                return self._show_party_status()
-            elif item_id == 'save_game':
-                return self._show_save_menu()
-            elif item_id == 'load_game':
-                return self._show_load_menu()
-            elif item_id == 'back':
-                return self._back_to_main_menu()
-        
-        elif message_type == 'settings_cancelled':
-            # 設定メニューがキャンセルされた時の処理
-            logger.debug("設定メニューがキャンセルされました")
-            return self._back_to_main_menu()
-                
-        return False
+            logger.warning("SettingsWindow未実装")
+            return False
     
     def _show_dungeon_selection_window(self):
         """ダンジョン選択をWindowManagerで表示"""

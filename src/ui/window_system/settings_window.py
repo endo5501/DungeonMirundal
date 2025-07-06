@@ -61,7 +61,6 @@ class SettingsWindow(Window):
         # UI要素
         self.tab_container: Optional[pygame_gui.core.UIElement] = None
         self.content_container: Optional[pygame_gui.core.UIElement] = None
-        self.button_container: Optional[pygame_gui.core.UIElement] = None
         
         logger.debug(f"SettingsWindowを初期化: {window_id}")
     
@@ -85,10 +84,8 @@ class SettingsWindow(Window):
             self._create_title_if_needed()
             self._create_tab_container()
             self._create_content_container()
-            self._create_button_container()
             self._create_tabs()
             self._create_fields()
-            self._create_action_buttons()
         
         logger.debug(f"SettingsWindow UI要素を作成: {self.window_id}")
     
@@ -145,11 +142,6 @@ class SettingsWindow(Window):
                 'rect_method': lambda: self.layout_manager.calculate_content_container_rect(self.rect, has_title),
                 'element_class': pygame_gui.elements.UIScrollingContainer,
                 'attribute_name': 'content_container'
-            },
-            'button': {
-                'rect_method': lambda: self.layout_manager.calculate_button_container_rect(self.rect),
-                'element_class': pygame_gui.elements.UIPanel,
-                'attribute_name': 'button_container'
             }
         }
         
@@ -173,9 +165,6 @@ class SettingsWindow(Window):
         """コンテンツコンテナを作成"""
         self._create_ui_container('content')
     
-    def _create_button_container(self) -> None:
-        """ボタンコンテナを作成"""
-        self._create_ui_container('button')
     
     def _create_tabs(self) -> None:
         """タブを作成"""
@@ -325,38 +314,6 @@ class SettingsWindow(Window):
             # ボタンは値を設定する必要がない（クリック時のアクションのみ）
             pass
     
-    def _create_action_buttons(self) -> None:
-        """アクションボタンを作成"""
-        button_positions = self.layout_manager.calculate_action_button_positions(
-            self.button_container.relative_rect
-        )
-        
-        # Applyボタン
-        apply_rect = button_positions['apply']
-        self.apply_button = pygame_gui.elements.UIButton(
-            relative_rect=apply_rect,
-            text='Apply',
-            manager=self.ui_manager,
-            container=self.button_container
-        )
-        
-        # Cancelボタン
-        cancel_rect = button_positions['cancel']
-        self.cancel_button = pygame_gui.elements.UIButton(
-            relative_rect=cancel_rect,
-            text='Cancel',
-            manager=self.ui_manager,
-            container=self.button_container
-        )
-        
-        # Resetボタン
-        reset_rect = button_positions['reset']
-        self.reset_button = pygame_gui.elements.UIButton(
-            relative_rect=reset_rect,
-            text='Reset',
-            manager=self.ui_manager,
-            container=self.button_container
-        )
     
     def handle_event(self, event: pygame.event.Event) -> bool:
         """イベントを処理"""
@@ -371,9 +328,6 @@ class SettingsWindow(Window):
             if event.key == pygame.K_TAB and event.mod & pygame.KMOD_CTRL:
                 self._handle_tab_switch()
                 return True
-            elif event.key == pygame.K_RETURN:
-                self.apply_changes()
-                return True
         
         # タブクリック処理
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
@@ -382,17 +336,6 @@ class SettingsWindow(Window):
                     self.switch_tab(i)
                     return True
         
-        # アクションボタン処理
-        if event.type == pygame_gui.UI_BUTTON_PRESSED:
-            if event.ui_element == self.apply_button:
-                self.apply_changes()
-                return True
-            elif event.ui_element == self.cancel_button:
-                self.cancel_changes()
-                return True
-            elif event.ui_element == self.reset_button:
-                self.reset_to_defaults()
-                return True
         
         # フィールド値変更処理
         if event.type in [pygame_gui.UI_HORIZONTAL_SLIDER_MOVED, 
@@ -544,9 +487,6 @@ class SettingsWindow(Window):
         else:
             raise ValueError(f"不正な操作タイプ: {operation_type}")
     
-    def apply_changes(self) -> bool:
-        """変更を適用"""
-        return self._execute_settings_operation('apply')
     
     def cancel_changes(self) -> None:
         """変更をキャンセル"""
@@ -560,9 +500,6 @@ class SettingsWindow(Window):
         window_manager = WindowManager()
         window_manager.hide_window(self, remove_from_stack=True)
     
-    def reset_to_defaults(self) -> None:
-        """デフォルト値にリセット"""
-        self._execute_settings_operation('reset')
     
     def handle_escape(self) -> bool:
         """ESCキーの処理"""
@@ -605,10 +542,6 @@ class SettingsWindow(Window):
         if hasattr(self, 'content_container') and self.content_container:
             self.content_container.hide()
             
-        # ボタンコンテナを非表示
-        if hasattr(self, 'button_container') and self.button_container:
-            self.button_container.hide()
-            
         # 個別のUI要素を非表示
         for tab in self.tabs:
             if hasattr(tab, 'ui_element') and tab.ui_element:
@@ -618,14 +551,6 @@ class SettingsWindow(Window):
                     field.ui_element.hide()
                 if hasattr(field, 'label_element') and field.label_element:
                     field.label_element.hide()
-                    
-        # アクションボタンを非表示
-        if hasattr(self, 'apply_button') and self.apply_button:
-            self.apply_button.hide()
-        if hasattr(self, 'cancel_button') and self.cancel_button:
-            self.cancel_button.hide()
-        if hasattr(self, 'reset_button') and self.reset_button:
-            self.reset_button.hide()
         
         logger.debug(f"SettingsWindow UI要素を非表示: {self.window_id}")
     
@@ -646,10 +571,6 @@ class SettingsWindow(Window):
         if hasattr(self, 'content_container') and self.content_container:
             self.content_container.show()
             
-        # ボタンコンテナを表示
-        if hasattr(self, 'button_container') and self.button_container:
-            self.button_container.show()
-            
         # 個別のUI要素を表示
         for tab in self.tabs:
             if hasattr(tab, 'ui_element') and tab.ui_element:
@@ -659,13 +580,5 @@ class SettingsWindow(Window):
                     field.ui_element.show()
                 if hasattr(field, 'label_element') and field.label_element:
                     field.label_element.show()
-                    
-        # アクションボタンを表示
-        if hasattr(self, 'apply_button') and self.apply_button:
-            self.apply_button.show()
-        if hasattr(self, 'cancel_button') and self.cancel_button:
-            self.cancel_button.show()
-        if hasattr(self, 'reset_button') and self.reset_button:
-            self.reset_button.show()
         
         logger.debug(f"SettingsWindow UI要素を表示: {self.window_id}")
