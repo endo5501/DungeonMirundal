@@ -552,15 +552,32 @@ class SettingsWindow(Window):
             self.content_container.hide()
             logger.debug("コンテンツコンテナを非表示にしました")
             
-        # 個別のUI要素を非表示
+        # 個別のUI要素を非表示（安全な方法）
         for tab in self.tabs:
             if hasattr(tab, 'ui_element') and tab.ui_element:
-                tab.ui_element.hide()
+                try:
+                    tab.ui_element.hide()
+                except Exception as e:
+                    logger.warning(f"タブUI要素非表示エラー: {e}")
             for field in tab.fields:
                 if hasattr(field, 'ui_element') and field.ui_element:
-                    field.ui_element.hide()
+                    try:
+                        # ドロップダウンメニューの場合は特別処理
+                        if hasattr(field.ui_element, 'menu_states'):
+                            # 状態をリセットしてから非表示にする
+                            if hasattr(field.ui_element, 'current_state'):
+                                field.ui_element.current_state = None
+                            if hasattr(field.ui_element, 'drop_down_menu_ui') and field.ui_element.drop_down_menu_ui:
+                                field.ui_element.drop_down_menu_ui.kill()
+                                field.ui_element.drop_down_menu_ui = None
+                        field.ui_element.hide()
+                    except Exception as e:
+                        logger.warning(f"フィールドUI要素非表示エラー ({field.field_id}): {e}")
                 if hasattr(field, 'label_element') and field.label_element:
-                    field.label_element.hide()
+                    try:
+                        field.label_element.hide()
+                    except Exception as e:
+                        logger.warning(f"ラベル要素非表示エラー: {e}")
         
         logger.info(f"SettingsWindow UI要素の非表示完了: {self.window_id}")
     
@@ -586,11 +603,16 @@ class SettingsWindow(Window):
                                 ui_element.drop_down_menu_ui = None
                                 dropdown_killed_count += 1
                         
-                        # 展開状態をリセット
-                        if hasattr(ui_element, 'is_expanded'):
-                            ui_element.is_expanded = False
-                        if hasattr(ui_element, 'menu_states'):
-                            ui_element.menu_states.clear()
+                        # 展開状態をリセット（安全に）
+                        try:
+                            if hasattr(ui_element, 'is_expanded'):
+                                ui_element.is_expanded = False
+                            if hasattr(ui_element, 'menu_states'):
+                                ui_element.menu_states.clear()
+                            if hasattr(ui_element, 'current_state'):
+                                ui_element.current_state = None
+                        except Exception as e:
+                            logger.warning(f"ドロップダウン状態リセットエラー ({field.field_id}): {e}")
             
             # 方法2: UIManagerの全要素をスキャンして孤立したドロップダウンを削除
             if hasattr(self.ui_manager, 'ui_group'):
