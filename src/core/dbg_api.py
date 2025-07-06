@@ -353,6 +353,83 @@ def get_ui_hierarchy():
                                         element_info['position'] = {'x': rect.x, 'y': rect.y}
                                         element_info['size'] = {'width': rect.width, 'height': rect.height}
                                     
+                                    # 詳細UI情報の拡張
+                                    element_info['details'] = {}
+                                    
+                                    # テキスト情報
+                                    if hasattr(sprite, 'text'):
+                                        element_info['details']['text'] = str(sprite.text)
+                                    
+                                    # 有効/無効状態
+                                    if hasattr(sprite, 'enabled'):
+                                        element_info['details']['enabled'] = bool(sprite.enabled)
+                                    
+                                    # ツールチップ
+                                    if hasattr(sprite, 'tooltip_text') and sprite.tooltip_text:
+                                        element_info['details']['tooltip'] = str(sprite.tooltip_text)
+                                    
+                                    # カスタム属性: メニューアイテムデータ
+                                    if hasattr(sprite, 'menu_item'):
+                                        try:
+                                            menu_item = sprite.menu_item
+                                            if isinstance(menu_item, dict):
+                                                element_info['details']['menu_item'] = menu_item
+                                            else:
+                                                element_info['details']['menu_item'] = str(menu_item)
+                                        except Exception:
+                                            pass
+                                    
+                                    # カスタム属性: menu_item_data
+                                    if hasattr(sprite, 'menu_item_data'):
+                                        try:
+                                            menu_data = sprite.menu_item_data
+                                            if isinstance(menu_data, dict):
+                                                element_info['details']['menu_item_data'] = menu_data
+                                            else:
+                                                element_info['details']['menu_item_data'] = str(menu_data)
+                                        except Exception:
+                                            pass
+                                    
+                                    # ショートカットキー情報
+                                    if hasattr(sprite, 'shortcut_key'):
+                                        element_info['details']['shortcut_key'] = str(sprite.shortcut_key)
+                                    
+                                    # インデックス情報（ボタン番号など）
+                                    if hasattr(sprite, 'button_index'):
+                                        element_info['details']['button_index'] = sprite.button_index
+                                        # 1-9のショートカットキーを自動生成
+                                        if isinstance(sprite.button_index, int) and 0 <= sprite.button_index < 9:
+                                            element_info['details']['auto_shortcut'] = str(sprite.button_index + 1)
+                                    
+                                    # 追加属性（存在する場合のみ）
+                                    for attr_name in ['value', 'selected', 'placeholder_text', 'is_focused']:
+                                        if hasattr(sprite, attr_name):
+                                            try:
+                                                attr_value = getattr(sprite, attr_name)
+                                                element_info['details'][attr_name] = attr_value
+                                            except Exception:
+                                                pass
+                                    
+                                    # デバッグ用: 利用可能な属性を調査
+                                    if not element_info['details']:
+                                        # 詳細情報が空の場合、利用可能な属性を表示
+                                        available_attrs = []
+                                        for attr in dir(sprite):
+                                            if not attr.startswith('_') and not callable(getattr(sprite, attr, None)):
+                                                try:
+                                                    value = getattr(sprite, attr)
+                                                    if value is not None:
+                                                        available_attrs.append(attr)
+                                                except Exception:
+                                                    pass
+                                        
+                                        if available_attrs:
+                                            element_info['details'] = {'available_attributes': available_attrs[:10]}  # 最初の10個のみ
+                                    
+                                    # details が空の場合は削除
+                                    if not element_info['details']:
+                                        del element_info['details']
+                                    
                                     hierarchy['ui_elements'].append(element_info)
                         except Exception as ui_error:
                             hierarchy['debug_info']['ui_elements_error'] = str(ui_error)

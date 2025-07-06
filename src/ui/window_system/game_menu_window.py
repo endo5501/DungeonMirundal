@@ -122,7 +122,7 @@ class GameMenuWindow(Window):
         
         y_position = 80  # タイトルの下から開始
         
-        for item in menu_items:
+        for i, item in enumerate(menu_items):
             button_rect = pygame.Rect(
                 50,  # 左右中央
                 y_position,
@@ -139,6 +139,12 @@ class GameMenuWindow(Window):
             
             # ボタンにメニューアイテム情報を保存
             button.menu_item = item
+            
+            # デバッグ用: ボタンインデックスとショートカットキー
+            button.button_index = i
+            if i < 9:  # 1-9のキーのみ対応
+                button.shortcut_key = str(i + 1)
+            
             self.menu_buttons.append(button)
             
             y_position += self.BUTTON_HEIGHT + self.BUTTON_SPACING

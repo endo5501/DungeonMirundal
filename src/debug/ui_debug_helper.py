@@ -322,7 +322,43 @@ class UIDebugHelper:
                 is_last = i == len(ui_elements) - 1
                 prefix = "    └── " if is_last else "    ├── "
                 status = "[visible]" if element.get('visible') else "[hidden]"
-                lines.append(f"{prefix}{element['type']} ({element['object_id']}) {status}")
+                
+                # 基本情報
+                base_info = f"{element['type']} ({element['object_id']}) {status}"
+                
+                # 詳細情報を追加
+                details = element.get('details', {})
+                detail_parts = []
+                
+                # テキスト情報
+                if 'text' in details:
+                    detail_parts.append(f"text='{details['text']}'")
+                
+                # ショートカットキー
+                if 'shortcut_key' in details:
+                    detail_parts.append(f"key={details['shortcut_key']}")
+                elif 'auto_shortcut' in details:
+                    detail_parts.append(f"key={details['auto_shortcut']}")
+                
+                # 有効/無効状態
+                if 'enabled' in details:
+                    enabled_status = "enabled" if details['enabled'] else "disabled"
+                    detail_parts.append(enabled_status)
+                
+                # メニューアイテム情報
+                if 'menu_item_data' in details and isinstance(details['menu_item_data'], dict):
+                    menu_data = details['menu_item_data']
+                    if 'label' in menu_data:
+                        detail_parts.append(f"label='{menu_data['label']}'")
+                    if 'id' in menu_data:
+                        detail_parts.append(f"id={menu_data['id']}")
+                
+                # 詳細情報がある場合は括弧で囲んで追加
+                if detail_parts:
+                    detail_str = f" ({', '.join(detail_parts)})"
+                    base_info += detail_str
+                
+                lines.append(f"{prefix}{base_info}")
         
         # 何も表示する内容がない場合
         if not window_stack and not windows and not ui_elements:

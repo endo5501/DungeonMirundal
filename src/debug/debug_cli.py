@@ -166,11 +166,17 @@ def _simplify_hierarchy(hierarchy: dict) -> dict:
     
     # ウィンドウ情報の簡略化
     for window in hierarchy.get('windows', []):
-        simple['windows'].append({
+        simple_win = {
             'id': window.get('id'),
             'type': window.get('type'),
             'visible': window.get('visible')
-        })
+        }
+        # 追加のウィンドウ属性
+        if 'state' in window:
+            simple_win['state'] = window['state']
+        if 'modal' in window:
+            simple_win['modal'] = window['modal']
+        simple['windows'].append(simple_win)
     
     # UI要素情報の簡略化
     for element in hierarchy.get('ui_elements', []):
@@ -183,6 +189,11 @@ def _simplify_hierarchy(hierarchy: dict) -> dict:
             simple_elem['position'] = element['position']
         if 'size' in element:
             simple_elem['size'] = element['size']
+        
+        # 詳細情報を含める
+        if 'details' in element:
+            simple_elem['details'] = element['details']
+        
         simple['ui_elements'].append(simple_elem)
     
     return simple

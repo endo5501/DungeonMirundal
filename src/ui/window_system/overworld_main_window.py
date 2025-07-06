@@ -138,6 +138,12 @@ class OverworldMainWindow(Window):
                 manager=self.ui_manager
             )
             button.menu_item_data = item  # カスタム属性でデータを保持
+            
+            # デバッグ用: ボタンインデックスとショートカットキー
+            button.button_index = i
+            if i < 9:  # 1-9のキーのみ対応
+                button.shortcut_key = str(i + 1)
+            
             self.menu_items.append(button)
         
         # パーティ情報パネル
