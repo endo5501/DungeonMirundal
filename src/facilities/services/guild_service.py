@@ -48,7 +48,14 @@ class GuildService(FacilityService, ActionExecutorMixin):
         # ユーティリティクラス
         self.party_utility = None  # パーティが設定されたときに初期化
         
+        # コントローラーへの参照（後で設定される）
+        self._controller = None
+        
         logger.info("GuildService initialized")
+    
+    def set_controller(self, controller):
+        """コントローラーを設定"""
+        self._controller = controller
     
     def get_menu_items(self) -> List[MenuItem]:
         """メニュー項目を取得"""
@@ -609,7 +616,7 @@ class GuildService(FacilityService, ActionExecutorMixin):
                 return CharacterCreationWizard(
                     rect=rect,
                     parent=parent,
-                    controller=self,
+                    controller=self._controller,
                     ui_manager=ui_manager
                 )
                 
@@ -619,7 +626,7 @@ class GuildService(FacilityService, ActionExecutorMixin):
                 return PartyFormationPanel(
                     rect=rect,
                     parent=parent,
-                    controller=self,
+                    controller=self._controller,
                     ui_manager=ui_manager
                 )
                 
@@ -629,7 +636,7 @@ class GuildService(FacilityService, ActionExecutorMixin):
                 return CharacterListPanel(
                     rect=rect,
                     parent=parent,
-                    controller=self,
+                    controller=self._controller,
                     ui_manager=ui_manager
                 )
                 

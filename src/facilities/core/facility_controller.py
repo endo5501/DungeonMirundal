@@ -25,6 +25,11 @@ class FacilityController:
         """
         self.facility_id = facility_id
         self.service = service_class()  # サービスクラスは引数なしで初期化
+        
+        # サービスにコントローラーの参照を設定（GuildServiceの場合）
+        if hasattr(self.service, 'set_controller'):
+            self.service.set_controller(self)
+        
         self.window = None  # FacilityWindowは後で設定
         self.is_active = False
         self._party: Optional[Party] = None
