@@ -80,6 +80,201 @@ def get_timestamp() -> str:
     """現在のタイムスタンプを取得"""
     return datetime.now().isoformat()
 
+def _get_hierarchical_ui_elements(ui_manager):
+    """UI要素の階層構造を取得"""
+    hierarchical_elements = []
+    
+    try:
+        # スプライトグループから要素を取得
+        sprite_group = ui_manager.get_sprite_group()
+        if hasattr(sprite_group, 'sprites'):
+            sprites = sprite_group.sprites()
+        else:
+            sprites = list(sprite_group)
+        
+        # 階層構造の構築
+        containers = []
+        other_elements = []
+        
+        # まず、コンテナとその他の要素を分類
+        for sprite in sprites:
+            if hasattr(sprite, 'object_ids'):
+                element_info = _extract_element_info(sprite)
+                
+                # UIContainer系の要素は階層の親として扱う
+                if element_info['type'] in ['UIContainer', 'UIPanel']:
+                    containers.append(element_info)
+                else:
+                    other_elements.append(element_info)
+        
+        # 階層構造を構築
+        root_containers = []
+        child_containers = []
+        
+        # 位置とサイズ情報を使用して親子関係を推定
+        for container in containers:
+            container['children'] = []
+            is_child = False
+            
+            # 他のコンテナに含まれるかチェック
+            for other_container in containers:
+                if container != other_container and _is_element_inside(container, other_container):
+                    other_container.setdefault('children', []).append(container)
+                    is_child = True
+                    break
+            
+            if not is_child:
+                root_containers.append(container)
+            else:
+                child_containers.append(container)
+        
+        # 各コンテナに子要素を割り当て
+        for element in other_elements:
+            assigned = False
+            
+            # 最も小さい（具体的な）コンテナに割り当て
+            best_container = None
+            best_area = float('inf')
+            
+            for container in containers:
+                if _is_element_inside(element, container):
+                    container_area = container.get('size', {}).get('width', 0) * container.get('size', {}).get('height', 0)
+                    if container_area < best_area and container_area > 0:
+                        best_container = container
+                        best_area = container_area
+            
+            if best_container:
+                best_container.setdefault('children', []).append(element)
+                assigned = True
+            
+            # どのコンテナにも含まれない場合はルートレベルに追加
+            if not assigned:
+                hierarchical_elements.append(element)
+        
+        # ルートコンテナを追加
+        hierarchical_elements.extend(root_containers)
+        
+        return hierarchical_elements
+        
+    except Exception as e:
+        logger.error(f"Error building UI hierarchy: {str(e)}")
+        return []
+
+def _extract_element_info(sprite):
+    """UI要素から情報を抽出"""
+    element_info = {
+        'type': sprite.__class__.__name__,
+        'visible': bool(getattr(sprite, 'visible', 0))
+    }
+    
+    # object_id情報
+    if hasattr(sprite, 'object_ids'):
+        ids = sprite.object_ids
+        element_info['object_id'] = ids[0] if ids else 'unknown'
+        element_info['object_ids'] = ids
+    
+    # 位置とサイズ情報
+    if hasattr(sprite, 'rect'):
+        rect = sprite.rect
+        element_info['position'] = {'x': rect.x, 'y': rect.y}
+        element_info['size'] = {'width': rect.width, 'height': rect.height}
+    
+    # 詳細UI情報の拡張
+    element_info['details'] = {}
+    
+    # テキスト情報
+    if hasattr(sprite, 'text'):
+        element_info['details']['text'] = str(sprite.text)
+    
+    # 有効/無効状態
+    if hasattr(sprite, 'enabled'):
+        element_info['details']['enabled'] = bool(sprite.enabled)
+    
+    # ツールチップ
+    if hasattr(sprite, 'tooltip_text') and sprite.tooltip_text:
+        element_info['details']['tooltip'] = str(sprite.tooltip_text)
+    
+    # カスタム属性: メニューアイテムデータ
+    if hasattr(sprite, 'menu_item'):
+        try:
+            menu_item = sprite.menu_item
+            if isinstance(menu_item, dict):
+                element_info['details']['menu_item'] = menu_item
+            else:
+                element_info['details']['menu_item'] = str(menu_item)
+        except Exception:
+            pass
+    
+    # カスタム属性: menu_item_data
+    if hasattr(sprite, 'menu_item_data'):
+        try:
+            menu_data = sprite.menu_item_data
+            if isinstance(menu_data, dict):
+                element_info['details']['menu_item_data'] = menu_data
+            else:
+                element_info['details']['menu_item_data'] = str(menu_data)
+        except Exception:
+            pass
+    
+    # ショートカットキー情報
+    if hasattr(sprite, 'shortcut_key'):
+        element_info['details']['shortcut_key'] = str(sprite.shortcut_key)
+    
+    # インデックス情報（ボタン番号など）
+    if hasattr(sprite, 'button_index'):
+        element_info['details']['button_index'] = sprite.button_index
+        # 1-9のショートカットキーを自動生成
+        if isinstance(sprite.button_index, int) and 0 <= sprite.button_index < 9:
+            element_info['details']['auto_shortcut'] = str(sprite.button_index + 1)
+    
+    # 追加属性（存在する場合のみ）
+    for attr_name in ['value', 'selected', 'placeholder_text', 'is_focused']:
+        if hasattr(sprite, attr_name):
+            try:
+                attr_value = getattr(sprite, attr_name)
+                element_info['details'][attr_name] = attr_value
+            except Exception:
+                pass
+    
+    # details が空の場合は削除
+    if not element_info['details']:
+        del element_info['details']
+    
+    return element_info
+
+def _is_element_inside(element, container):
+    """要素がコンテナの内部にあるかチェック"""
+    try:
+        elem_pos = element.get('position', {})
+        elem_size = element.get('size', {})
+        cont_pos = container.get('position', {})
+        cont_size = container.get('size', {})
+        
+        # 必要な値がすべて存在するかチェック
+        if not all([elem_pos.get('x') is not None, elem_pos.get('y') is not None,
+                   elem_size.get('width') is not None, elem_size.get('height') is not None,
+                   cont_pos.get('x') is not None, cont_pos.get('y') is not None,
+                   cont_size.get('width') is not None, cont_size.get('height') is not None]):
+            return False
+        
+        # 境界ボックスの計算
+        elem_left = elem_pos['x']
+        elem_right = elem_pos['x'] + elem_size['width']
+        elem_top = elem_pos['y']
+        elem_bottom = elem_pos['y'] + elem_size['height']
+        
+        cont_left = cont_pos['x']
+        cont_right = cont_pos['x'] + cont_size['width']
+        cont_top = cont_pos['y']
+        cont_bottom = cont_pos['y'] + cont_size['height']
+        
+        # 要素がコンテナに完全に含まれるかチェック
+        return (elem_left >= cont_left and elem_right <= cont_right and
+                elem_top >= cont_top and elem_bottom <= cont_bottom)
+        
+    except Exception:
+        return False
+
 def add_to_history(event_type: str, data: Dict[str, Any]) -> None:
     """入力履歴に追加"""
     global _input_history
@@ -319,120 +514,15 @@ def get_ui_hierarchy():
                 except Exception as windows_error:
                     hierarchy['windows_error'] = str(windows_error)
                 
-                # UI要素情報を取得（pygame-gui経由）
+                # UI要素情報を取得（階層化版）
                 try:
                     if hasattr(wm, 'ui_manager') and wm.ui_manager:
                         ui_manager = wm.ui_manager
                         hierarchy['debug_info']['ui_manager_available'] = True
                         
-                        # スプライトグループから要素を取得
-                        try:
-                            sprite_group = ui_manager.get_sprite_group()
-                            if hasattr(sprite_group, 'sprites'):
-                                sprites = sprite_group.sprites()
-                            else:
-                                sprites = list(sprite_group)
-                            
-                            hierarchy['debug_info']['ui_element_count'] = len(sprites)
-                            
-                            for sprite in sprites:
-                                if hasattr(sprite, 'object_ids'):
-                                    element_info = {
-                                        'type': sprite.__class__.__name__,
-                                        'visible': bool(getattr(sprite, 'visible', 0))
-                                    }
-                                    
-                                    # object_id情報
-                                    ids = sprite.object_ids
-                                    element_info['object_id'] = ids[0] if ids else 'unknown'
-                                    element_info['object_ids'] = ids
-                                    
-                                    # 位置とサイズ情報
-                                    if hasattr(sprite, 'rect'):
-                                        rect = sprite.rect
-                                        element_info['position'] = {'x': rect.x, 'y': rect.y}
-                                        element_info['size'] = {'width': rect.width, 'height': rect.height}
-                                    
-                                    # 詳細UI情報の拡張
-                                    element_info['details'] = {}
-                                    
-                                    # テキスト情報
-                                    if hasattr(sprite, 'text'):
-                                        element_info['details']['text'] = str(sprite.text)
-                                    
-                                    # 有効/無効状態
-                                    if hasattr(sprite, 'enabled'):
-                                        element_info['details']['enabled'] = bool(sprite.enabled)
-                                    
-                                    # ツールチップ
-                                    if hasattr(sprite, 'tooltip_text') and sprite.tooltip_text:
-                                        element_info['details']['tooltip'] = str(sprite.tooltip_text)
-                                    
-                                    # カスタム属性: メニューアイテムデータ
-                                    if hasattr(sprite, 'menu_item'):
-                                        try:
-                                            menu_item = sprite.menu_item
-                                            if isinstance(menu_item, dict):
-                                                element_info['details']['menu_item'] = menu_item
-                                            else:
-                                                element_info['details']['menu_item'] = str(menu_item)
-                                        except Exception:
-                                            pass
-                                    
-                                    # カスタム属性: menu_item_data
-                                    if hasattr(sprite, 'menu_item_data'):
-                                        try:
-                                            menu_data = sprite.menu_item_data
-                                            if isinstance(menu_data, dict):
-                                                element_info['details']['menu_item_data'] = menu_data
-                                            else:
-                                                element_info['details']['menu_item_data'] = str(menu_data)
-                                        except Exception:
-                                            pass
-                                    
-                                    # ショートカットキー情報
-                                    if hasattr(sprite, 'shortcut_key'):
-                                        element_info['details']['shortcut_key'] = str(sprite.shortcut_key)
-                                    
-                                    # インデックス情報（ボタン番号など）
-                                    if hasattr(sprite, 'button_index'):
-                                        element_info['details']['button_index'] = sprite.button_index
-                                        # 1-9のショートカットキーを自動生成
-                                        if isinstance(sprite.button_index, int) and 0 <= sprite.button_index < 9:
-                                            element_info['details']['auto_shortcut'] = str(sprite.button_index + 1)
-                                    
-                                    # 追加属性（存在する場合のみ）
-                                    for attr_name in ['value', 'selected', 'placeholder_text', 'is_focused']:
-                                        if hasattr(sprite, attr_name):
-                                            try:
-                                                attr_value = getattr(sprite, attr_name)
-                                                element_info['details'][attr_name] = attr_value
-                                            except Exception:
-                                                pass
-                                    
-                                    # デバッグ用: 利用可能な属性を調査
-                                    if not element_info['details']:
-                                        # 詳細情報が空の場合、利用可能な属性を表示
-                                        available_attrs = []
-                                        for attr in dir(sprite):
-                                            if not attr.startswith('_') and not callable(getattr(sprite, attr, None)):
-                                                try:
-                                                    value = getattr(sprite, attr)
-                                                    if value is not None:
-                                                        available_attrs.append(attr)
-                                                except Exception:
-                                                    pass
-                                        
-                                        if available_attrs:
-                                            element_info['details'] = {'available_attributes': available_attrs[:10]}  # 最初の10個のみ
-                                    
-                                    # details が空の場合は削除
-                                    if not element_info['details']:
-                                        del element_info['details']
-                                    
-                                    hierarchy['ui_elements'].append(element_info)
-                        except Exception as ui_error:
-                            hierarchy['debug_info']['ui_elements_error'] = str(ui_error)
+                        # 階層化されたUI要素情報を取得
+                        hierarchy['ui_elements'] = _get_hierarchical_ui_elements(ui_manager)
+                        
                     else:
                         hierarchy['debug_info']['ui_manager_available'] = False
                 except Exception as ui_manager_error:
@@ -543,9 +633,6 @@ def get_visible_buttons():
     try:
         buttons = []
         
-        # pygame_guiのUIManagerから情報を取得
-        from src.ui.window_system import WindowManager
-        
         # GameManagerのインスタンスを取得
         try:
             from main import game_manager
@@ -557,8 +644,6 @@ def get_visible_buttons():
         if hasattr(game_manager, 'window_manager') and game_manager.window_manager:
             wm = game_manager.window_manager
             if hasattr(wm, 'ui_manager') and wm.ui_manager:
-                ui_manager = wm.ui_manager
-                
                 # 安全にボタン情報を取得（pygame-guiには直接アクセスしない）
                 logger.info("Attempting to get button information safely")
         

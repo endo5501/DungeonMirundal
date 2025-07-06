@@ -4,10 +4,8 @@ UI階層デバッグヘルパー
 pygame-guiとWindowManagerのUI階層をダンプし、デバッグを支援する機能を提供。
 """
 
-import json
 import logging
 from typing import Dict, List, Any, Optional, Union
-import pygame
 import pygame_gui
 
 logger = logging.getLogger(__name__)
@@ -311,60 +309,83 @@ class UIDebugHelper:
                 detail_str = f" ({', '.join(details)})" if details else ""
                 lines.append(f"{window_prefix}{window['type']} ({window['id']}) {window_status}{detail_str}")
         
-        # UI要素をツリー表示
+        # UI要素をツリー表示（階層構造対応）
         if ui_elements:
             if windows or window_stack:
                 ui_prefix = "└── "
             else:
                 ui_prefix = "└── "
             lines.append(f"{ui_prefix}UI Elements:")
+            
+            # 階層構造を再帰的に表示
             for i, element in enumerate(ui_elements):
                 is_last = i == len(ui_elements) - 1
                 prefix = "    └── " if is_last else "    ├── "
-                status = "[visible]" if element.get('visible') else "[hidden]"
-                
-                # 基本情報
-                base_info = f"{element['type']} ({element['object_id']}) {status}"
-                
-                # 詳細情報を追加
-                details = element.get('details', {})
-                detail_parts = []
-                
-                # テキスト情報
-                if 'text' in details:
-                    detail_parts.append(f"text='{details['text']}'")
-                
-                # ショートカットキー
-                if 'shortcut_key' in details:
-                    detail_parts.append(f"key={details['shortcut_key']}")
-                elif 'auto_shortcut' in details:
-                    detail_parts.append(f"key={details['auto_shortcut']}")
-                
-                # 有効/無効状態
-                if 'enabled' in details:
-                    enabled_status = "enabled" if details['enabled'] else "disabled"
-                    detail_parts.append(enabled_status)
-                
-                # メニューアイテム情報
-                if 'menu_item_data' in details and isinstance(details['menu_item_data'], dict):
-                    menu_data = details['menu_item_data']
-                    if 'label' in menu_data:
-                        detail_parts.append(f"label='{menu_data['label']}'")
-                    if 'id' in menu_data:
-                        detail_parts.append(f"id={menu_data['id']}")
-                
-                # 詳細情報がある場合は括弧で囲んで追加
-                if detail_parts:
-                    detail_str = f" ({', '.join(detail_parts)})"
-                    base_info += detail_str
-                
-                lines.append(f"{prefix}{base_info}")
+                self._format_element_tree(element, lines, prefix, is_last)
         
         # 何も表示する内容がない場合
         if not window_stack and not windows and not ui_elements:
             lines.append("└── (No UI information available)")
         
         return "\n".join(lines)
+    
+    def _format_element_tree(self, element: Dict[str, Any], lines: List[str], prefix: str, is_last_sibling: bool) -> None:
+        """要素を階層構造でツリー表示"""
+        status = "[visible]" if element.get('visible') else "[hidden]"
+        
+        # 基本情報
+        base_info = f"{element['type']} ({element['object_id']}) {status}"
+        
+        # 詳細情報を追加
+        details = element.get('details', {})
+        detail_parts = []
+        
+        # テキスト情報
+        if 'text' in details:
+            detail_parts.append(f"text='{details['text']}'")
+        
+        # ショートカットキー
+        if 'shortcut_key' in details:
+            detail_parts.append(f"key={details['shortcut_key']}")
+        elif 'auto_shortcut' in details:
+            detail_parts.append(f"key={details['auto_shortcut']}")
+        
+        # 有効/無効状態
+        if 'enabled' in details:
+            enabled_status = "enabled" if details['enabled'] else "disabled"
+            detail_parts.append(enabled_status)
+        
+        # メニューアイテム情報
+        if 'menu_item_data' in details and isinstance(details['menu_item_data'], dict):
+            menu_data = details['menu_item_data']
+            if 'label' in menu_data:
+                detail_parts.append(f"label='{menu_data['label']}'")
+            if 'id' in menu_data:
+                detail_parts.append(f"id={menu_data['id']}")
+        
+        # 詳細情報がある場合は括弧で囲んで追加
+        if detail_parts:
+            detail_str = f" ({', '.join(detail_parts)})"
+            base_info += detail_str
+        
+        lines.append(f"{prefix}{base_info}")
+        
+        # 子要素を再帰的に表示
+        children = element.get('children', [])
+        if children:
+            # 現在のプレフィックスから基本部分を抽出
+            base_spaces = prefix.replace("├── ", "").replace("└── ", "")
+            
+            # 子要素用のプレフィックス準備
+            if is_last_sibling:
+                child_base_prefix = base_spaces + "    "
+            else:
+                child_base_prefix = base_spaces + "│   "
+            
+            for i, child in enumerate(children):
+                is_last_child = i == len(children) - 1
+                child_prefix = f"{child_base_prefix}└── " if is_last_child else f"{child_base_prefix}├── "
+                self._format_element_tree(child, lines, child_prefix, is_last_child)
     
     def _clean_raw_references(self, elements: List[Dict[str, Any]]) -> None:
         """要素から生のオブジェクト参照を再帰的に削除"""
