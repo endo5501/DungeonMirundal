@@ -1,5 +1,6 @@
 """地上部管理システム"""
 
+import pygame
 from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
 from datetime import datetime
@@ -13,10 +14,10 @@ from src.facilities.core.facility_registry import facility_registry
 from src.ui.window_system import WindowManager
 from src.ui.window_system.window import WindowState
 try:
-    from src.ui.dungeon_selection_ui import DungeonSelectionUI
+    from src.ui.window_system.dungeon_selection_window import DungeonSelectionWindow
 except ImportError:
-    # ダンジョン選択UIが未実装の場合はMockを使用
-    DungeonSelectionUI = None
+    # ダンジョン選択ウィンドウが未実装の場合はMockを使用
+    DungeonSelectionWindow = None
 from src.core.config_manager import config_manager
 from src.core.save_manager import save_manager
 from src.utils.logger import logger
@@ -75,7 +76,7 @@ class OverworldManager:
         # self.main_menu: Optional[Menu] = None  # WindowSystem移行により削除
         # self.location_menu: Optional[Menu] = None  # WindowSystem移行により削除
         self.settings_menu_active = False
-        self.dungeon_selection_ui = DungeonSelectionUI() if DungeonSelectionUI else None
+        self.dungeon_selection_window = None  # WindowManagerで管理
         
         # コールバック
         self.on_enter_dungeon: Optional[Callable] = None
@@ -1413,12 +1414,18 @@ class OverworldManager:
             self._show_error_dialog("エラー", "生存しているメンバーがいません")
             return
         
-        # ダンジョン選択UIを表示
-        self.dungeon_selection_ui.show_dungeon_selection(
-            self.current_party,
-            self._on_dungeon_selected,
-            self._on_dungeon_selection_cancelled
-        )
+        # ダンジョン選択ウィンドウを表示（Window System使用）
+        if DungeonSelectionWindow:
+            self.dungeon_selection_window = DungeonSelectionWindow()
+            self.dungeon_selection_window.set_callbacks(
+                self._on_dungeon_selected,
+                self._on_dungeon_selection_cancelled
+            )
+            # WindowManagerのレジストリに手動で登録してから表示
+            self.window_manager.window_registry[self.dungeon_selection_window.window_id] = self.dungeon_selection_window
+            self.window_manager.show_window(self.dungeon_selection_window)
+        else:
+            self._show_error_dialog("エラー", "ダンジョン選択システムが利用できません")
     
     def _on_dungeon_selected(self, dungeon_id: str):
         """ダンジョンが選択された時の処理"""
@@ -1579,6 +1586,7 @@ class OverworldManager:
     def set_exit_game_callback(self, callback: Callable):
         """ゲーム終了コールバックを設定"""
         self.on_exit_game = callback
+    
     
     def render(self, screen):
         """地上部の描画処理

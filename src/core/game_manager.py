@@ -763,7 +763,7 @@ class GameManager:
                     if not window_manager.screen:
                         window_manager.initialize_pygame(self.screen, self.clock)
                     
-                    # アクティブなウィンドウがある場合はWindowManagerで処理し、他のUIシステムをスキップ
+                    # アクティブなウィンドウがある場合はWindowManagerで処理
                     if window_manager.get_active_window():
                         window_manager.handle_global_events([event])
                         ui_handled = True
@@ -772,9 +772,7 @@ class GameManager:
                         if hasattr(self, 'ui_manager') and self.ui_manager:
                             ui_handled = self.ui_manager.handle_event(event)
                         
-                        # オーバーワールドマネージャーでイベント処理
-                        if not ui_handled and self.current_location == GameLocation.OVERWORLD and self.overworld_manager:
-                            ui_handled = self.overworld_manager.handle_event(event)
+                        # オーバーワールドマネージャーでのイベント処理は不要（Window Systemで統合）
                         
                         # ダンジョンUIマネージャーでイベント処理
                         if not ui_handled and self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
@@ -801,6 +799,8 @@ class GameManager:
             if not window_manager.get_active_window():
                 if hasattr(self, 'ui_manager') and self.ui_manager:
                     self.ui_manager.update(time_delta)
+            
+            # OverworldManagerの更新は不要（Window Systemで統合）
             
             # Phase 5: 戦闘状態の監視
             self.check_combat_state()
