@@ -4,6 +4,14 @@ import logging
 from typing import List, Dict, Any, Optional
 from ..core.facility_service import FacilityService, MenuItem
 from ..core.service_result import ServiceResult, ResultType
+from .service_utils import (
+    ServiceResultFactory,
+    PartyMemberUtility,
+    ItemOperationUtility,
+    ConfirmationFlowUtility,
+    CostCalculationUtility,
+    ActionExecutorMixin
+)
 # 正しいインポートパスに修正
 try:
     from src.core.game_manager import GameManager as Game
@@ -20,7 +28,7 @@ SpellModel = None
 logger = logging.getLogger(__name__)
 
 
-class InnService(FacilityService):
+class InnService(FacilityService, ActionExecutorMixin):
     """宿屋サービス
     
     休憩、冒険準備、アイテム保管などの機能を提供する。
@@ -249,51 +257,43 @@ class InnService(FacilityService):
     
     def _handle_item_management(self, params: Dict[str, Any]) -> ServiceResult:
         """アイテム管理を処理"""
-        action = params.get("action")
-        
-        if action == "transfer":
-            # アイテムをキャラクター間で移動
-            return self._transfer_item(params)
-        elif action == "use":
-            # アイテムを使用
-            return self._use_item(params)
-        elif action == "discard":
-            # アイテムを破棄
-            return self._discard_item(params)
-        else:
-            # アイテム一覧を表示
-            return self._get_party_items()
+        action_map = {
+            "transfer": self._transfer_item,
+            "use": self._use_item,
+            "discard": self._discard_item
+        }
+        default_action = self._get_party_items
+        return self._handle_management_action(params, action_map, default_action)
     
     def _handle_spell_management(self, params: Dict[str, Any]) -> ServiceResult:
         """魔法管理を処理"""
-        action = params.get("action")
-        
-        if action == "equip":
-            # 魔法を装備
-            return self._equip_spell(params)
-        elif action == "unequip":
-            # 魔法を外す
-            return self._unequip_spell(params)
-        else:
-            # 魔法一覧を表示
-            return self._get_party_spells()
+        action_map = {
+            "equip": self._equip_spell,
+            "unequip": self._unequip_spell
+        }
+        default_action = self._get_party_spells
+        return self._handle_management_action(params, action_map, default_action)
     
     def _handle_equipment_management(self, params: Dict[str, Any]) -> ServiceResult:
         """装備管理を処理"""
+        action_map = {
+            "equip": self._equip_item,
+            "unequip": self._unequip_item,
+            "optimize": self._optimize_equipment
+        }
+        default_action = self._get_party_equipment
+        return self._handle_management_action(params, action_map, default_action)
+    
+    def _handle_management_action(self, params: Dict[str, Any], 
+                                action_map: Dict[str, callable],
+                                default_action: callable) -> ServiceResult:
+        """管理アクションの共通ハンドラー"""
         action = params.get("action")
         
-        if action == "equip":
-            # 装備を着ける
-            return self._equip_item(params)
-        elif action == "unequip":
-            # 装備を外す
-            return self._unequip_item(params)
-        elif action == "optimize":
-            # 装備を最適化
-            return self._optimize_equipment(params)
+        if action and action in action_map:
+            return action_map[action](params)
         else:
-            # 装備一覧を表示
-            return self._get_party_equipment()
+            return default_action()
     
     # アイテム保管関連
     
@@ -313,34 +313,14 @@ class InnService(FacilityService):
     
     def _deposit_item(self, params: Dict[str, Any]) -> ServiceResult:
         """アイテムを預ける"""
-        item_id = params.get("item_id")
-        quantity = params.get("quantity", 1)
-        
-        if not item_id:
-            return ServiceResult(False, "アイテムが指定されていません")
-        
-        # TODO: アイテム保管の実装
-        # 現在は仮実装
-        return ServiceResult(
-            success=True,
-            message=f"アイテムを {quantity} 個預けました",
-            data={"item_id": item_id, "quantity": quantity}
+        return ItemOperationUtility.handle_item_operation(
+            params, "deposit", "預けました"
         )
     
     def _withdraw_item(self, params: Dict[str, Any]) -> ServiceResult:
         """アイテムを引き出す"""
-        item_id = params.get("item_id")
-        quantity = params.get("quantity", 1)
-        
-        if not item_id:
-            return ServiceResult(False, "アイテムが指定されていません")
-        
-        # TODO: アイテム引き出しの実装
-        # 現在は仮実装
-        return ServiceResult(
-            success=True,
-            message=f"アイテムを {quantity} 個引き出しました",
-            data={"item_id": item_id, "quantity": quantity}
+        return ItemOperationUtility.handle_item_operation(
+            params, "withdraw", "引き出しました"
         )
     
     def _get_storage_contents(self) -> ServiceResult:

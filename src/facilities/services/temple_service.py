@@ -4,6 +4,13 @@ import logging
 from typing import List, Dict, Any, Optional
 from ..core.facility_service import FacilityService, MenuItem
 from ..core.service_result import ServiceResult, ResultType
+from .service_utils import (
+    ServiceResultFactory,
+    PartyMemberUtility,
+    ConfirmationFlowUtility,
+    CostCalculationUtility,
+    ActionExecutorMixin
+)
 # 正しいインポートパスに修正
 try:
     from src.core.game_manager import GameManager as Game
@@ -16,7 +23,7 @@ from src.character.character import Character
 logger = logging.getLogger(__name__)
 
 
-class TempleService(FacilityService):
+class TempleService(FacilityService, ActionExecutorMixin):
     """教会サービス
     
     治療、蘇生、状態異常回復、祝福、寄付などの機能を提供する。
@@ -150,18 +157,12 @@ class TempleService(FacilityService):
     
     def _handle_heal(self, params: Dict[str, Any]) -> ServiceResult:
         """治療を処理"""
-        character_id = params.get("character_id")
-        
-        if not character_id:
-            # 治療対象の選択画面
-            return self._get_healable_members()
-        
-        # 治療確認
-        if not params.get("confirmed", False):
-            return self._confirm_heal(character_id)
-        
-        # 治療実行
-        return self._execute_heal(character_id)
+        return ConfirmationFlowUtility.handle_character_action_flow(
+            params,
+            self._get_healable_members,
+            self._confirm_heal,
+            self._execute_heal
+        )
     
     def _get_healable_members(self) -> ServiceResult:
         """治療可能なメンバーを取得"""
@@ -270,18 +271,12 @@ class TempleService(FacilityService):
     
     def _handle_resurrect(self, params: Dict[str, Any]) -> ServiceResult:
         """蘇生を処理"""
-        character_id = params.get("character_id")
-        
-        if not character_id:
-            # 蘇生対象の選択画面
-            return self._get_dead_members()
-        
-        # 蘇生確認
-        if not params.get("confirmed", False):
-            return self._confirm_resurrect(character_id)
-        
-        # 蘇生実行
-        return self._execute_resurrect(character_id)
+        return ConfirmationFlowUtility.handle_character_action_flow(
+            params,
+            self._get_dead_members,
+            self._confirm_resurrect,
+            self._execute_resurrect
+        )
     
     def _get_dead_members(self) -> ServiceResult:
         """死亡メンバーを取得"""
