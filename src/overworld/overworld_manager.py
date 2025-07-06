@@ -2,6 +2,7 @@
 
 from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
+from datetime import datetime
 
 from src.character.party import Party
 from src.character.character import Character, CharacterStatus
@@ -485,22 +486,21 @@ class OverworldManager:
             logger.error(f"設定メニュー表示エラー: {e}")
             return False
     
-    def _handle_exit_game(self):
+    def _handle_exit_game(self) -> bool:
         """ゲーム終了処理"""
         try:
-            # 終了確認ダイアログを表示
-            confirm_data = {
-                'title': 'ゲーム終了',
-                'message': 'ゲームを終了しますか？',
-                'action': 'exit_game'
-            }
+            logger.info("=== ゲーム終了処理開始 ===")
             
-            # 現在のメインウィンドウにメッセージを送信
-            if hasattr(self, 'main_window') and self.main_window:
-                return self.main_window.handle_message('show_exit_confirmation', confirm_data)
+            # 確認なしで直接終了（後でconfirmationダイアログを追加可能）
+            from src.core.game_manager import GameManager
+            game_manager = GameManager()
             
-            logger.warning("メインウィンドウが見つかりません")
-            return False
+            logger.info("ゲームを終了します")
+            
+            # GameManagerの終了処理を呼び出し
+            game_manager.exit_game()
+            
+            return True
             
         except Exception as e:
             logger.error(f"ゲーム終了処理エラー: {e}")
@@ -728,16 +728,14 @@ class OverworldManager:
         return False
     
     def _handle_save_game(self) -> bool:
-        """セーブゲーム処理"""
-        # TODO: セーブ画面の実装
-        logger.info("セーブゲーム処理（実装予定）")
-        return True
+        """セーブゲーム処理 - WindowSystemスロット選択画面を表示"""
+        logger.info("=== セーブゲーム処理開始 ===")
+        return self._show_save_menu_window()
     
     def _handle_load_game(self) -> bool:
-        """ロードゲーム処理"""
-        # TODO: ロード画面の実装
-        logger.info("ロードゲーム処理（実装予定）")
-        return True
+        """ロードゲーム処理 - WindowSystemスロット選択画面を表示"""
+        logger.info("=== ロードゲーム処理開始 ===")
+        return self._show_load_menu_window()
     
     def _handle_settings(self) -> bool:
         """詳細設定画面表示"""
