@@ -423,3 +423,51 @@ class SellPanel(ServicePanel):
             return True
         
         return False
+    
+    def _refresh_content(self) -> None:
+        """コンテンツを更新"""
+        self._load_sellable_items()
+        self._clear_item_selection()
+    
+    def _clear_item_selection(self) -> None:
+        """アイテム選択をクリア"""
+        self.selected_item = None
+        if self.quantity_input:
+            self.quantity_input.set_text("1")
+    
+    def _update_sell_controls(self) -> None:
+        """売却コントロールを更新"""
+        if self.selected_item:
+            # アイテムが選択されている場合
+            if self.sell_button:
+                self.sell_button.enable()
+            if self.quantity_input:
+                self.quantity_input.enable()
+            self._update_sell_price()
+        else:
+            # アイテムが選択されていない場合
+            if self.sell_button:
+                self.sell_button.disable()
+            if self.quantity_input:
+                self.quantity_input.disable()
+            if self.total_price_label:
+                self.total_price_label.set_text("合計: 0 G")
+    
+    def _update_detail_display(self) -> None:
+        """詳細表示を更新"""
+        if self.selected_item and hasattr(self, 'detail_text_box') and self.detail_text_box:
+            # アイテムの詳細を表示
+            details = f"""
+            <b>{self.selected_item['name']}</b><br>
+            種類: {self.selected_item.get('type', '不明')}<br>
+            単価: {self.selected_item.get('sell_price', 0)} G<br>
+            所有者: {self.selected_item.get('owner', '不明')}<br>
+            <br>
+            {self.selected_item.get('description', '説明なし')}
+            """
+            self.detail_text_box.html_text = details.strip()
+            self.detail_text_box.rebuild()
+        elif hasattr(self, 'detail_text_box') and self.detail_text_box:
+            # 何も選択されていない場合
+            self.detail_text_box.html_text = "アイテムを選択してください"
+            self.detail_text_box.rebuild()

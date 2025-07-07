@@ -275,9 +275,17 @@ class WizardServicePanel(ServicePanel):
     
     def _create_step_content(self, step: WizardStep, panel: pygame_gui.elements.UIPanel) -> None:
         """ステップ固有のコンテンツを作成（サブクラスでオーバーライド）"""
-        # デフォルト実装：シンプルなテキスト入力
+        # ステップIDに応じたコンテンツ作成
         if step.id == "name":
             self._create_name_input_content(panel)
+        elif step.id == "race":
+            self._create_race_selection_content(panel)
+        elif step.id == "stats":
+            self._create_stats_roll_content(panel)
+        elif step.id == "class":
+            self._create_class_selection_content(panel)
+        elif step.id == "confirm":
+            self._create_confirmation_content(panel)
         else:
             # プレースホルダー
             placeholder = pygame_gui.elements.UILabel(
@@ -337,11 +345,27 @@ class WizardServicePanel(ServicePanel):
     
     def _collect_step_data(self) -> None:
         """現在のステップのデータを収集"""
+        if self.current_step_index >= len(self.steps):
+            return
+        
         step = self.steps[self.current_step_index]
         
         # ステップ固有のデータ収集
         if step.id == "name" and hasattr(self, 'name_input'):
             self.wizard_data["name"] = self.name_input.get_text()
+        elif step.id == "race" and hasattr(self, 'race_selection'):
+            # 種族選択のデータを収集
+            selection = self.race_selection.get_single_selection()
+            if selection is not None and hasattr(self, 'race_data'):
+                self.wizard_data["race"] = self.race_data[selection]
+        elif step.id == "stats" and hasattr(self, 'stats_data'):
+            # ステータスのデータを収集
+            self.wizard_data["stats"] = getattr(self, 'stats_data', {})
+        elif step.id == "class" and hasattr(self, 'class_selection'):
+            # クラス選択のデータを収集
+            selection = self.class_selection.get_single_selection()
+            if selection is not None and hasattr(self, 'class_data'):
+                self.wizard_data["class"] = self.class_data[selection]
     
     def next_step(self) -> None:
         """次のステップへ進む"""
@@ -414,3 +438,61 @@ class WizardServicePanel(ServicePanel):
             return True
         
         return False
+    
+    def _highlight_button(self, button: pygame_gui.elements.UIButton) -> None:
+        """ボタンをハイライト"""
+        if button and hasattr(button, 'selected'):
+            button.selected = True
+        # pygame_guiのボタンは標準的にハイライト機能を持たないため、
+        # 代替実装として色やスタイルの変更を行う場合はここに実装
+    
+    def _unhighlight_button(self, button: pygame_gui.elements.UIButton) -> None:
+        """ボタンのハイライトを解除"""
+        if button and hasattr(button, 'selected'):
+            button.selected = False
+        # pygame_guiのボタンは標準的にハイライト機能を持たないため、
+        # 代替実装として色やスタイルの変更を行う場合はここに実装
+    
+    def _create_race_selection_content(self, panel: pygame_gui.elements.UIPanel) -> None:
+        """種族選択コンテンツを作成"""
+        # 種族選択リスト
+        self.race_selection = pygame_gui.elements.UISelectionList(
+            relative_rect=pygame.Rect(10, 60, 300, 200),
+            item_list=[],
+            manager=self.ui_manager,
+            container=panel
+        )
+        self.ui_elements.append(self.race_selection)
+    
+    def _create_stats_roll_content(self, panel: pygame_gui.elements.UIPanel) -> None:
+        """ステータスロールコンテンツを作成"""
+        # ステータス表示用のラベル
+        self.stats_label = pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect(10, 60, 300, 100),
+            text="ステータスを決定してください",
+            manager=self.ui_manager,
+            container=panel
+        )
+        self.ui_elements.append(self.stats_label)
+    
+    def _create_class_selection_content(self, panel: pygame_gui.elements.UIPanel) -> None:
+        """クラス選択コンテンツを作成"""
+        # クラス選択リスト
+        self.class_selection = pygame_gui.elements.UISelectionList(
+            relative_rect=pygame.Rect(10, 60, 300, 200),
+            item_list=[],
+            manager=self.ui_manager,
+            container=panel
+        )
+        self.ui_elements.append(self.class_selection)
+    
+    def _create_confirmation_content(self, panel: pygame_gui.elements.UIPanel) -> None:
+        """確認コンテンツを作成"""
+        # 確認用のテキストボックス
+        self.confirmation_box = pygame_gui.elements.UITextBox(
+            html_text="設定を確認してください",
+            relative_rect=pygame.Rect(10, 60, 300, 200),
+            manager=self.ui_manager,
+            container=panel
+        )
+        self.ui_elements.append(self.confirmation_box)
