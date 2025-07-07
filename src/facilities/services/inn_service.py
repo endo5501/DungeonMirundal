@@ -45,20 +45,22 @@ class InnService(FacilityService, ActionExecutorMixin):
         # 休憩料金の基本価格
         self.base_rest_cost = 10
         
+        # コントローラーへの参照（後で設定される）
+        self._controller = None
+        
+        # 宿屋倉庫管理
+        from src.overworld.inn_storage import inn_storage_manager
+        self.storage_manager = inn_storage_manager
+        
         logger.info("InnService initialized")
+    
+    def set_controller(self, controller):
+        """コントローラーを設定"""
+        self._controller = controller
     
     def get_menu_items(self) -> List[MenuItem]:
         """メニュー項目を取得"""
         items = []
-        
-        # 休憩
-        items.append(MenuItem(
-            id="rest",
-            label="休憩する",
-            description="パーティを休ませてHPとMPを回復します",
-            enabled=self._can_rest(),
-            service_type="action"
-        ))
         
         # 冒険準備
         items.append(MenuItem(
@@ -100,7 +102,7 @@ class InnService(FacilityService, ActionExecutorMixin):
     
     def can_execute(self, action_id: str) -> bool:
         """アクション実行可能かチェック"""
-        valid_actions = ["rest", "adventure_prep", "storage", "party_name", "exit"]
+        valid_actions = ["adventure_prep", "storage", "party_name", "exit"]
         return action_id in valid_actions
     
     def execute_action(self, action_id: str, params: Dict[str, Any]) -> ServiceResult:
@@ -108,9 +110,7 @@ class InnService(FacilityService, ActionExecutorMixin):
         logger.info(f"Executing action: {action_id} with params: {params}")
         
         try:
-            if action_id == "rest":
-                return self._handle_rest(params)
-            elif action_id == "adventure_prep":
+            if action_id == "adventure_prep":
                 return self._handle_adventure_prep(params)
             elif action_id == "storage":
                 return self._handle_storage(params)
@@ -125,135 +125,17 @@ class InnService(FacilityService, ActionExecutorMixin):
             logger.error(f"Action execution failed: {e}")
             return ServiceResult(False, f"エラーが発生しました: {str(e)}")
     
-    # 休憩関連
-    
-    def _handle_rest(self, params: Dict[str, Any]) -> ServiceResult:
-        """休憩を処理"""
-        if not self.party:
-            return ServiceResult(False, "パーティが編成されていません", result_type=ResultType.ERROR)
-        
-        # 確認が必要な場合
-        if not params.get("confirmed", False):
-            cost = self._calculate_rest_cost()
-            return ServiceResult(
-                success=True,
-                message=f"休憩料金は {cost} Gです。休憩しますか？",
-                result_type=ResultType.CONFIRM,
-                data={"cost": cost, "action": "rest"}
-            )
-        
-        # 休憩を実行
-        cost = self._calculate_rest_cost()
-        
-        # 所持金チェック
-        if self.party.gold < cost:
-            return ServiceResult(
-                success=False,
-                message="所持金が足りません",
-                result_type=ResultType.WARNING
-            )
-        
-        # 料金を支払い
-        self.party.gold -= cost
-        
-        # 全メンバーを回復
-        healed_count = 0
-        for member in self.party.members:
-            if member.is_alive():
-                # HP/MPを全回復
-                old_hp = member.hp
-                old_mp = member.mp
-                member.hp = member.max_hp
-                member.mp = member.max_mp
-                
-                # 状態異常も回復（毒、麻痺など軽度のもの）
-                if member.status in ["poison", "paralysis"]:
-                    member.status = "normal"
-                
-                if old_hp < member.max_hp or old_mp < member.max_mp:
-                    healed_count += 1
-        
-        if healed_count > 0:
-            return ServiceResult(
-                success=True,
-                message=f"パーティは休憩して回復しました（{cost} G支払い）",
-                result_type=ResultType.SUCCESS,
-                data={"healed_count": healed_count, "cost": cost}
-            )
-        else:
-            return ServiceResult(
-                success=True,
-                message="パーティは既に万全の状態です",
-                result_type=ResultType.INFO
-            )
-    
-    def _calculate_rest_cost(self) -> int:
-        """休憩料金を計算"""
-        if not self.party:
-            return 0
-        
-        # パーティの平均レベルに基づいて計算
-        total_level = sum(member.level for member in self.party.members if member.is_alive())
-        avg_level = total_level // max(1, len([m for m in self.party.members if m.is_alive()]))
-        
-        # 基本料金 * 平均レベル
-        return self.base_rest_cost * avg_level
-    
-    def _can_rest(self) -> bool:
-        """休憩可能かチェック"""
-        if not self.party:
-            return False
-        
-        # 生存メンバーがいて、回復が必要な場合
-        for member in self.party.members:
-            if hasattr(member, 'derived_stats') and member.derived_stats:
-                # 新しい統計システム
-                if (member.derived_stats.current_hp < member.derived_stats.max_hp or 
-                    member.derived_stats.current_mp < member.derived_stats.max_mp):
-                    return True
-            elif hasattr(member, 'status') and member.status != "normal":
-                return True
-        
-        return False
     
     # 冒険準備関連
     
     def _handle_adventure_prep(self, params: Dict[str, Any]) -> ServiceResult:
         """冒険準備を処理"""
-        sub_action = params.get("sub_action")
-        
-        if sub_action == "item_management":
-            return self._handle_item_management(params)
-        elif sub_action == "spell_management":
-            return self._handle_spell_management(params)
-        elif sub_action == "equipment_management":
-            return self._handle_equipment_management(params)
-        else:
-            # 冒険準備のメインパネルを表示
-            return ServiceResult(
-                success=True,
-                message="冒険準備画面を表示します",
-                data={
-                    "panel_type": "adventure_prep",
-                    "sub_services": [
-                        {
-                            "id": "item_management",
-                            "label": "アイテム管理",
-                            "description": "アイテムの整理と配分"
-                        },
-                        {
-                            "id": "spell_management",
-                            "label": "魔法管理",
-                            "description": "魔法の装備と管理"
-                        },
-                        {
-                            "id": "equipment_management",
-                            "label": "装備管理",
-                            "description": "装備の変更と最適化"
-                        }
-                    ]
-                }
-            )
+        # 冒険準備パネルの表示はUI側で処理されるため、成功を返すだけ
+        return ServiceResult(
+            success=True,
+            message="冒険準備画面を表示します",
+            result_type=ResultType.SUCCESS
+        )
     
     def _handle_item_management(self, params: Dict[str, Any]) -> ServiceResult:
         """アイテム管理を処理"""
@@ -299,17 +181,12 @@ class InnService(FacilityService, ActionExecutorMixin):
     
     def _handle_storage(self, params: Dict[str, Any]) -> ServiceResult:
         """アイテム保管を処理"""
-        action = params.get("action")
-        
-        if action == "deposit":
-            # アイテムを預ける
-            return self._deposit_item(params)
-        elif action == "withdraw":
-            # アイテムを引き出す
-            return self._withdraw_item(params)
-        else:
-            # 保管庫の内容を表示
-            return self._get_storage_contents()
+        # アイテム保管パネルの表示はUI側で処理されるため、成功を返すだけ
+        return ServiceResult(
+            success=True,
+            message="アイテム保管画面を表示します",
+            result_type=ResultType.SUCCESS
+        )
     
     def _deposit_item(self, params: Dict[str, Any]) -> ServiceResult:
         """アイテムを預ける"""
@@ -343,21 +220,25 @@ class InnService(FacilityService, ActionExecutorMixin):
     
     def _handle_party_name_change(self, params: Dict[str, Any]) -> ServiceResult:
         """パーティ名変更を処理"""
+        if not self.party:
+            return ServiceResult(False, "パーティが存在しません", result_type=ResultType.ERROR)
+        
         new_name = params.get("name")
         
         if not new_name:
-            # 名前入力画面を表示
+            # 名前入力が必要な場合
             return ServiceResult(
                 success=True,
                 message="新しいパーティ名を入力してください",
+                result_type=ResultType.INPUT,
                 data={
-                    "current_name": self.party.name if self.party else "未設定",
-                    "input_required": True
+                    "current_name": self.party.name,
+                    "input_type": "text",
+                    "input_prompt": "新しいパーティ名",
+                    "max_length": 20,
+                    "action": "party_name"
                 }
             )
-        
-        if not self.party:
-            return ServiceResult(False, "パーティが存在しません")
         
         # 名前の検証
         if len(new_name) < 1 or len(new_name) > 20:
@@ -370,6 +251,8 @@ class InnService(FacilityService, ActionExecutorMixin):
         # 名前を変更
         old_name = self.party.name
         self.party.name = new_name
+        
+        logger.info(f"パーティ名を変更: {old_name} -> {new_name}")
         
         return ServiceResult(
             success=True,
@@ -481,3 +364,36 @@ class InnService(FacilityService, ActionExecutorMixin):
         """装備を最適化"""
         # TODO: 実装
         return ServiceResult(True, "装備最適化機能は実装中です", result_type=ResultType.INFO)
+    
+    def create_service_panel(self, service_id: str, rect: 'pygame.Rect', parent: 'pygame_gui.elements.UIPanel',
+                           ui_manager: 'pygame_gui.UIManager') -> Optional['ServicePanel']:
+        """宿屋専用のサービスパネルを作成"""
+        try:
+            if service_id == "adventure_prep":
+                # 冒険準備パネル
+                from src.facilities.ui.inn.adventure_prep_panel import AdventurePrepPanel
+                return AdventurePrepPanel(
+                    rect=rect,
+                    parent=parent,
+                    controller=self._controller,
+                    ui_manager=ui_manager
+                )
+                
+            elif service_id == "storage":
+                # アイテム保管パネル
+                from src.facilities.ui.inn.storage_panel import StoragePanel
+                return StoragePanel(
+                    rect=rect,
+                    parent=parent,
+                    controller=self._controller,
+                    ui_manager=ui_manager
+                )
+                
+        except Exception as e:
+            logger.error(f"Failed to create inn panel for {service_id}: {e}")
+            # デバッグ用に詳細なエラー情報を記録
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        # 未対応のサービスまたは失敗時は汎用パネルを使用
+        return None

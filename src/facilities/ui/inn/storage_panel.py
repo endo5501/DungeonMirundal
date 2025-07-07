@@ -36,6 +36,11 @@ class StoragePanel(ServicePanel):
         self.selected_storage_item: Optional[Dict[str, Any]] = None
         self.storage_capacity = 100
         
+        # 宿屋倉庫マネージャーへの参照
+        self.storage_manager = None
+        if controller and hasattr(controller, 'service') and hasattr(controller.service, 'storage_manager'):
+            self.storage_manager = controller.service.storage_manager
+        
         logger.info("StoragePanel initialized")
     
     def _create_ui(self) -> None:

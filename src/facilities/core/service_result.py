@@ -12,6 +12,7 @@ class ResultType(Enum):
     WARNING = "warning"
     INFO = "info"
     CONFIRM = "confirm"  # 確認が必要な結果
+    INPUT = "input"  # 入力が必要な結果
 
 
 @dataclass
