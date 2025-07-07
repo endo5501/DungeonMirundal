@@ -21,6 +21,7 @@ def mock_controller():
     member1 = Mock()
     member1.is_alive.return_value = True
     member1.inventory = Mock()
+    # get_all_items()の戻り値をlenで計算可能にする
     member1.inventory.get_all_items.return_value = ["item1", "item2"]
     
     member2 = Mock()
@@ -129,7 +130,8 @@ class TestAdventurePrepPanelPartyStatus:
         # インベントリなしのメンバー
         member = Mock()
         member.is_alive.return_value = True
-        # inventoryアトリビュートなし
+        # inventoryアトリビュートなし（hasattr(member, 'inventory')がFalseになる）
+        delattr(member, 'inventory') if hasattr(member, 'inventory') else None
         
         mock_party.members = [member]
         mock_service.party = mock_party
@@ -155,11 +157,11 @@ class TestAdventurePrepPanelButtonHandling:
         mock_adventure_prep_panel.sub_service_buttons = {"item_management": item_button}
         
         # _open_sub_serviceメソッドをモック
-        with patch.object(AdventurePrepPanel, '_open_sub_service') as mock_open:
+        with patch.object(mock_adventure_prep_panel, '_open_sub_service') as mock_open:
             result = AdventurePrepPanel.handle_button_click(mock_adventure_prep_panel, item_button)
             
             assert result is True
-            mock_open.assert_called_with(mock_adventure_prep_panel, "item_management")
+            mock_open.assert_called_with("item_management")
     
     def test_handle_button_click_unknown_button(self, mock_adventure_prep_panel):
         """未知のボタンクリックの処理"""
@@ -179,7 +181,7 @@ class TestAdventurePrepPanelSubServiceManagement:
         """アイテム管理パネルの作成"""
         from src.facilities.ui.inn.adventure_prep_panel import AdventurePrepPanel
         
-        with patch('src.facilities.ui.inn.adventure_prep_panel.ItemManagementPanel') as mock_panel_class:
+        with patch('src.facilities.ui.inn.item_management_panel.ItemManagementPanel') as mock_panel_class:
             mock_panel_instance = Mock()
             mock_panel_class.return_value = mock_panel_instance
             
@@ -192,7 +194,7 @@ class TestAdventurePrepPanelSubServiceManagement:
         """魔法管理パネルの作成"""
         from src.facilities.ui.inn.adventure_prep_panel import AdventurePrepPanel
         
-        with patch('src.facilities.ui.inn.adventure_prep_panel.SpellManagementPanel') as mock_panel_class:
+        with patch('src.facilities.ui.inn.spell_management_panel.SpellManagementPanel') as mock_panel_class:
             mock_panel_instance = Mock()
             mock_panel_class.return_value = mock_panel_instance
             
@@ -205,7 +207,7 @@ class TestAdventurePrepPanelSubServiceManagement:
         """装備管理パネルの作成"""
         from src.facilities.ui.inn.adventure_prep_panel import AdventurePrepPanel
         
-        with patch('src.facilities.ui.inn.adventure_prep_panel.EquipmentManagementPanel') as mock_panel_class:
+        with patch('src.facilities.ui.inn.equipment_management_panel.EquipmentManagementPanel') as mock_panel_class:
             mock_panel_instance = Mock()
             mock_panel_class.return_value = mock_panel_instance
             
@@ -234,7 +236,7 @@ class TestAdventurePrepPanelSubServiceManagement:
         
         # サブパネル作成のモック
         mock_sub_panel = Mock()
-        with patch.object(AdventurePrepPanel, '_create_sub_panel', return_value=mock_sub_panel):
+        with patch.object(mock_adventure_prep_panel, '_create_sub_panel', return_value=mock_sub_panel):
             AdventurePrepPanel._open_sub_service(mock_adventure_prep_panel, "item_management")
             
             # サブパネルが作成・保存される
@@ -282,7 +284,7 @@ class TestAdventurePrepPanelSubServiceManagement:
         
         # 新しいサブパネル
         new_panel = Mock()
-        with patch.object(AdventurePrepPanel, '_create_sub_panel', return_value=new_panel):
+        with patch.object(mock_adventure_prep_panel, '_create_sub_panel', return_value=new_panel):
             AdventurePrepPanel._open_sub_service(mock_adventure_prep_panel, "equipment_management")
             
             # 現在のパネルが隠される
@@ -306,11 +308,16 @@ class TestAdventurePrepPanelVisibility:
         mock_adventure_prep_panel.info_box = Mock()
         mock_adventure_prep_panel.active_sub_panel = None
         
-        with patch.object(AdventurePrepPanel.__bases__[0], 'show') as mock_super_show:
+        with patch('builtins.super') as mock_super:
+            mock_super_instance = Mock()
+            mock_super.return_value = mock_super_instance
+            
             AdventurePrepPanel.show(mock_adventure_prep_panel)
             
+            # super()が呼ばれる
+            mock_super.assert_called_once_with()
             # 親クラスのshowが呼ばれる
-            mock_super_show.assert_called_once()
+            mock_super_instance.show.assert_called_once_with()
             
             # メインUIが表示される
             button1.show.assert_called_once()
@@ -330,11 +337,16 @@ class TestAdventurePrepPanelVisibility:
         active_panel = Mock()
         mock_adventure_prep_panel.active_sub_panel = active_panel
         
-        with patch.object(AdventurePrepPanel.__bases__[0], 'show') as mock_super_show:
+        with patch('builtins.super') as mock_super:
+            mock_super_instance = Mock()
+            mock_super.return_value = mock_super_instance
+            
             AdventurePrepPanel.show(mock_adventure_prep_panel)
             
+            # super()が呼ばれる
+            mock_super.assert_called_once_with()
             # 親クラスのshowが呼ばれる
-            mock_super_show.assert_called_once()
+            mock_super_instance.show.assert_called_once_with()
             
             # メインUIは表示されない
             button.show.assert_not_called()
@@ -349,11 +361,16 @@ class TestAdventurePrepPanelVisibility:
         mock_adventure_prep_panel.sub_panels = {"panel1": sub_panel1, "panel2": sub_panel2}
         mock_adventure_prep_panel.active_sub_panel = sub_panel1
         
-        with patch.object(AdventurePrepPanel.__bases__[0], 'hide') as mock_super_hide:
+        with patch('builtins.super') as mock_super:
+            mock_super_instance = Mock()
+            mock_super.return_value = mock_super_instance
+            
             AdventurePrepPanel.hide(mock_adventure_prep_panel)
             
+            # super()が呼ばれる
+            mock_super.assert_called_once_with()
             # 親クラスのhideが呼ばれる
-            mock_super_hide.assert_called_once()
+            mock_super_instance.hide.assert_called_once_with()
             
             # すべてのサブパネルが非表示になる
             sub_panel1.hide.assert_called_once()
@@ -375,7 +392,7 @@ class TestAdventurePrepPanelRefresh:
         mock_adventure_prep_panel.info_box = info_box
         mock_adventure_prep_panel.active_sub_panel = None
         
-        with patch.object(AdventurePrepPanel, '_get_party_status_text', return_value="新しいテキスト"):
+        with patch.object(mock_adventure_prep_panel, '_get_party_status_text', return_value="新しいテキスト"):
             AdventurePrepPanel.refresh(mock_adventure_prep_panel)
             
             # 情報ボックスのテキストが更新される
