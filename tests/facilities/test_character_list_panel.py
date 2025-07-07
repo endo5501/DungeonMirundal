@@ -76,6 +76,7 @@ class TestCharacterListPanelBasic:
         
         with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None):
             panel = CharacterListPanel(rect, parent, mock_controller, ui_manager)
+            panel.controller = mock_controller  # Manually set the controller
             
             # 初期状態の確認
             assert panel.characters == []
@@ -93,14 +94,25 @@ class TestCharacterListPanelBasic:
         
         with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None):
             panel = CharacterListPanel(rect, parent, mock_controller, ui_manager)
+            panel.controller = mock_controller  # Manually set the controller
             panel.title_label = Mock()
             panel.action_button = Mock()
+            panel.character_list = Mock()  # Mock the UI elements
+            panel.detail_box = Mock()
+            panel.filter_dropdown = Mock()
+            panel.sort_dropdown = Mock()
             
-            with patch.object(panel, '_update_character_list') as mock_update:
+            # Mock the service action to return a successful result
+            mock_result = Mock()
+            mock_result.is_success.return_value = True
+            mock_result.data = {"characters": []}
+            
+            with patch.object(panel, '_execute_service_action', return_value=mock_result) as mock_execute:
                 panel.set_mode("class_change")
                 
                 assert panel.display_mode == "class_change"
-                mock_update.assert_called_once()
+                # Verify that the service was called with proper parameters
+                mock_execute.assert_called_once_with("character_list", {"filter": "in_party"})
     
     def test_set_mode_list(self, mock_controller, mock_ui_setup):
         """リストモードの設定"""
@@ -110,14 +122,28 @@ class TestCharacterListPanelBasic:
         
         with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None):
             panel = CharacterListPanel(rect, parent, mock_controller, ui_manager)
+            panel.controller = mock_controller  # Manually set the controller
             panel.title_label = Mock()
             panel.action_button = Mock()
+            panel.character_list = Mock()  # Mock the UI elements
+            panel.detail_box = Mock()
+            panel.filter_dropdown = Mock()
+            panel.sort_dropdown = Mock()
             
-            with patch.object(panel, '_update_character_list') as mock_update:
+            # Mock the service action to return a successful result
+            mock_result = Mock()
+            mock_result.is_success.return_value = True
+            mock_result.data = {"characters": []}
+            
+            with patch.object(panel, '_execute_service_action', return_value=mock_result) as mock_execute:
                 panel.set_mode("list")
                 
                 assert panel.display_mode == "list"
-                mock_update.assert_called_once()
+                # In list mode, it should use current filter and sort
+                mock_execute.assert_called_once_with("character_list", {
+                    "filter": panel.current_filter,
+                    "sort": panel.current_sort
+                })
 
 
 class TestCharacterListPanelDataHandling:
@@ -131,12 +157,24 @@ class TestCharacterListPanelDataHandling:
         
         panel = Mock()
         panel.controller = mock_controller
+        panel.display_mode = "list"  # Set display mode
+        panel.current_filter = "all"
+        panel.current_sort = "name"
         
-        with patch.object(CharacterListPanel, '_update_character_list') as mock_update:
+        # Mock the service result
+        mock_result = Mock()
+        mock_result.is_success.return_value = True
+        mock_result.data = {"characters": sample_characters}
+        
+        with patch.object(panel, '_update_character_list') as mock_update, \
+             patch.object(panel, '_execute_service_action', return_value=mock_result) as mock_execute, \
+             patch.object(panel, '_update_detail_view') as mock_detail, \
+             patch.object(panel, '_update_action_button') as mock_action:
             CharacterListPanel._load_character_data(panel)
             
             assert panel.characters == sample_characters
             mock_update.assert_called_once()
+            mock_execute.assert_called_once_with("character_list", {"filter": "all", "sort": "name"})
     
     def test_load_character_data_no_service(self, mock_controller):
         """サービスメソッドが存在しない場合"""
@@ -148,13 +186,22 @@ class TestCharacterListPanelDataHandling:
         panel = Mock()
         panel.controller = mock_controller
         panel.characters = []
+        panel.display_mode = "list"
+        panel.current_filter = "all"
+        panel.current_sort = "name"
         
-        # エラーが発生しないことを確認
-        try:
-            CharacterListPanel._load_character_data(panel)
-            assert True
-        except Exception as e:
-            pytest.fail(f"Unexpected exception: {e}")
+        # Mock the service result to simulate an error
+        mock_result = Mock()
+        mock_result.is_success.return_value = False
+        mock_result.data = None
+        
+        with patch.object(panel, '_execute_service_action', return_value=mock_result) as mock_execute:
+            # エラーが発生しないことを確認
+            try:
+                CharacterListPanel._load_character_data(panel)
+                assert True
+            except Exception as e:
+                pytest.fail(f"Unexpected exception: {e}")
 
 
 class TestCharacterListPanelFiltering:
@@ -164,43 +211,45 @@ class TestCharacterListPanelFiltering:
         """生存フィルタの処理"""
         from src.facilities.ui.guild.character_list_panel import CharacterListPanel
         
-        panel = Mock()
+        # Create a mock that allows attribute assignment
+        panel = MagicMock()
         panel.characters = sample_characters
         panel.current_filter = "all"
         
-        with patch.object(CharacterListPanel, '_update_character_list') as mock_update:
-            CharacterListPanel._handle_filter_change(panel, "alive")
+        # Mock _load_character_data since it will be called
+        with patch.object(panel, '_load_character_data') as mock_load:
+            CharacterListPanel._handle_filter_change(panel, "パーティ外")
             
-            assert panel.current_filter == "alive"
-            mock_update.assert_called_once()
+            assert panel.current_filter == "available"
+            mock_load.assert_called_once()
     
     def test_handle_filter_change_dead(self, sample_characters):
         """死亡フィルタの処理"""
         from src.facilities.ui.guild.character_list_panel import CharacterListPanel
         
-        panel = Mock()
+        panel = MagicMock()
         panel.characters = sample_characters
         panel.current_filter = "all"
         
-        with patch.object(CharacterListPanel, '_update_character_list') as mock_update:
-            CharacterListPanel._handle_filter_change(panel, "dead")
+        with patch.object(panel, '_load_character_data') as mock_load:
+            CharacterListPanel._handle_filter_change(panel, "パーティ内")
             
-            assert panel.current_filter == "dead"
-            mock_update.assert_called_once()
+            assert panel.current_filter == "in_party"
+            mock_load.assert_called_once()
     
     def test_handle_filter_change_class(self, sample_characters):
         """クラスフィルタの処理"""
         from src.facilities.ui.guild.character_list_panel import CharacterListPanel
         
-        panel = Mock()
+        panel = MagicMock()
         panel.characters = sample_characters
-        panel.current_filter = "all"
+        panel.current_filter = "in_party"  # Start with a different filter
         
-        with patch.object(CharacterListPanel, '_update_character_list') as mock_update:
-            CharacterListPanel._handle_filter_change(panel, "fighter")
+        with patch.object(panel, '_load_character_data') as mock_load:
+            CharacterListPanel._handle_filter_change(panel, "全員")
             
-            assert panel.current_filter == "fighter"
-            mock_update.assert_called_once()
+            assert panel.current_filter == "all"
+            mock_load.assert_called_once()
 
 
 class TestCharacterListPanelSorting:
@@ -210,43 +259,43 @@ class TestCharacterListPanelSorting:
         """名前ソートの処理"""
         from src.facilities.ui.guild.character_list_panel import CharacterListPanel
         
-        panel = Mock()
+        panel = MagicMock()
         panel.characters = sample_characters
         panel.current_sort = "level"
         
-        with patch.object(CharacterListPanel, '_update_character_list') as mock_update:
-            CharacterListPanel._handle_sort_change(panel, "name")
+        with patch.object(panel, '_load_character_data') as mock_load:
+            CharacterListPanel._handle_sort_change(panel, "名前順")
             
             assert panel.current_sort == "name"
-            mock_update.assert_called_once()
+            mock_load.assert_called_once()
     
     def test_handle_sort_change_level(self, sample_characters):
         """レベルソートの処理"""
         from src.facilities.ui.guild.character_list_panel import CharacterListPanel
         
-        panel = Mock()
+        panel = MagicMock()
         panel.characters = sample_characters
         panel.current_sort = "name"
         
-        with patch.object(CharacterListPanel, '_update_character_list') as mock_update:
-            CharacterListPanel._handle_sort_change(panel, "level")
+        with patch.object(panel, '_load_character_data') as mock_load:
+            CharacterListPanel._handle_sort_change(panel, "レベル順")
             
             assert panel.current_sort == "level"
-            mock_update.assert_called_once()
+            mock_load.assert_called_once()
     
-    def test_handle_sort_change_experience(self, sample_characters):
-        """経験値ソートの処理"""
+    def test_handle_sort_change_class(self, sample_characters):
+        """職業ソートの処理"""
         from src.facilities.ui.guild.character_list_panel import CharacterListPanel
         
-        panel = Mock()
+        panel = MagicMock()
         panel.characters = sample_characters
         panel.current_sort = "name"
         
-        with patch.object(CharacterListPanel, '_update_character_list') as mock_update:
-            CharacterListPanel._handle_sort_change(panel, "experience")
+        with patch.object(panel, '_load_character_data') as mock_load:
+            CharacterListPanel._handle_sort_change(panel, "職業順")
             
-            assert panel.current_sort == "experience"
-            mock_update.assert_called_once()
+            assert panel.current_sort == "class"
+            mock_load.assert_called_once()
 
 
 class TestCharacterListPanelSelection:
@@ -261,12 +310,20 @@ class TestCharacterListPanelSelection:
         panel.selected_character = None
         panel.selected_index = None
         
-        with patch.object(CharacterListPanel, '_update_detail_view') as mock_detail, \
-             patch.object(CharacterListPanel, '_update_action_button') as mock_action:
+        # Mock the character_list UI element
+        panel.character_list = Mock()
+        mock_item_list = Mock()
+        mock_item_list.index.return_value = 0  # First item
+        panel.character_list.item_list = mock_item_list
+        
+        with patch.object(panel, '_update_detail_view') as mock_detail, \
+             patch.object(panel, '_update_action_button') as mock_action:
             
             # "戦士アレン Lv.5 (Fighter)" 形式での選択をシミュレート
             CharacterListPanel._handle_character_selection(panel, "戦士アレン Lv.5")
             
+            assert panel.selected_character == sample_characters[0]
+            assert panel.selected_index == 0
             mock_detail.assert_called_once()
             mock_action.assert_called_once()
     
@@ -279,8 +336,8 @@ class TestCharacterListPanelSelection:
         panel.selected_character = sample_characters[0]
         panel.selected_index = 0
         
-        with patch.object(CharacterListPanel, '_update_detail_view') as mock_detail, \
-             patch.object(CharacterListPanel, '_update_action_button') as mock_action:
+        with patch.object(panel, '_update_detail_view') as mock_detail, \
+             patch.object(panel, '_update_action_button') as mock_action:
             
             CharacterListPanel._handle_character_selection(panel, None)
             
@@ -325,7 +382,7 @@ class TestCharacterListPanelActions:
         
         button = panel.action_button
         
-        with patch.object(CharacterListPanel, '_handle_class_change') as mock_class_change:
+        with patch.object(panel, '_handle_class_change') as mock_class_change:
             result = CharacterListPanel.handle_button_click(panel, button)
             
             assert result is True
@@ -352,9 +409,49 @@ class TestCharacterListPanelActions:
         panel.selected_character = sample_characters[0]
         panel.controller = Mock()
         
-        with patch.object(CharacterListPanel, '_execute_class_change_action') as mock_execute:
+        # Mock the service results
+        # First call: get available classes
+        mock_get_classes = Mock()
+        mock_get_classes.is_success.return_value = True
+        mock_get_classes.data = {
+            "available_classes": [
+                {"id": "warrior", "name": "戦士"},
+                {"id": "knight", "name": "騎士"}
+            ]
+        }
+        mock_get_classes.message = "転職可能なクラス"
+        
+        # Second call: confirmation
+        mock_confirm = Mock()
+        mock_confirm.is_success.return_value = True
+        mock_confirm.result_type = Mock()
+        mock_confirm.result_type.value = "confirm"
+        mock_confirm.message = "確認"
+        
+        # Third call: actual execution
+        mock_execute_result = Mock()
+        mock_execute_result.is_success.return_value = True
+        mock_execute_result.message = "転職に成功しました"
+        
+        with patch.object(panel, '_execute_service_action') as mock_execute, \
+             patch.object(panel, '_show_message') as mock_message, \
+             patch.object(panel, '_load_character_data') as mock_load:
+            # Set up the sequence of calls
+            mock_execute.side_effect = [mock_get_classes, mock_confirm, mock_execute_result]
+            
             CharacterListPanel._handle_class_change(panel)
-            mock_execute.assert_called_once()
+            
+            # Verify the calls
+            assert mock_execute.call_count == 3
+            mock_execute.assert_any_call("class_change", {"character_id": "char1"})
+            mock_execute.assert_any_call("class_change", {"character_id": "char1", "new_class": "warrior"})
+            mock_execute.assert_any_call("class_change", {"character_id": "char1", "new_class": "warrior", "confirmed": True})
+            
+            # Verify messages
+            assert mock_message.call_count == 2
+            mock_message.assert_any_call("戦士アレンをwarriorに変更します", "info")
+            mock_message.assert_any_call("転職に成功しました", "info")
+            mock_load.assert_called_once()
     
     def test_handle_class_change_no_selection(self):
         """選択なしでのクラス変更処理"""
@@ -377,9 +474,13 @@ class TestCharacterListPanelActions:
         panel = Mock()
         panel.selected_character = sample_characters[0]
         
-        with patch.object(CharacterListPanel, '_show_character_detail_dialog') as mock_dialog:
+        with patch.object(panel, '_show_message') as mock_message:
             CharacterListPanel._handle_detail_view(panel)
-            mock_dialog.assert_called_once()
+            # The method shows a message with character details
+            mock_message.assert_called_once()
+            # Check that the message contains the character name
+            call_args = mock_message.call_args[0]
+            assert "戦士アレン" in call_args[0]
 
 
 class TestCharacterListPanelEvents:
@@ -394,14 +495,15 @@ class TestCharacterListPanelEvents:
         
         # ドロップダウンイベントのモック
         event = Mock()
+        event.type = pygame_gui.UI_DROP_DOWN_MENU_CHANGED
         event.ui_element = panel.filter_dropdown
-        event.text = "alive"
+        event.text = "パーティ外"
         
-        with patch.object(CharacterListPanel, '_handle_filter_change') as mock_filter:
+        with patch.object(panel, '_handle_filter_change') as mock_filter:
             result = CharacterListPanel.handle_dropdown_changed(panel, event)
             
             assert result is True
-            mock_filter.assert_called_with(panel, "alive")
+            mock_filter.assert_called_with("パーティ外")
     
     def test_handle_dropdown_changed_sort(self):
         """ソートドロップダウンのイベント処理"""
@@ -412,14 +514,15 @@ class TestCharacterListPanelEvents:
         
         # ドロップダウンイベントのモック
         event = Mock()
+        event.type = pygame_gui.UI_DROP_DOWN_MENU_CHANGED
         event.ui_element = panel.sort_dropdown
-        event.text = "level"
+        event.text = "レベル順"
         
-        with patch.object(CharacterListPanel, '_handle_sort_change') as mock_sort:
+        with patch.object(panel, '_handle_sort_change') as mock_sort:
             result = CharacterListPanel.handle_dropdown_changed(panel, event)
             
             assert result is True
-            mock_sort.assert_called_with(panel, "level")
+            mock_sort.assert_called_with("レベル順")
     
     def test_handle_dropdown_changed_unknown(self):
         """未知のドロップダウンのイベント処理"""
@@ -446,14 +549,15 @@ class TestCharacterListPanelEvents:
         
         # 選択イベントのモック
         event = Mock()
+        event.type = pygame_gui.UI_SELECTION_LIST_NEW_SELECTION
         event.ui_element = panel.character_list
-        event.ui_element.get_single_selection.return_value = "戦士アレン Lv.5"
+        panel.character_list.get_single_selection.return_value = "戦士アレン Lv.5"
         
-        with patch.object(CharacterListPanel, '_handle_character_selection') as mock_selection:
+        with patch.object(panel, '_handle_character_selection') as mock_selection:
             result = CharacterListPanel.handle_selection_list_changed(panel, event)
             
             assert result is True
-            mock_selection.assert_called_with(panel, "戦士アレン Lv.5")
+            mock_selection.assert_called_with("戦士アレン Lv.5")
     
     def test_handle_selection_list_changed_unknown(self):
         """未知の選択リストのイベント処理"""
@@ -481,7 +585,7 @@ class TestCharacterListPanelRefresh:
         panel = Mock()
         panel.controller = mock_controller
         
-        with patch.object(CharacterListPanel, '_load_character_data') as mock_load:
+        with patch.object(panel, '_load_character_data') as mock_load:
             CharacterListPanel.refresh(panel)
             mock_load.assert_called_once()
 
