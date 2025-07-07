@@ -21,9 +21,9 @@ except ImportError:
 from src.character.party import Party
 from src.character.character import Character
 
-# モデルクラスは必要に応じて後で実装
-ItemModel = None
-Item = None
+# アイテム・インベントリシステムのインポート
+from src.items.item import item_manager, Item, ItemInstance
+from src.inventory.inventory import inventory_manager, Inventory
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class ShopService(FacilityService, ActionExecutorMixin):
         super().__init__("shop")
         # GameManagerはシングルトンではないため、必要時に別途設定
         self.game = None
-        self.item_model = ItemModel() if ItemModel else None
+        self.item_manager = item_manager
         
         # 商店の在庫
         self._shop_inventory: Dict[str, Dict[str, Any]] = {}
@@ -50,7 +50,7 @@ class ShopService(FacilityService, ActionExecutorMixin):
         self.sell_rate = 0.5  # アイテム価値の50%で買い取り
         
         # 鑑定料金
-        self.identify_cost = 100
+        self.identify_cost = self.item_manager.get_identification_cost()
         
         logger.info("ShopService initialized")
     
@@ -172,90 +172,55 @@ class ShopService(FacilityService, ActionExecutorMixin):
     
     def _generate_shop_inventory(self) -> None:
         """商店在庫を生成"""
-        # TODO: 実際のアイテムデータベースから生成
-        # 現在は仮のデータ
-        self._shop_inventory = {
-            "iron_sword": {
-                "name": "鉄の剣",
-                "category": "weapons",
-                "price": 200,
-                "stock": 5,
-                "description": "標準的な鉄製の剣。攻撃力+5",
-                "item_type": "weapon",
-                "stats": {"attack": 5}
-            },
-            "steel_sword": {
-                "name": "鋼の剣",
-                "category": "weapons",
-                "price": 500,
-                "stock": 2,
-                "description": "高品質な鋼製の剣。攻撃力+10",
-                "item_type": "weapon",
-                "stats": {"attack": 10}
-            },
-            "leather_armor": {
-                "name": "革の鎧",
-                "category": "armor",
-                "price": 150,
-                "stock": 3,
-                "description": "軽い革製の鎧。防御力+3",
-                "item_type": "armor",
-                "stats": {"defense": 3}
-            },
-            "chain_mail": {
-                "name": "チェインメイル",
-                "category": "armor",
-                "price": 400,
-                "stock": 2,
-                "description": "鎖帷子。防御力+7",
-                "item_type": "armor",
-                "stats": {"defense": 7}
-            },
-            "potion": {
-                "name": "ポーション",
-                "category": "items",
-                "price": 50,
-                "stock": 20,
-                "description": "HPを50回復する",
-                "item_type": "consumable",
-                "effect": {"hp_restore": 50}
-            },
-            "hi_potion": {
-                "name": "ハイポーション",
-                "category": "items",
-                "price": 150,
-                "stock": 10,
-                "description": "HPを150回復する",
-                "item_type": "consumable",
-                "effect": {"hp_restore": 150}
-            },
-            "ether": {
-                "name": "エーテル",
-                "category": "items",
-                "price": 100,
-                "stock": 15,
-                "description": "MPを30回復する",
-                "item_type": "consumable",
-                "effect": {"mp_restore": 30}
-            },
-            "antidote": {
-                "name": "解毒剤",
-                "category": "items",
-                "price": 30,
-                "stock": 10,
-                "description": "毒状態を回復する",
-                "item_type": "consumable",
-                "effect": {"cure_poison": True}
-            },
-            "magic_scroll": {
-                "name": "魔法の巻物",
-                "category": "special",
-                "price": 1000,
-                "stock": 1,
-                "description": "一度だけ強力な魔法を使える",
-                "item_type": "special"
-            }
+        self._shop_inventory = {}
+        
+        # カテゴリマッピング
+        category_mapping = {
+            "weapon": "weapons",
+            "armor": "armor", 
+            "consumable": "items",
+            "spellbook": "special",
+            "tool": "special",
+            "treasure": "special"
         }
+        
+        # 在庫設定
+        stock_settings = {
+            "weapon": {"min": 2, "max": 5},
+            "armor": {"min": 1, "max": 3},
+            "consumable": {"min": 10, "max": 30},
+            "spellbook": {"min": 1, "max": 2},
+            "tool": {"min": 3, "max": 8},
+            "treasure": {"min": 1, "max": 2}
+        }
+        
+        # 全アイテムから商店で販売するものを選定
+        for item_id, item in self.item_manager.items.items():
+            # 特別なアイテムは販売しない
+            if item.rarity.value in ["epic", "legendary"]:
+                continue
+                
+            category = category_mapping.get(item.item_type.value, "special")
+            stock_setting = stock_settings.get(item.item_type.value, {"min": 1, "max": 3})
+            
+            # 在庫数をランダムに決定（ここでは固定値）
+            if item.item_type.value == "consumable":
+                stock = 20
+            elif item.item_type.value in ["weapon", "armor"]:
+                stock = 3
+            else:
+                stock = 2
+                
+            self._shop_inventory[item_id] = {
+                "name": item.get_name(),
+                "category": category,
+                "price": item.price,
+                "stock": stock,
+                "description": item.get_description(),
+                "item_type": item.item_type.value,
+                "rarity": item.rarity.value,
+                "item_object": item
+            }
     
     def _confirm_purchase(self, item_id: str, quantity: int) -> ServiceResult:
         """購入確認"""
@@ -311,8 +276,22 @@ class ShopService(FacilityService, ActionExecutorMixin):
         self.party.gold -= total_cost
         self._shop_inventory[item_id]["stock"] -= quantity
         
-        # TODO: 実際のアイテムをパーティに追加
-        # 現在は仮の処理
+        # アイテムインスタンスを作成
+        item_instance = self.item_manager.create_item_instance(item_id, quantity)
+        if not item_instance:
+            return ServiceResult(False, "アイテムの作成に失敗しました")
+        
+        # パーティインベントリに追加
+        party_inventory = inventory_manager.get_party_inventory()
+        if not party_inventory:
+            # パーティインベントリがない場合は作成
+            party_inventory = inventory_manager.create_party_inventory(self.party.party_id)
+        
+        if not party_inventory.add_item(item_instance):
+            # インベントリに追加できない場合は返金
+            self.party.gold += total_cost
+            self._shop_inventory[item_id]["stock"] += quantity
+            return ServiceResult(False, "インベントリが満杯のため購入できません")
         
         return ServiceResult(
             success=True,
@@ -349,22 +328,50 @@ class ShopService(FacilityService, ActionExecutorMixin):
         
         sellable_items = []
         
-        # パーティメンバーの全アイテムを収集
+        # パーティインベントリから売却可能アイテムを収集
+        party_inventory = inventory_manager.get_party_inventory()
+        if party_inventory:
+            for slot_index, item_instance in party_inventory.get_all_items():
+                item = self.item_manager.get_item_info(item_instance)
+                if item:
+                    # 重要アイテムでない場合は売却可能
+                    sell_price = self.item_manager.get_sell_price(item_instance)
+                    sellable_items.append({
+                        "slot_index": slot_index,
+                        "item_id": item_instance.item_id,
+                        "name": item.get_name(),
+                        "display_name": self.item_manager.get_item_display_name(item_instance),
+                        "quantity": item_instance.quantity,
+                        "base_price": item.price,
+                        "sell_price": sell_price,
+                        "owner_type": "party",
+                        "condition": item_instance.condition,
+                        "identified": item_instance.identified
+                    })
+        
+        # キャラクターインベントリからも収集
         for member in self.party.members:
-            if member.is_alive() and hasattr(member, 'inventory'):
-                for item in member.inventory.get_all_items():
-                    # 重要アイテムは売却不可
-                    if not item.is_key_item():
-                        sell_price = int(item.value * self.sell_rate)
-                        sellable_items.append({
-                            "id": item.id,
-                            "name": item.name,
-                            "quantity": getattr(item, 'quantity', 1),
-                            "base_price": item.value,
-                            "sell_price": sell_price,
-                            "owner_id": member.id,
-                            "owner_name": member.name
-                        })
+            if member.is_alive():
+                char_inventory = inventory_manager.get_character_inventory(member.character_id)
+                if char_inventory:
+                    for slot_index, item_instance in char_inventory.get_all_items():
+                        item = self.item_manager.get_item_info(item_instance)
+                        if item:
+                            sell_price = self.item_manager.get_sell_price(item_instance)
+                            sellable_items.append({
+                                "slot_index": slot_index,
+                                "item_id": item_instance.item_id,
+                                "name": item.get_name(),
+                                "display_name": self.item_manager.get_item_display_name(item_instance),
+                                "quantity": item_instance.quantity,
+                                "base_price": item.price,
+                                "sell_price": sell_price,
+                                "owner_type": "character",
+                                "owner_id": member.character_id,
+                                "owner_name": member.name,
+                                "condition": item_instance.condition,
+                                "identified": item_instance.identified
+                            })
         
         return ServiceResult(
             success=True,
@@ -378,20 +385,40 @@ class ShopService(FacilityService, ActionExecutorMixin):
     
     def _confirm_sell(self, item_id: str, quantity: int) -> ServiceResult:
         """売却確認"""
-        # TODO: 実際のアイテム情報を取得
-        # 現在は仮の処理
-        item_name = "アイテム"
-        sell_price = 25  # 仮の価格
-        total_price = sell_price * quantity
+        # 売却可能アイテムから該当アイテムを検索
+        sellable_result = self._get_sellable_items()
+        if not sellable_result.success:
+            return sellable_result
         
-        return ServiceResult(
-            success=True,
-            message=f"{item_name}を{quantity}個売却しますか？（{total_price} G）",
-            result_type=ResultType.CONFIRM,
+        sellable_items = sellable_result.data.get("items", [])
+        target_item = None
+        
+        for item_info in sellable_items:
+            if item_info["item_id"] == item_id:
+                target_item = item_info
+                break
+        
+        if not target_item:
+            return ServiceResultFactory.error("そのアイテムは売却できません")
+        
+        if quantity > target_item["quantity"]:
+            return ServiceResultFactory.error(
+                f"所持数が不足しています（所持: {target_item['quantity']}個）",
+                result_type=ResultType.WARNING
+            )
+        
+        unit_price = target_item["sell_price"] // target_item["quantity"]
+        total_price = unit_price * quantity
+        
+        return ServiceResultFactory.confirm(
+            f"{target_item['display_name']}を{quantity}個売却しますか？（{total_price} G）",
             data={
                 "item_id": item_id,
                 "quantity": quantity,
                 "total_price": total_price,
+                "slot_index": target_item["slot_index"],
+                "owner_type": target_item["owner_type"],
+                "owner_id": target_item.get("owner_id"),
                 "action": "sell"
             }
         )
@@ -401,21 +428,52 @@ class ShopService(FacilityService, ActionExecutorMixin):
         if not self.party:
             return ServiceResult(False, "パーティが存在しません")
         
-        # TODO: 実際の売却処理
-        # 現在は仮の処理
-        sell_price = 25
-        total_price = sell_price * quantity
+        # 売却確認で取得した情報を再度取得
+        confirm_result = self._confirm_sell(item_id, quantity)
+        if not confirm_result.success:
+            return confirm_result
         
+        sell_data = confirm_result.data
+        slot_index = sell_data["slot_index"]
+        owner_type = sell_data["owner_type"]
+        owner_id = sell_data.get("owner_id")
+        total_price = sell_data["total_price"]
+        
+        # インベントリからアイテムを削除
+        if owner_type == "party":
+            party_inventory = inventory_manager.get_party_inventory()
+            if not party_inventory:
+                return ServiceResult(False, "パーティインベントリが存在しません")
+            
+            removed_item = party_inventory.remove_item(slot_index, quantity)
+        elif owner_type == "character":
+            char_inventory = inventory_manager.get_character_inventory(owner_id)
+            if not char_inventory:
+                return ServiceResult(False, "キャラクターインベントリが存在しません")
+            
+            removed_item = char_inventory.remove_item(slot_index, quantity)
+        else:
+            return ServiceResult(False, "不正な所有者タイプです")
+        
+        if not removed_item:
+            return ServiceResult(False, "アイテムの削除に失敗しました")
+        
+        # 代金を受け取る
         self.party.gold += total_price
+        
+        # 表示名を取得
+        display_name = self.item_manager.get_item_display_name(removed_item)
         
         return ServiceResult(
             success=True,
-            message=f"アイテムを{quantity}個売却しました（{total_price} G）",
+            message=f"{display_name}を売却しました（{total_price} G）",
             result_type=ResultType.SUCCESS,
             data={
+                "item_id": item_id,
                 "quantity": quantity,
                 "earned": total_price,
-                "new_gold": self.party.gold
+                "new_gold": self.party.gold,
+                "item_name": display_name
             }
         )
     
@@ -443,16 +501,41 @@ class ShopService(FacilityService, ActionExecutorMixin):
         
         unidentified_items = []
         
-        # TODO: 実際の未鑑定アイテムを収集
-        # 現在は仮のデータ
-        unidentified_items = [
-            {
-                "id": "unknown_ring",
-                "display_name": "？？？の指輪",
-                "owner_id": "char1",
-                "owner_name": "Hero"
-            }
-        ]
+        # パーティインベントリから未鑑定アイテムを収集
+        party_inventory = inventory_manager.get_party_inventory()
+        if party_inventory:
+            for slot_index, item_instance in party_inventory.get_all_items():
+                if not item_instance.identified:
+                    item = self.item_manager.get_item_info(item_instance)
+                    if item:
+                        unidentified_items.append({
+                            "slot_index": slot_index,
+                            "item_id": item_instance.item_id,
+                            "instance_id": item_instance.instance_id,
+                            "display_name": self.item_manager.get_item_display_name(item_instance),
+                            "quantity": item_instance.quantity,
+                            "owner_type": "party"
+                        })
+        
+        # キャラクターインベントリからも収集
+        for member in self.party.members:
+            if member.is_alive():
+                char_inventory = inventory_manager.get_character_inventory(member.character_id)
+                if char_inventory:
+                    for slot_index, item_instance in char_inventory.get_all_items():
+                        if not item_instance.identified:
+                            item = self.item_manager.get_item_info(item_instance)
+                            if item:
+                                unidentified_items.append({
+                                    "slot_index": slot_index,
+                                    "item_id": item_instance.item_id,
+                                    "instance_id": item_instance.instance_id,
+                                    "display_name": self.item_manager.get_item_display_name(item_instance),
+                                    "quantity": item_instance.quantity,
+                                    "owner_type": "character",
+                                    "owner_id": member.character_id,
+                                    "owner_name": member.name
+                                })
         
         if not unidentified_items:
             return ServiceResult(
@@ -480,12 +563,30 @@ class ShopService(FacilityService, ActionExecutorMixin):
                 result_type=ResultType.WARNING
             )
         
-        return ServiceResult(
-            success=True,
-            message=f"このアイテムを鑑定しますか？（{self.identify_cost} G）",
-            result_type=ResultType.CONFIRM,
+        # 未鑑定アイテムから該当アイテムを検索
+        unidentified_result = self._get_unidentified_items()
+        if not unidentified_result.success:
+            return unidentified_result
+        
+        unidentified_items = unidentified_result.data.get("items", [])
+        target_item = None
+        
+        for item_info in unidentified_items:
+            if item_info["item_id"] == item_id or item_info["instance_id"] == item_id:
+                target_item = item_info
+                break
+        
+        if not target_item:
+            return ServiceResultFactory.error("そのアイテムは鑑定できません")
+        
+        return ServiceResultFactory.confirm(
+            f"{target_item['display_name']}を鑑定しますか？（{self.identify_cost} G）",
             data={
                 "item_id": item_id,
+                "instance_id": target_item["instance_id"],
+                "slot_index": target_item["slot_index"],
+                "owner_type": target_item["owner_type"],
+                "owner_id": target_item.get("owner_id"),
                 "cost": self.identify_cost,
                 "action": "identify"
             }
@@ -499,20 +600,65 @@ class ShopService(FacilityService, ActionExecutorMixin):
         if self.party.gold < self.identify_cost:
             return ServiceResult(False, "鑑定料金が不足しています")
         
+        # 鑑定確認で取得した情報を再度取得
+        confirm_result = self._confirm_identify(item_id)
+        if not confirm_result.success:
+            return confirm_result
+        
+        identify_data = confirm_result.data
+        instance_id = identify_data["instance_id"]
+        slot_index = identify_data["slot_index"]
+        owner_type = identify_data["owner_type"]
+        owner_id = identify_data.get("owner_id")
+        
+        # インベントリからアイテムインスタンスを取得
+        item_instance = None
+        if owner_type == "party":
+            party_inventory = inventory_manager.get_party_inventory()
+            if party_inventory and slot_index < len(party_inventory.slots):
+                slot = party_inventory.slots[slot_index]
+                if not slot.is_empty() and slot.item_instance.instance_id == instance_id:
+                    item_instance = slot.item_instance
+        elif owner_type == "character":
+            char_inventory = inventory_manager.get_character_inventory(owner_id)
+            if char_inventory and slot_index < len(char_inventory.slots):
+                slot = char_inventory.slots[slot_index]
+                if not slot.is_empty() and slot.item_instance.instance_id == instance_id:
+                    item_instance = slot.item_instance
+        
+        if not item_instance:
+            return ServiceResult(False, "アイテムが見つかりません")
+        
+        if item_instance.identified:
+            return ServiceResult(False, "このアイテムは既に鑑定済みです")
+        
         # 料金を支払う
         self.party.gold -= self.identify_cost
         
-        # TODO: 実際の鑑定処理
-        # 現在は仮の処理
-        identified_name = "力の指輪"
+        # 鑑定実行
+        old_display_name = self.item_manager.get_item_display_name(item_instance)
+        success = self.item_manager.identify_item(item_instance)
+        
+        if not success:
+            # 失敗した場合は返金
+            self.party.gold += self.identify_cost
+            return ServiceResult(False, "鑑定に失敗しました")
+        
+        # 鑑定後の表示名を取得
+        new_display_name = self.item_manager.get_item_display_name(item_instance)
+        item = self.item_manager.get_item_info(item_instance)
+        identified_name = item.get_name() if item else "不明なアイテム"
         
         return ServiceResult(
             success=True,
             message=f"鑑定完了！「{identified_name}」でした",
             result_type=ResultType.SUCCESS,
             data={
-                "item_id": item_id,
+                "item_id": item_instance.item_id,
+                "instance_id": item_instance.instance_id,
+                "old_name": old_display_name,
                 "identified_name": identified_name,
+                "new_display_name": new_display_name,
                 "remaining_gold": self.party.gold
             }
         )
@@ -524,20 +670,19 @@ class ShopService(FacilityService, ActionExecutorMixin):
         if not self.party:
             return False
         
+        # パーティインベントリをチェック
+        party_inventory = inventory_manager.get_party_inventory()
+        if party_inventory:
+            for _, item_instance in party_inventory.get_all_items():
+                return True  # アイテムがあれば売却可能
+        
+        # キャラクターインベントリをチェック
         for member in self.party.members:
-            # 新しいインベントリシステムと古いリストシステムの両方に対応
-            if hasattr(member, 'inventory'):
-                if hasattr(member.inventory, 'get_all_items'):
-                    # 新しいインベントリシステム
-                    try:
-                        for item in member.inventory.get_all_items():
-                            if not item.is_key_item():
-                                return True
-                    except Exception:
-                        pass
-                elif isinstance(member.inventory, list) and len(member.inventory) > 0:
-                    # 古いリストシステム
-                    return True
+            if member.is_alive():
+                char_inventory = inventory_manager.get_character_inventory(member.character_id)
+                if char_inventory:
+                    for _, item_instance in char_inventory.get_all_items():
+                        return True  # アイテムがあれば売却可能
         
         return False
     
@@ -546,6 +691,20 @@ class ShopService(FacilityService, ActionExecutorMixin):
         if not self.party:
             return False
         
-        # TODO: 実際の未鑑定アイテムチェック
-        # 現在は仮の実装
-        return True
+        # パーティインベントリをチェック
+        party_inventory = inventory_manager.get_party_inventory()
+        if party_inventory:
+            for _, item_instance in party_inventory.get_all_items():
+                if not item_instance.identified:
+                    return True
+        
+        # キャラクターインベントリをチェック
+        for member in self.party.members:
+            if member.is_alive():
+                char_inventory = inventory_manager.get_character_inventory(member.character_id)
+                if char_inventory:
+                    for _, item_instance in char_inventory.get_all_items():
+                        if not item_instance.identified:
+                            return True
+        
+        return False
