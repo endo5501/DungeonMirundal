@@ -109,8 +109,8 @@ class TestPartyFormationPanelBasic:
             with patch('pygame_gui.elements.UILabel') as mock_label, \
                  patch('pygame_gui.elements.UISelectionList') as mock_list, \
                  patch('pygame_gui.elements.UITextBox') as mock_text_box, \
-                 patch.object(PartyFormationPanel, '_create_button') as mock_create_button, \
-                 patch.object(PartyFormationPanel, '_load_party_data'):
+                 patch.object(panel, '_create_button') as mock_create_button, \
+                 patch.object(panel, '_load_party_data'):
                 
                 PartyFormationPanel._create_ui(panel)
                 
@@ -147,11 +147,11 @@ class TestPartyFormationPanelDataLoading:
             data={"characters": sample_available_characters}
         )
         
-        with patch.object(PartyFormationPanel, '_execute_service_action') as mock_action, \
-             patch.object(PartyFormationPanel, '_update_party_list') as mock_update_party, \
-             patch.object(PartyFormationPanel, '_update_available_list') as mock_update_available, \
-             patch.object(PartyFormationPanel, '_update_buttons') as mock_update_buttons, \
-             patch.object(PartyFormationPanel, '_update_party_info') as mock_update_info:
+        with patch.object(panel, '_execute_service_action') as mock_action, \
+             patch.object(panel, '_update_party_list') as mock_update_party, \
+             patch.object(panel, '_update_available_list') as mock_update_available, \
+             patch.object(panel, '_update_buttons') as mock_update_buttons, \
+             patch.object(panel, '_update_party_info') as mock_update_info:
             
             mock_action.side_effect = [party_result, available_result]
             
@@ -179,9 +179,9 @@ class TestPartyFormationPanelDataLoading:
         # 失敗結果のモック
         failure_result = ServiceResult(success=False)
         
-        with patch.object(PartyFormationPanel, '_execute_service_action', return_value=failure_result), \
-             patch.object(PartyFormationPanel, '_update_buttons'), \
-             patch.object(PartyFormationPanel, '_update_party_info'):
+        with patch.object(panel, '_execute_service_action', return_value=failure_result), \
+             patch.object(panel, '_update_buttons'), \
+             patch.object(panel, '_update_party_info'):
             
             PartyFormationPanel._load_party_data(panel)
             
@@ -340,12 +340,12 @@ class TestPartyFormationPanelMemberManagement:
         
         success_result = ServiceResult(success=True, message="追加しました")
         
-        with patch.object(PartyFormationPanel, '_execute_service_action', return_value=success_result), \
-             patch.object(PartyFormationPanel, '_update_party_list') as mock_update_party, \
-             patch.object(PartyFormationPanel, '_update_available_list') as mock_update_available, \
-             patch.object(PartyFormationPanel, '_update_party_info') as mock_update_info, \
-             patch.object(PartyFormationPanel, '_update_buttons') as mock_update_buttons, \
-             patch.object(PartyFormationPanel, '_show_message') as mock_show:
+        with patch.object(panel, '_execute_service_action', return_value=success_result), \
+             patch.object(panel, '_update_party_list') as mock_update_party, \
+             patch.object(panel, '_update_available_list') as mock_update_available, \
+             patch.object(panel, '_update_party_info') as mock_update_info, \
+             patch.object(panel, '_update_buttons') as mock_update_buttons, \
+             patch.object(panel, '_show_message') as mock_show:
             
             PartyFormationPanel._add_member(panel)
             
@@ -364,7 +364,7 @@ class TestPartyFormationPanelMemberManagement:
             mock_update_buttons.assert_called_once()
             
             # 成功メッセージが表示される
-            mock_show.assert_called_with(panel, "追加しました", "info")
+            mock_show.assert_called_with("追加しました", "info")
     
     def test_add_member_failure(self, sample_available_characters):
         """メンバー追加失敗"""
@@ -377,8 +377,8 @@ class TestPartyFormationPanelMemberManagement:
         
         failure_result = ServiceResult(success=False, message="追加に失敗")
         
-        with patch.object(PartyFormationPanel, '_execute_service_action', return_value=failure_result), \
-             patch.object(PartyFormationPanel, '_show_message') as mock_show:
+        with patch.object(panel, '_execute_service_action', return_value=failure_result), \
+             patch.object(panel, '_show_message') as mock_show:
             
             PartyFormationPanel._add_member(panel)
             
@@ -387,7 +387,7 @@ class TestPartyFormationPanelMemberManagement:
             assert len(panel.available_characters) == 2
             
             # エラーメッセージが表示される
-            mock_show.assert_called_with(panel, "追加に失敗", "error")
+            mock_show.assert_called_with("追加に失敗", "error")
     
     def test_add_member_no_selection(self):
         """選択なしでのメンバー追加"""
@@ -412,12 +412,12 @@ class TestPartyFormationPanelMemberManagement:
         
         success_result = ServiceResult(success=True, message="削除しました")
         
-        with patch.object(PartyFormationPanel, '_execute_service_action', return_value=success_result), \
-             patch.object(PartyFormationPanel, '_update_party_list'), \
-             patch.object(PartyFormationPanel, '_update_available_list'), \
-             patch.object(PartyFormationPanel, '_update_party_info'), \
-             patch.object(PartyFormationPanel, '_update_buttons'), \
-             patch.object(PartyFormationPanel, '_show_message') as mock_show:
+        with patch.object(panel, '_execute_service_action', return_value=success_result), \
+             patch.object(panel, '_update_party_list'), \
+             patch.object(panel, '_update_available_list'), \
+             patch.object(panel, '_update_party_info'), \
+             patch.object(panel, '_update_buttons'), \
+             patch.object(panel, '_show_message') as mock_show:
             
             PartyFormationPanel._remove_member(panel)
             
@@ -431,7 +431,7 @@ class TestPartyFormationPanelMemberManagement:
             assert panel.selected_party_index is None
             
             # 成功メッセージが表示される
-            mock_show.assert_called_with(panel, "削除しました", "info")
+            mock_show.assert_called_with("削除しました", "info")
     
     def test_move_member_up_success(self, sample_party_members):
         """メンバー上移動成功"""
@@ -444,9 +444,9 @@ class TestPartyFormationPanelMemberManagement:
         
         success_result = ServiceResult(success=True)
         
-        with patch.object(PartyFormationPanel, '_execute_service_action', return_value=success_result), \
-             patch.object(PartyFormationPanel, '_update_party_list'), \
-             patch.object(PartyFormationPanel, '_update_buttons'):
+        with patch.object(panel, '_execute_service_action', return_value=success_result), \
+             patch.object(panel, '_update_party_list'), \
+             patch.object(panel, '_update_buttons'):
             
             PartyFormationPanel._move_member_up(panel)
             
@@ -471,8 +471,8 @@ class TestPartyFormationPanelMemberManagement:
         
         failure_result = ServiceResult(success=False, message="移動に失敗")
         
-        with patch.object(PartyFormationPanel, '_execute_service_action', return_value=failure_result), \
-             patch.object(PartyFormationPanel, '_show_message') as mock_show:
+        with patch.object(panel, '_execute_service_action', return_value=failure_result), \
+             patch.object(panel, '_show_message') as mock_show:
             
             PartyFormationPanel._move_member_up(panel)
             
@@ -481,7 +481,7 @@ class TestPartyFormationPanelMemberManagement:
             assert current_order == original_order
             
             # エラーメッセージが表示される
-            mock_show.assert_called_with(panel, "移動に失敗", "error")
+            mock_show.assert_called_with("移動に失敗", "error")
     
     def test_move_member_down_success(self, sample_party_members):
         """メンバー下移動成功"""
@@ -494,9 +494,9 @@ class TestPartyFormationPanelMemberManagement:
         
         success_result = ServiceResult(success=True)
         
-        with patch.object(PartyFormationPanel, '_execute_service_action', return_value=success_result), \
-             patch.object(PartyFormationPanel, '_update_party_list'), \
-             patch.object(PartyFormationPanel, '_update_buttons'):
+        with patch.object(panel, '_execute_service_action', return_value=success_result), \
+             patch.object(panel, '_update_party_list'), \
+             patch.object(panel, '_update_buttons'):
             
             PartyFormationPanel._move_member_down(panel)
             
@@ -518,7 +518,7 @@ class TestPartyFormationPanelEventHandling:
         panel = Mock()
         panel.add_button = Mock()
         
-        with patch.object(PartyFormationPanel, '_add_member') as mock_add:
+        with patch.object(panel, '_add_member') as mock_add:
             result = PartyFormationPanel.handle_button_click(panel, panel.add_button)
             
             assert result is True
@@ -532,7 +532,7 @@ class TestPartyFormationPanelEventHandling:
         panel.remove_button = Mock()
         panel.add_button = Mock()
         
-        with patch.object(PartyFormationPanel, '_remove_member') as mock_remove:
+        with patch.object(panel, '_remove_member') as mock_remove:
             result = PartyFormationPanel.handle_button_click(panel, panel.remove_button)
             
             assert result is True
@@ -547,7 +547,7 @@ class TestPartyFormationPanelEventHandling:
         panel.add_button = Mock()
         panel.remove_button = Mock()
         
-        with patch.object(PartyFormationPanel, '_move_member_up') as mock_up:
+        with patch.object(panel, '_move_member_up') as mock_up:
             result = PartyFormationPanel.handle_button_click(panel, panel.up_button)
             
             assert result is True
@@ -563,7 +563,7 @@ class TestPartyFormationPanelEventHandling:
         panel.remove_button = Mock()
         panel.up_button = Mock()
         
-        with patch.object(PartyFormationPanel, '_move_member_down') as mock_down:
+        with patch.object(panel, '_move_member_down') as mock_down:
             result = PartyFormationPanel.handle_button_click(panel, panel.down_button)
             
             assert result is True
@@ -604,7 +604,7 @@ class TestPartyFormationPanelEventHandling:
         panel.party_list.get_single_selection.return_value = "1. 戦士アレン Lv5 戦士"
         panel.party_list.item_list = ["1. 戦士アレン Lv5 戦士", "2. 魔法使いベラ Lv3 魔法使い"]
         
-        with patch.object(PartyFormationPanel, '_update_buttons') as mock_update:
+        with patch.object(panel, '_update_buttons') as mock_update:
             result = PartyFormationPanel.handle_selection_list_changed(panel, event)
             
             assert result is True
@@ -636,7 +636,7 @@ class TestPartyFormationPanelEventHandling:
         panel.available_list.get_single_selection.return_value = "盗賊チャド Lv4 盗賊"
         panel.available_list.item_list = ["盗賊チャド Lv4 盗賊", "僧侶ダイアナ Lv2 僧侶"]
         
-        with patch.object(PartyFormationPanel, '_update_buttons') as mock_update:
+        with patch.object(panel, '_update_buttons') as mock_update:
             result = PartyFormationPanel.handle_selection_list_changed(panel, event)
             
             assert result is True
@@ -683,7 +683,7 @@ class TestPartyFormationPanelEventHandling:
         # 選択なし
         panel.party_list.get_single_selection.return_value = None
         
-        with patch.object(PartyFormationPanel, '_update_buttons') as mock_update:
+        with patch.object(panel, '_update_buttons') as mock_update:
             result = PartyFormationPanel.handle_selection_list_changed(panel, event)
             
             assert result is True
@@ -701,6 +701,6 @@ class TestPartyFormationPanelRefresh:
         
         panel = Mock()
         
-        with patch.object(PartyFormationPanel, '_load_party_data') as mock_load:
+        with patch.object(panel, '_load_party_data') as mock_load:
             PartyFormationPanel.refresh(panel)
             mock_load.assert_called_once()
