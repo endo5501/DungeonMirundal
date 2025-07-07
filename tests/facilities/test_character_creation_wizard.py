@@ -143,7 +143,7 @@ class TestCharacterCreationWizardNameStep:
         
         wizard = Mock()
         
-        with patch.object(CharacterCreationWizard, '_show_message'):
+        with patch.object(wizard, '_show_message'):
             result = CharacterCreationWizard._validate_name(wizard, {"name": "有効な名前"})
             assert result is True
     
@@ -153,11 +153,11 @@ class TestCharacterCreationWizardNameStep:
         
         wizard = Mock()
         
-        with patch.object(CharacterCreationWizard, '_show_message') as mock_show:
+        with patch.object(wizard, '_show_message') as mock_show:
             result = CharacterCreationWizard._validate_name(wizard, {"name": ""})
             
             assert result is False
-            mock_show.assert_called_with(wizard, "名前を入力してください", "warning")
+            mock_show.assert_called_with("名前を入力してください", "warning")
     
     def test_validate_name_too_long(self):
         """長すぎる名前の検証"""
@@ -166,11 +166,11 @@ class TestCharacterCreationWizardNameStep:
         wizard = Mock()
         long_name = "a" * 21  # 21文字
         
-        with patch.object(CharacterCreationWizard, '_show_message') as mock_show:
+        with patch.object(wizard, '_show_message') as mock_show:
             result = CharacterCreationWizard._validate_name(wizard, {"name": long_name})
             
             assert result is False
-            mock_show.assert_called_with(wizard, "名前は20文字以内で入力してください", "warning")
+            mock_show.assert_called_with("名前は20文字以内で入力してください", "warning")
 
 
 class TestCharacterCreationWizardRaceStep:
@@ -189,7 +189,7 @@ class TestCharacterCreationWizardRaceStep:
         panel = Mock()
         
         with patch('pygame_gui.elements.UIButton') as mock_button, \
-             patch.object(CharacterCreationWizard, '_highlight_button'):
+             patch.object(wizard, '_highlight_button'):
             
             CharacterCreationWizard._create_race_selection_content(wizard, panel)
             
@@ -212,7 +212,7 @@ class TestCharacterCreationWizardRaceStep:
         panel = Mock()
         
         with patch('pygame_gui.elements.UIButton') as mock_button, \
-             patch.object(CharacterCreationWizard, '_highlight_button') as mock_highlight:
+             patch.object(wizard, '_highlight_button') as mock_highlight:
             
             CharacterCreationWizard._create_race_selection_content(wizard, panel)
             
@@ -231,8 +231,8 @@ class TestCharacterCreationWizardRaceStep:
             "dwarf": Mock()
         }
         
-        with patch.object(CharacterCreationWizard, '_unhighlight_button') as mock_unhighlight, \
-             patch.object(CharacterCreationWizard, '_highlight_button') as mock_highlight:
+        with patch.object(wizard, '_unhighlight_button') as mock_unhighlight, \
+             patch.object(wizard, '_highlight_button') as mock_highlight:
             
             CharacterCreationWizard._select_race(wizard, "elf")
             
@@ -240,7 +240,7 @@ class TestCharacterCreationWizardRaceStep:
             assert mock_unhighlight.call_count == 3
             
             # 選択されたボタンがハイライトされる
-            mock_highlight.assert_called_with(wizard, wizard.race_buttons["elf"])
+            mock_highlight.assert_called_with(wizard.race_buttons["elf"])
             
             # データが設定される
             assert wizard.wizard_data["race"] == "elf"
@@ -251,7 +251,7 @@ class TestCharacterCreationWizardRaceStep:
         
         wizard = Mock()
         
-        with patch.object(CharacterCreationWizard, '_show_message'):
+        with patch.object(wizard, '_show_message'):
             result = CharacterCreationWizard._validate_race(wizard, {"race": "human"})
             assert result is True
     
@@ -261,11 +261,11 @@ class TestCharacterCreationWizardRaceStep:
         
         wizard = Mock()
         
-        with patch.object(CharacterCreationWizard, '_show_message') as mock_show:
+        with patch.object(wizard, '_show_message') as mock_show:
             result = CharacterCreationWizard._validate_race(wizard, {"race": None})
             
             assert result is False
-            mock_show.assert_called_with(wizard, "種族を選択してください", "warning")
+            mock_show.assert_called_with("種族を選択してください", "warning")
     
     def test_validate_race_invalid(self):
         """無効な種族の検証"""
@@ -273,11 +273,11 @@ class TestCharacterCreationWizardRaceStep:
         
         wizard = Mock()
         
-        with patch.object(CharacterCreationWizard, '_show_message') as mock_show:
+        with patch.object(wizard, '_show_message') as mock_show:
             result = CharacterCreationWizard._validate_race(wizard, {"race": "invalid_race"})
             
             assert result is False
-            mock_show.assert_called_with(wizard, "無効な種族です", "error")
+            mock_show.assert_called_with("無効な種族です", "error")
 
 
 class TestCharacterCreationWizardStatsStep:
@@ -323,12 +323,12 @@ class TestCharacterCreationWizardStatsStep:
         
         with patch('pygame_gui.elements.UIButton'), \
              patch('pygame_gui.elements.UILabel'), \
-             patch.object(CharacterCreationWizard, '_display_stats') as mock_display:
+             patch.object(wizard, '_display_stats') as mock_display:
             
             CharacterCreationWizard._create_stats_roll_content(wizard, panel)
             
             # 既存の能力値が表示される
-            mock_display.assert_called_with(wizard, {"strength": 15, "intelligence": 12})
+            mock_display.assert_called_with({"strength": 15, "intelligence": 12})
     
     def test_roll_stats(self):
         """能力値ロールの処理"""
@@ -338,7 +338,7 @@ class TestCharacterCreationWizardStatsStep:
         wizard.wizard_data = {}
         
         with patch('random.randint', return_value=4), \
-             patch.object(CharacterCreationWizard, '_display_stats') as mock_display:
+             patch.object(wizard, '_display_stats') as mock_display:
             
             CharacterCreationWizard._roll_stats(wizard)
             
@@ -353,7 +353,7 @@ class TestCharacterCreationWizardStatsStep:
             }
             
             assert wizard.wizard_data["stats"] == expected_stats
-            mock_display.assert_called_with(wizard, expected_stats)
+            mock_display.assert_called_with(expected_stats)
     
     def test_display_stats(self):
         """能力値表示の処理"""
@@ -391,7 +391,7 @@ class TestCharacterCreationWizardStatsStep:
             "luck": 11
         }
         
-        with patch.object(CharacterCreationWizard, '_show_message'):
+        with patch.object(wizard, '_show_message'):
             result = CharacterCreationWizard._validate_stats(wizard, {"stats": valid_stats})
             assert result is True
     
@@ -401,11 +401,11 @@ class TestCharacterCreationWizardStatsStep:
         
         wizard = Mock()
         
-        with patch.object(CharacterCreationWizard, '_show_message') as mock_show:
+        with patch.object(wizard, '_show_message') as mock_show:
             result = CharacterCreationWizard._validate_stats(wizard, {"stats": None})
             
             assert result is False
-            mock_show.assert_called_with(wizard, "能力値を決定してください", "warning")
+            mock_show.assert_called_with("能力値を決定してください", "warning")
     
     def test_validate_stats_incomplete(self):
         """不完全な能力値の検証"""
@@ -414,12 +414,12 @@ class TestCharacterCreationWizardStatsStep:
         wizard = Mock()
         incomplete_stats = {"strength": 15}  # 他の能力値が不足
         
-        with patch.object(CharacterCreationWizard, '_show_message') as mock_show:
+        with patch.object(wizard, '_show_message') as mock_show:
             result = CharacterCreationWizard._validate_stats(wizard, {"stats": incomplete_stats})
             
             assert result is False
             # 最初に見つからない能力値でエラー
-            mock_show.assert_called_with(wizard, "能力値が不完全です: intelligence", "error")
+            mock_show.assert_called_with("能力値が不完全です: intelligence", "error")
     
     def test_validate_stats_invalid_value(self):
         """無効な能力値の検証"""
@@ -435,11 +435,11 @@ class TestCharacterCreationWizardStatsStep:
             "luck": 11
         }
         
-        with patch.object(CharacterCreationWizard, '_show_message') as mock_show:
+        with patch.object(wizard, '_show_message') as mock_show:
             result = CharacterCreationWizard._validate_stats(wizard, {"stats": invalid_stats})
             
             assert result is False
-            mock_show.assert_called_with(wizard, "無効な能力値です: strength=25", "error")
+            mock_show.assert_called_with("無効な能力値です: strength=25", "error")
 
 
 class TestCharacterCreationWizardClassStep:
@@ -458,7 +458,7 @@ class TestCharacterCreationWizardClassStep:
         panel = Mock()
         
         with patch('pygame_gui.elements.UIButton') as mock_button, \
-             patch.object(CharacterCreationWizard, '_get_available_classes', return_value=["fighter", "mage"]):
+             patch.object(wizard, '_get_available_classes', return_value=["fighter", "mage"]):
             
             CharacterCreationWizard._create_class_selection_content(wizard, panel)
             
@@ -514,8 +514,8 @@ class TestCharacterCreationWizardClassStep:
             "mage": Mock()
         }
         
-        with patch.object(CharacterCreationWizard, '_unhighlight_button') as mock_unhighlight, \
-             patch.object(CharacterCreationWizard, '_highlight_button') as mock_highlight:
+        with patch.object(wizard, '_unhighlight_button') as mock_unhighlight, \
+             patch.object(wizard, '_highlight_button') as mock_highlight:
             
             CharacterCreationWizard._select_class(wizard, "mage")
             
@@ -523,7 +523,7 @@ class TestCharacterCreationWizardClassStep:
             assert mock_unhighlight.call_count == 2
             
             # 選択されたボタンがハイライトされる
-            mock_highlight.assert_called_with(wizard, wizard.class_buttons["mage"])
+            mock_highlight.assert_called_with(wizard.class_buttons["mage"])
             
             # データが設定される
             assert wizard.wizard_data["class"] == "mage"
@@ -534,8 +534,8 @@ class TestCharacterCreationWizardClassStep:
         
         wizard = Mock()
         
-        with patch.object(CharacterCreationWizard, '_get_available_classes', return_value=["fighter", "mage"]), \
-             patch.object(CharacterCreationWizard, '_show_message'):
+        with patch.object(wizard, '_get_available_classes', return_value=["fighter", "mage"]), \
+             patch.object(wizard, '_show_message'):
             
             result = CharacterCreationWizard._validate_class(wizard, {"class": "fighter"})
             assert result is True
@@ -546,11 +546,11 @@ class TestCharacterCreationWizardClassStep:
         
         wizard = Mock()
         
-        with patch.object(CharacterCreationWizard, '_show_message') as mock_show:
+        with patch.object(wizard, '_show_message') as mock_show:
             result = CharacterCreationWizard._validate_class(wizard, {"class": None})
             
             assert result is False
-            mock_show.assert_called_with(wizard, "職業を選択してください", "warning")
+            mock_show.assert_called_with("職業を選択してください", "warning")
     
     def test_validate_class_unavailable(self):
         """選択不可能な職業の検証"""
@@ -558,13 +558,13 @@ class TestCharacterCreationWizardClassStep:
         
         wizard = Mock()
         
-        with patch.object(CharacterCreationWizard, '_get_available_classes', return_value=["fighter"]), \
-             patch.object(CharacterCreationWizard, '_show_message') as mock_show:
+        with patch.object(wizard, '_get_available_classes', return_value=["fighter"]), \
+             patch.object(wizard, '_show_message') as mock_show:
             
             result = CharacterCreationWizard._validate_class(wizard, {"class": "ninja"})
             
             assert result is False
-            mock_show.assert_called_with(wizard, "その職業は選択できません", "error")
+            mock_show.assert_called_with("その職業は選択できません", "error")
 
 
 class TestCharacterCreationWizardConfirmStep:
@@ -581,7 +581,7 @@ class TestCharacterCreationWizardConfirmStep:
         panel = Mock()
         
         with patch('pygame_gui.elements.UITextBox') as mock_text_box, \
-             patch.object(CharacterCreationWizard, '_create_character_summary', return_value="サマリー"):
+             patch.object(wizard, '_create_character_summary', return_value="サマリー"):
             
             CharacterCreationWizard._create_confirmation_content(wizard, panel)
             
@@ -633,8 +633,11 @@ class TestCharacterCreationWizardButtonHandling:
         
         button = wizard.roll_button
         
-        with patch.object(CharacterCreationWizard.__bases__[0], 'handle_button_click', return_value=False), \
-             patch.object(CharacterCreationWizard, '_roll_stats') as mock_roll:
+        # Mock the super() call directly
+        with patch('builtins.super') as mock_super, \
+             patch.object(wizard, '_roll_stats') as mock_roll:
+            
+            mock_super.return_value.handle_button_click.return_value = False
             
             result = CharacterCreationWizard.handle_button_click(wizard, button)
             
@@ -650,13 +653,16 @@ class TestCharacterCreationWizardButtonHandling:
         wizard.race_buttons = {"elf": race_button}
         wizard.class_buttons = {}
         
-        with patch.object(CharacterCreationWizard.__bases__[0], 'handle_button_click', return_value=False), \
-             patch.object(CharacterCreationWizard, '_select_race') as mock_select:
+        # Mock the super() call directly
+        with patch('builtins.super') as mock_super, \
+             patch.object(wizard, '_select_race') as mock_select:
+            
+            mock_super.return_value.handle_button_click.return_value = False
             
             result = CharacterCreationWizard.handle_button_click(wizard, race_button)
             
             assert result is True
-            mock_select.assert_called_with(wizard, "elf")
+            mock_select.assert_called_with("elf")
     
     def test_handle_button_click_class_button(self):
         """職業ボタンのクリック処理"""
@@ -667,13 +673,16 @@ class TestCharacterCreationWizardButtonHandling:
         wizard.race_buttons = {}
         wizard.class_buttons = {"mage": class_button}
         
-        with patch.object(CharacterCreationWizard.__bases__[0], 'handle_button_click', return_value=False), \
-             patch.object(CharacterCreationWizard, '_select_class') as mock_select:
+        # Mock the super() call directly
+        with patch('builtins.super') as mock_super, \
+             patch.object(wizard, '_select_class') as mock_select:
+            
+            mock_super.return_value.handle_button_click.return_value = False
             
             result = CharacterCreationWizard.handle_button_click(wizard, class_button)
             
             assert result is True
-            mock_select.assert_called_with(wizard, "mage")
+            mock_select.assert_called_with("mage")
     
     def test_handle_button_click_parent_handled(self):
         """親クラスで処理された場合"""
@@ -684,7 +693,10 @@ class TestCharacterCreationWizardButtonHandling:
         wizard.class_buttons = {}
         button = Mock()
         
-        with patch.object(CharacterCreationWizard.__bases__[0], 'handle_button_click', return_value=True):
+        # Mock the super() call directly
+        with patch('builtins.super') as mock_super:
+            mock_super.return_value.handle_button_click.return_value = True
+            
             result = CharacterCreationWizard.handle_button_click(wizard, button)
             
             assert result is True
@@ -700,7 +712,10 @@ class TestCharacterCreationWizardButtonHandling:
         
         unknown_button = Mock()
         
-        with patch.object(CharacterCreationWizard.__bases__[0], 'handle_button_click', return_value=False):
+        # Mock the super() call directly
+        with patch('builtins.super') as mock_super:
+            mock_super.return_value.handle_button_click.return_value = False
+            
             result = CharacterCreationWizard.handle_button_click(wizard, unknown_button)
             
             assert result is False
