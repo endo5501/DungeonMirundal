@@ -92,6 +92,9 @@ class TestWizardServicePanelBasic:
         with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None), \
              patch.object(WizardServicePanel, '_create_ui'):
             panel = WizardServicePanel(rect, parent, controller, service_id, ui_manager)
+            # Manually set required attributes since parent init is mocked
+            panel.service_id = service_id
+            panel.steps = []
             panel._load_wizard_steps()
             
             # キャラクター作成のステップが読み込まれる
@@ -110,6 +113,9 @@ class TestWizardServicePanelBasic:
         with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None), \
              patch.object(WizardServicePanel, '_create_ui'):
             panel = WizardServicePanel(rect, parent, controller, service_id, ui_manager)
+            # Manually set required attributes since parent init is mocked
+            panel.service_id = service_id
+            panel.steps = []
             panel._load_wizard_steps()
             
             # デフォルトのステップが読み込まれる
@@ -151,9 +157,13 @@ class TestWizardServicePanelUICreation:
         with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None), \
              patch.object(WizardServicePanel, '_create_ui'):
             panel = WizardServicePanel(rect, parent, controller, service_id, ui_manager)
+            # Manually set all required attributes since parent init is mocked
             panel.container = Mock()
+            panel.rect = pygame.Rect(0, 0, 600, 500)
+            panel.ui_manager = ui_manager
+            panel.ui_elements = []
             panel.steps = sample_character_creation_steps
-            panel.current_step_index = 1  # 2番目のステップが現在
+            panel.current_step_index = 1
             
             with patch('pygame_gui.elements.UIPanel') as mock_panel, \
                  patch('pygame_gui.elements.UILabel') as mock_label:
@@ -175,16 +185,20 @@ class TestWizardServicePanelUICreation:
         with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None), \
              patch.object(WizardServicePanel, '_create_ui'):
             panel = WizardServicePanel(rect, parent, controller, service_id, ui_manager)
+            # Manually set all required attributes since parent init is mocked
             panel.container = Mock()
+            panel.rect = pygame.Rect(0, 0, 600, 500)
+            panel.ui_manager = ui_manager
+            panel.ui_elements = []
+            panel._create_button = Mock(return_value=Mock())  # Mock button creation
             
             with patch('pygame_gui.elements.UIPanel'), \
-                 patch.object(WizardServicePanel, '_create_button') as mock_create_button, \
-                 patch.object(WizardServicePanel, '_update_navigation_buttons') as mock_update:
+                 patch.object(panel, '_update_navigation_buttons') as mock_update:
                 
                 panel._create_navigation_buttons(50)
                 
                 # 3つのボタンが作成される（キャンセル、戻る、次へ）
-                assert mock_create_button.call_count == 3
+                assert panel._create_button.call_count == 3
                 
                 # ボタン状態が更新される
                 mock_update.assert_called_once()
@@ -255,10 +269,12 @@ class TestWizardServicePanelNavigation:
         panel.steps = sample_character_creation_steps
         panel.current_step_index = 0
         panel.step_panels = {"name": Mock()}
+        # Set required attributes for _show_step
+        panel.step_panels["name"].hide = Mock()
         
-        with patch.object(WizardServicePanel, '_create_step_panel') as mock_create, \
-             patch.object(WizardServicePanel, '_update_step_indicator') as mock_indicator, \
-             patch.object(WizardServicePanel, '_update_navigation_buttons') as mock_nav:
+        with patch.object(panel, '_create_step_panel') as mock_create, \
+             patch.object(panel, '_update_step_indicator') as mock_indicator, \
+             patch.object(panel, '_update_navigation_buttons') as mock_nav:
             
             WizardServicePanel._show_step(panel, 1)
             
@@ -300,12 +316,13 @@ class TestWizardServicePanelStepContent:
         panel.content_area.relative_rect = pygame.Rect(0, 0, 400, 300)
         panel.ui_elements = []
         panel.step_panels = {}
+        panel.container = Mock()  # Add missing container
         
         step = MockWizardStep("test", "テストステップ", "テスト用のステップです")
         
         with patch('pygame_gui.elements.UIPanel') as mock_panel, \
              patch('pygame_gui.elements.UILabel') as mock_label, \
-             patch.object(WizardServicePanel, '_create_step_content') as mock_content:
+             patch.object(panel, '_create_step_content') as mock_content:
             
             WizardServicePanel._create_step_panel(panel, step)
             
@@ -331,11 +348,11 @@ class TestWizardServicePanelStepContent:
         
         step = MockWizardStep("name", "名前入力")
         
-        with patch.object(WizardServicePanel, '_create_name_input_content') as mock_name:
+        with patch.object(panel, '_create_name_input_content') as mock_name:
             WizardServicePanel._create_step_content(panel, step, step_panel)
             
             # 名前入力コンテンツが作成される
-            mock_name.assert_called_with(panel, step_panel)
+            mock_name.assert_called_once_with(step_panel)
     
     def test_create_step_content_other_step(self, mock_ui_setup):
         """その他のステップのコンテンツ作成"""
@@ -361,6 +378,8 @@ class TestWizardServicePanelStepContent:
         
         panel = Mock()
         panel.ui_manager = Mock()
+        panel.ui_elements = []
+        panel.wizard_data = {}  # Add wizard_data attribute
         step_panel = Mock()
         
         with patch('pygame_gui.elements.UITextEntryLine') as mock_entry:
