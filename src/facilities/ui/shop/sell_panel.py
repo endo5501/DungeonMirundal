@@ -19,7 +19,8 @@ class SellPanel(ServicePanel):
     def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
-        super().__init__(rect, parent, controller, "sell", ui_manager)
+        # ServicePanelを継承しているため、先にデータ属性を全て初期化する必要がある
+        # （super().__init__内で_create_ui()が呼ばれるため）
         
         # UI要素
         self.owner_list: Optional[pygame_gui.elements.UISelectionList] = None
@@ -29,8 +30,10 @@ class SellPanel(ServicePanel):
         self.sell_button: Optional[pygame_gui.elements.UIButton] = None
         self.gold_label: Optional[pygame_gui.elements.UILabel] = None
         self.sell_info_label: Optional[pygame_gui.elements.UILabel] = None
+        self.sell_price_label: Optional[pygame_gui.elements.UILabel] = None
+        self.owner_ids: List[str] = []
         
-        # データ
+        # データ（_create_ui()で参照されるため先に初期化）
         self.sellable_items: List[Dict[str, Any]] = []
         self.items_by_owner: Dict[str, List[Dict[str, Any]]] = {}
         self.selected_owner: Optional[str] = None
@@ -38,7 +41,16 @@ class SellPanel(ServicePanel):
         self.displayed_items: List[Dict[str, Any]] = []
         self.sell_rate: float = 0.5
         
+        # ServicePanelの初期化（この中で_create_ui()が呼ばれる）
+        super().__init__(rect, parent, controller, "sell", ui_manager)
+        
         logger.info("SellPanel initialized")
+    
+    def set_mode(self, mode: str):
+        """パネルモードを設定（identify用）"""
+        if mode == "identify":
+            # 鑑定モード用の設定
+            pass
     
     def _create_ui(self) -> None:
         """UI要素を作成"""
@@ -56,6 +68,9 @@ class SellPanel(ServicePanel):
         
         # 初期データを読み込み
         self._load_sellable_items()
+        
+        # 初期状態の詳細表示を更新
+        self._update_detail_view()
     
     def _create_header(self) -> None:
         """ヘッダーを作成"""
@@ -286,7 +301,11 @@ class SellPanel(ServicePanel):
             return
         
         if not self.selected_item:
-            self.detail_box.html_text = "アイテムを選択してください"
+            # アイテムがない場合、状況に応じたメッセージを表示
+            if not self.sellable_items:
+                self.detail_box.html_text = "売却可能なアイテムがありません。<br><br>アイテムを取得してからお越しください。"
+            else:
+                self.detail_box.html_text = "アイテムを選択してください"
             self.detail_box.rebuild()
             return
         

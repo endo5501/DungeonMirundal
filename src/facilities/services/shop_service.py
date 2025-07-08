@@ -41,6 +41,9 @@ class ShopService(FacilityService, ActionExecutorMixin):
         self.game = None
         self.item_manager = item_manager
         
+        # コントローラー参照（後で設定される）
+        self._controller = None
+        
         # 商店の在庫
         self._shop_inventory: Dict[str, Dict[str, Any]] = {}
         self._last_stock_refresh: Optional[datetime] = None
@@ -53,6 +56,10 @@ class ShopService(FacilityService, ActionExecutorMixin):
         self.identify_cost = self.item_manager.get_identification_cost()
         
         logger.info("ShopService initialized")
+    
+    def set_controller(self, controller):
+        """コントローラーを設定"""
+        self._controller = controller
     
     def get_menu_items(self) -> List[MenuItem]:
         """メニュー項目を取得"""
@@ -708,3 +715,46 @@ class ShopService(FacilityService, ActionExecutorMixin):
                             return True
         
         return False
+    
+    def create_service_panel(self, service_id: str, rect, parent, ui_manager):
+        """商店専用のサービスパネルを作成"""
+        logger.info(f"[DEBUG] ShopService.create_service_panel called: service_id={service_id}")
+        try:
+            if service_id == "buy":
+                # 購入パネル
+                from src.facilities.ui.shop.buy_panel import BuyPanel
+                return BuyPanel(
+                    rect=rect,
+                    parent=parent,
+                    controller=self._controller,
+                    ui_manager=ui_manager
+                )
+                
+            elif service_id == "sell":
+                # 売却パネル
+                from src.facilities.ui.shop.sell_panel import SellPanel
+                return SellPanel(
+                    rect=rect,
+                    parent=parent,
+                    controller=self._controller,
+                    ui_manager=ui_manager
+                )
+                
+            elif service_id == "identify":
+                # 鑑定パネル（売却パネルを鑑定モードで使用）
+                from src.facilities.ui.shop.sell_panel import SellPanel
+                panel = SellPanel(
+                    rect=rect,
+                    parent=parent,
+                    controller=self._controller,
+                    ui_manager=ui_manager
+                )
+                # 鑑定モードに設定
+                panel.set_mode("identify")
+                return panel
+                
+        except ImportError as e:
+            logger.error(f"Failed to import shop panel: {e}")
+            
+        # フォールバック：Noneを返してgenericパネルを使用
+        return None

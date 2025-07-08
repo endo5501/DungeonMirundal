@@ -239,11 +239,18 @@ class FacilityWindow(Window):
         
         try:
             # サービス自体に専用パネル作成を委任
-            custom_panel = self.controller.service.create_service_panel(
-                service_id, content_rect, self.main_panel, self.ui_manager
-            )
-            if custom_panel:
-                return custom_panel
+            if hasattr(self.controller.service, 'create_service_panel'):
+                logger.info(f"[DEBUG] Calling create_service_panel for {service_id}")
+                custom_panel = self.controller.service.create_service_panel(
+                    service_id, content_rect, self.main_panel, self.ui_manager
+                )
+                if custom_panel:
+                    logger.info(f"[DEBUG] Custom panel created for {service_id}: {type(custom_panel)}")
+                    return custom_panel
+                else:
+                    logger.info(f"[DEBUG] create_service_panel returned None for {service_id}")
+            else:
+                logger.info(f"[DEBUG] Service {self.controller.service.__class__.__name__} has no create_service_panel method")
             
             # 汎用サービスタイプに応じてパネルを作成
             if menu_item.service_type == "wizard":
@@ -259,8 +266,8 @@ class FacilityWindow(Window):
                 # ServicePanelは抽象クラスなので具体的な実装を作成
                 return self._create_generic_service_panel(content_rect, service_id, menu_item)
                 
-        except ImportError as e:
-            logger.error(f"Failed to import service panel: {e}")
+        except Exception as e:
+            logger.error(f"Exception in create_service_panel for {service_id}: {e}", exc_info=True)
             # フォールバック：シンプルなパネル
             return self._create_fallback_panel(content_rect, service_id)
     

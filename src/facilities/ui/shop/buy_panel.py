@@ -19,22 +19,28 @@ class BuyPanel(ServicePanel):
     def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
-        super().__init__(rect, parent, controller, "buy", ui_manager)
+        # ServicePanelを継承しているため、先にデータ属性を全て初期化する必要がある
+        # （super().__init__内で_create_ui()が呼ばれるため）
         
         # UI要素
         self.category_buttons: Dict[str, pygame_gui.elements.UIButton] = {}
         self.item_list: Optional[pygame_gui.elements.UISelectionList] = None
         self.detail_panel = None
+        self.detail_box = None
         self.quantity_input: Optional[pygame_gui.elements.UITextEntryLine] = None
         self.buy_button: Optional[pygame_gui.elements.UIButton] = None
         self.gold_label: Optional[pygame_gui.elements.UILabel] = None
+        self.total_label: Optional[pygame_gui.elements.UILabel] = None
         
-        # データ
+        # データ（_create_ui()で参照される可能性があるため先に初期化）
         self.shop_items: Dict[str, Dict[str, Any]] = {}
         self.selected_category: Optional[str] = None
         self.selected_item: Optional[Dict[str, Any]] = None
         self.selected_item_id: Optional[str] = None
         self.displayed_items: List[Tuple[str, Dict[str, Any]]] = []
+        
+        # ServicePanelの初期化（この中で_create_ui()が呼ばれる）
+        super().__init__(rect, parent, controller, "buy", ui_manager)
         
         logger.info("BuyPanel initialized")
     
