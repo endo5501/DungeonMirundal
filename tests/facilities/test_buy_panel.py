@@ -235,7 +235,8 @@ class TestBuyPanelDataLoading:
         )
         
         with patch.object(BuyPanel, '_execute_service_action', return_value=result), \
-             patch.object(BuyPanel, '_update_gold_display') as mock_update:
+             patch.object(BuyPanel, '_update_gold_display') as mock_update, \
+             patch.object(BuyPanel, '_select_category') as mock_select:
             
             BuyPanel._load_shop_data(panel)
             
@@ -244,6 +245,9 @@ class TestBuyPanelDataLoading:
             
             # 所持金表示が更新される
             mock_update.assert_called_with(panel, 2000)
+            
+            # 最初のカテゴリが選択される
+            mock_select.assert_called_with(panel, "weapons")
     
     def test_load_shop_data_failure(self, mock_controller, sample_service_result):
         """商店データの読み込み失敗"""

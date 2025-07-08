@@ -366,7 +366,7 @@ class SellPanel(ServicePanel):
             self._load_sellable_items()
             
             # 所持金を更新
-            if result.data and "new_gold" in result.data:
+            if result.data and isinstance(result.data, dict) and "new_gold" in result.data:
                 self._update_gold_display(result.data["new_gold"])
         else:
             self._show_message(result.message, "error")

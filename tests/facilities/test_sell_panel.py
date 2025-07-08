@@ -147,12 +147,13 @@ class TestSellPanelUICreation:
         panel.ui_manager = Mock()
         panel.container = Mock()
         panel.ui_elements = []
+        panel.sell_rate = 0.5  # 売却レートを追加
         
         with patch('pygame_gui.elements.UILabel') as mock_label:
             SellPanel._create_header(panel)
             
-            # タイトルと所持金ラベルが作成される
-            assert mock_label.call_count == 2
+            # タイトル、所持金、売却レートの3つのラベルが作成される
+            assert mock_label.call_count == 3
     
     def test_create_lists(self):
         """リストの作成"""
@@ -205,6 +206,7 @@ class TestSellPanelDataLoading:
         panel = Mock()
         panel.controller = mock_controller
         panel.sell_rate = 0.5
+        panel.sell_info_label = Mock()  # 売却レートラベルを追加
         
         # サービス結果のモック
         result = sample_service_result(
@@ -239,6 +241,8 @@ class TestSellPanelDataLoading:
         panel = Mock()
         panel.controller = mock_controller
         panel.sellable_items = []
+        panel.sell_rate = 0.5  # 売却レートを初期化
+        panel.sell_info_label = Mock()  # 売却レートラベルを追加
         
         # 失敗結果
         result = sample_service_result(success=False)
@@ -309,8 +313,8 @@ class TestSellPanelOwnerSelection:
         
         # アイテムリストが設定される
         expected_items = [
-            "古い剣 x1 (200G)",
-            "革の鎧 x1 (150G)"
+            "古い剣 (200 G)",
+            "革の鎧 (150 G)"
         ]
         panel.item_list.set_item_list.assert_called_with(expected_items)
         
@@ -575,6 +579,7 @@ class TestSellPanelUIUpdates:
         panel = Mock()
         panel.items_by_owner = {"戦士アレン": [], "魔法使いベラ": []}
         panel.owner_list = Mock()
+        panel.sellable_items = []  # 空のリストを設定
         
         SellPanel._update_owner_list(panel)
         

@@ -58,7 +58,8 @@ class TestWizardServicePanelBasic:
         
         rect, parent, controller, service_id, ui_manager = mock_ui_setup
         
-        with patch.object(WizardServicePanel, '_create_ui'):
+        with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None), \
+             patch.object(WizardServicePanel, '_create_ui'):
             panel = WizardServicePanel(rect, parent, controller, service_id, ui_manager)
             
             # 基本属性の確認
@@ -81,7 +82,8 @@ class TestWizardServicePanelBasic:
         
         rect, parent, controller, service_id, ui_manager = mock_ui_setup
         
-        with patch.object(WizardServicePanel, '_create_ui'):
+        with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None), \
+             patch.object(WizardServicePanel, '_create_ui'):
             panel = WizardServicePanel(rect, parent, controller, service_id, ui_manager)
             panel._load_wizard_steps()
             
@@ -98,7 +100,8 @@ class TestWizardServicePanelBasic:
         rect, parent, controller, service_id, ui_manager = mock_ui_setup
         service_id = "unknown_service"  # 未知のサービス
         
-        with patch.object(WizardServicePanel, '_create_ui'):
+        with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None), \
+             patch.object(WizardServicePanel, '_create_ui'):
             panel = WizardServicePanel(rect, parent, controller, service_id, ui_manager)
             panel._load_wizard_steps()
             
@@ -138,7 +141,8 @@ class TestWizardServicePanelUICreation:
         
         rect, parent, controller, service_id, ui_manager = mock_ui_setup
         
-        with patch.object(WizardServicePanel, '_create_ui'):
+        with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None), \
+             patch.object(WizardServicePanel, '_create_ui'):
             panel = WizardServicePanel(rect, parent, controller, service_id, ui_manager)
             panel.container = Mock()
             panel.steps = sample_character_creation_steps
@@ -161,7 +165,8 @@ class TestWizardServicePanelUICreation:
         
         rect, parent, controller, service_id, ui_manager = mock_ui_setup
         
-        with patch.object(WizardServicePanel, '_create_ui'):
+        with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None), \
+             patch.object(WizardServicePanel, '_create_ui'):
             panel = WizardServicePanel(rect, parent, controller, service_id, ui_manager)
             panel.container = Mock()
             
@@ -384,7 +389,8 @@ class TestWizardServicePanelActions:
         
         rect, parent, controller, service_id, ui_manager = mock_ui_setup
         
-        with patch.object(WizardServicePanel, '_create_ui'):
+        with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None), \
+             patch.object(WizardServicePanel, '_create_ui'):
             panel = WizardServicePanel(rect, parent, controller, service_id, ui_manager)
             
             # 初期状態
@@ -404,7 +410,8 @@ class TestWizardServicePanelActions:
         
         rect, parent, controller, service_id, ui_manager = mock_ui_setup
         
-        with patch.object(WizardServicePanel, '_create_ui'):
+        with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None), \
+             patch.object(WizardServicePanel, '_create_ui'):
             panel = WizardServicePanel(rect, parent, controller, service_id, ui_manager)
             panel.steps = sample_character_creation_steps
             
