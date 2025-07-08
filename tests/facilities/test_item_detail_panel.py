@@ -178,18 +178,13 @@ class TestItemDetailPanelDisplay:
         from src.facilities.ui.shop.item_detail_panel import ItemDetailPanel
         
         panel = Mock()
-        panel.name_label = Mock()
-        panel.description_box = Mock()
-        panel.stats_box = Mock()
         
-        ItemDetailPanel.set_item(panel, None)
-        
-        # 全て空になる (実際の実装ではclearメソッドが呼ばれる)
-        panel.name_label.set_text.assert_called_with("")
-        assert panel.description_box.html_text == ""
-        assert panel.stats_box.html_text == ""
-        panel.description_box.rebuild.assert_called_once()
-        panel.stats_box.rebuild.assert_called_once()
+        # clearメソッドをモック
+        with patch.object(panel, 'clear') as mock_clear:
+            ItemDetailPanel.set_item(panel, None)
+            
+            # clearメソッドが呼ばれる
+            mock_clear.assert_called_once()
     
     def test_display_item_minimal_data(self):
         """最小限のデータでの表示"""
@@ -217,59 +212,115 @@ class TestItemDetailPanelDisplay:
 class TestItemDetailPanelUtilities:
     """ItemDetailPanelのユーティリティ機能テスト"""
     
-    def test_format_weapon_stats(self, sample_item_data):
-        """武器統計情報のフォーマット"""
+    def test_build_stats_text_weapon(self, sample_item_data):
+        """武器統計情報のテキスト構築"""
         from src.facilities.ui.shop.item_detail_panel import ItemDetailPanel
         
+        panel = Mock()
         weapon_data = sample_item_data["weapon"]
         
-        # This method doesn't exist in actual implementation, skip this test
-        pytest.skip("_format_weapon_stats method not implemented")
+        with patch.object(panel, '_get_stat_name', return_value="攻撃力") as mock_stat_name:
+            result = ItemDetailPanel._build_stats_text(panel, weapon_data)
+            
+            # 基本構造をチェック
+            assert "<b>効果:</b><br>" in result
+            assert "攻撃力" in result
+            assert str(weapon_data["price"]) in result
+            mock_stat_name.assert_called()
     
-    def test_format_armor_stats(self, sample_item_data):
-        """防具統計情報のフォーマット"""
+    def test_build_stats_text_armor(self, sample_item_data):
+        """防具統計情報のテキスト構築"""
         from src.facilities.ui.shop.item_detail_panel import ItemDetailPanel
         
+        panel = Mock()
         armor_data = sample_item_data["armor"]
         
-        # This method doesn't exist in actual implementation, skip this test
-        pytest.skip("_format_armor_stats method not implemented")
+        with patch.object(panel, '_get_stat_name', return_value="防御力") as mock_stat_name:
+            result = ItemDetailPanel._build_stats_text(panel, armor_data)
+            
+            # 基本構造をチェック
+            assert "<b>効果:</b><br>" in result
+            assert "防御力" in result
+            assert str(armor_data["price"]) in result
+            mock_stat_name.assert_called()
     
-    def test_format_consumable_stats(self, sample_item_data):
-        """消耗品統計情報のフォーマット"""
+    def test_build_stats_text_consumable(self, sample_item_data):
+        """消耗品統計情報のテキスト構築"""
         from src.facilities.ui.shop.item_detail_panel import ItemDetailPanel
         
-        consumable_data = sample_item_data["consumable"]
+        panel = Mock()
+        # サンプルデータのconsumableは"effects"フィールドを持つが、実装は"effect"を期待
+        # テスト用に適切なデータ構造を作成
+        consumable_data = {
+            "type": "consumable",
+            "price": 100,
+            "effect": {
+                "hp_restore": 50
+            }
+        }
         
-        # This method doesn't exist in actual implementation, skip this test
-        pytest.skip("_format_consumable_stats method not implemented")
+        with patch.object(panel, '_get_effect_text', return_value="HPを50回復") as mock_effect_text:
+            result = ItemDetailPanel._build_stats_text(panel, consumable_data)
+            
+            # 基本構造をチェック
+            assert "<b>効果:</b><br>" in result
+            assert "HPを50回復" in result
+            assert str(consumable_data["price"]) in result
+            mock_effect_text.assert_called()
     
-    def test_format_stats_missing_data(self):
-        """データが不足している場合の統計情報フォーマット"""
+    def test_build_stats_text_missing_data(self):
+        """データが不足している場合の統計情報テキスト構築"""
         from src.facilities.ui.shop.item_detail_panel import ItemDetailPanel
+        
+        panel = Mock()
         
         # 必要なフィールドが不足しているデータ
         incomplete_weapon = {
             "type": "weapon",
-            "stats": {"attack": 10}  # 他のフィールドなし
+            "stats": {"attack": 10}  # priceなど他のフィールドなし
         }
         
-        # This method doesn't exist in actual implementation, skip this test
-        pytest.skip("_format_weapon_stats method not implemented")
+        with patch.object(panel, '_get_stat_name', return_value="攻撃力"):
+            result = ItemDetailPanel._build_stats_text(panel, incomplete_weapon)
+            
+            # 基本構造は保たれる
+            assert "<b>効果:</b><br>" in result
+            assert "攻撃力" in result
+            # priceがない場合は価格情報は含まれない
+            assert "価格:" not in result
     
-    def test_get_rarity_color(self):
-        """レアリティカラーの取得"""
+    def test_get_stat_name(self):
+        """ステータス名の取得"""
         from src.facilities.ui.shop.item_detail_panel import ItemDetailPanel
         
-        # This method doesn't exist in actual implementation, skip this test
-        pytest.skip("_get_rarity_color method not implemented")
+        panel = Mock()
+        
+        # 既知のステータス名
+        assert ItemDetailPanel._get_stat_name(panel, "attack") == "攻撃力"
+        assert ItemDetailPanel._get_stat_name(panel, "defense") == "防御力"
+        assert ItemDetailPanel._get_stat_name(panel, "magic") == "魔力"
+        assert ItemDetailPanel._get_stat_name(panel, "speed") == "素早さ"
+        
+        # 未知のステータス名（そのまま返される）
+        assert ItemDetailPanel._get_stat_name(panel, "unknown_stat") == "unknown_stat"
     
-    def test_format_price_display(self):
-        """価格表示のフォーマット"""
+    def test_get_effect_text(self):
+        """効果テキストの取得"""
         from src.facilities.ui.shop.item_detail_panel import ItemDetailPanel
         
-        # This method doesn't exist in actual implementation, skip this test
-        pytest.skip("_format_price method not implemented")
+        panel = Mock()
+        
+        # HP回復効果
+        assert ItemDetailPanel._get_effect_text(panel, "hp_restore", 50) == "HPを50回復"
+        
+        # MP回復効果
+        assert ItemDetailPanel._get_effect_text(panel, "mp_restore", 30) == "MPを30回復"
+        
+        # 毒治療効果
+        assert ItemDetailPanel._get_effect_text(panel, "cure_poison", True) == "毒を治療"
+        
+        # 未知の効果（デフォルトフォーマット）
+        assert ItemDetailPanel._get_effect_text(panel, "unknown_effect", 10) == "unknown_effect: 10"
 
 
 class TestItemDetailPanelVisibility:
