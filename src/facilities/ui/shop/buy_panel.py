@@ -2,7 +2,7 @@
 
 import pygame
 import pygame_gui
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 import logging
 from ..service_panel import ServicePanel
 from ...core.service_result import ServiceResult, ResultType
@@ -24,7 +24,7 @@ class BuyPanel(ServicePanel):
         # UI要素
         self.category_buttons: Dict[str, pygame_gui.elements.UIButton] = {}
         self.item_list: Optional[pygame_gui.elements.UISelectionList] = None
-        self.detail_panel: Optional[ItemDetailPanel] = None
+        self.detail_panel = None
         self.quantity_input: Optional[pygame_gui.elements.UITextEntryLine] = None
         self.buy_button: Optional[pygame_gui.elements.UIButton] = None
         self.gold_label: Optional[pygame_gui.elements.UILabel] = None

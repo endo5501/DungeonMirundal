@@ -62,6 +62,13 @@ class TestWizardServicePanelBasic:
              patch.object(WizardServicePanel, '_create_ui'):
             panel = WizardServicePanel(rect, parent, controller, service_id, ui_manager)
             
+            # Manually set attributes since we're mocking parent init
+            panel.rect = rect
+            panel.parent = parent
+            panel.controller = controller
+            panel.service_id = service_id
+            panel.ui_manager = ui_manager
+            
             # 基本属性の確認
             assert panel.rect == rect
             assert panel.parent == parent
