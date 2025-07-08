@@ -53,17 +53,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - テストが通過してからコミット
 - 修正完了後はまとめてコミット（コミットメッセージは英語）
 
-## 開発計画
-- **総開発期間**: 14週間（6フェーズ）
-- **Phase 1**: 基盤構築（Pygame環境）
-- **Phase 2**: コア機能（キャラクター・UI）
-- **Phase 3**: 地上部（施設システム）
-- **Phase 4**: 装備・魔法システム
-- **Phase 5**: ダンジョン（Wizardry風1人称探索・戦闘）
-- **Phase 6**: 統合・最適化
-
-各フェーズの詳細TODO: `docs/phase*_todos.md`
-不具合: `docs/bugs.md`
+詳細TODO: `docs/todos/*.md`
 
 ## 作業後のTODO管理
 - 作業後、TODOファイルを更新してください
