@@ -81,5 +81,33 @@
             "name": "noto",
             "size": "16"
         }
+    },
+    "text_entry_line": {
+        "colours": {
+            "normal_text": "#000000",
+            "normal_bg": "#FFFFFF",
+            "selected_bg": "#3390FF",
+            "selected_text": "#FFFFFF",
+            "normal_border": "#DDDDDD"
+        },
+        "font": {
+            "name": "noto",
+            "size": "14",
+            "regular_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "bold_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
+        }
+    },
+    "text_box": {
+        "colours": {
+            "normal_text": "#FFFFFF",
+            "normal_bg": "#25292e",
+            "normal_border": "#DDDDDD"
+        },
+        "font": {
+            "name": "noto",
+            "size": "14",
+            "regular_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "bold_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
+        }
     }
 }

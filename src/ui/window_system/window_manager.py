@@ -172,37 +172,50 @@ class WindowManager:
     def _register_japanese_fonts_to_pygame_gui(self):
         """pygame-guiに日本語フォントを直接登録"""
         try:
-            import pygame.freetype
-            
             # pygame-guiのフォント辞書を取得
             theme = self.ui_manager.get_theme()
             font_dict = theme.get_font_dictionary()
             
             # 日本語フォントパス
             japanese_font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+            japanese_bold_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
             
-            # notoフォントとして登録
             if os.path.exists(japanese_font_path):
-                # フォントをロード
                 try:
-                    # pygame.fontでフォントをロード
-                    import pygame.font
-                    test_font = pygame.font.Font(japanese_font_path, 14)
-                    
-                    # フォント辞書に登録
+                    # notoフォントファミリーとして登録（通常版）
                     font_dict.add_font_path('noto', japanese_font_path, 'regular')
+                    logger.info(f"WindowManager: noto regular フォント登録: {japanese_font_path}")
                     
-                    logger.info(f"WindowManager: pygame-guiに日本語フォントを登録: {japanese_font_path}")
+                    # ボールド版も登録
+                    if os.path.exists(japanese_bold_path):
+                        font_dict.add_font_path('noto', japanese_bold_path, 'bold')
+                        logger.info(f"WindowManager: noto bold フォント登録: {japanese_bold_path}")
+                    
+                    # pygame-guiが警告で要求している組み合わせを事前ロード
+                    font_preload_configs = [
+                        {'name': 'noto', 'point_size': 14, 'style': 'regular', 'antialiased': '1'},
+                        {'name': 'noto', 'point_size': 14, 'style': 'bold', 'antialiased': '1'},
+                        {'name': 'noto', 'point_size': 16, 'style': 'regular', 'antialiased': '1'},
+                        {'name': 'noto', 'point_size': 16, 'style': 'bold', 'antialiased': '1'}
+                    ]
+                    
+                    for config in font_preload_configs:
+                        try:
+                            font_dict.preload_font(
+                                font_size=config['point_size'],
+                                font_name=config['name'],
+                                bold=config['style'] == 'bold',
+                                italic=False
+                            )
+                            logger.info(f"WindowManager: プリロード完了 - {config}")
+                        except Exception as preload_e:
+                            logger.warning(f"WindowManager: プリロード失敗 - {config}: {preload_e}")
+                    
+                    logger.info("WindowManager: pygame-guiに日本語フォントを登録しました")
                     
                 except Exception as font_e:
-                    logger.warning(f"WindowManager: pygame.fontでのフォントロードエラー: {font_e}")
+                    logger.error(f"WindowManager: フォント登録エラー: {font_e}")
                     
-                    # pygame.freetypeで試す
-                    try:
-                        ft_font = pygame.freetype.Font(japanese_font_path, 14)
-                        logger.info(f"WindowManager: pygame.freetypeで日本語フォントをロード成功")
-                    except Exception as ft_e:
-                        logger.error(f"WindowManager: pygame.freetypeでのフォントロードエラー: {ft_e}")
             else:
                 logger.warning(f"WindowManager: 日本語フォントが見つかりません: {japanese_font_path}")
                 
