@@ -60,6 +60,7 @@ class GameSave:
     game_state: Dict[str, Any] = field(default_factory=dict)
     settings: Dict[str, Any] = field(default_factory=dict)
     flags: Dict[str, bool] = field(default_factory=dict)
+    guild_characters: List[Character] = field(default_factory=list)  # ギルド登録済み冒険者一覧
     version: str = "0.1.0"
     
     def to_dict(self) -> Dict[str, Any]:
@@ -69,17 +70,27 @@ class GameSave:
             'game_state': self.game_state,
             'settings': self.settings,
             'flags': self.flags,
+            'guild_characters': [char.to_dict() for char in self.guild_characters],
             'version': self.version
         }
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'GameSave':
+        guild_chars_data = data.get('guild_characters', [])
+        guild_characters = []
+        for char_data in guild_chars_data:
+            try:
+                guild_characters.append(Character.from_dict(char_data))
+            except Exception as e:
+                logger.warning(f"Failed to load guild character: {e}")
+        
         return cls(
             save_slot=SaveSlot.from_dict(data.get('save_slot', {})),
             party=Party.from_dict(data.get('party', {})),
             game_state=data.get('game_state', {}),
             settings=data.get('settings', {}),
             flags=data.get('flags', {}),
+            guild_characters=guild_characters,
             version=data.get('version', '0.1.0')
         )
 
@@ -162,7 +173,8 @@ class SaveManager:
         slot_id: int, 
         save_name: str = "",
         game_state: Optional[Dict[str, Any]] = None,
-        create_backup: bool = True
+        create_backup: bool = True,
+        guild_characters: Optional[List] = None
     ) -> bool:
         """ゲームを保存"""
         try:
@@ -186,13 +198,22 @@ class SaveManager:
                 location=game_state.get('location', 'overworld') if game_state else 'overworld'
             )
             
+            # 既存のセーブデータからギルドキャラクターを保持
+            existing_guild_characters = []
+            if self.current_save and self.current_save.guild_characters:
+                existing_guild_characters = self.current_save.guild_characters
+            
+            # 新しいギルドキャラクターが指定されていればそれを使用
+            final_guild_characters = guild_characters if guild_characters is not None else existing_guild_characters
+            
             # ゲームセーブデータの作成
             game_save = GameSave(
                 save_slot=save_slot,
                 party=party,
                 game_state=game_state or {},
                 settings={},
-                flags={}
+                flags={},
+                guild_characters=final_guild_characters
             )
             
             # JSONファイルに保存

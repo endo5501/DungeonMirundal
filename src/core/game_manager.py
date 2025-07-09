@@ -485,6 +485,116 @@ class GameManager:
         """パーティを設定（GuildService用のエイリアス）"""
         self.set_current_party(party)
     
+    # === ギルド管理メソッド ===
+    
+    def add_guild_character(self, character):
+        """ギルド登録済み冒険者一覧にキャラクターを追加"""
+        try:
+            # 現在のセーブデータを取得または作成
+            if not self.save_manager.current_save:
+                logger.warning("セーブデータが存在しません。新しいセーブデータを作成します")
+                return False
+            
+            # ギルド登録済み冒険者一覧にキャラクターを追加
+            current_guild_characters = self.save_manager.current_save.guild_characters
+            
+            # 重複チェック
+            for existing_char in current_guild_characters:
+                if existing_char.character_id == character.character_id:
+                    logger.warning(f"キャラクター {character.name} は既にギルドに登録済みです")
+                    return False
+            
+            current_guild_characters.append(character)
+            logger.info(f"キャラクター {character.name} をギルドに登録しました")
+            return True
+            
+        except Exception as e:
+            logger.error(f"ギルドキャラクター追加エラー: {e}")
+            return False
+    
+    def remove_guild_character(self, character_id: str):
+        """ギルド登録済み冒険者一覧からキャラクターを削除"""
+        try:
+            if not self.save_manager.current_save:
+                logger.warning("セーブデータが存在しません")
+                return False
+            
+            guild_characters = self.save_manager.current_save.guild_characters
+            
+            for i, character in enumerate(guild_characters):
+                if character.character_id == character_id:
+                    removed_char = guild_characters.pop(i)
+                    logger.info(f"キャラクター {removed_char.name} をギルドから削除しました")
+                    return True
+            
+            logger.warning(f"キャラクターID {character_id} がギルドに見つかりません")
+            return False
+            
+        except Exception as e:
+            logger.error(f"ギルドキャラクター削除エラー: {e}")
+            return False
+    
+    def get_guild_characters(self):
+        """ギルド登録済み冒険者一覧を取得"""
+        try:
+            if not self.save_manager.current_save:
+                logger.warning("セーブデータが存在しません")
+                return []
+            
+            return self.save_manager.current_save.guild_characters
+            
+        except Exception as e:
+            logger.error(f"ギルドキャラクター取得エラー: {e}")
+            return []
+    
+    def get_guild_character_by_id(self, character_id: str):
+        """指定IDのギルド登録済み冒険者を取得"""
+        try:
+            guild_characters = self.get_guild_characters()
+            
+            for character in guild_characters:
+                if character.character_id == character_id:
+                    return character
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"ギルドキャラクター取得エラー: {e}")
+            return None
+    
+    def save_current_game(self, slot_id: int, save_name: str = "") -> bool:
+        """現在のゲーム状態を保存（ギルドキャラクターを含む）"""
+        try:
+            if not self.current_party:
+                logger.error("保存するパーティがありません")
+                return False
+            
+            # ギルドキャラクターを取得
+            guild_characters = self.get_guild_characters()
+            
+            # ゲーム状態を作成
+            game_state = {
+                'location': self.current_location.value if hasattr(self.current_location, 'value') else str(self.current_location)
+            }
+            
+            # セーブ実行
+            success = self.save_manager.save_game(
+                party=self.current_party,
+                slot_id=slot_id,
+                save_name=save_name,
+                game_state=game_state,
+                guild_characters=guild_characters
+            )
+            
+            if success:
+                logger.info(f"ゲームを保存しました: スロット{slot_id}, ギルドキャラクター{len(guild_characters)}人")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"ゲーム保存エラー: {e}")
+            return False
+    
     @property
     def in_dungeon(self) -> bool:
         """ダンジョン内にいるかどうか"""

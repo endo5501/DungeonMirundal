@@ -68,22 +68,23 @@ class PartyFormationPanel(ServicePanel):
         # パーティメンバーボタンリスト
         self.party_buttons: List[pygame_gui.elements.UIButton] = []
         
-        # 中央のボタン群
-        center_x = self.rect.width // 2 - button_size // 2
+        # 中央のボタン群（パーティ⇔利用可能の移動ボタン）
+        # パネル幅を考慮して真ん中に配置
+        transfer_button_x = (self.rect.width - 100) // 2
         
-        # 追加ボタン
-        add_rect = pygame.Rect(center_x - 25, 100, 50, button_size)
+        # 追加ボタン（→）
+        add_rect = pygame.Rect(transfer_button_x, 120, 100, button_size)
         self.add_button = self._create_button(
-            "→",
+            "追加 → (A)",
             add_rect,
             container=self.container,
             object_id="#add_member_button"
         )
         
-        # 削除ボタン
-        remove_rect = pygame.Rect(center_x - 25, 150, 50, button_size)
+        # 削除ボタン（←）
+        remove_rect = pygame.Rect(transfer_button_x, 170, 100, button_size)
         self.remove_button = self._create_button(
-            "←",
+            "← 削除 (R)",
             remove_rect,
             container=self.container,
             object_id="#remove_member_button"
@@ -113,22 +114,23 @@ class PartyFormationPanel(ServicePanel):
         # 利用可能キャラクターボタンリスト
         self.available_buttons: List[pygame_gui.elements.UIButton] = []
         
-        # 並び替えボタン
+        # 並び替えボタン（パーティリストの右側に配置）
+        # パーティリストの右端 + 少し間隔を開ける
         order_x = 10 + list_width + 10
         
-        # 上へボタン
-        up_rect = pygame.Rect(order_x, 100, 40, button_size)
+        # 上へボタン（↑） - 中央の移動ボタンと同じ高さに配置
+        up_rect = pygame.Rect(order_x, 100, 80, button_size)
         self.up_button = self._create_button(
-            "↑",
+            "↑ 上へ (U)",
             up_rect,
             container=self.container,
             object_id="#move_up_button"
         )
         
-        # 下へボタン
-        down_rect = pygame.Rect(order_x, 150, 40, button_size)
+        # 下へボタン（↓） - 適切な間隔で配置
+        down_rect = pygame.Rect(order_x, 150, 80, button_size)
         self.down_button = self._create_button(
-            "↓",
+            "↓ 下へ (D)",
             down_rect,
             container=self.container,
             object_id="#move_down_button"
@@ -331,16 +333,8 @@ class PartyFormationPanel(ServicePanel):
         logger.info(f"[DEBUG] _add_member: service result = {result}")
         
         if result.is_success():
-            # リストから削除して移動
-            self.available_characters.pop(self.selected_available_index)
-            self.party_members.append(character)
-            
-            logger.info(f"[DEBUG] _add_member: character moved to party. Party size: {len(self.party_members)}, Available: {len(self.available_characters)}")
-            
-            # UIを更新
-            self._update_party_list()
-            self._update_available_list()
-            self._update_party_info()
+            # サービスが追加処理を行った後、データを再読み込み
+            self._load_party_data()
             
             # 選択をクリア
             self.selected_available_index = None
@@ -356,7 +350,15 @@ class PartyFormationPanel(ServicePanel):
         if self.selected_party_index is None:
             return
         
+        # パーティが空の場合は何もしない
+        if len(self.party_members) == 0:
+            self.selected_party_index = None
+            self._update_buttons()
+            return
+        
         if self.selected_party_index >= len(self.party_members):
+            self.selected_party_index = None
+            self._update_buttons()
             return
         
         # 選択されたメンバーを取得
@@ -372,14 +374,8 @@ class PartyFormationPanel(ServicePanel):
         )
         
         if result.is_success():
-            # リストから削除して移動
-            self.party_members.pop(self.selected_party_index)
-            self.available_characters.append(member)
-            
-            # UIを更新
-            self._update_party_list()
-            self._update_available_list()
-            self._update_party_info()
+            # サービスが削除処理を行った後、データを再読み込み
+            self._load_party_data()
             
             # 選択をクリア
             self.selected_party_index = None
@@ -457,6 +453,35 @@ class PartyFormationPanel(ServicePanel):
             self.party_members[index], self.party_members[index+1] = \
                 self.party_members[index+1], self.party_members[index]
             self._show_message(result.message, "error")
+    
+    def handle_key_event(self, event: pygame.event.Event) -> bool:
+        """キーボードショートカットを処理"""
+        if event.type != pygame.KEYDOWN:
+            return False
+        
+        key = event.key
+        if key == pygame.K_a:
+            # 追加ボタン（→）
+            if self.add_button and self.add_button.is_enabled:
+                self._add_member()
+                return True
+        elif key == pygame.K_r:
+            # 削除ボタン（←）
+            if self.remove_button and self.remove_button.is_enabled:
+                self._remove_member()
+                return True
+        elif key == pygame.K_u:
+            # 上へボタン（↑）
+            if self.up_button and self.up_button.is_enabled:
+                self._move_member_up()
+                return True
+        elif key == pygame.K_d:
+            # 下へボタン（↓）
+            if self.down_button and self.down_button.is_enabled:
+                self._move_member_down()
+                return True
+        
+        return False
     
     def handle_button_click(self, button: pygame_gui.elements.UIButton) -> bool:
         """ボタンクリックを処理"""

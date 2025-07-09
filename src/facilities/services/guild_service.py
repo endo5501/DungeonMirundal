@@ -179,31 +179,22 @@ class GuildService(FacilityService, ActionExecutorMixin):
             
             logger.info(f"[DEBUG] Character created successfully: {character.name}")
             
-            # データベースに保存
-            if self.character_model:
-                logger.info(f"[DEBUG] Saving to character_model")
-                self.character_model.create(character)
-            else:
-                logger.info(f"[DEBUG] No character_model available")
-            
-            # キャラクターを現在のパーティに追加
-            if self.game:
-                logger.info(f"[DEBUG] Adding character to current party")
-                current_party = self.game.get_current_party()
-                if current_party:
-                    success = current_party.add_character(character)
-                    if success:
-                        logger.info(f"Character added to party: {character.name}")
-                    else:
-                        logger.warning(f"Failed to add character to party (might be full): {character.name}")
+            # GameManagerのギルド管理システムに保存
+            if self.game and hasattr(self.game, 'add_guild_character'):
+                logger.info(f"[DEBUG] Saving to GameManager guild system")
+                success = self.game.add_guild_character(character)
+                if success:
+                    logger.info(f"Character created and saved to guild: {character.name}")
                 else:
-                    logger.warning("No current party available")
+                    logger.error(f"Failed to save character to guild: {character.name}")
+                    return ServiceResultFactory.error("ギルドへの登録に失敗しました")
             else:
-                logger.warning("GameManager is None, adding character to local list")
+                logger.warning(f"[DEBUG] No GameManager guild system available, using fallback")
+                # フォールバック: ローカルリストに追加
+                self._created_characters.append(character)
+                logger.info(f"Character saved to local storage: {character.name} (total: {len(self._created_characters)})")
             
-            # ローカルリストにも追加（フォールバック）
-            self._created_characters.append(character)
-            logger.info(f"Character added to local list: {character.name} (total: {len(self._created_characters)})")
+            # 注意: パーティには自動追加しない - ユーザーがパーティ編成で手動追加する
             
             return ServiceResultFactory.success(
                 f"キャラクター「{character.name}」を作成しました！",
@@ -314,7 +305,7 @@ class GuildService(FacilityService, ActionExecutorMixin):
             return ServiceResultFactory.error("パーティへの追加に失敗しました")
     
     def _remove_party_member(self, params: Dict[str, Any]) -> ServiceResult:
-        """パーティからメンバーを削除"""
+        """パーティからメンバーを削除（ギルドに戻す）"""
         character_id = params.get("character_id")
         if not character_id:
             return ServiceResultFactory.error("キャラクターIDが指定されていません")
@@ -323,10 +314,18 @@ class GuildService(FacilityService, ActionExecutorMixin):
         if not party:
             return ServiceResultFactory.error("パーティが存在しません")
         
-        # メンバーを削除
+        # メンバーを取得して削除
         character = party.get_character(character_id)
         if character:
             if party.remove_character(character_id):
+                # キャラクターをギルドに戻す（既にギルドにいる場合は何もしない）
+                if self.game and hasattr(self.game, 'get_guild_character_by_id'):
+                    existing_guild_char = self.game.get_guild_character_by_id(character_id)
+                    if not existing_guild_char:
+                        # ギルドにまだいない場合は追加
+                        self.game.add_guild_character(character)
+                        logger.info(f"Character {character.name} returned to guild")
+                
                 return ServiceResultFactory.success(
                     f"{character.name}をパーティから外しました",
                     data={"party_size": len(party.members)}
@@ -731,59 +730,50 @@ class GuildService(FacilityService, ActionExecutorMixin):
         return None
     
     def _get_character_by_id(self, character_id: str) -> Optional[Character]:
-        """IDでキャラクターを取得（仮実装）"""
-        # 実際の実装では、キャラクターデータベースから取得
-        # 現在は仮のキャラクターを返す
-        if self.character_model:
-            return self.character_model.get(character_id)
+        """IDでキャラクターを取得"""
+        # 1. GameManagerのギルド管理システムから取得（優先）
+        if self.game and hasattr(self.game, 'get_guild_character_by_id'):
+            character = self.game.get_guild_character_by_id(character_id)
+            if character:
+                return character
         
-        # フォールバック: パーティからキャラクターを探す
+        # 2. GameManagerの現在のパーティからキャラクターを取得
         party = self._get_current_party()
         if party:
-            return party.get_character(character_id)
+            character = party.get_character(character_id)
+            if character:
+                return character
         
-        # テスト用の仮キャラクター
-        if character_id.startswith("test_"):
-            # テストキャラクターをリストから検索
-            test_characters = self._get_all_available_characters()
-            for char in test_characters:
-                if char.character_id == character_id:
-                    return char
-            
-            # 見つからない場合は新しく作成
-            from src.character.stats import BaseStats
-            base_stats = BaseStats(
-                strength=16, intelligence=16, faith=16,
-                vitality=16, agility=16, luck=16
-            )
-            char = Character(
-                name=f"Test Character {character_id[-1]}",
-                race="human",
-                character_class="fighter",
-                base_stats=base_stats
-            )
-            char.character_id = character_id
-            char.experience.level = 12  # テスト用に高レベル（クラス変更可能）
-            return char
+        # 3. フォールバック: 作成されたキャラクターのローカルリストから検索
+        for char in self._created_characters:
+            if char.character_id == character_id:
+                return char
         
+        # 4. キャラクターが見つからない場合
+        logger.warning(f"Character not found: {character_id}")
         return None
     
     def _get_all_available_characters(self) -> List[Character]:
         """利用可能な全キャラクターを取得"""
         all_characters = []
         
-        # 1. CharacterModelから取得（存在する場合）
-        if self.character_model:
-            all_characters.extend(self.character_model.get_all())
+        # 1. GameManagerのギルド管理システムから取得（優先）
+        if self.game and hasattr(self.game, 'get_guild_characters'):
+            guild_characters = self.game.get_guild_characters()
+            all_characters.extend(guild_characters)
+            logger.info(f"Found {len(guild_characters)} characters in guild system")
         
-        # 2. GameManagerから取得（存在する場合）
-        if self.game and hasattr(self.game, 'get_all_characters'):
-            game_characters = self.game.get_all_characters()
-            if game_characters:
-                all_characters.extend(game_characters)
+        # 2. GameManagerの現在のパーティからキャラクターを取得
+        party = self._get_current_party()
+        if party:
+            party_characters = party.get_all_characters()
+            all_characters.extend(party_characters)
+            logger.info(f"Found {len(party_characters)} characters in current party")
         
-        # 3. ローカルに作成されたキャラクターを追加
+        # 3. フォールバック: ローカルに作成されたキャラクターを追加
         all_characters.extend(self._created_characters)
+        if self._created_characters:
+            logger.info(f"Found {len(self._created_characters)} characters in local storage (fallback)")
         
         # 4. 重複除去（character_idベース）
         seen_ids = set()
@@ -793,43 +783,12 @@ class GuildService(FacilityService, ActionExecutorMixin):
                 seen_ids.add(char.character_id)
                 unique_characters.append(char)
         
-        # 5. 実際のキャラクターがない場合のみテスト用キャラクターを追加
+        # 5. 結果をログ出力
         if not unique_characters:
-            logger.info("No real characters found, returning test characters")
-            unique_characters = self._create_test_characters()
+            logger.info("No characters found, returning empty list")
+            return []
         else:
-            logger.info(f"Found {len(unique_characters)} real characters")
+            logger.info(f"Found {len(unique_characters)} unique characters total")
         
         return unique_characters
     
-    def _create_test_characters(self) -> List[Character]:
-        """テスト用キャラクターを作成"""
-        test_characters = []
-        from src.character.stats import BaseStats
-        
-        for i in range(1, 6):
-            # 高い基本能力値を設定（クラス変更要件を満たすため）
-            base_stats = BaseStats(
-                strength=16,
-                intelligence=16, 
-                faith=16,  # faithに統一
-                vitality=16,
-                agility=16,
-                luck=16
-            )
-            
-            char = Character(
-                name=f"Adventurer {i}",
-                race=["human", "elf", "dwarf"][i % 3],
-                character_class=["fighter", "priest", "mage", "thief"][i % 4],
-                base_stats=base_stats
-            )
-            char.character_id = f"test_char_{i}"
-            
-            # テスト用のため、一部キャラクターのレベルを上げる（クラス変更は最低レベル10が必要）
-            if i <= 3:
-                char.experience.level = 10 + i  # レベル11-13にする
-            
-            test_characters.append(char)
-        
-        return test_characters
