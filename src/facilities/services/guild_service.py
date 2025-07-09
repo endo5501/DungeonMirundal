@@ -37,13 +37,16 @@ class GuildService(FacilityService, ActionExecutorMixin):
     def __init__(self):
         """初期化"""
         super().__init__("guild")
-        # GameManagerはシングルトンではないため、必要時に別途設定
+        # GameManagerへの参照
         self.game = None
         self.character_model = CharacterModel() if CharacterModel else None
         self.party_model = PartyModel() if PartyModel else None
         
         # キャラクター作成の一時データ
         self._creation_data: Dict[str, Any] = {}
+        
+        # 作成されたキャラクターの一時保存リスト
+        self._created_characters: List[Character] = []
         
         # ユーティリティクラス
         self.party_utility = None  # パーティが設定されたときに初期化
@@ -56,6 +59,11 @@ class GuildService(FacilityService, ActionExecutorMixin):
     def set_controller(self, controller):
         """コントローラーを設定"""
         self._controller = controller
+    
+    def set_game_manager(self, game_manager):
+        """GameManagerを設定"""
+        self.game = game_manager
+        logger.info(f"[DEBUG] GuildService: GameManager set: {game_manager}")
     
     def get_menu_items(self) -> List[MenuItem]:
         """メニュー項目を取得"""
@@ -117,6 +125,8 @@ class GuildService(FacilityService, ActionExecutorMixin):
     
     def execute_action(self, action_id: str, params: Dict[str, Any]) -> ServiceResult:
         """アクションを実行"""
+        logger.info(f"[DEBUG] GuildService.execute_action called: action_id={action_id}, params={params}")
+        
         action_map = {
             "character_creation": self._handle_character_creation,
             "character_creation_complete": self._complete_character_creation,
@@ -125,6 +135,14 @@ class GuildService(FacilityService, ActionExecutorMixin):
             "character_list": self._handle_character_list,
             "exit": lambda p: ServiceResultFactory.success("ギルドから退出しました")
         }
+        
+        logger.info(f"[DEBUG] GuildService: action_map contains {list(action_map.keys())}")
+        logger.info(f"[DEBUG] GuildService: Looking for action '{action_id}' in action_map")
+        
+        if action_id in action_map:
+            logger.info(f"[DEBUG] GuildService: Found action method: {action_map[action_id]}")
+        else:
+            logger.error(f"[DEBUG] GuildService: Action '{action_id}' not found in action_map")
         
         return self.execute_with_error_handling(action_map, action_id, params)
     
@@ -142,33 +160,60 @@ class GuildService(FacilityService, ActionExecutorMixin):
     
     def _complete_character_creation(self, params: Dict[str, Any]) -> ServiceResult:
         """キャラクター作成を完了"""
+        logger.info(f"[DEBUG] _complete_character_creation called with params: {params}")
         try:
             # 必須パラメータの確認
             required = ["name", "race", "class", "stats"]
             for field in required:
                 if field not in params:
+                    logger.error(f"[DEBUG] Missing required field: {field}")
                     return ServiceResultFactory.error(f"必須項目が不足しています: {field}")
+            
+            logger.info(f"[DEBUG] All required parameters present")
             
             # キャラクターを作成
             character = self._create_character_from_params(params)
             if not character:
+                logger.error(f"[DEBUG] _create_character_from_params returned None")
                 return ServiceResultFactory.error("キャラクターの作成に失敗しました")
+            
+            logger.info(f"[DEBUG] Character created successfully: {character.name}")
             
             # データベースに保存
             if self.character_model:
+                logger.info(f"[DEBUG] Saving to character_model")
                 self.character_model.create(character)
+            else:
+                logger.info(f"[DEBUG] No character_model available")
             
-            # キャラクターをゲームに登録
+            # キャラクターを現在のパーティに追加
             if self.game:
-                self.game.add_character(character)
+                logger.info(f"[DEBUG] Adding character to current party")
+                current_party = self.game.get_current_party()
+                if current_party:
+                    success = current_party.add_character(character)
+                    if success:
+                        logger.info(f"Character added to party: {character.name}")
+                    else:
+                        logger.warning(f"Failed to add character to party (might be full): {character.name}")
+                else:
+                    logger.warning("No current party available")
+            else:
+                logger.warning("GameManager is None, adding character to local list")
+            
+            # ローカルリストにも追加（フォールバック）
+            self._created_characters.append(character)
+            logger.info(f"Character added to local list: {character.name} (total: {len(self._created_characters)})")
             
             return ServiceResultFactory.success(
                 f"キャラクター「{character.name}」を作成しました！",
-                data={"character_id": character.id}
+                data={"character_id": character.character_id}
             )
             
         except Exception as e:
             logger.error(f"Character creation failed: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return ServiceResultFactory.error("キャラクター作成中にエラーが発生しました")
     
     def _create_character_from_params(self, params: Dict[str, Any]) -> Optional[Character]:
@@ -227,15 +272,19 @@ class GuildService(FacilityService, ActionExecutorMixin):
     
     def _add_party_member(self, params: Dict[str, Any]) -> ServiceResult:
         """パーティにメンバーを追加"""
+        logger.info(f"[DEBUG] _add_party_member called with params: {params}")
+        
         character_id = params.get("character_id")
         if not character_id:
             return ServiceResultFactory.error("キャラクターIDが指定されていません")
         
         # GameManagerからパーティを取得
         party = self._get_current_party()
+        logger.info(f"[DEBUG] Current party: {party}")
         
         # キャラクターを取得（仮実装）
         character = self._get_character_by_id(character_id)
+        logger.info(f"[DEBUG] Found character: {character}")
         if not character:
             return ServiceResultFactory.error("キャラクターが見つかりません")
         
@@ -245,16 +294,23 @@ class GuildService(FacilityService, ActionExecutorMixin):
         
         if not party:
             # 新しいパーティを作成
+            logger.info("[DEBUG] Creating new party")
             party = Party()
             if self.game:
+                logger.info("[DEBUG] Setting party to GameManager")
                 self.game.set_party(party)
+            else:
+                logger.warning("[DEBUG] No GameManager available to set party")
         
+        logger.info(f"[DEBUG] Adding character {character.name} to party")
         if party.add_character(character):
+            logger.info(f"[DEBUG] Character added successfully. Party size: {len(party.members)}")
             return ServiceResultFactory.success(
-                f"{character.name}をパーティに追加しました",
+                f"キャラクター {character.name} をパーティに追加しました",
                 data={"party_size": len(party.members)}
             )
         else:
+            logger.error("[DEBUG] Failed to add character to party")
             return ServiceResultFactory.error("パーティへの追加に失敗しました")
     
     def _remove_party_member(self, params: Dict[str, Any]) -> ServiceResult:
@@ -666,8 +722,12 @@ class GuildService(FacilityService, ActionExecutorMixin):
     
     def _get_current_party(self) -> Optional[Party]:
         """現在のパーティを取得"""
-        if self.game and hasattr(self.game, 'get_party'):
-            return self.game.get_party()
+        logger.info(f"[DEBUG] _get_current_party called: self.game={self.game}")
+        if self.game and hasattr(self.game, 'get_current_party'):
+            party = self.game.get_current_party()
+            logger.info(f"[DEBUG] GameManager.get_current_party() returned: {party}")
+            return party
+        logger.warning("[DEBUG] No GameManager or get_current_party method not available")
         return None
     
     def _get_character_by_id(self, character_id: str) -> Optional[Character]:
@@ -710,10 +770,40 @@ class GuildService(FacilityService, ActionExecutorMixin):
     
     def _get_all_available_characters(self) -> List[Character]:
         """利用可能な全キャラクターを取得"""
-        if self.character_model:
-            return self.character_model.get_all()
+        all_characters = []
         
-        # フォールバック: テスト用キャラクターを返す
+        # 1. CharacterModelから取得（存在する場合）
+        if self.character_model:
+            all_characters.extend(self.character_model.get_all())
+        
+        # 2. GameManagerから取得（存在する場合）
+        if self.game and hasattr(self.game, 'get_all_characters'):
+            game_characters = self.game.get_all_characters()
+            if game_characters:
+                all_characters.extend(game_characters)
+        
+        # 3. ローカルに作成されたキャラクターを追加
+        all_characters.extend(self._created_characters)
+        
+        # 4. 重複除去（character_idベース）
+        seen_ids = set()
+        unique_characters = []
+        for char in all_characters:
+            if char.character_id not in seen_ids:
+                seen_ids.add(char.character_id)
+                unique_characters.append(char)
+        
+        # 5. 実際のキャラクターがない場合のみテスト用キャラクターを追加
+        if not unique_characters:
+            logger.info("No real characters found, returning test characters")
+            unique_characters = self._create_test_characters()
+        else:
+            logger.info(f"Found {len(unique_characters)} real characters")
+        
+        return unique_characters
+    
+    def _create_test_characters(self) -> List[Character]:
+        """テスト用キャラクターを作成"""
         test_characters = []
         from src.character.stats import BaseStats
         

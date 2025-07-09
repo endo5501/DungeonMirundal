@@ -50,7 +50,7 @@ class CharacterListPanel(ServicePanel):
         title_text = "クラス変更対象を選択" if self.display_mode == "class_change" else "冒険者一覧"
         self.title_label = pygame_gui.elements.UILabel(
             relative_rect=pygame.Rect(10, -10, 300, 30),
-            text=f"<b>{title_text}</b>",
+            text=title_text,
             manager=self.ui_manager,
             container=self.container
         )
@@ -118,7 +118,7 @@ class CharacterListPanel(ServicePanel):
             self.rect.width - list_width - 30, list_height
         )
         self.detail_box = pygame_gui.elements.UITextBox(
-            html_text="<b>キャラクター詳細</b><br>キャラクターを選択してください",
+            html_text="キャラクター詳細<br>キャラクターを選択してください",
             relative_rect=detail_rect,
             manager=self.ui_manager,
             container=self.container
@@ -234,7 +234,7 @@ class CharacterListPanel(ServicePanel):
             return
         
         if not self.selected_character:
-            self.detail_box.html_text = "<b>キャラクター詳細</b><br>キャラクターを選択してください"
+            self.detail_box.html_text = "キャラクター詳細<br>キャラクターを選択してください"
             self.detail_box.rebuild()
             return
         
@@ -260,19 +260,19 @@ class CharacterListPanel(ServicePanel):
         }
         
         # 詳細テキストを構築
-        detail_text = f"<b>{char['name']}</b><br>"
-        detail_text += f"<b>基本情報</b><br>"
+        detail_text = f"{char['name']}<br>"
+        detail_text += f"基本情報<br>"
         detail_text += f"レベル: {char['level']}<br>"
         detail_text += f"種族: {race_names.get(char['race'], char['race'])}<br>"
         detail_text += f"職業: {class_names.get(char['class'], char['class'])}<br>"
         detail_text += f"<br>"
-        detail_text += f"<b>ステータス</b><br>"
+        detail_text += f"ステータス<br>"
         detail_text += f"HP: {char['hp']}<br>"
         detail_text += f"MP: {char['mp']}<br>"
         detail_text += f"状態: {status_names.get(char['status'], char['status'])}<br>"
         
         if char.get("in_party", False):
-            detail_text += f"<br><font color='#00aa00'>パーティメンバー</font>"
+            detail_text += f"<br>パーティメンバー"
         
         # TODO: 能力値、装備、スキルなどの詳細情報を追加
         

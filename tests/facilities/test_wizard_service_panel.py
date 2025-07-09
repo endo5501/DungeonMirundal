@@ -185,18 +185,19 @@ class TestWizardServicePanelUICreation:
             panel = WizardServicePanel(rect, parent, controller, service_id, ui_manager)
             # Manually set all required attributes since parent init is mocked
             panel.container = Mock()
+            panel.container.get_size.return_value = (600, 500)
             panel.rect = pygame.Rect(0, 0, 600, 500)
             panel.ui_manager = ui_manager
             panel.ui_elements = []
-            panel._create_button = Mock(return_value=Mock())  # Mock button creation
             
             with patch('pygame_gui.elements.UIPanel'), \
+                 patch('pygame_gui.elements.UIButton') as mock_button, \
                  patch.object(panel, '_update_navigation_buttons') as mock_update:
                 
                 panel._create_navigation_buttons(50)
                 
                 # 3つのボタンが作成される（キャンセル、戻る、次へ）
-                assert panel._create_button.call_count == 3
+                assert mock_button.call_count == 3
                 
                 # ボタン状態が更新される
                 mock_update.assert_called_once()
@@ -514,14 +515,16 @@ class TestWizardServicePanelStepContent:
         panel.ui_elements = []
         step_panel = Mock()
         
-        with patch('pygame_gui.elements.UITextBox') as mock_textbox:
+        with patch('pygame_gui.elements.UILabel') as mock_label, \
+             patch.object(panel, '_build_confirmation_text', return_value="テスト確認テキスト"):
             WizardServicePanel._create_confirmation_content(panel, step_panel)
             
-            # 確認テキストボックスが作成される
-            mock_textbox.assert_called_once()
+            # 2つのUILabelが作成される
+            assert mock_label.call_count == 2
             
-            # confirmation_box属性が設定される
-            assert hasattr(panel, 'confirmation_box')
+            # confirmation_label属性が設定される
+            assert hasattr(panel, 'confirmation_label')
+            assert hasattr(panel, 'confirmation_display')
 
 
 class TestWizardServicePanelNavigation:
@@ -645,6 +648,7 @@ class TestWizardServicePanelCompletion:
         panel = Mock()
         panel.service_id = "test_service"
         panel.wizard_data = {"name": "テスト", "race": "人間"}
+        panel.step_panels = {}
         
         success_result = ServiceResult(
             success=True,
@@ -1022,13 +1026,14 @@ class TestWizardServicePanelStepPanelManagement:
         panel.step_panels["name"] = current_panel
         
         with patch.object(panel, '_create_step_panel') as mock_create, \
+             patch.object(panel, '_cleanup_step_panel') as mock_cleanup, \
              patch.object(panel, '_update_step_indicator') as mock_indicator, \
              patch.object(panel, '_update_navigation_buttons') as mock_nav:
             
             WizardServicePanel._show_step(panel, 1)  # race step
             
-            # 現在のステップパネルが隠される
-            current_panel.hide.assert_called_once()
+            # 現在のステップパネルがクリーンアップされる
+            mock_cleanup.assert_called_once_with("name")
             
             # 新しいステップが作成される（まだ存在しない場合）
             mock_create.assert_called_once()
@@ -1212,25 +1217,20 @@ class TestWizardServicePanelStepIndicatorUpdate:
         from src.facilities.ui.wizard_service_panel import WizardServicePanel
         
         panel = Mock()
-        panel.indicator_panel = Mock()
-        
-        # 既存の子要素をモック
-        mock_element1 = Mock()
-        mock_element1.kill = Mock()
-        mock_element2 = Mock()
-        mock_element2.kill = Mock()
-        
-        panel.indicator_panel.element_ids = [mock_element1, mock_element2]
+        mock_indicator_panel = Mock()
+        panel.indicator_panel = mock_indicator_panel
         
         with patch.object(panel, '_create_step_indicator') as mock_create:
             WizardServicePanel._update_step_indicator(panel)
             
-            # 既存の要素がクリアされる
-            mock_element1.kill.assert_called_once()
-            mock_element2.kill.assert_called_once()
+            # 既存のパネルがkillされる
+            mock_indicator_panel.kill.assert_called_once()
             
             # インジケーターが再作成される
             mock_create.assert_called_with(60)
+            
+            # パネルがNoneに設定される
+            assert panel.indicator_panel is None
     
     def test_update_step_indicator_no_kill_method(self):
         """killメソッドがない要素での更新"""

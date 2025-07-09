@@ -178,26 +178,26 @@ class WizardServicePanel(ServicePanel):
         button_height = 35
         button_spacing = 10
         
-        # キャンセルボタン（左端）
-        self.cancel_button = self._create_button(
+        # キャンセルボタン（左端）- カスタムキーを使用
+        self.cancel_button = self._create_wizard_button(
             "キャンセル",
             pygame.Rect(0, 5, button_width, button_height),
             container=self.nav_button_panel,
             object_id="#cancel_button"
         )
         
-        # 戻るボタン（右側）
+        # 戻るボタン（右側）- カスタムキーを使用
         back_x = self.rect.width - 2 * button_width - button_spacing - 20
-        self.back_button = self._create_button(
+        self.back_button = self._create_wizard_button(
             "戻る",
             pygame.Rect(back_x, 5, button_width, button_height),
             container=self.nav_button_panel,
             object_id="#back_button"
         )
         
-        # 次へ/完了ボタン（右端）
+        # 次へ/完了ボタン（右端）- カスタムキーを使用
         next_x = self.rect.width - button_width - 20
-        self.next_button = self._create_button(
+        self.next_button = self._create_wizard_button(
             "次へ",
             pygame.Rect(next_x, 5, button_width, button_height),
             container=self.nav_button_panel,
@@ -206,6 +206,44 @@ class WizardServicePanel(ServicePanel):
         
         # 初期状態を更新
         self._update_navigation_buttons()
+    
+    def _create_wizard_button(self, text: str, rect: pygame.Rect,
+                             container: Optional[pygame_gui.core.UIContainer] = None,
+                             object_id: Optional[str] = None) -> pygame_gui.elements.UIButton:
+        """ウィザード用のボタンを作成（数字キーの自動割り当てを無効化）
+        
+        Args:
+            text: ボタンテキスト
+            rect: 矩形領域
+            container: コンテナ（省略時はself.container）
+            object_id: オブジェクトID
+            
+        Returns:
+            作成したボタン
+        """
+        if container is None:
+            container = self.container
+            
+        button = pygame_gui.elements.UIButton(
+            relative_rect=rect,
+            text=text,
+            manager=self.ui_manager,
+            container=container,
+            object_id=object_id
+        )
+        
+        # ウィザードナビゲーションボタンには特別なキーを割り当て
+        if text == "キャンセル":
+            button.shortcut_key = "ESC"
+        elif text == "戻る":
+            button.shortcut_key = "BACKSPACE"
+        elif text == "次へ":
+            button.shortcut_key = "ENTER"
+        elif text == "完了":
+            button.shortcut_key = "ENTER"
+        
+        self.ui_elements.append(button)
+        return button
     
     def _update_navigation_buttons(self) -> None:
         """ナビゲーションボタンの状態を更新"""
@@ -229,10 +267,10 @@ class WizardServicePanel(ServicePanel):
             logger.error(f"Invalid step index: {step_index}")
             return
         
-        # 現在のステップコンテンツを隠す
+        # 現在のステップコンテンツを完全削除
         current_step_id = self.steps[self.current_step_index].id if self.current_step_index < len(self.steps) else None
         if current_step_id and current_step_id in self.step_panels:
-            self.step_panels[current_step_id].hide()
+            self._cleanup_step_panel(current_step_id)
         
         # 新しいステップを設定
         self.current_step_index = step_index
@@ -314,15 +352,97 @@ class WizardServicePanel(ServicePanel):
     
     def _update_step_indicator(self) -> None:
         """ステップインジケーターを更新"""
-        # 既存のインジケーターを破棄して再作成
+        # インジケーターパネル全体を再作成
         if self.indicator_panel:
-            # 子要素をクリア
-            for element in list(self.indicator_panel.element_ids):
-                if hasattr(element, 'kill'):
-                    element.kill()
+            # 既存のパネルを完全削除
+            self.indicator_panel.kill()
+            self.indicator_panel = None
+        
+        # ステップインジケーターを作成
+        self._create_step_indicator(60)
+    
+    def _cleanup_indicator_children(self) -> None:
+        """ステップインジケーター子要素を完全削除"""
+        if not self.indicator_panel:
+            return
             
-            # インジケーターを再作成
-            self._create_step_indicator(60)
+        try:
+            # pygame_guiのパネル内の全子要素を取得
+            if hasattr(self.indicator_panel, 'get_container'):
+                container = self.indicator_panel.get_container()
+                if container and hasattr(container, '_layer_thickness'):
+                    # 各レイヤーの要素を削除
+                    for layer_elements in container._layer_thickness.values():
+                        for element in list(layer_elements):
+                            try:
+                                if hasattr(element, 'kill'):
+                                    element.kill()
+                                # ui_elementsリストからも削除
+                                if element in self.ui_elements:
+                                    self.ui_elements.remove(element)
+                            except Exception as e:
+                                logger.warning(f"Failed to cleanup indicator element: {e}")
+                                
+        except Exception as e:
+            logger.warning(f"Failed to cleanup indicator children: {e}")
+            
+        # 直接のelement_idsからも削除
+        if hasattr(self.indicator_panel, 'element_ids'):
+            for element in list(self.indicator_panel.element_ids):
+                try:
+                    if hasattr(element, 'kill'):
+                        element.kill()
+                    if element in self.ui_elements:
+                        self.ui_elements.remove(element)
+                except Exception as e:
+                    logger.warning(f"Failed to cleanup element from element_ids: {e}")
+    
+    def _cleanup_step_panel(self, step_id: str) -> None:
+        """ステップパネルを完全削除"""
+        if step_id not in self.step_panels:
+            return
+            
+        panel = self.step_panels[step_id]
+        
+        try:
+            # パネル内の全子要素を再帰的に削除
+            self._recursive_cleanup_panel(panel)
+            
+            # パネル自体を削除
+            if hasattr(panel, 'kill'):
+                panel.kill()
+                
+            # 辞書から削除
+            del self.step_panels[step_id]
+            
+            logger.info(f"Step panel cleaned up: {step_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to cleanup step panel {step_id}: {e}")
+    
+    def _recursive_cleanup_panel(self, panel) -> None:
+        """パネル内の要素を再帰的に削除"""
+        try:
+            # pygame_guiのパネル内の全子要素を取得
+            if hasattr(panel, 'get_container'):
+                container = panel.get_container()
+                if container and hasattr(container, '_layer_thickness'):
+                    # 各レイヤーの要素を削除
+                    for layer_elements in container._layer_thickness.values():
+                        for element in list(layer_elements):
+                            try:
+                                # 子要素も再帰的に削除
+                                self._recursive_cleanup_panel(element)
+                                if hasattr(element, 'kill'):
+                                    element.kill()
+                                # ui_elementsリストからも削除
+                                if element in self.ui_elements:
+                                    self.ui_elements.remove(element)
+                            except Exception as e:
+                                logger.warning(f"Failed to cleanup panel element: {e}")
+                                
+        except Exception as e:
+            logger.warning(f"Failed to recursive cleanup panel: {e}")
     
     def _validate_current_step(self) -> bool:
         """現在のステップを検証"""
@@ -405,7 +525,17 @@ class WizardServicePanel(ServicePanel):
         
         if result.is_success():
             self._show_message(result.message, "info")
-            # TODO: ウィザードを閉じて元の画面に戻る
+            
+            # 全ステップパネルを完全クリーンアップ
+            for step_id in list(self.step_panels.keys()):
+                self._cleanup_step_panel(step_id)
+            
+            # ウィザードデータをクリア
+            self.wizard_data.clear()
+            
+            # 最初のステップに戻る
+            self.current_step_index = 0
+            self._show_step(0)
         else:
             self._show_message(result.message, "error")
     
@@ -436,6 +566,27 @@ class WizardServicePanel(ServicePanel):
         elif button == self.cancel_button:
             self._cancel_wizard()
             return True
+        
+        return False
+    
+    def handle_key_event(self, event: pygame.event.Event) -> bool:
+        """キーイベントを処理（ショートカットキー対応）"""
+        if event.type == pygame.KEYDOWN:
+            # ENTERキーで「次へ」ボタンを起動
+            if event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
+                logger.info("[DEBUG] WizardServicePanel: ENTER key pressed - triggering next_step()")
+                self.next_step()
+                return True
+            # BACKSPACEキーで「戻る」ボタンを起動
+            elif event.key == pygame.K_BACKSPACE:
+                logger.info("[DEBUG] WizardServicePanel: BACKSPACE key pressed - triggering previous_step()")
+                self.previous_step()
+                return True
+            # ESCキーで「キャンセル」ボタンを起動
+            elif event.key == pygame.K_ESCAPE:
+                logger.info("[DEBUG] WizardServicePanel: ESC key pressed - triggering cancel_wizard()")
+                self._cancel_wizard()
+                return True
         
         return False
     
@@ -488,11 +639,41 @@ class WizardServicePanel(ServicePanel):
     
     def _create_confirmation_content(self, panel: pygame_gui.elements.UIPanel) -> None:
         """確認コンテンツを作成"""
-        # 確認用のテキストボックス
-        self.confirmation_box = pygame_gui.elements.UITextBox(
-            html_text="設定を確認してください",
-            relative_rect=pygame.Rect(10, 60, 300, 200),
+        # 確認用のラベル（文字化け対策でUILabelを使用）
+        self.confirmation_label = pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect(10, 60, 300, 40),
+            text="設定を確認してください",
             manager=self.ui_manager,
             container=panel
         )
-        self.ui_elements.append(self.confirmation_box)
+        self.ui_elements.append(self.confirmation_label)
+        
+        # ウィザードデータの表示用テキストボックス
+        confirmation_text = self._build_confirmation_text()
+        self.confirmation_display = pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect(10, 110, 300, 150),
+            text=confirmation_text,
+            manager=self.ui_manager,
+            container=panel
+        )
+        self.ui_elements.append(self.confirmation_display)
+    
+    def _build_confirmation_text(self) -> str:
+        """確認用テキストを構築"""
+        lines = []
+        
+        if "name" in self.wizard_data:
+            lines.append(f"名前: {self.wizard_data['name']}")
+            
+        if "race" in self.wizard_data:
+            race_name = self.wizard_data['race'].get('name', '未選択') if isinstance(self.wizard_data['race'], dict) else str(self.wizard_data['race'])
+            lines.append(f"種族: {race_name}")
+            
+        if "class" in self.wizard_data:
+            class_name = self.wizard_data['class'].get('name', '未選択') if isinstance(self.wizard_data['class'], dict) else str(self.wizard_data['class'])
+            lines.append(f"職業: {class_name}")
+            
+        if "stats" in self.wizard_data:
+            lines.append("能力値: 決定済み")
+            
+        return "\n".join(lines) if lines else "設定内容を確認中..."

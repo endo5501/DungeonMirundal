@@ -403,6 +403,8 @@ class GameManager:
         # 地上部マネージャーの初期化
         try:
             self.overworld_manager = OverworldManager()
+            # GameManagerの参照を設定
+            self.overworld_manager.set_game_manager(self)
             # set_ui_managerメソッドは存在しないため削除
             self.overworld_manager.set_enter_dungeon_callback(self.transition_to_dungeon)
             self.overworld_manager.set_exit_game_callback(self.exit_game)
@@ -478,6 +480,10 @@ class GameManager:
     def get_current_party(self) -> Party:
         """現在のパーティを取得"""
         return self.current_party
+    
+    def set_party(self, party: Party):
+        """パーティを設定（GuildService用のエイリアス）"""
+        self.set_current_party(party)
     
     @property
     def in_dungeon(self) -> bool:

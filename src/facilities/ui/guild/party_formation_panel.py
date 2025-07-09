@@ -20,8 +20,10 @@ class PartyFormationPanel(ServicePanel):
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
         # UI要素（super().__init__の前に定義）
-        self.party_list: Optional[pygame_gui.elements.UISelectionList] = None
-        self.available_list: Optional[pygame_gui.elements.UISelectionList] = None
+        self.party_list_panel: Optional[pygame_gui.elements.UIPanel] = None
+        self.available_list_panel: Optional[pygame_gui.elements.UIPanel] = None
+        self.party_buttons: List[pygame_gui.elements.UIButton] = []
+        self.available_buttons: List[pygame_gui.elements.UIButton] = []
         self.add_button: Optional[pygame_gui.elements.UIButton] = None
         self.remove_button: Optional[pygame_gui.elements.UIButton] = None
         self.up_button: Optional[pygame_gui.elements.UIButton] = None
@@ -54,16 +56,17 @@ class PartyFormationPanel(ServicePanel):
         )
         self.ui_elements.append(party_label)
         
-        # パーティメンバーリスト
+        # パーティメンバーリスト（パネルとして実装）
         party_rect = pygame.Rect(10, 45, list_width, list_height)
-        self.party_list = pygame_gui.elements.UISelectionList(
+        self.party_list_panel = pygame_gui.elements.UIPanel(
             relative_rect=party_rect,
-            item_list=[],
             manager=self.ui_manager,
-            container=self.container,
-            allow_multi_select=False
+            container=self.container
         )
-        self.ui_elements.append(self.party_list)
+        self.ui_elements.append(self.party_list_panel)
+        
+        # パーティメンバーボタンリスト
+        self.party_buttons: List[pygame_gui.elements.UIButton] = []
         
         # 中央のボタン群
         center_x = self.rect.width // 2 - button_size // 2
@@ -95,19 +98,20 @@ class PartyFormationPanel(ServicePanel):
         )
         self.ui_elements.append(available_label)
         
-        # 利用可能キャラクターリスト
+        # 利用可能キャラクターリスト（パネルとして実装）
         available_rect = pygame.Rect(
             self.rect.width - list_width - 10, 45,
             list_width, list_height
         )
-        self.available_list = pygame_gui.elements.UISelectionList(
+        self.available_list_panel = pygame_gui.elements.UIPanel(
             relative_rect=available_rect,
-            item_list=[],
             manager=self.ui_manager,
-            container=self.container,
-            allow_multi_select=False
+            container=self.container
         )
-        self.ui_elements.append(self.available_list)
+        self.ui_elements.append(self.available_list_panel)
+        
+        # 利用可能キャラクターボタンリスト
+        self.available_buttons: List[pygame_gui.elements.UIButton] = []
         
         # 並び替えボタン
         order_x = 10 + list_width + 10
@@ -142,21 +146,32 @@ class PartyFormationPanel(ServicePanel):
         
         # 初期データを読み込み
         self._load_party_data()
+        
+        # ボタンの初期状態を設定
+        logger.info(f"[DEBUG] Initial button state: add_button={self.add_button}, remove_button={self.remove_button}")
     
     def _load_party_data(self) -> None:
         """パーティデータを読み込み"""
+        logger.info("[DEBUG] _load_party_data called")
+        
         # パーティ情報を取得
         result = self._execute_service_action("party_formation", {"action": "get_info"})
+        logger.info(f"[DEBUG] Party info result: {result}")
         
         if result.is_success() and result.data:
             self.party_members = result.data.get("members", [])
+            logger.info(f"[DEBUG] Loaded party members: {len(self.party_members)}")
             self._update_party_list()
         
         # 利用可能なキャラクターを取得
         result = self._execute_service_action("character_list", {"filter": "available"})
+        logger.info(f"[DEBUG] Available characters result: {result}")
         
         if result.is_success() and result.data:
             self.available_characters = result.data.get("characters", [])
+            logger.info(f"[DEBUG] Loaded available characters: {len(self.available_characters)}")
+            for i, char in enumerate(self.available_characters):
+                logger.info(f"[DEBUG] Character {i}: {char}")
             self._update_available_list()
         
         self._update_buttons()
@@ -164,36 +179,72 @@ class PartyFormationPanel(ServicePanel):
     
     def _update_party_list(self) -> None:
         """パーティリストを更新"""
-        if not self.party_list:
+        if not self.party_list_panel:
             return
         
-        # リストアイテムを構築
-        items = []
+        # 既存のボタンを削除
+        for button in self.party_buttons:
+            button.kill()
+        self.party_buttons.clear()
+        
+        # パーティメンバーのボタンを作成
+        button_height = 35
+        button_spacing = 5
         for i, member in enumerate(self.party_members):
             text = f"{i+1}. {member['name']} Lv{member['level']} {member['class']}"
-            items.append(text)
-        
-        self.party_list.set_item_list(items)
+            button_rect = pygame.Rect(5, 5 + i * (button_height + button_spacing), 
+                                    self.party_list_panel.relative_rect.width - 10, button_height)
+            
+            button = pygame_gui.elements.UIButton(
+                relative_rect=button_rect,
+                text=text,
+                manager=self.ui_manager,
+                container=self.party_list_panel,
+                object_id=f"#party_member_{i}"
+            )
+            
+            self.party_buttons.append(button)
+            self.ui_elements.append(button)
     
     def _update_available_list(self) -> None:
         """利用可能リストを更新"""
-        if not self.available_list:
+        if not self.available_list_panel:
             return
         
-        # リストアイテムを構築
-        items = []
-        for char in self.available_characters:
-            text = f"{char['name']} Lv{char['level']} {char['class']}"
-            items.append(text)
+        # 既存のボタンを削除
+        for button in self.available_buttons:
+            button.kill()
+        self.available_buttons.clear()
         
-        self.available_list.set_item_list(items)
+        # 利用可能キャラクターのボタンを作成
+        button_height = 35
+        button_spacing = 5
+        for i, char in enumerate(self.available_characters):
+            text = f"{char['name']} Lv{char['level']} {char['class']}"
+            button_rect = pygame.Rect(5, 5 + i * (button_height + button_spacing), 
+                                    self.available_list_panel.relative_rect.width - 10, button_height)
+            
+            button = pygame_gui.elements.UIButton(
+                relative_rect=button_rect,
+                text=text,
+                manager=self.ui_manager,
+                container=self.available_list_panel,
+                object_id=f"#available_character_{i}"
+            )
+            
+            self.available_buttons.append(button)
+            self.ui_elements.append(button)
     
     def _update_buttons(self) -> None:
         """ボタンの有効/無効を更新"""
+        logger.info(f"[DEBUG] _update_buttons called: selected_available_index={self.selected_available_index}, selected_party_index={self.selected_party_index}")
+        logger.info(f"[DEBUG] Party members: {len(self.party_members)}, Available: {len(self.available_characters)}")
+        
         # 追加ボタン
         if self.add_button:
             can_add = (len(self.party_members) < 6 and 
                       self.selected_available_index is not None)
+            logger.info(f"[DEBUG] Add button: can_add={can_add}")
             if can_add:
                 self.add_button.enable()
             else:
@@ -254,14 +305,19 @@ class PartyFormationPanel(ServicePanel):
     
     def _add_member(self) -> None:
         """メンバーを追加"""
+        logger.info(f"[DEBUG] _add_member called: selected_available_index={self.selected_available_index}")
+        
         if self.selected_available_index is None:
+            logger.warning("[DEBUG] _add_member: selected_available_index is None")
             return
         
         if self.selected_available_index >= len(self.available_characters):
+            logger.warning(f"[DEBUG] _add_member: invalid index {self.selected_available_index} >= {len(self.available_characters)}")
             return
         
         # 選択されたキャラクターを取得
         character = self.available_characters[self.selected_available_index]
+        logger.info(f"[DEBUG] _add_member: adding character {character}")
         
         # パーティに追加
         result = self._execute_service_action(
@@ -272,10 +328,14 @@ class PartyFormationPanel(ServicePanel):
             }
         )
         
+        logger.info(f"[DEBUG] _add_member: service result = {result}")
+        
         if result.is_success():
             # リストから削除して移動
             self.available_characters.pop(self.selected_available_index)
             self.party_members.append(character)
+            
+            logger.info(f"[DEBUG] _add_member: character moved to party. Party size: {len(self.party_members)}, Available: {len(self.available_characters)}")
             
             # UIを更新
             self._update_party_list()
@@ -288,6 +348,7 @@ class PartyFormationPanel(ServicePanel):
             
             self._show_message(result.message, "info")
         else:
+            logger.error(f"[DEBUG] _add_member: failed with message: {result.message}")
             self._show_message(result.message, "error")
     
     def _remove_member(self) -> None:
@@ -354,7 +415,7 @@ class PartyFormationPanel(ServicePanel):
             
             # UIを更新
             self._update_party_list()
-            self.party_list.set_selected_index(self.selected_party_index)
+            self._highlight_selected_buttons()
             self._update_buttons()
         else:
             # 失敗したら元に戻す
@@ -389,7 +450,7 @@ class PartyFormationPanel(ServicePanel):
             
             # UIを更新
             self._update_party_list()
-            self.party_list.set_selected_index(self.selected_party_index)
+            self._highlight_selected_buttons()
             self._update_buttons()
         else:
             # 失敗したら元に戻す
@@ -399,54 +460,78 @@ class PartyFormationPanel(ServicePanel):
     
     def handle_button_click(self, button: pygame_gui.elements.UIButton) -> bool:
         """ボタンクリックを処理"""
+        logger.info(f"[DEBUG] PartyFormationPanel: handle_button_click called with button: {button}")
+        
         if button == self.add_button:
+            logger.info("[DEBUG] Add button clicked")
             self._add_member()
             return True
         elif button == self.remove_button:
+            logger.info("[DEBUG] Remove button clicked")
             self._remove_member()
             return True
         elif button == self.up_button:
+            logger.info("[DEBUG] Up button clicked")
             self._move_member_up()
             return True
         elif button == self.down_button:
+            logger.info("[DEBUG] Down button clicked")
             self._move_member_down()
             return True
         
-        return False
-    
-    def handle_selection_list_changed(self, event: pygame.event.Event) -> bool:
-        """選択リスト変更イベントを処理"""
-        if event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
-            if event.ui_element == self.party_list:
-                # パーティリストの選択が変更された
-                selection = self.party_list.get_single_selection()
-                if selection is not None:
-                    self.selected_party_index = self.party_list.item_list.index(selection)
-                    # 利用可能リストの選択をクリア
-                    self.selected_available_index = None
-                    if self.available_list:
-                        self.available_list.set_selected_index(None)
-                else:
-                    self.selected_party_index = None
-                
-                self._update_buttons()
-                return True
-                
-            elif event.ui_element == self.available_list:
-                # 利用可能リストの選択が変更された
-                selection = self.available_list.get_single_selection()
-                if selection is not None:
-                    self.selected_available_index = self.available_list.item_list.index(selection)
-                    # パーティリストの選択をクリア
-                    self.selected_party_index = None
-                    if self.party_list:
-                        self.party_list.set_selected_index(None)
-                else:
-                    self.selected_available_index = None
-                
+        # パーティメンバーボタンのクリック
+        for i, party_button in enumerate(self.party_buttons):
+            if button == party_button:
+                logger.info(f"[DEBUG] Party member button {i} clicked")
+                self.selected_party_index = i
+                self.selected_available_index = None
+                self._highlight_selected_buttons()
                 self._update_buttons()
                 return True
         
+        # 利用可能キャラクターボタンのクリック
+        for i, available_button in enumerate(self.available_buttons):
+            if button == available_button:
+                logger.info(f"[DEBUG] Available character button {i} clicked")
+                self.selected_available_index = i
+                self.selected_party_index = None
+                self._highlight_selected_buttons()
+                self._update_buttons()
+                return True
+        
+        logger.info(f"[DEBUG] Button not handled: {button}")
+        return False
+    
+    def _highlight_selected_buttons(self) -> None:
+        """選択されたボタンをハイライト"""
+        logger.info(f"[DEBUG] _highlight_selected_buttons called")
+        
+        # すべてのボタンの通常色に戻す
+        for button in self.party_buttons:
+            button.colours['normal_bg'] = pygame.Color('#25292e')
+            button.rebuild()
+            
+        for button in self.available_buttons:
+            button.colours['normal_bg'] = pygame.Color('#25292e')
+            button.rebuild()
+        
+        # 選択されたパーティメンバーボタンをハイライト
+        if self.selected_party_index is not None and self.selected_party_index < len(self.party_buttons):
+            button = self.party_buttons[self.selected_party_index]
+            button.colours['normal_bg'] = pygame.Color('#4a5a6a')  # 選択色
+            button.rebuild()
+            logger.info(f"[DEBUG] Highlighted party button at index {self.selected_party_index}")
+        
+        # 選択された利用可能キャラクターボタンをハイライト
+        if self.selected_available_index is not None and self.selected_available_index < len(self.available_buttons):
+            button = self.available_buttons[self.selected_available_index]
+            button.colours['normal_bg'] = pygame.Color('#4a5a6a')  # 選択色
+            button.rebuild()
+            logger.info(f"[DEBUG] Highlighted available button at index {self.selected_available_index}")
+    
+    def handle_selection_list_changed(self, event: pygame.event.Event) -> bool:
+        """選択リスト変更イベントを処理（UISelectionListが削除されたため不要）"""
+        # UISelectionListを使わないため、このメソッドは不要
         return False
     
     def refresh(self) -> None:

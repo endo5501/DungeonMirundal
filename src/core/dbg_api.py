@@ -345,7 +345,7 @@ def send_key_input(code: int, down: bool = True):
     """キーボード入力をゲームに送信"""
     try:
         evt_type = pygame.KEYDOWN if down else pygame.KEYUP
-        event = pygame.event.Event(evt_type, key=code)
+        event = pygame.event.Event(evt_type, key=code, mod=0)  # modifiersフィールドを追加
         pygame.event.post(event)
         
         # 履歴に記録

@@ -28,11 +28,21 @@ class FacilityRegistry:
         self.config: Dict[str, Any] = {}
         self.current_facility_id: Optional[str] = None
         self.current_party: Optional[Party] = None
+        self._game_manager = None  # GameManagerの参照
         
         # 設定ファイルを読み込み
         self._load_config()
         
         logger.info("FacilityRegistry initialized")
+    
+    def set_game_manager(self, game_manager):
+        """GameManagerの参照を設定"""
+        self._game_manager = game_manager
+        logger.info(f"[DEBUG] FacilityRegistry: GameManager set: {game_manager}")
+        
+        # 既存のすべてのコントローラーにGameManagerを設定
+        for controller in self.facilities.values():
+            controller.set_game_manager(game_manager)
     
     @classmethod
     def get_instance(cls) -> 'FacilityRegistry':
@@ -143,6 +153,10 @@ class FacilityRegistry:
         # コントローラーを作成
         try:
             controller = FacilityController(facility_id, service_class)
+            
+            # GameManagerの参照を設定
+            if self._game_manager:
+                controller.set_game_manager(self._game_manager)
             
             # 設定を適用
             facility_config = self.config.get("facilities", {}).get(facility_id, {})

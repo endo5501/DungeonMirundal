@@ -261,13 +261,19 @@ class ActionExecutorMixin:
         
         try:
             if action_id not in action_map:
+                logger.error(f"[DEBUG] Action '{action_id}' not found in action_map: {list(action_map.keys())}")
                 return ServiceResultFactory.error(f"不明なアクション: {action_id}")
             
             action_method = action_map[action_id]
-            return action_method(params)
+            logger.info(f"[DEBUG] Calling action method: {action_method}")
+            result = action_method(params)
+            logger.info(f"[DEBUG] Action method returned: {result}")
+            return result
             
         except Exception as e:
             logger.error(f"Action execution failed for {action_id}: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return ServiceResultFactory.error(f"エラーが発生しました: {str(e)}")
     
     def validate_action_availability(self, action_id: str, 

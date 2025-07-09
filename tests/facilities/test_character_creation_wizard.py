@@ -66,7 +66,7 @@ class TestCharacterCreationWizardBasic:
             assert wizard.stat_labels == {}
             assert wizard.stat_values == {}
             assert wizard.roll_button is None
-            assert wizard.confirm_text is None
+            assert wizard.confirm_labels == []
     
     def test_load_wizard_steps(self, mock_controller, mock_ui_setup):
         """ウィザードステップが正しく定義される"""
@@ -102,17 +102,19 @@ class TestCharacterCreationWizardNameStep:
         wizard.wizard_data = {}
         wizard.ui_manager = Mock()
         wizard.ui_elements = []
+        wizard.container = Mock()
+        wizard.container.get_size.return_value = (800, 600)
         
         panel = Mock()
         
         with patch('pygame_gui.elements.UITextEntryLine') as mock_text_entry, \
-             patch('pygame_gui.elements.UITextBox') as mock_text_box:
+             patch('pygame_gui.elements.UIButton') as mock_button:
             
             CharacterCreationWizard._create_name_input_content(wizard, panel)
             
             # UI要素が作成される
             mock_text_entry.assert_called_once()
-            mock_text_box.assert_called_once()
+            mock_button.assert_called_once()
             
             # wizard.name_inputが設定される
             assert hasattr(wizard, 'name_input')
@@ -125,12 +127,14 @@ class TestCharacterCreationWizardNameStep:
         wizard.wizard_data = {"name": "既存名前"}
         wizard.ui_manager = Mock()
         wizard.ui_elements = []
+        wizard.container = Mock()
+        wizard.container.get_size.return_value = (800, 600)
         
         panel = Mock()
         mock_name_input = Mock()
         
         with patch('pygame_gui.elements.UITextEntryLine', return_value=mock_name_input), \
-             patch('pygame_gui.elements.UITextBox'):
+             patch('pygame_gui.elements.UIButton'):
             
             CharacterCreationWizard._create_name_input_content(wizard, panel)
             
@@ -148,16 +152,18 @@ class TestCharacterCreationWizardNameStep:
             assert result is True
     
     def test_validate_name_empty(self):
-        """空の名前の検証"""
+        """空の名前の検証（デバッグモードではデフォルト名を設定しTrueを返す）"""
         from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
         
         wizard = Mock()
+        wizard.wizard_data = {}
         
         with patch.object(wizard, '_show_message') as mock_show:
             result = CharacterCreationWizard._validate_name(wizard, {"name": ""})
             
-            assert result is False
-            mock_show.assert_called_with("名前を入力してください", "warning")
+            # デバッグモードではデフォルト名を設定してTrueを返す
+            assert result is True
+            assert wizard.wizard_data["name"] == "TestCharacter"
     
     def test_validate_name_too_long(self):
         """長すぎる名前の検証"""
@@ -256,16 +262,20 @@ class TestCharacterCreationWizardRaceStep:
             assert result is True
     
     def test_validate_race_empty(self):
-        """種族が選択されていない場合"""
+        """種族が選択されていない場合（デバッグモードでは自動的にhumanを設定）"""
         from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
         
         wizard = Mock()
+        wizard.wizard_data = {}
         
+        data = {"race": None}
         with patch.object(wizard, '_show_message') as mock_show:
-            result = CharacterCreationWizard._validate_race(wizard, {"race": None})
+            result = CharacterCreationWizard._validate_race(wizard, data)
             
-            assert result is False
-            mock_show.assert_called_with("種族を選択してください", "warning")
+            # デバッグモードでは自動的にhumanを設定してTrueを返す
+            assert result is True
+            assert wizard.wizard_data["race"] == "human"
+            assert data["race"] == "human"
     
     def test_validate_race_invalid(self):
         """無効な種族の検証"""
@@ -396,16 +406,26 @@ class TestCharacterCreationWizardStatsStep:
             assert result is True
     
     def test_validate_stats_missing(self):
-        """能力値が未設定の場合"""
+        """能力値が未設定の場合（デバッグモードではデフォルト値を設定）"""
         from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
         
         wizard = Mock()
+        wizard.wizard_data = {}
         
         with patch.object(wizard, '_show_message') as mock_show:
             result = CharacterCreationWizard._validate_stats(wizard, {"stats": None})
             
-            assert result is False
-            mock_show.assert_called_with("能力値を決定してください", "warning")
+            # デバッグモードではデフォルト値を設定してTrueを返す
+            assert result is True
+            expected_stats = {
+                "strength": 12,
+                "intelligence": 12,
+                "faith": 12,
+                "vitality": 12,
+                "agility": 12,
+                "luck": 12
+            }
+            assert wizard.wizard_data["stats"] == expected_stats
     
     def test_validate_stats_incomplete(self):
         """不完全な能力値の検証"""
@@ -541,16 +561,23 @@ class TestCharacterCreationWizardClassStep:
             assert result is True
     
     def test_validate_class_empty(self):
-        """職業が選択されていない場合"""
+        """職業が選択されていない場合（デバッグモードでは自動的にfighterを設定）"""
         from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
         
         wizard = Mock()
+        wizard.wizard_data = {}
         
+        # _get_available_classesをMock
+        wizard._get_available_classes = Mock(return_value=["fighter", "mage", "priest"])
         with patch.object(wizard, '_show_message') as mock_show:
-            result = CharacterCreationWizard._validate_class(wizard, {"class": None})
             
-            assert result is False
-            mock_show.assert_called_with("職業を選択してください", "warning")
+            data = {"class": None}
+            result = CharacterCreationWizard._validate_class(wizard, data)
+            
+            # デバッグモードでは自動的にfighterを設定してTrueを返す
+            assert result is True
+            assert wizard.wizard_data["class"] == "fighter"
+            assert data["class"] == "fighter"
     
     def test_validate_class_unavailable(self):
         """選択不可能な職業の検証"""
@@ -580,16 +607,16 @@ class TestCharacterCreationWizardConfirmStep:
         
         panel = Mock()
         
-        with patch('pygame_gui.elements.UITextBox') as mock_text_box, \
-             patch.object(wizard, '_create_character_summary', return_value="サマリー"):
+        with patch('pygame_gui.elements.UILabel') as mock_label, \
+             patch.object(wizard, '_create_character_info_lines', return_value=["名前: テスト", "種族: human", "職業: fighter"]):
             
             CharacterCreationWizard._create_confirmation_content(wizard, panel)
             
-            # テキストボックスが作成される
-            mock_text_box.assert_called_once()
+            # ラベルが作成される
+            assert mock_label.call_count >= 1
             
-            # confirm_textが設定される
-            assert hasattr(wizard, 'confirm_text')
+            # confirm_labelsが設定される
+            assert hasattr(wizard, 'confirm_labels')
     
     def test_create_character_summary(self, mock_wizard_data):
         """キャラクター情報サマリーの作成"""

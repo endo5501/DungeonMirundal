@@ -83,10 +83,14 @@ class OverworldManager:
         self.on_exit_game: Optional[Callable] = None
         self.input_manager_ref: Optional[Any] = None
         
+        # GameManagerの参照を設定（先に初期化）
+        self.game_manager = None  # 後でset_game_managerで設定される
+        
         # 新施設システムを使用
         self.facility_registry = facility_registry
         # すべての施設サービスを登録
         self.facility_registry.register_all_services()
+        # GameManagerの参照は後で設定される（set_game_managerメソッドで）
         
         # 施設入場前のメニュー状態を記録するフラグ
         self.main_menu_was_visible = False
@@ -97,6 +101,13 @@ class OverworldManager:
         self.main_window = None
         
         logger.info("OverworldManagerを初期化しました")
+    
+    def set_game_manager(self, game_manager) -> None:
+        """GameManagerの参照を設定"""
+        self.game_manager = game_manager
+        # FacilityRegistryにもGameManagerを設定
+        self.facility_registry.set_game_manager(game_manager)
+        logger.info("OverworldManager: GameManagerが設定されました")
     
     def enter_overworld(self, party: Party, from_dungeon: bool = False) -> bool:
         """地上部に入る"""

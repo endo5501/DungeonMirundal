@@ -509,6 +509,27 @@ class FacilityWindow(Window):
             if self.navigation_panel.handle_button_click(event):
                 return True
         
+        # サービスパネルのイベント処理
+        if self.current_service_id and self.current_service_id in self.service_panels:
+            service_panel = self.service_panels[self.current_service_id]
+            
+            # UISelectionListのイベント処理
+            if hasattr(service_panel, 'handle_selection_list_changed'):
+                if (event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION or
+                    event.type == pygame_gui.UI_SELECTION_LIST_DOUBLE_CLICKED_SELECTION):
+                    if service_panel.handle_selection_list_changed(event):
+                        return True
+            
+            # ボタンクリック（UI_BUTTON_PRESSED）イベントの処理
+            if hasattr(service_panel, 'handle_button_click') and event.type == pygame_gui.UI_BUTTON_PRESSED:
+                if service_panel.handle_button_click(event.ui_element):
+                    return True
+            
+            # ENTERキーやその他のキーイベントの処理（ウィザード用）
+            if hasattr(service_panel, 'handle_key_event') and event.type == pygame.KEYDOWN:
+                if service_panel.handle_key_event(event):
+                    return True
+        
         # シンプルナビゲーションのボタンクリック処理（フォールバック）
         if hasattr(self, 'nav_buttons') and event.type == pygame_gui.UI_BUTTON_PRESSED:
             for button in self.nav_buttons:

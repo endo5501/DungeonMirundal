@@ -79,8 +79,10 @@ class TestPartyFormationPanelBasic:
             panel = PartyFormationPanel(rect, parent, mock_controller, ui_manager)
             
             # 初期状態の確認
-            assert panel.party_list is None
-            assert panel.available_list is None
+            assert panel.party_list_panel is None
+            assert panel.available_list_panel is None
+            assert panel.party_buttons == []
+            assert panel.available_buttons == []
             assert panel.add_button is None
             assert panel.remove_button is None
             assert panel.up_button is None
@@ -104,10 +106,11 @@ class TestPartyFormationPanelBasic:
             panel.rect = rect
             panel.ui_manager = ui_manager
             panel.container = Mock()
+            panel.container.get_size.return_value = (800, 600)
             panel.ui_elements = []
             
             with patch('pygame_gui.elements.UILabel') as mock_label, \
-                 patch('pygame_gui.elements.UISelectionList') as mock_list, \
+                 patch('pygame_gui.elements.UIPanel') as mock_panel, \
                  patch('pygame_gui.elements.UITextBox') as mock_text_box, \
                  patch.object(panel, '_create_button') as mock_create_button, \
                  patch.object(panel, '_load_party_data'):
@@ -117,8 +120,8 @@ class TestPartyFormationPanelBasic:
                 # ラベルが作成される
                 assert mock_label.call_count == 2  # パーティと利用可能リストのラベル
                 
-                # リストが作成される
-                assert mock_list.call_count == 2  # パーティリストと利用可能リスト
+                # パネルが作成される
+                assert mock_panel.call_count == 2  # パーティパネルと利用可能パネル
                 
                 # ボタンが作成される
                 assert mock_create_button.call_count == 4  # 追加、削除、上へ、下へ
@@ -199,23 +202,25 @@ class TestPartyFormationPanelUIUpdates:
         
         panel = Mock()
         panel.party_members = sample_party_members
-        panel.party_list = Mock()
+        panel.party_list_panel = Mock()
+        panel.party_list_panel.relative_rect = Mock()
+        panel.party_list_panel.relative_rect.width = 200
+        panel.party_buttons = []
+        panel.ui_elements = []
+        panel.ui_manager = Mock()
         
-        PartyFormationPanel._update_party_list(panel)
-        
-        # リストアイテムが設定される
-        expected_items = [
-            "1. 戦士アレン Lv5 戦士",
-            "2. 魔法使いベラ Lv3 魔法使い"
-        ]
-        panel.party_list.set_item_list.assert_called_with(expected_items)
+        with patch('pygame_gui.elements.UIButton') as mock_button:
+            PartyFormationPanel._update_party_list(panel)
+            
+            # ボタンが作成される
+            assert mock_button.call_count == 2
     
     def test_update_party_list_no_list(self):
         """パーティリストがない場合"""
         from src.facilities.ui.guild.party_formation_panel import PartyFormationPanel
         
         panel = Mock()
-        panel.party_list = None
+        panel.party_list_panel = None
         
         # エラーが発生しないことを確認
         try:
@@ -230,16 +235,18 @@ class TestPartyFormationPanelUIUpdates:
         
         panel = Mock()
         panel.available_characters = sample_available_characters
-        panel.available_list = Mock()
+        panel.available_list_panel = Mock()
+        panel.available_list_panel.relative_rect = Mock()
+        panel.available_list_panel.relative_rect.width = 200
+        panel.available_buttons = []
+        panel.ui_elements = []
+        panel.ui_manager = Mock()
         
-        PartyFormationPanel._update_available_list(panel)
-        
-        # リストアイテムが設定される
-        expected_items = [
-            "盗賊チャド Lv4 盗賊",
-            "僧侶ダイアナ Lv2 僧侶"
-        ]
-        panel.available_list.set_item_list.assert_called_with(expected_items)
+        with patch('pygame_gui.elements.UIButton') as mock_button:
+            PartyFormationPanel._update_available_list(panel)
+            
+            # ボタンが作成される
+            assert mock_button.call_count == 2
     
     def test_update_buttons_can_add(self, sample_party_members):
         """追加可能な状態でのボタン更新"""
@@ -247,6 +254,7 @@ class TestPartyFormationPanelUIUpdates:
         
         panel = Mock()
         panel.party_members = sample_party_members  # 2人（6人未満）
+        panel.available_characters = []
         panel.selected_available_index = 0
         panel.selected_party_index = None
         panel.add_button = Mock()
@@ -270,6 +278,7 @@ class TestPartyFormationPanelUIUpdates:
         
         panel = Mock()
         panel.party_members = sample_party_members
+        panel.available_characters = []
         panel.selected_party_index = 1  # 2番目を選択
         panel.selected_available_index = None
         panel.add_button = Mock()
@@ -440,7 +449,7 @@ class TestPartyFormationPanelMemberManagement:
         panel = Mock()
         panel.selected_party_index = 1
         panel.party_members = sample_party_members.copy()
-        panel.party_list = Mock()
+        panel.party_list_panel = Mock()
         
         success_result = ServiceResult(success=True)
         
@@ -457,8 +466,7 @@ class TestPartyFormationPanelMemberManagement:
             # 選択位置が更新される
             assert panel.selected_party_index == 0
             
-            # リストの選択が更新される
-            panel.party_list.set_selected_index.assert_called_with(0)
+            # 注意: UISelectionListを使用しないため、set_selected_indexは呼ばれない
     
     def test_move_member_up_failure(self, sample_party_members):
         """メンバー上移動失敗"""
@@ -490,7 +498,7 @@ class TestPartyFormationPanelMemberManagement:
         panel = Mock()
         panel.selected_party_index = 0
         panel.party_members = sample_party_members.copy()
-        panel.party_list = Mock()
+        panel.party_list_panel = Mock()
         
         success_result = ServiceResult(success=True)
         
@@ -578,6 +586,8 @@ class TestPartyFormationPanelEventHandling:
         panel.remove_button = Mock()
         panel.up_button = Mock()
         panel.down_button = Mock()
+        panel.party_buttons = []
+        panel.available_buttons = []
         
         unknown_button = Mock()
         
@@ -586,110 +596,56 @@ class TestPartyFormationPanelEventHandling:
         assert result is False
     
     def test_handle_selection_list_changed_party_list(self):
-        """パーティリスト選択変更の処理"""
+        """パーティリスト選択変更の処理（UISelectionListを使用しないため常にFalseを返す）"""
         from src.facilities.ui.guild.party_formation_panel import PartyFormationPanel
         
         panel = Mock()
-        panel.party_list = Mock()
-        panel.available_list = Mock()
-        panel.selected_party_index = None
-        panel.selected_available_index = None
-        
-        # パーティリストの選択変更イベント
         event = Mock()
         event.type = pygame_gui.UI_SELECTION_LIST_NEW_SELECTION
-        event.ui_element = panel.party_list
-        
-        # 選択アイテムの設定
-        panel.party_list.get_single_selection.return_value = "1. 戦士アレン Lv5 戦士"
-        panel.party_list.item_list = ["1. 戦士アレン Lv5 戦士", "2. 魔法使いベラ Lv3 魔法使い"]
-        
-        with patch.object(panel, '_update_buttons') as mock_update:
-            result = PartyFormationPanel.handle_selection_list_changed(panel, event)
-            
-            assert result is True
-            assert panel.selected_party_index == 0
-            assert panel.selected_available_index is None
-            
-            # 利用可能リストの選択がクリアされる
-            panel.available_list.set_selected_index.assert_called_with(None)
-            
-            # ボタンが更新される
-            mock_update.assert_called_once()
-    
-    def test_handle_selection_list_changed_available_list(self):
-        """利用可能リスト選択変更の処理"""
-        from src.facilities.ui.guild.party_formation_panel import PartyFormationPanel
-        
-        panel = Mock()
-        panel.party_list = Mock()
-        panel.available_list = Mock()
-        panel.selected_party_index = None
-        panel.selected_available_index = None
-        
-        # 利用可能リストの選択変更イベント
-        event = Mock()
-        event.type = pygame_gui.UI_SELECTION_LIST_NEW_SELECTION
-        event.ui_element = panel.available_list
-        
-        # 選択アイテムの設定
-        panel.available_list.get_single_selection.return_value = "盗賊チャド Lv4 盗賊"
-        panel.available_list.item_list = ["盗賊チャド Lv4 盗賊", "僧侶ダイアナ Lv2 僧侶"]
-        
-        with patch.object(panel, '_update_buttons') as mock_update:
-            result = PartyFormationPanel.handle_selection_list_changed(panel, event)
-            
-            assert result is True
-            assert panel.selected_available_index == 0
-            assert panel.selected_party_index is None
-            
-            # パーティリストの選択がクリアされる
-            panel.party_list.set_selected_index.assert_called_with(None)
-            
-            # ボタンが更新される
-            mock_update.assert_called_once()
-    
-    def test_handle_selection_list_changed_unknown_element(self):
-        """未知の要素の選択変更処理"""
-        from src.facilities.ui.guild.party_formation_panel import PartyFormationPanel
-        
-        panel = Mock()
-        panel.party_list = Mock()
-        panel.available_list = Mock()
-        
-        # 未知の要素のイベント
-        event = Mock()
-        event.type = pygame_gui.UI_SELECTION_LIST_NEW_SELECTION
-        event.ui_element = Mock()  # 異なる要素
         
         result = PartyFormationPanel.handle_selection_list_changed(panel, event)
         
+        # UISelectionListを使用しない実装では常にFalseを返す
         assert result is False
     
-    def test_handle_selection_list_changed_no_selection(self):
-        """選択解除の処理"""
+    def test_handle_selection_list_changed_available_list_panel(self):
+        """利用可能リスト選択変更の処理（UISelectionListを使用しないため常にFalseを返す）"""
         from src.facilities.ui.guild.party_formation_panel import PartyFormationPanel
         
         panel = Mock()
-        panel.party_list = Mock()
-        panel.available_list = Mock()
-        panel.selected_party_index = 0
-        
-        # 選択解除イベント
         event = Mock()
         event.type = pygame_gui.UI_SELECTION_LIST_NEW_SELECTION
-        event.ui_element = panel.party_list
         
-        # 選択なし
-        panel.party_list.get_single_selection.return_value = None
+        result = PartyFormationPanel.handle_selection_list_changed(panel, event)
         
-        with patch.object(panel, '_update_buttons') as mock_update:
-            result = PartyFormationPanel.handle_selection_list_changed(panel, event)
-            
-            assert result is True
-            assert panel.selected_party_index is None
-            
-            mock_update.assert_called_once()
+        # UISelectionListを使用しない実装では常にFalseを返す
+        assert result is False
+    
+    def test_handle_selection_list_changed_unknown_element(self):
+        """未知の要素の選択変更処理（UISelectionListを使用しないため常にFalseを返す）"""
+        from src.facilities.ui.guild.party_formation_panel import PartyFormationPanel
+        
+        panel = Mock()
+        event = Mock()
+        event.type = pygame_gui.UI_SELECTION_LIST_NEW_SELECTION
+        
+        result = PartyFormationPanel.handle_selection_list_changed(panel, event)
+        
+        # UISelectionListを使用しない実装では常にFalseを返す
+        assert result is False
+    
+    def test_handle_selection_list_changed_no_selection(self):
+        """選択解除の処理（UISelectionListを使用しないため常にFalseを返す）"""
+        from src.facilities.ui.guild.party_formation_panel import PartyFormationPanel
+        
+        panel = Mock()
+        event = Mock()
+        event.type = pygame_gui.UI_SELECTION_LIST_NEW_SELECTION
+        
+        result = PartyFormationPanel.handle_selection_list_changed(panel, event)
+        
+        # UISelectionListを使用しない実装では常にFalseを返す
+        assert result is False
 
 
 class TestPartyFormationPanelRefresh:

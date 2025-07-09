@@ -34,8 +34,18 @@ class FacilityController:
         self.is_active = False
         self._party: Optional[Party] = None
         self._config: Dict[str, Any] = {}
+        self._game_manager = None  # GameManagerの参照
         
         logger.info(f"FacilityController created: {facility_id}")
+    
+    def set_game_manager(self, game_manager):
+        """GameManagerの参照を設定"""
+        self._game_manager = game_manager
+        
+        # サービスにGameManagerの参照を設定
+        if hasattr(self.service, 'set_game_manager'):
+            self.service.set_game_manager(game_manager)
+            logger.info(f"[DEBUG] FacilityController: GameManager set to service: {self.facility_id}")
     
     def enter(self, party: Party) -> bool:
         """施設に入る
@@ -130,7 +140,13 @@ class FacilityController:
         
         # サービス実行
         try:
+            logger.info(f"[DEBUG] FacilityController: Calling service.execute_action({action_id}, {params})")
+            logger.info(f"[DEBUG] FacilityController: Service instance: {self.service}")
+            logger.info(f"[DEBUG] FacilityController: Service type: {type(self.service)}")
+            
             result = self.service.execute_action(action_id, params)
+            
+            logger.info(f"[DEBUG] FacilityController: Service returned: {result}")
             
             # 成功時はUIを更新（ただし情報取得系のアクションは除く）
             if result.is_success() and self.window and not self._is_info_action(action_id, params):
