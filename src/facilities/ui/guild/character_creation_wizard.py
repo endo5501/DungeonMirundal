@@ -95,7 +95,8 @@ class CharacterCreationWizard(WizardServicePanel):
             relative_rect=input_rect,
             manager=self.ui_manager,
             container=panel,
-            placeholder_text="キャラクター名を入力"
+            placeholder_text="キャラクター名を入力",
+            object_id="#character_name_input"
         )
         self.ui_elements.append(self.name_input)
         
@@ -103,9 +104,13 @@ class CharacterCreationWizard(WizardServicePanel):
         if "name" in self.wizard_data:
             self.name_input.set_text(self.wizard_data["name"])
         
+        # フォーカスを明示的に設定
+        self.name_input.focus()
+        
         # デバッグ用：テスト名前を設定
         logger.info(f"[DEBUG] name_input created: {self.name_input}")
         logger.info(f"[DEBUG] name_input has focus: {hasattr(self.name_input, 'focused')}")
+        logger.info(f"[DEBUG] name_input focused: {getattr(self.name_input, 'is_focused', False)}")
         
         # テスト用のボタンを追加（デバッグ時の名前設定用）
         test_button_rect = pygame.Rect(320, 60, 100, 40)
@@ -514,23 +519,6 @@ class CharacterCreationWizard(WizardServicePanel):
         if hasattr(button, 'selected'):
             button.selected = False
     
-    def _collect_step_data(self) -> None:
-        """現在のステップのデータを収集 (デバッグ強化版)"""
-        if self.current_step_index >= len(self.steps):
-            return
-        
-        step = self.steps[self.current_step_index]
-        logger.info(f"[DEBUG] _collect_step_data: step.id={step.id}")
-        
-        # 名前入力ステップの場合
-        if step.id == "name" and hasattr(self, 'name_input'):
-            name_text = self.name_input.get_text()
-            logger.info(f"[DEBUG] name_input.get_text() = '{name_text}'")
-            self.wizard_data["name"] = name_text
-            logger.info(f"[DEBUG] wizard_data['name'] = '{self.wizard_data.get('name', '')}'")
-        else:
-            # 親クラスの処理を呼び出し
-            super()._collect_step_data()
     
     def _validate_name(self, data: Dict[str, Any]) -> bool:
         """名前を検証"""

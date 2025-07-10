@@ -482,8 +482,15 @@ class FacilityWindow(Window):
             logger.info(f"[DEBUG] FacilityWindow({self.window_id}) received number key: {button_number}")
         
         # pygame_gui のイベント処理
+        # WindowManagerの統一UIManagerとは別のUIManagerを使用しているため、
+        # ここで処理する必要がある
+        ui_consumed = False
         if self.ui_manager:
-            self.ui_manager.process_events(event)
+            # UIManagerがイベントを処理したかチェック
+            # テキスト入力系のイベントはpygame_guiが処理する
+            if event.type in [pygame.KEYDOWN, pygame.TEXTINPUT, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION]:
+                self.ui_manager.process_events(event)
+                ui_consumed = True
         
         # ESCキー処理
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -537,4 +544,5 @@ class FacilityWindow(Window):
                     self._on_service_selected(button.item_id)
                     return True
         
-        return False
+        # UIManagerがイベントを処理した場合はTrueを返す
+        return ui_consumed

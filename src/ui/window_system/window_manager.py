@@ -836,8 +836,13 @@ class WindowManager:
                         handled = True
                         continue
                 
-                
-                # UIManagerでのイベント処理
+                # アクティブウィンドウがイベントを処理しなかった場合のみ
+                # UIManagerでのイベント処理を行う
+                if self.ui_manager:
+                    self.ui_manager.process_events(event)
+                    handled = True
+            else:
+                # アクティブウィンドウがない場合は統一UIManagerで処理
                 if self.ui_manager:
                     self.ui_manager.process_events(event)
                     handled = True
