@@ -220,8 +220,10 @@ class CharacterListPanel(ServicePanel):
             
             # ステータス表示
             status_mark = ""
-            if char.get("status") != "normal":
-                status_mark = f" [{char['status']}]"
+            status = char.get("status", "good")
+            # "good"と"normal"は正常状態として扱う
+            if status not in ["normal", "good"]:
+                status_mark = f" [{status}]"
             
             text = f"{party_mark} {char['name']} Lv{char['level']} {char['class']}{status_mark}"
             items.append(text)
@@ -327,11 +329,17 @@ class CharacterListPanel(ServicePanel):
             self.selected_index = None
         else:
             # 選択されたインデックスを取得
-            index = self.character_list.item_list.index(selection)
-            if 0 <= index < len(self.characters):
-                self.selected_index = index
-                self.selected_character = self.characters[index]
-            else:
+            try:
+                index = self.character_list.item_list.index(selection)
+                if 0 <= index < len(self.characters):
+                    self.selected_index = index
+                    self.selected_character = self.characters[index]
+                else:
+                    self.selected_character = None
+                    self.selected_index = None
+            except ValueError:
+                # item_listに存在しない場合（リストが更新された等）
+                logger.warning(f"Selection '{selection}' not found in item_list")
                 self.selected_character = None
                 self.selected_index = None
         
