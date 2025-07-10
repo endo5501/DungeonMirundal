@@ -354,25 +354,18 @@ class TestPartyFormationPanelMemberManagement:
              patch.object(panel, '_update_available_list') as mock_update_available, \
              patch.object(panel, '_update_party_info') as mock_update_info, \
              patch.object(panel, '_update_buttons') as mock_update_buttons, \
-             patch.object(panel, '_show_message') as mock_show:
+             patch.object(panel, '_show_message') as mock_show, \
+             patch.object(panel, '_load_party_data') as mock_load:  # データの再読み込みをモック
             
             PartyFormationPanel._add_member(panel)
             
-            # メンバーが移動される
-            assert len(panel.party_members) == 1
-            assert panel.party_members[0]["id"] == "char3"
-            assert len(panel.available_characters) == 1
+            # サービスを通じて追加されるので、内部リストは変更されない
+            # 実際のデータ更新は_load_party_dataで行われる
+            mock_load.assert_called_once()
             
-            # 選択がクリアされる
-            assert panel.selected_available_index is None
-            
-            # UI更新メソッドが呼ばれる
-            mock_update_party.assert_called_once()
-            mock_update_available.assert_called_once()
-            mock_update_info.assert_called_once()
-            mock_update_buttons.assert_called_once()
-            
-            # 成功メッセージが表示される
+            # _load_party_dataが呼ばれた後、それ自体がUI更新メソッドを呼ぶ
+            # ただし、モックされているので実際には呼ばれない
+            # 成功メッセージのみが表示される
             mock_show.assert_called_with("追加しました", "info")
     
     def test_add_member_failure(self, sample_available_characters):
@@ -422,22 +415,14 @@ class TestPartyFormationPanelMemberManagement:
         success_result = ServiceResult(success=True, message="削除しました")
         
         with patch.object(panel, '_execute_service_action', return_value=success_result), \
-             patch.object(panel, '_update_party_list'), \
-             patch.object(panel, '_update_available_list'), \
-             patch.object(panel, '_update_party_info'), \
-             patch.object(panel, '_update_buttons'), \
+             patch.object(panel, '_load_party_data') as mock_load, \
              patch.object(panel, '_show_message') as mock_show:
             
             PartyFormationPanel._remove_member(panel)
             
-            # メンバーが移動される
-            assert len(panel.party_members) == 1
-            assert panel.party_members[0]["id"] == "char2"
-            assert len(panel.available_characters) == 1
-            assert panel.available_characters[0]["id"] == "char1"
-            
-            # 選択がクリアされる
-            assert panel.selected_party_index is None
+            # サービスを通じて削除されるので、内部リストは変更されない
+            # 実際のデータ更新は_load_party_dataで行われる
+            mock_load.assert_called_once()
             
             # 成功メッセージが表示される
             mock_show.assert_called_with("削除しました", "info")

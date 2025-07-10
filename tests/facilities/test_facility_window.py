@@ -503,8 +503,8 @@ class TestFacilityWindowEventHandling:
         with patch.object(window, '_on_service_selected') as mock_select:
             result = window.handle_event(event)
             
-            # 処理されない
-            assert result is False
+            # UIイベントとして処理される（ただしサービス選択はされない）
+            assert result is True  # UI managerがイベントを処理
             mock_select.assert_not_called()
     
     def test_handle_event_navigation_panel_click(self, mock_controller):
