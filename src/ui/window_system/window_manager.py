@@ -8,6 +8,7 @@ from typing import Dict, Optional, List, Type, Any
 import pygame
 import pygame_gui
 import os
+import sys
 from datetime import datetime
 
 from src.utils.logger import logger
@@ -50,6 +51,27 @@ class WindowManager:
         
         self._initialized = True
         logger.info("WindowManagerを初期化しました")
+    
+    def _load_jp_font_path(self):
+        """日本語フォントのパスを取得（ChatGPTのload_jp_fontアプローチ）"""
+        # まず同梱フォントを優先
+        local_fonts = [
+            "assets/fonts/NotoSansCJKJP-Regular.otf",
+            "assets/fonts/NotoSansJP-Regular.otf", 
+            "assets/fonts/ipag.ttf"
+        ]
+        for f in local_fonts:
+            if os.path.exists(f):
+                return os.path.abspath(f)
+
+        # 次にシステムフォント候補
+        for name in ["Hiragino Sans", "YuGothic", "Apple SD Gothic Neo"]:
+            path = pygame.font.match_font(name)
+            if path:
+                return path
+
+        # 最後の手段
+        return None
     
     def _initialize_core_components(self):
         """コアコンポーネントを初期化"""
@@ -103,21 +125,57 @@ class WindowManager:
             # pygameフォントシステムを事前に初期化
             pygame.font.init()
             
-            # 日本語フォントを事前にロード（pygame-guiが認識できるようにする）
+            # 日本語フォント取得（load_jp_fontアプローチ）
             try:
-                japanese_font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
-                if os.path.exists(japanese_font_path):
+                jp_font_path = self._load_jp_font_path()
+                if jp_font_path:
                     # フォントを事前ロード
-                    test_font = pygame.font.Font(japanese_font_path, 14)
-                    logger.info(f"WindowManager: 日本語フォントを事前ロード: {japanese_font_path}")
+                    test_font = pygame.font.Font(jp_font_path, 14)
+                    logger.info(f"WindowManager: 日本語フォントを事前ロード: {jp_font_path}")
+                    # 後でテーマファイルで使用するためにパスを保存
+                    self._japanese_font_path = jp_font_path
+                else:
+                    logger.warning("WindowManager: 日本語フォントが見つかりません")
+                    self._japanese_font_path = None
             except Exception as pre_e:
                 logger.warning(f"WindowManager: 日本語フォント事前ロードエラー: {pre_e}")
+                self._japanese_font_path = None
             
-            # pygame-gui マネージャー（既存システムと同じテーマファイル）
+            # pygame-gui マネージャー（日本語フォント対応テーマ）
             try:
-                theme_path = "/home/satorue/Dungeon/config/ui_theme.json"
-                self.ui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()), theme_path)
-                logger.info(f"WindowManager: UIテーマを読み込みました: {theme_path}")
+                if self._japanese_font_path:
+                    # 動的テーマデータを作成（見つかった日本語フォントを使用）
+                    theme_data = {
+                        "defaults": {
+                            "font": {
+                                "name": self._japanese_font_path,
+                                "size": "14"
+                            },
+                            "colours": {
+                                "normal_text": "#FFFFFF",
+                                "hovered_text": "#FFFFFF",
+                                "selected_text": "#FFFFFF",
+                                "active_text": "#FFFFFF",
+                                "normal_border": "#DDDDDD",
+                                "hovered_border": "#B0C4DE",
+                                "disabled_border": "#808080",
+                                "normal_bg": "#25292e",
+                                "hovered_bg": "#35393e",
+                                "disabled_bg": "#25292e",
+                                "selected_bg": "#193784",
+                                "active_bg": "#193784",
+                                "dark_bg": "#15191e"
+                            }
+                        }
+                    }
+                    self.ui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()))
+                    self.ui_manager.get_theme().load_theme(theme_data)
+                    logger.info(f"WindowManager: 動的テーマを読み込みました（日本語フォント: {self._japanese_font_path}）")
+                else:
+                    # フォールバック：既存のテーマファイル
+                    theme_path = "config/ui_theme.json"
+                    self.ui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()), theme_path)
+                    logger.info(f"WindowManager: フォールバックテーマを読み込みました: {theme_path}")
                 
                 # デバッグ：pygame-guiのフォント状態を確認
                 theme = self.ui_manager.get_theme()
@@ -170,57 +228,70 @@ class WindowManager:
             logger.error(f"WindowManager: フォント初期化エラー: {e}")
     
     def _register_japanese_fonts_to_pygame_gui(self):
-        """pygame-guiに日本語フォントを直接登録"""
+        """pygame-guiに日本語フォントを直接登録（ChatGPTアプローチ）"""
         try:
-            # pygame-guiのフォント辞書を取得
-            theme = self.ui_manager.get_theme()
-            font_dict = theme.get_font_dictionary()
+            # 日本語フォントパスを取得
+            jp_font_path = self._load_jp_font_path()
+            if not jp_font_path:
+                logger.warning("WindowManager: 日本語フォントが見つかりません")
+                return
             
-            # 日本語フォントパス
-            japanese_font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
-            japanese_bold_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
+            logger.info(f"WindowManager: 日本語フォントを発見: {jp_font_path}")
             
-            if os.path.exists(japanese_font_path):
-                try:
-                    # notoフォントファミリーとして登録（通常版）
-                    font_dict.add_font_path('noto', japanese_font_path, 'regular')
-                    logger.info(f"WindowManager: noto regular フォント登録: {japanese_font_path}")
+            # ① エイリアス "jp_font" として登録
+            try:
+                self.ui_manager.add_font_paths("jp_font", jp_font_path)
+                logger.info(f"WindowManager: 日本語フォント登録成功: jp_font -> {jp_font_path}")
+            except Exception as e:
+                logger.error(f"WindowManager: フォントパス登録失敗: {e}")
+                return
+            
+            # ② 必要なサイズでプリロード
+            try:
+                self.ui_manager.preload_fonts([
+                    {"name": "jp_font", "style": "regular", "point_size": 14},
+                    {"name": "jp_font", "style": "regular", "point_size": 16},
+                    {"name": "jp_font", "style": "regular", "point_size": 18},
+                    {"name": "jp_font", "style": "regular", "point_size": 20},
+                    {"name": "jp_font", "style": "regular", "point_size": 24}
+                ])
+                logger.info("WindowManager: 日本語フォント事前ロード完了")
+            except Exception as e:
+                logger.error(f"WindowManager: フォントプリロード失敗: {e}")
+            
+            # ③ テーマ設定で名前だけ指定（ChatGPTアプローチ）
+            theme_data = {
+                "defaults": {
+                    "font": {
+                        "name": "jp_font",
+                        "size": "16",
+                        "style": "regular"
+                    }
+                },
+                "button": {  # ボタン専用のフォント設定
+                    "font": {
+                        "name": "jp_font",
+                        "size": "16",
+                        "style": "regular"
+                    }
+                },
+                "label": {   # ラベル専用のフォント設定
+                    "font": {
+                        "name": "jp_font", 
+                        "size": "16",
+                        "style": "regular"
+                    }
+                }
+            }
+            
+            try:
+                self.ui_manager.get_theme().load_theme(theme_data)
+                logger.info("WindowManager: 動的テーマ読み込み成功（日本語フォント対応）")
+            except Exception as e:
+                logger.error(f"WindowManager: テーマ読み込み失敗: {e}")
                     
-                    # ボールド版も登録
-                    if os.path.exists(japanese_bold_path):
-                        font_dict.add_font_path('noto', japanese_bold_path, 'bold')
-                        logger.info(f"WindowManager: noto bold フォント登録: {japanese_bold_path}")
-                    
-                    # pygame-guiが警告で要求している組み合わせを事前ロード
-                    font_preload_configs = [
-                        {'name': 'noto', 'point_size': 14, 'style': 'regular', 'antialiased': '1'},
-                        {'name': 'noto', 'point_size': 14, 'style': 'bold', 'antialiased': '1'},
-                        {'name': 'noto', 'point_size': 16, 'style': 'regular', 'antialiased': '1'},
-                        {'name': 'noto', 'point_size': 16, 'style': 'bold', 'antialiased': '1'}
-                    ]
-                    
-                    for config in font_preload_configs:
-                        try:
-                            font_dict.preload_font(
-                                font_size=config['point_size'],
-                                font_name=config['name'],
-                                bold=config['style'] == 'bold',
-                                italic=False
-                            )
-                            logger.info(f"WindowManager: プリロード完了 - {config}")
-                        except Exception as preload_e:
-                            logger.warning(f"WindowManager: プリロード失敗 - {config}: {preload_e}")
-                    
-                    logger.info("WindowManager: pygame-guiに日本語フォントを登録しました")
-                    
-                except Exception as font_e:
-                    logger.error(f"WindowManager: フォント登録エラー: {font_e}")
-                    
-            else:
-                logger.warning(f"WindowManager: 日本語フォントが見つかりません: {japanese_font_path}")
-                
         except Exception as e:
-            logger.error(f"WindowManager: pygame-guiへのフォント登録エラー: {e}")
+            logger.error(f"WindowManager: 日本語フォント登録処理でエラー: {e}")
     
     def create_window(self, window_class: Type[Window], window_id: str = None, 
                      parent: Optional[Window] = None, **kwargs) -> Window:

@@ -1,10 +1,8 @@
 {
     "defaults": {
         "font": {
-            "name": "noto",
-            "size": "14",
-            "regular_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            "bold_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
+            "name": "assets/fonts/NotoSansCJKJP-Regular.otf",
+            "size": "14"
         },
         "colours": {
             "normal_text": "#FFFFFF",
@@ -38,10 +36,6 @@
         "misc": {
             "shape": "rectangle",
             "list_item_height": "30"
-        },
-        "font": {
-            "name": "noto",
-            "size": "14"
         }
     },
     "button": {
@@ -57,10 +51,6 @@
             "disabled_text": "#808080",
             "normal_border": "#DDDDDD",
             "hovered_border": "#B0C4DE"
-        },
-        "font": {
-            "name": "noto",
-            "size": "14"
         }
     },
     "panel": {
@@ -78,7 +68,7 @@
             "normal_text": "#FFFFFF"
         },
         "font": {
-            "name": "noto",
+            "name": "assets/fonts/NotoSansCJKJP-Regular.otf",
             "size": "16"
         }
     },
@@ -89,12 +79,6 @@
             "selected_bg": "#3390FF",
             "selected_text": "#FFFFFF",
             "normal_border": "#DDDDDD"
-        },
-        "font": {
-            "name": "noto",
-            "size": "14",
-            "regular_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            "bold_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
         }
     },
     "#character_name_input": {
@@ -110,11 +94,9 @@
             "dark_bg": "#F5F5F5"
         },
         "font": {
-            "name": "noto",
+            "name": "assets/fonts/NotoSansCJKJP-Regular.otf",
             "size": "18",
-            "style": "bold",
-            "regular_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            "bold_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
+            "style": "bold"
         },
         "misc": {
             "border_width": "3"
@@ -125,12 +107,6 @@
             "normal_text": "#FFFFFF",
             "normal_bg": "#25292e",
             "normal_border": "#DDDDDD"
-        },
-        "font": {
-            "name": "noto",
-            "size": "14",
-            "regular_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            "bold_path": "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
         }
     }
 }

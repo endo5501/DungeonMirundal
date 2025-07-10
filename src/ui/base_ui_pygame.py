@@ -380,7 +380,7 @@ class UIManager:
         
         # pygame-gui マネージャー（テーマファイル付き）
         try:
-            theme_path = "/home/satorue/Dungeon/config/ui_theme.json"
+            theme_path = "config/ui_theme.json"
             self.pygame_gui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()), theme_path)
             logger.info(f"UIテーマを読み込みました: {theme_path}")
         except Exception as e:
