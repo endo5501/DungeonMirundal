@@ -39,6 +39,24 @@ pygame_gui 0.6.14の利用可能APIメソッドを調査
 - 同梱フォントなしでのテスト
 - 基本的な動作検証
 
+### 分析ドキュメント
+
+#### `about_pygame_gui_load_jp_font.md`
+ChatGPTによる文字化け問題の詳細分析
+
+**内容**:
+- フォントエイリアス問題の根本原因解説
+- pygame_guiテーマシステムの仕組み説明
+- 解決策の技術的背景
+
+#### `about_test_pygame_gui_correct_approach.md`
+テーマ階層問題の分析記録
+
+**内容**:
+- defaults vs button/label設定の優先順位
+- 実際の問題発生パターンと解決方法
+- ChatGPTからの助言内容
+
 ## 🚀 使用方法
 
 ### 1. 基本的なテスト実行
