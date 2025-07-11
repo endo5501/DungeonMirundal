@@ -452,11 +452,11 @@ class OverworldManager:
             logger.info(f"セーブ設定作成: operation={save_config.get('operation')}")
             
             if self.window_manager:
-                # 現在のゲームメニューを取得して一時的に非表示にする（スタックからは削除しない）
+                # 現在のゲームメニューを取得してスタックから削除する
                 game_menu_window = self.window_manager.get_window('game_menu')
                 if game_menu_window:
-                    self.window_manager.hide_window(game_menu_window, remove_from_stack=False)
-                    logger.info("GameMenuWindowを一時的に非表示にしました（スタック保持）")
+                    self.window_manager.hide_window(game_menu_window, remove_from_stack=True)
+                    logger.info("GameMenuWindowをスタックから削除しました")
                 
                 # セーブスロット選択のOverworldMainWindowを表示
                 if hasattr(self, 'main_window') and self.main_window:
@@ -485,11 +485,11 @@ class OverworldManager:
             logger.info(f"ロード設定作成: operation={load_config.get('operation')}")
             
             if self.window_manager:
-                # 現在のゲームメニューを取得して一時的に非表示にする（スタックからは削除しない）
+                # 現在のゲームメニューを取得してスタックから削除する
                 game_menu_window = self.window_manager.get_window('game_menu')
                 if game_menu_window:
-                    self.window_manager.hide_window(game_menu_window, remove_from_stack=False)
-                    logger.info("GameMenuWindowを一時的に非表示にしました（スタック保持）")
+                    self.window_manager.hide_window(game_menu_window, remove_from_stack=True)
+                    logger.info("GameMenuWindowをスタックから削除しました")
                 
                 # ロードスロット選択のOverworldMainWindowを表示
                 if hasattr(self, 'main_window') and self.main_window:
@@ -549,6 +549,12 @@ class OverworldManager:
     def _create_game_menu_config(self):
         """ゲームメニュー設定を作成"""
         menu_items = [
+            {
+                'id': 'new_game',
+                'label': '新規ゲーム',
+                'action': 'new_game',
+                'enabled': True
+            },
             {
                 'id': 'save_game',
                 'label': 'ゲームをセーブ',
@@ -727,7 +733,9 @@ class OverworldManager:
         if message_type == 'menu_item_selected':
             action = data.get('action')
             
-            if action == 'save_game':
+            if action == 'new_game':
+                return self._handle_new_game()
+            elif action == 'save_game':
                 return self._handle_save_game()
             elif action == 'load_game':
                 return self._handle_load_game()
@@ -767,6 +775,48 @@ class OverworldManager:
         logger.warning(f"未処理の設定メッセージタイプ: {message_type}")
         return False
     
+    def _handle_new_game(self) -> bool:
+        """新規ゲーム処理 - 全データをクリアして新しいゲームを開始"""
+        logger.info("=== 新規ゲーム処理開始 ===")
+        try:
+            # GameManagerを取得
+            from src.core.game_manager import GameManager
+            game_manager = GameManager()
+            
+            # 全データをクリア
+            logger.info("全データをクリアしています...")
+            
+            # パーティをリセット
+            self.current_party = None
+            
+            # GameManagerの新規ゲーム開始処理を呼び出し
+            if hasattr(game_manager, 'start_new_game'):
+                game_manager.start_new_game()
+                logger.info("新規ゲームが開始されました")
+            else:
+                # フォールバック: 基本的なリセット処理
+                logger.info("フォールバック: 基本的なリセット処理を実行")
+                # 既存のテスト用パーティを再作成
+                from src.core.game_manager import GameManager
+                game_manager = GameManager()
+                test_party = game_manager._create_test_party()
+                self.current_party = test_party
+                logger.info("テスト用パーティを再作成しました")
+            
+            # ゲームメニューを閉じて地上部に戻る
+            if self.window_manager:
+                game_menu_window = self.window_manager.get_window('game_menu')
+                if game_menu_window:
+                    self.window_manager.hide_window(game_menu_window, remove_from_stack=True)
+                    logger.info("ゲームメニューを閉じました")
+            
+            logger.info("新規ゲーム処理完了")
+            return True
+            
+        except Exception as e:
+            logger.error(f"新規ゲーム処理エラー: {e}")
+            return False
+
     def _handle_save_game(self) -> bool:
         """セーブゲーム処理 - WindowSystemスロット選択画面を表示"""
         logger.info("=== セーブゲーム処理開始 ===")
