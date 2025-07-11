@@ -146,29 +146,12 @@
       "welcome_message": "神の祝福がありますように。",
       "background_music": "temple_theme.mp3",
       "services": {
-        "heal": {
-          "type": "action",
-          "name": "治療",
-          "description": "キャラクターを治療します",
-          "cost_formula": "level * 10"
-        },
         "resurrect": {
           "type": "action",
           "name": "蘇生",
           "description": "死亡したキャラクターを蘇生させます",
           "cost_formula": "level * 100",
           "vitality_cost": 1
-        },
-        "cure": {
-          "type": "panel",
-          "name": "状態回復",
-          "description": "状態異常を回復します",
-          "status_costs": {
-            "poison": 50,
-            "paralysis": 100,
-            "petrification": 500,
-            "curse": 200
-          }
         },
         "blessing": {
           "type": "action",
@@ -177,11 +160,12 @@
           "cost": 500,
           "duration": "next_battle"
         },
-        "donation": {
-          "type": "action",
-          "name": "寄付",
-          "description": "教会に寄付をします",
-          "karma_bonus": true
+        "prayer_shop": {
+          "type": "panel",
+          "name": "祈祷書購入",
+          "description": "神聖魔法の祈祷書を購入します",
+          "categories": ["healing", "blessing", "resurrection", "purification"],
+          "level_requirements": true
         }
       }
     },

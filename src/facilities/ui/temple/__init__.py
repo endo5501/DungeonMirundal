@@ -1,15 +1,11 @@
 """教会UIパッケージ"""
 
-from .heal_panel import HealPanel
 from .resurrect_panel import ResurrectPanel
-from .cure_panel import CurePanel
 from .blessing_panel import BlessingPanel
-from .donation_panel import DonationPanel
+from .prayer_shop_panel import PrayerShopPanel
 
 __all__ = [
-    "HealPanel",
     "ResurrectPanel", 
-    "CurePanel",
     "BlessingPanel",
-    "DonationPanel"
+    "PrayerShopPanel"
 ]
