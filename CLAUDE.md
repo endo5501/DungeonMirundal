@@ -19,6 +19,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 @docs/how_to_debug_game.md
 
+### フォントシステム（日本語対応）
+
+プロジェクトでは日本語フォント表示にpygame/pygame_guiを使用しています。
+
+**フォント関連問題が発生した場合**:
+- @docs/font_system_guide.md - 包括的ガイド
+- @docs/pygame_gui_font_integration.md - pygame_gui技術詳細  
+- @docs/font_troubleshooting_checklist.md - 問題解決チェックリスト
+- @docs/samples/font_tests/ - 動作テストサンプル
+
 ### ソースコード類似度確認
 
 @docs/how_to_plan_refactoring_by_similarity.md

@@ -460,6 +460,15 @@ if hierarchy:
 | A-Z | 97-122 |
 | 矢印キー | 273-276 |
 
+## フォント関連問題
+
+フォント表示（特に日本語文字化け）に関する問題については、専用ドキュメントを参照してください：
+
+- **包括的ガイド**: [@docs/font_system_guide.md](./font_system_guide.md)
+- **pygame_gui統合**: [@docs/pygame_gui_font_integration.md](./pygame_gui_font_integration.md)  
+- **問題解決**: [@docs/font_troubleshooting_checklist.md](./font_troubleshooting_checklist.md)
+- **テストサンプル**: [@docs/samples/font_tests/](./samples/font_tests/)
+
 ## まとめ
 
 **🎉 Dungeonゲームのデバッグシステム (2025年7月5日 現在)**
