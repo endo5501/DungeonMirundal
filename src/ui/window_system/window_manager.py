@@ -8,7 +8,6 @@ from typing import Dict, Optional, List, Type, Any
 import pygame
 import pygame_gui
 import os
-import sys
 from datetime import datetime
 
 from src.utils.logger import logger
@@ -125,57 +124,12 @@ class WindowManager:
             # pygameフォントシステムを事前に初期化
             pygame.font.init()
             
-            # 日本語フォント取得（load_jp_fontアプローチ）
-            try:
-                jp_font_path = self._load_jp_font_path()
-                if jp_font_path:
-                    # フォントを事前ロード
-                    test_font = pygame.font.Font(jp_font_path, 14)
-                    logger.info(f"WindowManager: 日本語フォントを事前ロード: {jp_font_path}")
-                    # 後でテーマファイルで使用するためにパスを保存
-                    self._japanese_font_path = jp_font_path
-                else:
-                    logger.warning("WindowManager: 日本語フォントが見つかりません")
-                    self._japanese_font_path = None
-            except Exception as pre_e:
-                logger.warning(f"WindowManager: 日本語フォント事前ロードエラー: {pre_e}")
-                self._japanese_font_path = None
             
-            # pygame-gui マネージャー（日本語フォント対応テーマ）
+            # pygame-gui マネージャー（既存のテーマファイルを使用）
             try:
-                if self._japanese_font_path:
-                    # 動的テーマデータを作成（見つかった日本語フォントを使用）
-                    theme_data = {
-                        "defaults": {
-                            "font": {
-                                "name": self._japanese_font_path,
-                                "size": "14"
-                            },
-                            "colours": {
-                                "normal_text": "#FFFFFF",
-                                "hovered_text": "#FFFFFF",
-                                "selected_text": "#FFFFFF",
-                                "active_text": "#FFFFFF",
-                                "normal_border": "#DDDDDD",
-                                "hovered_border": "#B0C4DE",
-                                "disabled_border": "#808080",
-                                "normal_bg": "#25292e",
-                                "hovered_bg": "#35393e",
-                                "disabled_bg": "#25292e",
-                                "selected_bg": "#193784",
-                                "active_bg": "#193784",
-                                "dark_bg": "#15191e"
-                            }
-                        }
-                    }
-                    self.ui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()))
-                    self.ui_manager.get_theme().load_theme(theme_data)
-                    logger.info(f"WindowManager: 動的テーマを読み込みました（日本語フォント: {self._japanese_font_path}）")
-                else:
-                    # フォールバック：既存のテーマファイル
-                    theme_path = "config/ui_theme.json"
-                    self.ui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()), theme_path)
-                    logger.info(f"WindowManager: フォールバックテーマを読み込みました: {theme_path}")
+                theme_path = "config/ui_theme.json"
+                self.ui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()), theme_path)
+                logger.info(f"WindowManager: UIテーマを読み込みました: {theme_path}")
                 
                 # デバッグ：pygame-guiのフォント状態を確認
                 theme = self.ui_manager.get_theme()

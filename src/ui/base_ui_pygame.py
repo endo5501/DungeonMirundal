@@ -1,11 +1,9 @@
 """基本UIシステム（Pygame版）"""
 
-from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Callable, Any, Tuple
+from typing import Dict, List, Optional, Callable, Any
 from enum import Enum
 import pygame
 import pygame_gui
-from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
 # UI基本定数
@@ -86,32 +84,6 @@ def _try_add_word_to_line(word: str, current_line: str, lines: List[str], font: 
             lines.append(current_line.strip())
         return word
 
-
-def _get_available_japanese_font(size: int = DEFAULT_FONT_SIZE) -> Optional[pygame.font.Font]:
-    """利用可能な日本語フォントを安全に取得"""
-    # 利用可能なシステムフォントを取得
-    available_fonts = pygame.font.get_fonts()
-    
-    # 日本語対応フォントの優先順位リスト（実際にシステムにあるもののみ）
-    japanese_font_candidates = [
-        'noto', 'notosans', 'ipagothic', 'ipamincho', 
-        'takao', 'takaogothic', 'takaomincho',
-        'dejavu', 'dejavusans'  # フォールバック
-    ]
-    
-    # 利用可能なフォントから最初に見つかったものを使用
-    for font_name in japanese_font_candidates:
-        if font_name in available_fonts:
-            try:
-                return pygame.font.SysFont(font_name, size)
-            except:
-                continue
-    
-    # どれも見つからない場合はPygameのデフォルトを使用
-    try:
-        return pygame.font.Font(None, size)
-    except:
-        return None
 
 
 class UIState(Enum):
@@ -263,8 +235,8 @@ class UIText(UIElement):
                     use_font = font_manager.get_default_font()
             except Exception as e:
                 logger.warning(f"フォントマネージャーの取得に失敗: {e}")
-                # 利用可能な日本語フォントを安全に取得
-                use_font = _get_available_japanese_font(DEFAULT_FONT_SIZE)
+                # フォールバック：デフォルトフォント（英語のみ）
+                use_font = pygame.font.Font(None, DEFAULT_FONT_SIZE)
                 if not use_font:
                     return  # フォントが取得できない場合は描画しない
         
@@ -326,8 +298,8 @@ class UIButton(UIElement):
                         use_font = font_manager.get_default_font()
                 except Exception as e:
                     logger.warning(f"フォントマネージャーの取得に失敗: {e}")
-                    # 利用可能な日本語フォントを安全に取得
-                    use_font = _get_available_japanese_font(24)
+                    # フォールバック：デフォルトフォント（英語のみ）
+                    use_font = pygame.font.Font(None, 24)
                     if not use_font:
                         return  # フォントが取得できない場合は描画しない
             

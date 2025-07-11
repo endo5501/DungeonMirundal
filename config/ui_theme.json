@@ -1,7 +1,7 @@
 {
     "defaults": {
         "font": {
-            "name": "assets/fonts/NotoSansCJKJP-Regular.otf",
+            "name": "default",
             "size": "14"
         },
         "colours": {
@@ -66,10 +66,6 @@
     "label": {
         "colours": {
             "normal_text": "#FFFFFF"
-        },
-        "font": {
-            "name": "assets/fonts/NotoSansCJKJP-Regular.otf",
-            "size": "16"
         }
     },
     "text_entry_line": {
@@ -92,11 +88,6 @@
             "normal_border": "#888888",
             "focused_border": "#0066CC",
             "dark_bg": "#F5F5F5"
-        },
-        "font": {
-            "name": "assets/fonts/NotoSansCJKJP-Regular.otf",
-            "size": "18",
-            "style": "bold"
         },
         "misc": {
             "border_width": "3"
