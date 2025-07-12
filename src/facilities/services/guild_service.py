@@ -3,19 +3,13 @@
 import logging
 from typing import List, Dict, Any, Optional
 from ..core.facility_service import FacilityService, MenuItem
-from ..core.service_result import ServiceResult, ResultType
+from ..core.service_result import ServiceResult
 from .service_utils import (
     ServiceResultFactory,
     PartyMemberUtility,
-    ConfirmationFlowUtility,
     ActionExecutorMixin
 )
-# 正しいインポートパスに修正
-try:
-    from src.core.game_manager import GameManager as Game
-except ImportError:
-    # テスト時のフォールバック
-    Game = None
+# GameManagerはランタイムで参照される
 
 from src.character.character import Character
 from src.character.party import Party
@@ -234,6 +228,9 @@ class GuildService(FacilityService, ActionExecutorMixin):
                 character_class=char_class,
                 base_stats=base_stats
             )
+            
+            # 派生統計値（HP、MP等）を初期化
+            character.initialize_derived_stats()
             
             return character
             

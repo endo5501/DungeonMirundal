@@ -97,7 +97,7 @@ class Character:
     
     def initialize_derived_stats(self):
         """派生統計値を初期化"""
-        if not hasattr(self, 'derived_stats') or self.derived_stats is None:
+        if not hasattr(self, 'derived_stats') or self.derived_stats is None or self.derived_stats.max_hp == 0:
             from src.character.stats import StatGenerator
             
             # 設定データの読み込み

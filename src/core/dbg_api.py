@@ -879,8 +879,11 @@ def get_party_info():
                             char_info["max_hp"] = stats.max_hp
                     
                     # ステータス情報
-                    if hasattr(char, 'status') and hasattr(char.status, 'condition'):
-                        char_info["status"] = str(char.status.condition)
+                    if hasattr(char, 'status'):
+                        if hasattr(char.status, 'value'):
+                            char_info["status"] = char.status.value
+                        else:
+                            char_info["status"] = str(char.status)
                     
                     party_info["characters"].append(char_info)
                 
@@ -1014,8 +1017,11 @@ def get_character_details(character_index: int):
                     # 状態情報
                     if hasattr(char, 'status'):
                         status = char.status
-                        character_info["condition"] = str(getattr(status, 'condition', 'Unknown'))
-                        character_info["is_alive"] = getattr(status, 'is_alive', True)
+                        if hasattr(status, 'value'):
+                            character_info["condition"] = status.value
+                        else:
+                            character_info["condition"] = str(status)
+                        character_info["is_alive"] = hasattr(char, 'is_alive') and char.is_alive()
                     
                     # 装備・アイテム情報
                     character_info["equipment"] = []
@@ -1106,8 +1112,11 @@ def get_adventure_guild_list():
                         char_info["max_hp"] = stats.max_hp
                 
                 # ステータス情報
-                if hasattr(char, 'status') and hasattr(char.status, 'condition'):
-                    char_info["status"] = str(char.status.condition)
+                if hasattr(char, 'status'):
+                    if hasattr(char.status, 'value'):
+                        char_info["status"] = char.status.value
+                    else:
+                        char_info["status"] = str(char.status)
                 
                 guild_info["guild_characters"].append(char_info)
         

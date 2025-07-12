@@ -1,7 +1,7 @@
 """キャラクター統計システム"""
 
-from dataclasses import dataclass, field
-from typing import Dict, Optional
+from dataclasses import dataclass
+from typing import Dict
 import random
 from src.utils.logger import logger
 
@@ -142,6 +142,7 @@ class StatGenerator:
             agility=roll_func(),
             intelligence=roll_func(),
             faith=roll_func(),
+            vitality=roll_func(),
             luck=roll_func()
         )
         
