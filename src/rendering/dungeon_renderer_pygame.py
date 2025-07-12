@@ -1,11 +1,19 @@
-"""リファクタリング済みダンジョン疑似3D描画システム（Pygame完全実装版）"""
+"""リファクタリング済みダンジョン疑似3D描画システム（Pygame完全実装版）
+
+Fowlerのリファクタリング手法を適用:
+- Extract Class: 入力処理をDungeonInputHandlerに分離
+- Move Method: 入力関連メソッドを入力ハンドラーに移動
+- Single Responsibility: 描画に特化したクラスに変更
+"""
 
 from enum import Enum
+from typing import Optional
 import pygame
 
 from src.dungeon.dungeon_manager import DungeonManager, DungeonState, PlayerPosition
 from src.dungeon.dungeon_generator import DungeonLevel
 from src.character.party import Party
+from src.rendering.dungeon_input_handler import DungeonInputHandler, DungeonInputAction
 from src.utils.logger import logger
 from src.rendering.renderer_config import RendererConfig
 from src.rendering.camera import Camera
@@ -14,12 +22,6 @@ from src.rendering.wall_renderer import WallRenderer
 from src.rendering.ui_renderer import UIRenderer
 from src.rendering.prop_renderer import PropRenderer
 from src.rendering.direction_helper import DirectionHelper
-
-# 入力アクション定数
-ACTION_MOVE_FORWARD = "move_forward"
-ACTION_MOVE_BACKWARD = "move_backward"
-ACTION_TURN_LEFT = "turn_left"
-ACTION_TURN_RIGHT = "turn_right"
 
 
 class ViewMode(Enum):
@@ -37,7 +39,10 @@ class RenderQuality(Enum):
 
 
 class DungeonRendererPygame:
-    """ダンジョン疑似3D描画システム（Pygame完全実装）"""
+    """ダンジョン疑似3D描画システム（Pygame完全実装）
+    
+    リファクタリング版：描画に特化し、入力処理を分離。
+    """
     
     def __init__(self, screen=None, config: RendererConfig = None):
         logger.info("DungeonRendererPygame 初期化開始")
@@ -65,18 +70,46 @@ class DungeonRendererPygame:
         self.view_mode = ViewMode.FIRST_PERSON
         self.render_quality = RenderQuality.MEDIUM
         
-        # コンポーネント初期化
+        # 描画コンポーネント初期化
         self.camera = Camera(self.config.directions)
         self.raycast_engine = RaycastEngine(self.config.raycast)
         self.wall_renderer = WallRenderer(self.screen, self.config.wall_render, self.config.colors)
         self.ui_renderer = UIRenderer(self.screen, self.config.ui, self.config.colors)
         self.prop_renderer = PropRenderer(self.screen, self.config.prop_render, self.config.colors)
         
+        # 入力ハンドラー（分離されたコンポーネント）
+        self.input_handler = DungeonInputHandler()
+        
         logger.info("DungeonRendererPygame 初期化完了")
+    
+    # === 新しい入力システムのアクセサー ===
+    
+    def get_input_handler(self) -> DungeonInputHandler:
+        """入力ハンドラーを取得"""
+        return self.input_handler
+    
+    def handle_key_input(self, key: int) -> bool:
+        """キー入力を直接処理"""
+        result = self.input_handler.handle_key_input(key)
+        if result:
+            logger.debug(f"キー入力処理: {result.message}")
+            return result.success
+        return False
+    
+    def handle_action_input(self, action: DungeonInputAction) -> bool:
+        """アクション入力を直接処理"""
+        result = self.input_handler.handle_action(action)
+        if result.success:
+            logger.debug(f"アクション処理成功: {result.message}")
+        else:
+            logger.warning(f"アクション処理失敗: {result.message}")
+        return result.success
     
     def set_dungeon_manager(self, dungeon_manager: DungeonManager):
         """ダンジョンマネージャー設定"""
         self.dungeon_manager = dungeon_manager
+        # 入力ハンドラーにも設定
+        self.input_handler.set_dungeon_manager(dungeon_manager)
         logger.info("ダンジョンマネージャーを設定しました")
     
     def set_party(self, party: Party):
@@ -233,68 +266,52 @@ class DungeonRendererPygame:
             return False
     
     def handle_input(self, action: str) -> bool:
-        """入力処理"""
-        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
+        """入力処理（後方互換性用）"""
+        # 入力ハンドラーに委譲
+        result = self.input_handler.handle_string_action(action)
+        
+        if result.success:
+            logger.debug(f"入力処理成功: {result.message}")
+            return True
+        else:
+            logger.warning(f"入力処理失敗: {result.message}")
             return False
-        
-        try:
-            if action == ACTION_MOVE_FORWARD:
-                return self._handle_move_forward()
-            elif action == ACTION_MOVE_BACKWARD:
-                return self._handle_move_backward()
-            elif action == ACTION_TURN_LEFT:
-                return self._handle_turn_left()
-            elif action == ACTION_TURN_RIGHT:
-                return self._handle_turn_right()
-                
-        except Exception as e:
-            logger.error(f"入力処理中にエラー: {e}")
-        
-        return False
     
-    # GameManagerからの呼び出し用メソッド
+    # GameManagerからの呼び出し用メソッド（後方互換性用）
     def _move_forward(self):
         """前進（GameManagerからの呼び出し用）"""
-        return self.handle_input("move_forward")
+        result = self.input_handler.handle_action(DungeonInputAction.MOVE_FORWARD)
+        return result.success
     
     def _move_backward(self):
         """後退（GameManagerからの呼び出し用）"""
-        return self.handle_input("move_backward")
+        result = self.input_handler.handle_action(DungeonInputAction.MOVE_BACKWARD)
+        return result.success
     
     def _move_left(self):
         """左移動（GameManagerからの呼び出し用）"""
-        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
-            return False
-            
-        current_pos = self.dungeon_manager.current_dungeon.player_position
-        facing = current_pos.facing
-        left_direction = DirectionHelper.get_left_direction(facing)
-        
-        return self.dungeon_manager.move_player(left_direction)
+        result = self.input_handler.handle_action(DungeonInputAction.MOVE_LEFT)
+        return result.success
     
     def _move_right(self):
         """右移動（GameManagerからの呼び出し用）"""
-        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
-            return False
-            
-        current_pos = self.dungeon_manager.current_dungeon.player_position
-        facing = current_pos.facing
-        right_direction = DirectionHelper.get_right_direction(facing)
-        
-        return self.dungeon_manager.move_player(right_direction)
+        result = self.input_handler.handle_action(DungeonInputAction.MOVE_RIGHT)
+        return result.success
     
     def _turn_left(self):
         """左回転（GameManagerからの呼び出し用）"""
-        return self.handle_input("turn_left")
+        result = self.input_handler.handle_action(DungeonInputAction.TURN_LEFT)
+        return result.success
     
     def _turn_right(self):
         """右回転（GameManagerからの呼び出し用）"""
-        return self.handle_input("turn_right")
+        result = self.input_handler.handle_action(DungeonInputAction.TURN_RIGHT)
+        return result.success
     
     def _show_menu(self):
         """メニュー表示（GameManagerからの呼び出し用）"""
-        logger.info("ダンジョン内メニューが呼び出されました")
-        return True
+        result = self.input_handler.handle_action(DungeonInputAction.SHOW_MENU)
+        return result.success
     
     def auto_recover(self) -> bool:
         """自動復旧処理（GameManagerからの呼び出し用）"""
