@@ -109,6 +109,44 @@ class OverworldManager:
         self.facility_registry.set_game_manager(game_manager)
         logger.info("OverworldManager: GameManagerが設定されました")
     
+    def _get_game_manager(self):
+        """
+        安全なGameManagerインスタンス取得
+        
+        複数の方法でGameManagerインスタンスを取得し、
+        新しいインスタンスの作成を防止する。
+        
+        Returns:
+            GameManager: 既存のGameManagerインスタンス（None if not found）
+        """
+        # 方法1: 自分が持つ参照から取得
+        if hasattr(self, 'game_manager') and self.game_manager is not None:
+            return self.game_manager
+        
+        # 方法2: main.pyから取得
+        try:
+            import main
+            if hasattr(main, 'game_manager') and main.game_manager is not None:
+                # 参照を更新
+                self.game_manager = main.game_manager
+                return main.game_manager
+        except (ImportError, AttributeError):
+            pass
+        
+        # 方法3: sys.modulesから取得
+        try:
+            import sys
+            if 'main' in sys.modules:
+                main_module = sys.modules['main']
+                if hasattr(main_module, 'game_manager') and main_module.game_manager is not None:
+                    self.game_manager = main_module.game_manager
+                    return main_module.game_manager
+        except Exception:
+            pass
+        
+        logger.error("既存のGameManagerインスタンスが見つかりません")
+        return None
+    
     def enter_overworld(self, party: Party, from_dungeon: bool = False) -> bool:
         """地上部に入る"""
         if self.is_active:
@@ -532,8 +570,13 @@ class OverworldManager:
             logger.info("=== ゲーム終了処理開始 ===")
             
             # 確認なしで直接終了（後でconfirmationダイアログを追加可能）
-            from src.core.game_manager import GameManager
-            game_manager = GameManager()
+            # 既存のGameManagerインスタンスを取得（新規作成禁止）
+            game_manager = self._get_game_manager()
+            if not game_manager:
+                logger.error("GameManagerが見つかりません。直接終了します。")
+                import sys
+                sys.exit(0)
+                return False
             
             logger.info("ゲームを終了します")
             
@@ -779,9 +822,11 @@ class OverworldManager:
         """新規ゲーム処理 - 全データをクリアして新しいゲームを開始"""
         logger.info("=== 新規ゲーム処理開始 ===")
         try:
-            # GameManagerを取得
-            from src.core.game_manager import GameManager
-            game_manager = GameManager()
+            # 既存のGameManagerを取得（新規作成禁止）
+            game_manager = self._get_game_manager()
+            if not game_manager:
+                logger.error("GameManagerが見つかりません。新規ゲーム処理を中止します。")
+                return False
             
             # 全データをクリア
             logger.info("全データをクリアしています...")
@@ -796,12 +841,13 @@ class OverworldManager:
             else:
                 # フォールバック: 基本的なリセット処理
                 logger.info("フォールバック: 基本的なリセット処理を実行")
-                # 既存のテスト用パーティを再作成
-                from src.core.game_manager import GameManager
-                game_manager = GameManager()
-                test_party = game_manager._create_test_party()
-                self.current_party = test_party
-                logger.info("テスト用パーティを再作成しました")
+                # 既存のGameManagerのテスト用パーティ作成メソッドを使用
+                if hasattr(game_manager, '_create_test_party'):
+                    game_manager._create_test_party()
+                    self.current_party = game_manager.current_party
+                    logger.info("テスト用パーティを再作成しました")
+                else:
+                    logger.error("テスト用パーティ作成メソッドが見つかりません")
             
             # ゲームメニューを閉じて地上部に戻る
             if self.window_manager:
@@ -1295,9 +1341,11 @@ class OverworldManager:
                 logger.warning("セーブするパーティがありません")
                 return False
             
-            # GameManagerからセーブ機能を呼び出し
-            from src.core.game_manager import GameManager
-            game_manager = GameManager()
+            # 既存のGameManagerからセーブ機能を呼び出し（新規作成禁止）
+            game_manager = self._get_game_manager()
+            if not game_manager:
+                logger.error("GameManagerが見つかりません。セーブ処理を中止します。")
+                return False
             
             # 現在のゲーム状態を構築
             game_state = {
@@ -1307,12 +1355,10 @@ class OverworldManager:
                 'party_name': self.current_party.name
             }
             
-            # セーブを実行
-            success = game_manager.save_manager.save_game(
-                party=self.current_party,
+            # GameManagerの統合セーブメソッドを使用（ギルドキャラクターも含む）
+            success = game_manager.save_current_game(
                 slot_id=slot_id,
-                save_name=f"{self.current_party.name} - 町",
-                game_state=game_state
+                save_name=f"{self.current_party.name} - 町"
             )
             
             if success:
@@ -1389,12 +1435,22 @@ class OverworldManager:
         try:
             logger.info(f"スロット {slot_id} からロード開始")
             
-            # GameManagerからロード機能を呼び出し
-            from src.core.game_manager import GameManager
-            game_manager = GameManager()
+            # 既存のGameManagerからロード機能を呼び出し（新規作成禁止）
+            game_manager = self._get_game_manager()
+            if not game_manager:
+                logger.error("GameManagerが見つかりません。ロード処理を中止します。")
+                return False
             
-            # ゲーム状態をロード
-            success = game_manager.load_game_state(str(slot_id))
+            # SaveManagerから直接ロード
+            save_data = game_manager.save_manager.load_game(slot_id)
+            if not save_data:
+                logger.error(f"スロット {slot_id} からのロードに失敗")
+                return False
+            
+            # パーティ情報を復元
+            game_manager.set_current_party(save_data.party)
+            self.current_party = save_data.party
+            success = True
             
             if success:
                 logger.info(f"スロット {slot_id} からロード完了")

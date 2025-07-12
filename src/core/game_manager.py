@@ -187,8 +187,17 @@ class GameManager:
                 
         status = self.game_config.get_text("ui.settings.enabled") if self.debug_enabled else self.game_config.get_text("ui.settings.disabled")
 
-        # デバッグサーバ起動
+        # デバッグサーバ起動（GameManagerインスタンスを登録）
         dbg_api.start(self.screen, self)
+        
+        # main.pyのgame_manager変数を確実に更新
+        try:
+            import main
+            if hasattr(main, 'game_manager'):
+                main.game_manager = self
+                logger.info(f"main.game_manager updated to {hex(id(self))}")
+        except Exception as e:
+            logger.warning(f"Failed to update main.game_manager: {e}")
 
         logger.info(self.game_config.get_text("app_log.debug_setting").format(status=status))
     

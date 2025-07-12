@@ -81,6 +81,93 @@ def get_timestamp() -> str:
     """現在のタイムスタンプを取得"""
     return datetime.now().isoformat()
 
+def get_current_game_manager():
+    """現在のGameManagerインスタンスを動的に取得
+    
+    セーブ・ロード後でも正しいGameManagerインスタンスを取得するため、
+    複数の方法でGameManagerへのアクセスを試行する。
+    """
+    global _game_manager
+    
+    # 方法1: main.pyから直接取得（最優先・最新インスタンス）
+    try:
+        import main
+        if hasattr(main, 'game_manager') and main.game_manager is not None:
+            # インスタンスが変更されている場合はログ出力
+            if _game_manager is not main.game_manager:
+                if _game_manager is not None:
+                    old_address = hex(id(_game_manager))
+                    new_address = hex(id(main.game_manager))
+                    logger.info(f"GameManager instance changed: {old_address} -> {new_address}")
+                _game_manager = main.game_manager  # キャッシュを更新
+            logger.debug("Retrieved current GameManager from main.py")
+            return main.game_manager
+    except (ImportError, AttributeError) as e:
+        logger.debug(f"Could not access main.game_manager: {e}")
+    
+    # 方法2: sys.modulesから取得
+    try:
+        import sys
+        if 'main' in sys.modules:
+            main_module = sys.modules['main']
+            if hasattr(main_module, 'game_manager') and main_module.game_manager is not None:
+                # インスタンスが変更されている場合はログ出力
+                if _game_manager is not main_module.game_manager:
+                    if _game_manager is not None:
+                        old_address = hex(id(_game_manager))
+                        new_address = hex(id(main_module.game_manager))
+                        logger.info(f"GameManager instance changed via sys.modules: {old_address} -> {new_address}")
+                    _game_manager = main_module.game_manager  # キャッシュを更新
+                logger.debug("Retrieved current GameManager from sys.modules")
+                return main_module.game_manager
+    except Exception as e:
+        logger.debug(f"Could not access GameManager from sys.modules: {e}")
+    
+    # 方法3: キャッシュされたインスタンス（最後の手段）
+    if _game_manager is not None:
+        # GameManagerが有効かチェック
+        try:
+            if hasattr(_game_manager, 'current_party'):
+                logger.warning("Using cached GameManager (may be outdated)")
+                return _game_manager
+        except Exception as e:
+            logger.warning(f"Cached GameManager appears invalid: {e}")
+            _game_manager = None
+    
+    # 全ての方法が失敗した場合
+    logger.error("Could not retrieve valid GameManager instance")
+    return None
+
+def get_game_manager_debug_info():
+    """GameManager取得のデバッグ情報を提供"""
+    global _game_manager
+    
+    debug_info = {
+        "cached_manager_exists": _game_manager is not None,
+        "cached_manager_type": str(type(_game_manager)) if _game_manager else None,
+        "main_module_exists": False,
+        "main_manager_exists": False,
+        "sys_modules_main_exists": False,
+        "retrieval_method_used": None
+    }
+    
+    # main.pyの存在確認
+    try:
+        import main
+        debug_info["main_module_exists"] = True
+        debug_info["main_manager_exists"] = hasattr(main, 'game_manager') and main.game_manager is not None
+    except ImportError:
+        pass
+    
+    # sys.modulesの確認
+    try:
+        import sys
+        debug_info["sys_modules_main_exists"] = 'main' in sys.modules
+    except Exception:
+        pass
+    
+    return debug_info
+
 def _get_hierarchical_ui_elements(ui_manager):
     """UI要素の階層構造を取得"""
     hierarchical_elements = []
@@ -831,8 +918,8 @@ def get_middleware_status():
 def get_party_info():
     """現在のパーティ情報を取得"""
     try:
-        # GameManagerのインスタンスを取得
-        game_manager = _game_manager
+        # GameManagerのインスタンスを動的に取得（セーブ・ロード対応）
+        game_manager = get_current_game_manager()
         
         party_info = {
             "party_exists": False,
@@ -911,12 +998,13 @@ def debug_game_manager_access():
             "game_manager_attributes": [],
             "current_party_exists": False,
             "current_party_type": None,
-            "error_details": None
+            "error_details": None,
+            "retrieval_debug": get_game_manager_debug_info()
         }
         
         try:
-            # グローバル変数から直接取得
-            game_manager = _game_manager
+            # 動的取得を使用してデバッグ
+            game_manager = get_current_game_manager()
             debug_info["game_manager_import_success"] = True
             debug_info["game_manager_exists"] = game_manager is not None
             
@@ -935,9 +1023,22 @@ def debug_game_manager_access():
                             "name": getattr(party, 'name', 'Unknown'),
                             "party_id": getattr(party, 'party_id', 'Unknown'),
                             "has_members": hasattr(party, 'members'),
-                            "members_count": len(getattr(party, 'members', [])),
-                            "has_get_all_characters": hasattr(party, 'get_all_characters')
+                            "has_get_all_characters": hasattr(party, 'get_all_characters'),
+                            "party_type": str(type(party))
                         }
+                        
+                        # メンバー数の取得を複数の方法で試行
+                        try:
+                            if hasattr(party, 'members'):
+                                members = party.members
+                                debug_info["party_details"]["members_count"] = len(members)
+                                debug_info["party_details"]["members_type"] = str(type(members))
+                            else:
+                                debug_info["party_details"]["members_count"] = 0
+                                debug_info["party_details"]["members_access_error"] = "No members attribute"
+                        except Exception as members_error:
+                            debug_info["party_details"]["members_count"] = 0
+                            debug_info["party_details"]["members_error"] = str(members_error)
                         
                         if hasattr(party, 'get_all_characters'):
                             try:
@@ -966,8 +1067,8 @@ def debug_game_manager_access():
 def get_character_details(character_index: int):
     """パーティメンバーの詳細情報を取得"""
     try:
-        # GameManagerのインスタンスを取得
-        game_manager = _game_manager
+        # GameManagerのインスタンスを動的に取得（セーブ・ロード対応）
+        game_manager = get_current_game_manager()
         
         character_info = {
             "character_exists": False,
@@ -1074,8 +1175,8 @@ def get_character_details(character_index: int):
 def get_adventure_guild_list():
     """冒険者ギルドに登録されたキャラクター一覧を取得"""
     try:
-        # GameManagerのインスタンスを取得
-        game_manager = _game_manager
+        # GameManagerのインスタンスを動的に取得（セーブ・ロード対応）
+        game_manager = get_current_game_manager()
         
         guild_info = {
             "guild_characters_count": 0,
@@ -1149,12 +1250,21 @@ def start(screen: pygame.Surface, game_manager=None, port: int = DEFAULT_PORT):
     
     with _screen_lock:
         _screen = screen
-        _game_manager = game_manager
+        if game_manager is not None:
+            # 新しいGameManagerインスタンスが渡された場合
+            if _game_manager is not game_manager:
+                if _game_manager is not None:
+                    old_address = hex(id(_game_manager))
+                    new_address = hex(id(game_manager))
+                    logger.info(f"Debug server GameManager updated: {old_address} -> {new_address}")
+                else:
+                    logger.info(f"Debug server GameManager initialized: {hex(id(game_manager))}")
+                _game_manager = game_manager
     
     DEFAULT_PORT = port
     logger.info(f"Initializing debug server with screen size: {screen.get_size()}")
     if game_manager:
-        logger.info(f"Debug server initialized with GameManager: {type(game_manager)}")
+        logger.info(f"Debug server initialized with GameManager: {type(game_manager)} at {hex(id(game_manager))}")
     else:
         logger.warning("Debug server initialized without GameManager - some features may not work")
     
