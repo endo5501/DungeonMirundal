@@ -70,6 +70,9 @@ uv run python src/debug/game_debug_client.py party_character 0
 
 # 冒険者ギルド登録キャラクター一覧
 uv run python src/debug/game_debug_client.py adventure_list
+
+# GameManagerデバッグ情報確認（セーブ・ロード問題の診断）
+uv run python src/debug/game_debug_client.py debug_gm
 ```
 
 ### 3. 便利関数
@@ -127,11 +130,23 @@ test_all_visible_buttons()
 | `GET /party/character/{index}` | キャラクター詳細取得 | ~1ms | `curl "http://localhost:8765/party/character/0"` |
 | `GET /adventure/list` | 冒険者ギルドリスト取得 | ~1ms | `curl "http://localhost:8765/adventure/list"` |
 
-**提供される情報:**
+### デバッグ・診断情報 ✅ 全て利用可能
+
+| エンドポイント | 機能 | レスポンス時間 | 例 |
+|---------------|------|------------|-----|
+| `GET /debug/game_manager` | GameManagerアクセス診断 | ~1ms | `curl "http://localhost:8765/debug/game_manager"` |
+
+**パーティ・キャラクター情報で提供される情報:**
 - パーティ名、ID、所持金
 - パーティメンバーの基本情報（名前、レベル、HP/MAX_HP、状態）
 - キャラクター詳細（種族、職業、ステータス、装備・所持アイテム）
 - 冒険者ギルド登録キャラクター一覧
+
+**デバッグ・診断情報で提供される情報:**
+- GameManagerインスタンスの存在・状態確認
+- パーティオブジェクトへのアクセス状況
+- セーブ・ロード後の参照整合性診断
+- 複数の取得方法（キャッシュ、main.py、sys.modules）の成功/失敗状況
 
 
 ## 注意: ボタンナビゲーション機能は制限あり
@@ -202,6 +217,43 @@ print("\n=== 冒険者ギルド登録キャラクター ===")
 client.display_adventure_guild_list()
 ```
 
+### 5. セーブ・ロード問題のデバッグ
+
+```python
+client = GameDebugClient()
+
+# セーブ前の状態確認
+print("=== セーブ前の状態 ===")
+debug_info = client.get_game_manager_debug_info()
+if debug_info:
+    print(f"GameManager存在: {debug_info.get('game_manager_exists')}")
+    print(f"パーティ存在: {debug_info.get('current_party_exists')}")
+    
+    retrieval_debug = debug_info.get('retrieval_debug', {})
+    print(f"キャッシュから取得可能: {retrieval_debug.get('cached_manager_exists')}")
+    print(f"main.pyから取得可能: {retrieval_debug.get('main_manager_exists')}")
+
+# ゲーム内でセーブを実行（手動）
+
+# セーブ後の状態確認
+print("\n=== セーブ後の状態 ===")
+debug_info = client.get_game_manager_debug_info()
+if debug_info:
+    print(f"GameManager存在: {debug_info.get('game_manager_exists')}")
+    print(f"パーティ存在: {debug_info.get('current_party_exists')}")
+    
+    retrieval_debug = debug_info.get('retrieval_debug', {})
+    print(f"キャッシュから取得可能: {retrieval_debug.get('cached_manager_exists')}")
+    print(f"main.pyから取得可能: {retrieval_debug.get('main_manager_exists')}")
+
+# パーティ情報が正常に取得できるかテスト
+party_info = client.get_party_info()
+if party_info and party_info.get("party_exists"):
+    print(f"\n✅ パーティ情報取得成功: {party_info['party_name']}")
+else:
+    print("\n❌ パーティ情報取得失敗")
+```
+
 ## テスト統合
 
 ### pytest での使用
@@ -249,6 +301,18 @@ def test_adventure_guild_list(game_api_client):
     assert guild_info is not None
     assert 'guild_characters_count' in guild_info
     assert 'guild_characters' in guild_info
+
+def test_game_manager_debug_info(game_api_client):
+    """GameManagerデバッグ情報取得のテスト"""
+    debug_info = game_api_client.get_game_manager_debug_info()
+    assert debug_info is not None
+    assert 'game_manager_exists' in debug_info
+    assert 'retrieval_debug' in debug_info
+    assert 'timestamp' in debug_info
+    
+    retrieval_debug = debug_info.get('retrieval_debug', {})
+    assert 'cached_manager_exists' in retrieval_debug
+    assert 'main_module_exists' in retrieval_debug
 ```
 
 ### 統合テストの実行
@@ -481,6 +545,25 @@ curl -I "http://localhost:8765/screenshot"
 curl "http://localhost:8765/screenshot" | jq .
 ```
 
+### セーブ・ロード後にパーティ情報が取得できない
+
+```bash
+# GameManagerの状態確認
+uv run python src/debug/game_debug_client.py debug_gm
+
+# パーティ情報取得をリトライ
+uv run python src/debug/game_debug_client.py party
+
+# デバッグ情報とパーティ情報を連続確認
+curl "http://localhost:8765/debug/game_manager" | jq .
+curl "http://localhost:8765/party/info" | jq .
+```
+
+**対処法**:
+1. ゲームを再起動して問題が解決するか確認
+2. `debug_gm`コマンドで取得方法の診断を実行
+3. ログを確認して動的取得が正常に機能しているかチェック
+
 ## 高度なデバッグ機能
 
 ### 新機能: パーティ・キャラクター情報の活用
@@ -574,6 +657,57 @@ print(f"画像が同一: {result['identical']}")
 print(f"平均差分: {result['mean_difference']}")
 ```
 
+### GameManagerデバッグ機能の活用
+
+```python
+client = GameDebugClient()
+
+# セーブ・ロード時の参照問題診断
+def diagnose_save_load_issue():
+    """セーブ・ロード時のGameManager参照問題を診断"""
+    print("=== GameManager診断開始 ===")
+    
+    # 現在の状態確認
+    debug_info = client.get_game_manager_debug_info()
+    if debug_info:
+        print(f"診断時刻: {debug_info.get('timestamp')}")
+        print(f"GameManager存在: {debug_info.get('game_manager_exists')}")
+        print(f"パーティアクセス可能: {debug_info.get('current_party_exists')}")
+        
+        retrieval_debug = debug_info.get('retrieval_debug', {})
+        print("\n--- 取得方法別診断 ---")
+        print(f"キャッシュ: {'✅' if retrieval_debug.get('cached_manager_exists') else '❌'}")
+        print(f"main.py: {'✅' if retrieval_debug.get('main_manager_exists') else '❌'}")
+        print(f"sys.modules: {'✅' if retrieval_debug.get('sys_modules_main_exists') else '❌'}")
+        
+        # 実際のパーティアクセステスト
+        party_info = client.get_party_info()
+        if party_info and party_info.get('party_exists'):
+            print(f"\n✅ パーティ情報取得成功: {party_info['party_name']}")
+        else:
+            print("\n❌ パーティ情報取得失敗 - セーブ・ロード問題の可能性")
+    else:
+        print("❌ デバッグ情報の取得に失敗")
+
+# パフォーマンス監視
+def monitor_api_performance():
+    """APIレスポンス時間を監視"""
+    import time
+    
+    operations = [
+        ("party_info", lambda: client.get_party_info()),
+        ("debug_info", lambda: client.get_game_manager_debug_info()),
+        ("screenshot", lambda: client.get_screenshot())
+    ]
+    
+    for name, operation in operations:
+        start_time = time.time()
+        result = operation()
+        elapsed = (time.time() - start_time) * 1000
+        status = "✅" if result else "❌"
+        print(f"{status} {name}: {elapsed:.2f}ms")
+```
+
 ### UI階層の取得（実際の動作例）
 
 ```python
@@ -618,7 +752,7 @@ if hierarchy:
 
 ### ✅ 完全利用可能な機能
 
-1. **高速APIエンドポイント**: 全11個のエンドポイントが1-15msで応答
+1. **高速APIエンドポイント**: 全12個のエンドポイントが1-15msで応答
    - スクリーンショット取得
    - キー・マウス入力送信
    - ゲーム状態監視
@@ -627,6 +761,7 @@ if hierarchy:
    - **新機能**: パーティ情報取得
    - **新機能**: キャラクター詳細取得
    - **新機能**: 冒険者ギルドリスト取得
+   - **新機能**: GameManagerデバッグ情報取得
 
 2. **UI監視機能**:
    - WindowManagerからのリアルタイムウィンドウ情報
@@ -641,6 +776,7 @@ if hierarchy:
    - Python APIクライアント
    - CLIツール
    - 拡張ログシステム
+   - **新機能**: セーブ・ロード問題診断ツール
 
 ### ⚠️ 使用上の注意
 

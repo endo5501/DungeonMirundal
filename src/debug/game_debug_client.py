@@ -412,6 +412,24 @@ class GameDebugClient:
             logger.error(f"Error getting adventure guild list: {e}")
             return None
     
+    def get_game_manager_debug_info(self) -> Optional[Dict[str, Any]]:
+        """
+        GameManagerアクセスのデバッグ情報を取得
+        
+        Returns:
+            デバッグ情報の辞書、失敗時はNone
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/debug/game_manager",
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error getting game manager debug info: {e}")
+            return None
+    
     def display_party_info(self, party_info: Optional[Dict[str, Any]] = None) -> None:
         """
         パーティ情報を見やすく表示
@@ -524,7 +542,7 @@ class GameDebugClient:
 def main():
     """コマンドライン実行"""
     parser = argparse.ArgumentParser(description="Game Debug API Client")
-    parser.add_argument("command", choices=["screenshot", "key", "mouse", "escape", "enter", "space", "analyze", "buttons", "click", "party", "party_character", "adventure_list"],
+    parser.add_argument("command", choices=["screenshot", "key", "mouse", "escape", "enter", "space", "analyze", "buttons", "click", "party", "party_character", "adventure_list", "debug_gm"],
                       help="実行するコマンド")
     parser.add_argument("--save", "-s", help="スクリーンショット保存先")
     parser.add_argument("--code", "-c", type=int, help="キーコード")
@@ -622,6 +640,45 @@ def main():
     
     elif args.command == "adventure_list":
         client.display_adventure_guild_list()
+    
+    elif args.command == "debug_gm":
+        debug_info = client.get_game_manager_debug_info()
+        if debug_info:
+            print("=== GameManager デバッグ情報 ===")
+            print(f"タイムスタンプ: {debug_info.get('timestamp', 'Unknown')}")
+            print(f"GameManager存在: {debug_info.get('game_manager_exists', False)}")
+            print(f"GameManagerタイプ: {debug_info.get('game_manager_type', 'Unknown')}")
+            print(f"現在のパーティ存在: {debug_info.get('current_party_exists', False)}")
+            
+            retrieval_debug = debug_info.get('retrieval_debug', {})
+            if retrieval_debug:
+                print("\n--- 取得方法デバッグ情報 ---")
+                print(f"キャッシュManager存在: {retrieval_debug.get('cached_manager_exists', False)}")
+                print(f"mainモジュール存在: {retrieval_debug.get('main_module_exists', False)}")
+                print(f"main.game_manager存在: {retrieval_debug.get('main_manager_exists', False)}")
+                print(f"sys.modules['main']存在: {retrieval_debug.get('sys_modules_main_exists', False)}")
+            
+            party_details = debug_info.get('party_details', {})
+            if party_details:
+                print(f"\n--- パーティ詳細 ---")
+                print(f"パーティ名: {party_details.get('name', 'Unknown')}")
+                print(f"パーティID: {party_details.get('party_id', 'Unknown')}")
+                print(f"パーティタイプ: {party_details.get('party_type', 'Unknown')}")
+                print(f"membersプロパティ有: {party_details.get('has_members', False)}")
+                print(f"get_all_charactersメソッド有: {party_details.get('has_get_all_characters', False)}")
+                print(f"メンバー数: {party_details.get('members_count', 0)}")
+                
+                # エラー情報があれば表示
+                if 'members_error' in party_details:
+                    print(f"⚠️ メンバーアクセスエラー: {party_details['members_error']}")
+                if 'members_access_error' in party_details:
+                    print(f"⚠️ メンバーアクセス問題: {party_details['members_access_error']}")
+                if 'characters_from_method' in party_details:
+                    print(f"get_all_characters()結果: {party_details['characters_from_method']}人")
+                if 'characters_method_error' in party_details:
+                    print(f"⚠️ get_all_characters()エラー: {party_details['characters_method_error']}")
+        else:
+            print("GameManagerデバッグ情報の取得に失敗しました")
 
 
 if __name__ == "__main__":
