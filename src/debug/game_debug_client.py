@@ -354,12 +354,177 @@ class GameDebugClient:
         except Exception as e:
             logger.error(f"Error getting UI hierarchy: {e}")
             return None
+    
+    def get_party_info(self) -> Optional[Dict[str, Any]]:
+        """
+        現在のパーティ情報を取得
+        
+        Returns:
+            パーティ情報の辞書、失敗時はNone
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/party/info",
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error getting party info: {e}")
+            return None
+    
+    def get_character_details(self, character_index: int) -> Optional[Dict[str, Any]]:
+        """
+        特定のキャラクターの詳細情報を取得
+        
+        Args:
+            character_index: パーティ内のキャラクターインデックス（0から始まる）
+            
+        Returns:
+            キャラクター詳細情報の辞書、失敗時はNone
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/party/character/{character_index}",
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error getting character details for index {character_index}: {e}")
+            return None
+    
+    def get_adventure_guild_list(self) -> Optional[Dict[str, Any]]:
+        """
+        冒険者ギルドに登録されたキャラクター一覧を取得
+        
+        Returns:
+            ギルドキャラクター情報の辞書、失敗時はNone
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/adventure/list",
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error getting adventure guild list: {e}")
+            return None
+    
+    def display_party_info(self, party_info: Optional[Dict[str, Any]] = None) -> None:
+        """
+        パーティ情報を見やすく表示
+        
+        Args:
+            party_info: パーティ情報（Noneの場合は自動取得）
+        """
+        if party_info is None:
+            party_info = self.get_party_info()
+        
+        if not party_info:
+            print("❌ パーティ情報を取得できませんでした")
+            return
+        
+        print("=== Party Information ===")
+        if party_info.get("party_exists"):
+            print(f"パーティ名: {party_info.get('party_name', 'Unknown')}")
+            print(f"パーティID: {party_info.get('party_id', 'Unknown')}")
+            print(f"所持金: {party_info.get('gold', 0)} ゴールド")
+            print(f"メンバー数: {party_info.get('character_count', 0)}")
+            
+            characters = party_info.get("characters", [])
+            if characters:
+                print("\n--- メンバー一覧 ---")
+                for i, char in enumerate(characters):
+                    print(f"  {i}: {char.get('name', 'Unknown')} (Lv.{char.get('level', 1)}) - {char.get('hp', 0)}/{char.get('max_hp', 0)} HP - {char.get('status', 'unknown')}")
+            else:
+                print("メンバーがいません")
+        else:
+            print("❌ アクティブなパーティがありません")
+    
+    def display_character_details(self, character_index: int, character_info: Optional[Dict[str, Any]] = None) -> None:
+        """
+        キャラクター詳細情報を見やすく表示
+        
+        Args:
+            character_index: キャラクターインデックス
+            character_info: キャラクター情報（Noneの場合は自動取得）
+        """
+        if character_info is None:
+            character_info = self.get_character_details(character_index)
+        
+        if not character_info:
+            print(f"❌ キャラクター情報を取得できませんでした (index: {character_index})")
+            return
+        
+        if not character_info.get("character_exists"):
+            print(f"❌ キャラクター {character_index} は存在しません")
+            return
+        
+        print(f"=== Character Details (Index: {character_index}) ===")
+        print(f"名前: {character_info.get('name', 'Unknown')}")
+        print(f"種族: {character_info.get('race', 'Unknown')}")
+        print(f"職業: {character_info.get('character_class', 'Unknown')}")
+        print(f"レベル: {character_info.get('level', 1)}")
+        print(f"経験値: {character_info.get('experience', 0)}")
+        print(f"HP: {character_info.get('hp', 0)}/{character_info.get('max_hp', 0)}")
+        print(f"MP: {character_info.get('mp', 0)}/{character_info.get('max_mp', 0)}")
+        print(f"状態: {character_info.get('condition', 'Unknown')}")
+        print(f"生存: {'はい' if character_info.get('is_alive', True) else 'いいえ'}")
+        
+        # 基本ステータス
+        stats = character_info.get("stats", {})
+        if stats:
+            print("\n--- 基本ステータス ---")
+            for stat_name, value in stats.items():
+                print(f"  {stat_name.title()}: {value}")
+        
+        # 装備アイテム
+        equipment = character_info.get("equipment", [])
+        if equipment:
+            print("\n--- 装備中のアイテム ---")
+            for item in equipment:
+                print(f"  * {item.get('slot', 'unknown')}: {item.get('item_name', 'Unknown')}")
+        
+        # 所持アイテム
+        items = character_info.get("items", [])
+        if items:
+            print("\n--- 所持アイテム ---")
+            for item in items:
+                print(f"  - {item.get('item_name', 'Unknown')}")
+    
+    def display_adventure_guild_list(self, guild_info: Optional[Dict[str, Any]] = None) -> None:
+        """
+        冒険者ギルド一覧を見やすく表示
+        
+        Args:
+            guild_info: ギルド情報（Noneの場合は自動取得）
+        """
+        if guild_info is None:
+            guild_info = self.get_adventure_guild_list()
+        
+        if not guild_info:
+            print("❌ 冒険者ギルド情報を取得できませんでした")
+            return
+        
+        print("=== Adventure Guild Character List ===")
+        character_count = guild_info.get("guild_characters_count", 0)
+        print(f"登録キャラクター数: {character_count}")
+        
+        characters = guild_info.get("guild_characters", [])
+        if characters:
+            print("\n--- 登録キャラクター一覧 ---")
+            for i, char in enumerate(characters):
+                print(f"  {i}: {char.get('name', 'Unknown')} ({char.get('race', 'Unknown')}/{char.get('character_class', 'Unknown')}) - Lv.{char.get('level', 1)} - {char.get('hp', 0)}/{char.get('max_hp', 0)} HP - {char.get('status', 'unknown')}")
+        else:
+            print("登録されたキャラクターがいません")
 
 
 def main():
     """コマンドライン実行"""
     parser = argparse.ArgumentParser(description="Game Debug API Client")
-    parser.add_argument("command", choices=["screenshot", "key", "mouse", "escape", "enter", "space", "analyze", "buttons", "click"],
+    parser.add_argument("command", choices=["screenshot", "key", "mouse", "escape", "enter", "space", "analyze", "buttons", "click", "party", "party_character", "adventure_list"],
                       help="実行するコマンド")
     parser.add_argument("--save", "-s", help="スクリーンショット保存先")
     parser.add_argument("--code", "-c", type=int, help="キーコード")
@@ -369,6 +534,7 @@ def main():
     parser.add_argument("--wait", "-w", type=float, default=0, help="実行前の待機時間")
     parser.add_argument("--number", "-n", type=int, help="ボタン番号（1-9）")
     parser.add_argument("--text", "-t", help="ボタンテキスト")
+    parser.add_argument("character_index", nargs="?", type=int, help="キャラクターインデックス（party_characterコマンド用）")
     
     args = parser.parse_args()
     
@@ -444,6 +610,18 @@ def main():
         else:
             logger.error("--number or --text is required for click command")
             sys.exit(1)
+    
+    elif args.command == "party":
+        client.display_party_info()
+    
+    elif args.command == "party_character":
+        if args.character_index is None:
+            logger.error("character_index is required for party_character command")
+            sys.exit(1)
+        client.display_character_details(args.character_index)
+    
+    elif args.command == "adventure_list":
+        client.display_adventure_guild_list()
 
 
 if __name__ == "__main__":

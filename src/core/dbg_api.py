@@ -71,6 +71,7 @@ app = FastAPI(
 
 # グローバル変数
 _screen: Optional[pygame.Surface] = None
+_game_manager = None  # GameManagerインスタンスの参照
 _screen_lock = threading.Lock()
 _input_history: list[Dict[str, Any]] = []
 _max_history = 1000
@@ -575,7 +576,7 @@ def get_game_state():
     """ゲームの現在の状態を取得"""
     try:
         # GameManagerのインスタンスを取得
-        from main import game_manager
+        game_manager = _game_manager
         
         game_state = {
             "current_state": None,
@@ -824,27 +825,329 @@ def get_middleware_status():
             detail=f"Failed to get middleware status: {str(e)}"
         )
 
+@app.get("/party/info",
+         summary="Get party information",
+         description="Returns current party members and gold")
+def get_party_info():
+    """現在のパーティ情報を取得"""
+    try:
+        # GameManagerのインスタンスを取得
+        game_manager = _game_manager
+        
+        party_info = {
+            "party_exists": False,
+            "party_name": None,
+            "party_id": None,
+            "gold": 0,
+            "characters": [],
+            "character_count": 0,
+            "timestamp": get_timestamp()
+        }
+        
+        if game_manager and hasattr(game_manager, 'current_party') and game_manager.current_party:
+            party = game_manager.current_party
+            party_info["party_exists"] = True
+            party_info["party_name"] = getattr(party, 'name', 'Unknown Party')
+            party_info["party_id"] = getattr(party, 'party_id', 'Unknown ID')
+            party_info["gold"] = getattr(party, 'gold', 0)
+            
+            # パーティメンバーの基本情報を取得
+            if hasattr(party, 'get_all_characters'):
+                characters = party.get_all_characters()
+                party_info["character_count"] = len(characters)
+                
+                for char in characters:
+                    char_info = {
+                        "character_id": getattr(char, 'character_id', 'Unknown ID'),
+                        "name": getattr(char, 'name', 'Unknown'),
+                        "level": 1,  # デフォルト値
+                        "hp": 0,
+                        "max_hp": 0,
+                        "status": "unknown"
+                    }
+                    
+                    # レベル情報
+                    if hasattr(char, 'experience') and hasattr(char.experience, 'level'):
+                        char_info["level"] = char.experience.level
+                    
+                    # HP情報
+                    if hasattr(char, 'derived_stats'):
+                        stats = char.derived_stats
+                        if hasattr(stats, 'current_hp'):
+                            char_info["hp"] = stats.current_hp
+                        if hasattr(stats, 'max_hp'):
+                            char_info["max_hp"] = stats.max_hp
+                    
+                    # ステータス情報
+                    if hasattr(char, 'status') and hasattr(char.status, 'condition'):
+                        char_info["status"] = str(char.status.condition)
+                    
+                    party_info["characters"].append(char_info)
+                
+        logger.info(f"Party info fetched: {party_info['character_count']} characters, {party_info['gold']} gold")
+        return party_info
+        
+    except Exception as e:
+        logger.error(f"Failed to get party info: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get party info: {str(e)}"
+        )
+
+@app.get("/debug/game_manager",
+         summary="Debug game manager access",
+         description="Returns detailed debug information about game_manager access")
+def debug_game_manager_access():
+    """GameManagerアクセスのデバッグ情報を取得"""
+    try:
+        debug_info = {
+            "timestamp": get_timestamp(),
+            "game_manager_import_success": False,
+            "game_manager_exists": False,
+            "game_manager_type": None,
+            "game_manager_attributes": [],
+            "current_party_exists": False,
+            "current_party_type": None,
+            "error_details": None
+        }
+        
+        try:
+            # グローバル変数から直接取得
+            game_manager = _game_manager
+            debug_info["game_manager_import_success"] = True
+            debug_info["game_manager_exists"] = game_manager is not None
+            
+            if game_manager is not None:
+                debug_info["game_manager_type"] = str(type(game_manager))
+                debug_info["game_manager_attributes"] = [attr for attr in dir(game_manager) if not attr.startswith('_')]
+                
+                if hasattr(game_manager, 'current_party'):
+                    debug_info["current_party_exists"] = game_manager.current_party is not None
+                    if game_manager.current_party is not None:
+                        debug_info["current_party_type"] = str(type(game_manager.current_party))
+                        
+                        # パーティの詳細情報
+                        party = game_manager.current_party
+                        debug_info["party_details"] = {
+                            "name": getattr(party, 'name', 'Unknown'),
+                            "party_id": getattr(party, 'party_id', 'Unknown'),
+                            "has_members": hasattr(party, 'members'),
+                            "members_count": len(getattr(party, 'members', [])),
+                            "has_get_all_characters": hasattr(party, 'get_all_characters')
+                        }
+                        
+                        if hasattr(party, 'get_all_characters'):
+                            try:
+                                characters = party.get_all_characters()
+                                debug_info["party_details"]["characters_from_method"] = len(characters)
+                            except Exception as char_error:
+                                debug_info["party_details"]["characters_method_error"] = str(char_error)
+                
+        except ImportError as import_error:
+            debug_info["error_details"] = f"Import error: {str(import_error)}"
+        except Exception as general_error:
+            debug_info["error_details"] = f"General error: {str(general_error)}"
+            
+        return debug_info
+        
+    except Exception as e:
+        logger.error(f"Failed to debug game manager access: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to debug game manager access: {str(e)}"
+        )
+
+@app.get("/party/character/{character_index}",
+         summary="Get character details",
+         description="Returns detailed information about a specific party member")
+def get_character_details(character_index: int):
+    """パーティメンバーの詳細情報を取得"""
+    try:
+        # GameManagerのインスタンスを取得
+        game_manager = _game_manager
+        
+        character_info = {
+            "character_exists": False,
+            "character_index": character_index,
+            "timestamp": get_timestamp()
+        }
+        
+        if game_manager and hasattr(game_manager, 'current_party') and game_manager.current_party:
+            party = game_manager.current_party
+            
+            if hasattr(party, 'get_all_characters'):
+                characters = party.get_all_characters()
+                
+                if 0 <= character_index < len(characters):
+                    char = characters[character_index]
+                    character_info["character_exists"] = True
+                    
+                    # 基本情報
+                    character_info["character_id"] = getattr(char, 'character_id', 'Unknown ID')
+                    character_info["name"] = getattr(char, 'name', 'Unknown')
+                    character_info["race"] = getattr(char, 'race', 'Unknown')
+                    character_info["character_class"] = getattr(char, 'character_class', 'Unknown')
+                    
+                    # レベル・経験値情報
+                    if hasattr(char, 'experience'):
+                        exp = char.experience
+                        character_info["level"] = getattr(exp, 'level', 1)
+                        character_info["experience"] = getattr(exp, 'current_exp', 0)
+                        character_info["next_level_exp"] = getattr(exp, 'next_level_exp', 0)
+                    
+                    # ステータス情報
+                    character_info["stats"] = {}
+                    if hasattr(char, 'base_stats'):
+                        base_stats = char.base_stats
+                        for stat_name in ['strength', 'intelligence', 'piety', 'vitality', 'agility', 'luck']:
+                            if hasattr(base_stats, stat_name):
+                                character_info["stats"][stat_name] = getattr(base_stats, stat_name)
+                    
+                    # HP/MP情報
+                    if hasattr(char, 'derived_stats'):
+                        derived = char.derived_stats
+                        character_info["hp"] = getattr(derived, 'current_hp', 0)
+                        character_info["max_hp"] = getattr(derived, 'max_hp', 0)
+                        character_info["mp"] = getattr(derived, 'current_mp', 0)
+                        character_info["max_mp"] = getattr(derived, 'max_mp', 0)
+                    
+                    # 状態情報
+                    if hasattr(char, 'status'):
+                        status = char.status
+                        character_info["condition"] = str(getattr(status, 'condition', 'Unknown'))
+                        character_info["is_alive"] = getattr(status, 'is_alive', True)
+                    
+                    # 装備・アイテム情報
+                    character_info["equipment"] = []
+                    character_info["items"] = []
+                    
+                    if hasattr(char, 'equipment') and hasattr(char.equipment, 'equipped_items'):
+                        equipped = char.equipment.equipped_items
+                        for slot, item in equipped.items():
+                            if item:
+                                character_info["equipment"].append({
+                                    "slot": slot,
+                                    "item_name": getattr(item, 'name', 'Unknown Item'),
+                                    "item_id": getattr(item, 'item_id', 'Unknown ID'),
+                                    "equipped": True
+                                })
+                    
+                    if hasattr(char, 'inventory') and hasattr(char.inventory, 'items'):
+                        for item in char.inventory.items:
+                            character_info["items"].append({
+                                "item_name": getattr(item, 'name', 'Unknown Item'),
+                                "item_id": getattr(item, 'item_id', 'Unknown ID'),
+                                "equipped": False
+                            })
+                else:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Character index {character_index} not found. Party has {len(characters)} characters."
+                    )
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail="No active party found"
+            )
+        
+        logger.info(f"Character details fetched for index {character_index}")
+        return character_info
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get character details: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get character details: {str(e)}"
+        )
+
+@app.get("/adventure/list",
+         summary="Get adventure guild character list",
+         description="Returns list of all characters registered in the adventure guild")
+def get_adventure_guild_list():
+    """冒険者ギルドに登録されたキャラクター一覧を取得"""
+    try:
+        # GameManagerのインスタンスを取得
+        game_manager = _game_manager
+        
+        guild_info = {
+            "guild_characters_count": 0,
+            "guild_characters": [],
+            "timestamp": get_timestamp()
+        }
+        
+        if game_manager and hasattr(game_manager, 'get_guild_characters'):
+            guild_characters = game_manager.get_guild_characters()
+            guild_info["guild_characters_count"] = len(guild_characters)
+            
+            for char in guild_characters:
+                char_info = {
+                    "character_id": getattr(char, 'character_id', 'Unknown ID'),
+                    "name": getattr(char, 'name', 'Unknown'),
+                    "race": getattr(char, 'race', 'Unknown'),
+                    "character_class": getattr(char, 'character_class', 'Unknown'),
+                    "level": 1,
+                    "hp": 0,
+                    "max_hp": 0,
+                    "status": "unknown"
+                }
+                
+                # レベル情報
+                if hasattr(char, 'experience') and hasattr(char.experience, 'level'):
+                    char_info["level"] = char.experience.level
+                
+                # HP情報
+                if hasattr(char, 'derived_stats'):
+                    stats = char.derived_stats
+                    if hasattr(stats, 'current_hp'):
+                        char_info["hp"] = stats.current_hp
+                    if hasattr(stats, 'max_hp'):
+                        char_info["max_hp"] = stats.max_hp
+                
+                # ステータス情報
+                if hasattr(char, 'status') and hasattr(char.status, 'condition'):
+                    char_info["status"] = str(char.status.condition)
+                
+                guild_info["guild_characters"].append(char_info)
+        
+        logger.info(f"Adventure guild list fetched: {guild_info['guild_characters_count']} characters")
+        return guild_info
+        
+    except Exception as e:
+        logger.error(f"Failed to get adventure guild list: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get adventure guild list: {str(e)}"
+        )
+
 # サーバー起動関数
 def _run_server():
     """サーバーを起動"""
     logger.info(f"Starting debug server on {DEFAULT_HOST}:{DEFAULT_PORT}")
     uvicorn.run(app, host=DEFAULT_HOST, port=DEFAULT_PORT, log_level="warning")
 
-def start(screen: pygame.Surface, port: int = DEFAULT_PORT):
+def start(screen: pygame.Surface, game_manager=None, port: int = DEFAULT_PORT):
     """
     デバッグサーバーを起動
     
     Args:
         screen: pygame.Surfaceオブジェクト
+        game_manager: GameManagerインスタンス（オプション）
         port: サーバーポート（デフォルト: 8765）
     """
-    global _screen, DEFAULT_PORT
+    global _screen, _game_manager, DEFAULT_PORT
     
     with _screen_lock:
         _screen = screen
+        _game_manager = game_manager
     
     DEFAULT_PORT = port
     logger.info(f"Initializing debug server with screen size: {screen.get_size()}")
+    if game_manager:
+        logger.info(f"Debug server initialized with GameManager: {type(game_manager)}")
+    else:
+        logger.warning("Debug server initialized without GameManager - some features may not work")
     
     # MCPを初期化
     setup_mcp()

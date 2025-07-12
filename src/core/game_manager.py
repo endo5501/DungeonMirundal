@@ -188,7 +188,7 @@ class GameManager:
         status = self.game_config.get_text("ui.settings.enabled") if self.debug_enabled else self.game_config.get_text("ui.settings.disabled")
 
         # デバッグサーバ起動
-        dbg_api.start(self.screen)
+        dbg_api.start(self.screen, self)
 
         logger.info(self.game_config.get_text("app_log.debug_setting").format(status=status))
     

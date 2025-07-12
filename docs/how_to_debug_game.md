@@ -31,6 +31,14 @@ if client.wait_for_api():
     # UI階層情報確認
     hierarchy = client.get_ui_hierarchy()
     print(f"Window stack: {hierarchy.get('window_stack')}")
+    
+    # パーティ情報確認
+    party_info = client.get_party_info()
+    client.display_party_info(party_info)
+    
+    # キャラクター詳細確認
+    char_info = client.get_character_details(0)
+    client.display_character_details(0, char_info)
 ```
 
 ### 2. コマンドライン
@@ -53,6 +61,15 @@ uv run python -m src.debug.debug_cli ui-dump --format json
 
 # UI階層をツリー形式で表示
 uv run python -m src.debug.debug_cli ui-dump --format tree
+
+# パーティ情報取得
+uv run python src/debug/game_debug_client.py party
+
+# キャラクター詳細情報取得（インデックス0のキャラクター）
+uv run python src/debug/game_debug_client.py party_character 0
+
+# 冒険者ギルド登録キャラクター一覧
+uv run python src/debug/game_debug_client.py adventure_list
 ```
 
 ### 3. 便利関数
@@ -102,6 +119,20 @@ test_all_visible_buttons()
 | `GET /history` | 入力履歴取得 | ~1ms | `curl "http://localhost:8765/history"` |
 | `DELETE /history` | 履歴クリア | ~2ms | `curl -X DELETE "http://localhost:8765/history"` |
 
+### パーティ・キャラクター情報 ✅ 全て利用可能
+
+| エンドポイント | 機能 | レスポンス時間 | 例 |
+|---------------|------|------------|-----|
+| `GET /party/info` | パーティ情報取得 | ~1ms | `curl "http://localhost:8765/party/info"` |
+| `GET /party/character/{index}` | キャラクター詳細取得 | ~1ms | `curl "http://localhost:8765/party/character/0"` |
+| `GET /adventure/list` | 冒険者ギルドリスト取得 | ~1ms | `curl "http://localhost:8765/adventure/list"` |
+
+**提供される情報:**
+- パーティ名、ID、所持金
+- パーティメンバーの基本情報（名前、レベル、HP/MAX_HP、状態）
+- キャラクター詳細（種族、職業、ステータス、装備・所持アイテム）
+- 冒険者ギルド登録キャラクター一覧
+
 
 ## 注意: ボタンナビゲーション機能は制限あり
 
@@ -149,6 +180,28 @@ from src.debug.debug_helper import quick_debug_esc_issue
 quick_debug_esc_issue()
 ```
 
+### 4. パーティ・キャラクター情報のデバッグ
+
+```python
+client = GameDebugClient()
+
+# パーティ情報の取得と表示
+print("=== パーティ情報の確認 ===")
+client.display_party_info()
+
+# 全キャラクターの詳細確認
+party_info = client.get_party_info()
+if party_info and party_info.get("party_exists"):
+    character_count = party_info.get("character_count", 0)
+    for i in range(character_count):
+        print(f"\n=== キャラクター {i} の詳細 ===")
+        client.display_character_details(i)
+
+# 冒険者ギルドの確認
+print("\n=== 冒険者ギルド登録キャラクター ===")
+client.display_adventure_guild_list()
+```
+
 ## テスト統合
 
 ### pytest での使用
@@ -167,6 +220,35 @@ def test_screenshot_capture(game_api_client):
     assert 'jpeg' in screenshot
     assert 'timestamp' in screenshot
     assert screenshot['size'][0] > 0 and screenshot['size'][1] > 0
+
+def test_party_info(game_api_client):
+    """パーティ情報取得のテスト"""
+    party_info = game_api_client.get_party_info()
+    assert party_info is not None
+    assert 'party_exists' in party_info
+    assert 'gold' in party_info
+    assert 'characters' in party_info
+    assert 'character_count' in party_info
+
+def test_character_details(game_api_client):
+    """キャラクター詳細取得のテスト"""
+    # まずパーティ情報を取得してキャラクターが存在するか確認
+    party_info = game_api_client.get_party_info()
+    if party_info and party_info.get('party_exists') and party_info.get('character_count', 0) > 0:
+        char_info = game_api_client.get_character_details(0)
+        assert char_info is not None
+        assert 'character_exists' in char_info
+        if char_info.get('character_exists'):
+            assert 'name' in char_info
+            assert 'race' in char_info
+            assert 'character_class' in char_info
+
+def test_adventure_guild_list(game_api_client):
+    """冒険者ギルドリスト取得のテスト"""
+    guild_info = game_api_client.get_adventure_guild_list()
+    assert guild_info is not None
+    assert 'guild_characters_count' in guild_info
+    assert 'guild_characters' in guild_info
 ```
 
 ### 統合テストの実行
@@ -401,6 +483,67 @@ curl "http://localhost:8765/screenshot" | jq .
 
 ## 高度なデバッグ機能
 
+### 新機能: パーティ・キャラクター情報の活用
+
+```python
+client = GameDebugClient()
+
+# パーティ状態の監視ループ
+def monitor_party_status():
+    """パーティ状態を定期的に監視"""
+    while True:
+        party_info = client.get_party_info()
+        if party_info and party_info.get("party_exists"):
+            print(f"パーティ: {party_info['party_name']} - {party_info['gold']}G")
+            
+            # HP状況をチェック
+            for i, char in enumerate(party_info.get("characters", [])):
+                hp_ratio = char['hp'] / max(char['max_hp'], 1)
+                status = "🟢" if hp_ratio > 0.7 else "🟡" if hp_ratio > 0.3 else "🔴"
+                print(f"  {status} {char['name']}: {char['hp']}/{char['max_hp']} HP")
+        
+        time.sleep(5)
+
+# 特定キャラクターの装備チェック
+def check_character_equipment(character_index=0):
+    """キャラクターの装備状況を詳しく分析"""
+    char_info = client.get_character_details(character_index)
+    if char_info and char_info.get("character_exists"):
+        print(f"=== {char_info['name']} の装備分析 ===")
+        
+        equipment = char_info.get("equipment", [])
+        equipment_slots = {}
+        for item in equipment:
+            equipment_slots[item['slot']] = item['item_name']
+        
+        # 必要な装備スロットをチェック
+        required_slots = ['weapon', 'armor', 'shield', 'helmet']
+        for slot in required_slots:
+            if slot in equipment_slots:
+                print(f"✓ {slot}: {equipment_slots[slot]}")
+            else:
+                print(f"✗ {slot}: 未装備")
+
+# 冒険者ギルドの管理状況確認
+def analyze_guild_management():
+    """冒険者ギルドの管理状況を分析"""
+    guild_info = client.get_adventure_guild_list()
+    party_info = client.get_party_info()
+    
+    guild_count = guild_info.get("guild_characters_count", 0)
+    party_count = party_info.get("character_count", 0) if party_info.get("party_exists") else 0
+    
+    print(f"登録キャラクター数: {guild_count}")
+    print(f"パーティメンバー数: {party_count}")
+    print(f"ベンチキャラクター数: {guild_count - party_count}")
+    
+    if guild_count > 0:
+        # レベル分布
+        levels = [char.get('level', 1) for char in guild_info.get("guild_characters", [])]
+        avg_level = sum(levels) / len(levels)
+        print(f"平均レベル: {avg_level:.1f}")
+```
+
 ### 画面遷移の連続キャプチャ
 
 ```python
@@ -471,22 +614,30 @@ if hierarchy:
 
 ## まとめ
 
-**🎉 Dungeonゲームのデバッグシステム (2025年7月5日 現在)**
+**🎉 Dungeonゲームのデバッグシステム (2025年7月12日 現在)**
 
 ### ✅ 完全利用可能な機能
 
-1. **高速APIエンドポイント**: 全8個のエンドポイントが1-15msで応答
+1. **高速APIエンドポイント**: 全11個のエンドポイントが1-15msで応答
    - スクリーンショット取得
    - キー・マウス入力送信
    - ゲーム状態監視
    - UI階層情報取得（安全モード）
    - 入力履歴管理
+   - **新機能**: パーティ情報取得
+   - **新機能**: キャラクター詳細取得
+   - **新機能**: 冒険者ギルドリスト取得
 
 2. **UI監視機能**:
    - WindowManagerからのリアルタイムウィンドウ情報
    - 安全なUI階層デバッグ
 
-3. **開発ツール**:
+3. **パーティ・キャラクター監視機能** (新機能):
+   - パーティ基本情報（名前、所持金、メンバー数）
+   - キャラクター詳細情報（ステータス、装備、アイテム）
+   - 冒険者ギルド登録キャラクター管理
+
+4. **開発ツール**:
    - Python APIクライアント
    - CLIツール
    - 拡張ログシステム
