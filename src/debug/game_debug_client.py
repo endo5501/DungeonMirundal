@@ -503,14 +503,55 @@ class GameDebugClient:
         if equipment:
             print("\n--- 装備中のアイテム ---")
             for item in equipment:
-                print(f"  * {item.get('slot', 'unknown')}: {item.get('item_name', 'Unknown')}")
+                item_desc = f"  * {item.get('slot', 'unknown')}: {item.get('item_name', 'Unknown')}"
+                if item.get('item_type'):
+                    item_desc += f" ({item['item_type']})"
+                if item.get('description'):
+                    item_desc += f" - {item['description']}"
+                print(item_desc)
         
-        # 所持アイテム
-        items = character_info.get("items", [])
-        if items:
-            print("\n--- 所持アイテム ---")
-            for item in items:
-                print(f"  - {item.get('item_name', 'Unknown')}")
+        # 所持アイテム（インベントリ）
+        inventory = character_info.get("inventory", [])
+        inventory_count = character_info.get("inventory_count", 0)
+        
+        print(f"\n--- 所持アイテム (総数: {inventory_count}) ---")
+        if inventory:
+            for i, item in enumerate(inventory):
+                item_desc = f"  {i+1}. {item.get('item_name', 'Unknown')}"
+                
+                # アイテムタイプ
+                if item.get('item_type'):
+                    item_desc += f" ({item['item_type']})"
+                
+                # 数量
+                quantity = item.get('quantity', 1)
+                if quantity > 1:
+                    item_desc += f" x{quantity}"
+                
+                # 装備可能性
+                if item.get('equipable'):
+                    item_desc += " [装備可能]"
+                
+                # 価値
+                if item.get('value'):
+                    item_desc += f" (価値: {item['value']}G)"
+                
+                print(item_desc)
+                
+                # 説明がある場合は改行して表示
+                if item.get('description'):
+                    print(f"     説明: {item['description']}")
+                
+                # ステータス修正値がある場合
+                if item.get('stats_modifier'):
+                    stats_mod = item['stats_modifier']
+                    if isinstance(stats_mod, dict) and any(v != 0 for v in stats_mod.values()):
+                        mod_str = ", ".join([f"{k}:{v:+d}" for k, v in stats_mod.items() if v != 0])
+                        print(f"     効果: {mod_str}")
+        elif inventory_count == 0:
+            print("  アイテムを所持していません")
+        else:
+            print(f"  アイテム情報を取得できませんでした（総数: {inventory_count}）")
     
     def display_adventure_guild_list(self, guild_info: Optional[Dict[str, Any]] = None) -> None:
         """

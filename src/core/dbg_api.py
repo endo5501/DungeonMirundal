@@ -1126,26 +1126,97 @@ def get_character_details(character_index: int):
                     
                     # 装備・アイテム情報
                     character_info["equipment"] = []
-                    character_info["items"] = []
+                    character_info["inventory"] = []
+                    character_info["inventory_count"] = 0
                     
+                    # 装備中のアイテム
                     if hasattr(char, 'equipment') and hasattr(char.equipment, 'equipped_items'):
                         equipped = char.equipment.equipped_items
                         for slot, item in equipped.items():
                             if item:
-                                character_info["equipment"].append({
+                                equipment_item = {
                                     "slot": slot,
                                     "item_name": getattr(item, 'name', 'Unknown Item'),
                                     "item_id": getattr(item, 'item_id', 'Unknown ID'),
                                     "equipped": True
-                                })
+                                }
+                                
+                                # アイテムの詳細情報を追加
+                                if hasattr(item, 'item_type'):
+                                    equipment_item["item_type"] = getattr(item.item_type, 'value', str(item.item_type))
+                                if hasattr(item, 'description'):
+                                    equipment_item["description"] = item.description
+                                if hasattr(item, 'stats_modifier'):
+                                    equipment_item["stats_modifier"] = item.stats_modifier
+                                
+                                character_info["equipment"].append(equipment_item)
                     
-                    if hasattr(char, 'inventory') and hasattr(char.inventory, 'items'):
-                        for item in char.inventory.items:
-                            character_info["items"].append({
+                    # 所持品（インベントリ）
+                    if hasattr(char, 'inventory'):
+                        inventory = char.inventory
+                        
+                        # インベントリの種類に応じて取得方法を変える
+                        inventory_items = []
+                        
+                        # 方法1: inventory.items属性から取得
+                        if hasattr(inventory, 'items') and inventory.items:
+                            inventory_items = inventory.items
+                        # 方法2: inventory.get_all_items()メソッドから取得
+                        elif hasattr(inventory, 'get_all_items'):
+                            try:
+                                inventory_items = inventory.get_all_items()
+                            except Exception as e:
+                                logger.debug(f"get_all_items() failed: {e}")
+                        # 方法3: inventory.__dict__の内容を確認
+                        elif hasattr(inventory, '__dict__'):
+                            for attr_name, attr_value in inventory.__dict__.items():
+                                if attr_name.endswith('_items') or attr_name == 'items':
+                                    if isinstance(attr_value, list):
+                                        inventory_items = attr_value
+                                        break
+                        
+                        character_info["inventory_count"] = len(inventory_items) if inventory_items else 0
+                        
+                        # 各アイテムの詳細情報を取得
+                        for item in inventory_items if inventory_items else []:
+                            inventory_item = {
                                 "item_name": getattr(item, 'name', 'Unknown Item'),
                                 "item_id": getattr(item, 'item_id', 'Unknown ID'),
                                 "equipped": False
-                            })
+                            }
+                            
+                            # アイテムの詳細情報を追加
+                            if hasattr(item, 'item_type'):
+                                item_type = item.item_type
+                                if hasattr(item_type, 'value'):
+                                    inventory_item["item_type"] = item_type.value
+                                else:
+                                    inventory_item["item_type"] = str(item_type)
+                            
+                            if hasattr(item, 'description'):
+                                inventory_item["description"] = item.description
+                                
+                            if hasattr(item, 'quantity'):
+                                inventory_item["quantity"] = item.quantity
+                            else:
+                                inventory_item["quantity"] = 1  # デフォルト数量
+                                
+                            if hasattr(item, 'value'):
+                                inventory_item["value"] = item.value
+                                
+                            if hasattr(item, 'stats_modifier'):
+                                inventory_item["stats_modifier"] = item.stats_modifier
+                                
+                            # アイテムが装備可能かどうか
+                            if hasattr(item, 'is_equipable'):
+                                inventory_item["equipable"] = item.is_equipable
+                            elif hasattr(item, 'item_type'):
+                                # アイテムタイプから装備可能性を推定
+                                equipable_types = ['weapon', 'armor', 'shield', 'helmet', 'accessory']
+                                item_type_str = str(getattr(item.item_type, 'value', item.item_type)).lower()
+                                inventory_item["equipable"] = any(eq_type in item_type_str for eq_type in equipable_types)
+                            
+                            character_info["inventory"].append(inventory_item)
                 else:
                     raise HTTPException(
                         status_code=404,
