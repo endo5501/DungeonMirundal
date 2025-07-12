@@ -1,4 +1,10 @@
-"""キャラクタークラス"""
+"""キャラクタークラス - リファクタリング版
+
+Fowlerのリファクタリング手法を適用:
+- Extract Class: コンポーネントシステムの導入
+- Move Method: 機能別メソッドをコンポーネントに移動
+- Replace Data Value with Object: 複雑なデータ構造をオブジェクト化
+"""
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any, Tuple
@@ -7,6 +13,10 @@ import uuid
 from datetime import datetime
 
 from src.character.stats import BaseStats, DerivedStats, StatGenerator, StatValidator
+from src.character.components.base_component import ComponentManager, ComponentType, ensure_component
+from src.character.components.equipment_component import EquipmentComponent
+from src.character.components.inventory_component import InventoryComponent
+from src.character.components.status_effects_component import StatusEffectsComponent
 from src.core.config_manager import config_manager
 from src.utils.logger import logger
 
@@ -60,7 +70,11 @@ class Experience:
 
 @dataclass
 class Character:
-    """キャラクタークラス"""
+    """キャラクタークラス - コンポーネントシステム対応版
+    
+    複雑な機能をコンポーネントに分離し、責務を明確化。
+    既存コードとの互換性を保ちながら新機能を追加。
+    """
     # 基本情報
     character_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = ""
@@ -81,19 +95,87 @@ class Character:
     inventory: List[str] = field(default_factory=list)  # アイテムID（廃止予定）
     equipped_items: Dict[str, str] = field(default_factory=dict)  # スロット -> アイテムID（廃止予定）
     
-    # 新しいインベントリシステム
+    # 旧フラグ（互換性のため残す）
     _inventory_initialized: bool = field(default=False, init=False)
     _equipment_initialized: bool = field(default=False, init=False)
     _status_effects_initialized: bool = field(default=False, init=False)
     _spellbook_initialized: bool = field(default=False, init=False)
     
+    # コンポーネントシステム
+    _component_manager: Optional[ComponentManager] = field(default=None, init=False)
+    
     # メタ情報
     created_at: datetime = field(default_factory=datetime.now)
     
     def __post_init__(self):
-        """初期化後処理"""
+        """初期化後処理 - コンポーネントシステム対応"""
         if not self.name:
             self.name = f"Character_{self.character_id[:8]}"
+        
+        # コンポーネントマネージャーを初期化
+        self._setup_component_system()
+    
+    def _setup_component_system(self):
+        """コンポーネントシステムのセットアップ"""
+        from src.character.components.base_component import create_component_manager
+        
+        self._component_manager = create_component_manager(self)
+        
+        # 基本コンポーネントを追加
+        self._component_manager.add_component(EquipmentComponent(self))
+        self._component_manager.add_component(InventoryComponent(self))
+        self._component_manager.add_component(StatusEffectsComponent(self))
+        
+        logger.debug(f"コンポーネントシステムセットアップ完了: {self.name}")
+    
+    # === コンポーネントアクセス用プロパティ ===
+    
+    @property
+    def equipment(self) -> Optional[EquipmentComponent]:
+        """装備コンポーネントを取得"""
+        if self._component_manager:
+            return self._component_manager.get_component(ComponentType.EQUIPMENT)
+        return None
+    
+    @property
+    def items(self) -> Optional[InventoryComponent]:
+        """インベントリコンポーネントを取得"""
+        if self._component_manager:
+            return self._component_manager.get_component(ComponentType.INVENTORY)
+        return None
+    
+    @property
+    def status_effects(self) -> Optional[StatusEffectsComponent]:
+        """状態異常コンポーネントを取得"""
+        if self._component_manager:
+            return self._component_manager.get_component(ComponentType.STATUS_EFFECTS)
+        return None
+    
+    # === 互換性メソッド（旧APIとの互換性を保つ） ===
+    
+    def initialize_inventory(self):
+        """インベントリ初期化（互換性用）"""
+        if self.items:
+            success = self.items.ensure_initialized()
+            self._inventory_initialized = success
+            return success
+        return False
+    
+    def initialize_equipment(self):
+        """装備初期化（互換性用）"""
+        if self.equipment:
+            success = self.equipment.ensure_initialized()
+            self._equipment_initialized = success
+            return success
+        return False
+    
+    def initialize_status_effects(self):
+        """状態異常初期化（互換性用）"""
+        if self.status_effects:
+            success = self.status_effects.ensure_initialized()
+            self._status_effects_initialized = success
+            return success
+        return False
     
     def initialize_derived_stats(self):
         """派生統計値を初期化"""
