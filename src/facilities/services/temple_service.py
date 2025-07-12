@@ -35,11 +35,18 @@ class TempleService(FacilityService, ActionExecutorMixin):
         # GameManagerはシングルトンではないため、必要時に別途設定
         self.game = None
         
+        # コントローラーへの参照（後で設定される）
+        self._controller = None
+        
         # 料金設定
         self.resurrect_cost_per_level = 100  # レベルあたりの蘇生費
         self.blessing_cost = 500  # 祝福の固定料金
         
         logger.info("TempleService initialized")
+    
+    def set_controller(self, controller):
+        """コントローラーを設定"""
+        self._controller = controller
     
     def get_menu_items(self) -> List[MenuItem]:
         """メニュー項目を取得"""
@@ -416,3 +423,51 @@ class TempleService(FacilityService, ActionExecutorMixin):
             "silence": "沈黙"
         }
         return status_names.get(status, status)
+    
+    def create_service_panel(self, service_id: str, rect, parent, ui_manager):
+        """教会専用のサービスパネルを作成"""
+        logger.info(f"[DEBUG] TempleService.create_service_panel called: service_id={service_id}")
+        try:
+            if service_id == "prayer_shop":
+                # 祈祷書購入は専用パネルを使用
+                from src.facilities.ui.temple.prayer_shop_panel import PrayerShopPanel
+                # 祈祷書データを取得
+                prayer_data = {
+                    "available_spells": self._get_available_prayer_books(),
+                    "categories": ["healing", "blessing", "resurrection", "purification"],
+                    "party_gold": self.party.gold if self.party else 0
+                }
+                return PrayerShopPanel(
+                    rect=rect,
+                    parent=parent,
+                    ui_manager=ui_manager,
+                    controller=self._controller,
+                    service=self,
+                    data=prayer_data
+                )
+            elif service_id == "resurrect":
+                # 蘇生は専用パネルを使用
+                from src.facilities.ui.temple.resurrect_panel import ResurrectPanel
+                return ResurrectPanel(
+                    rect=rect,
+                    parent=parent,
+                    ui_manager=ui_manager,
+                    controller=self._controller,
+                    service=self
+                )
+            elif service_id == "blessing":
+                # 祝福は専用パネルを使用
+                from src.facilities.ui.temple.blessing_panel import BlessingPanel
+                return BlessingPanel(
+                    rect=rect,
+                    parent=parent,
+                    ui_manager=ui_manager,
+                    controller=self._controller,
+                    service=self
+                )
+            else:
+                logger.warning(f"[DEBUG] Unknown service_id for panel creation: {service_id}")
+                return None
+        except Exception as e:
+            logger.error(f"[DEBUG] Error creating service panel: {e}")
+            return None
