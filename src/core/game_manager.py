@@ -1,4 +1,10 @@
-"""ゲーム管理システム"""
+"""ゲーム管理システム - リファクタリング版
+
+Fowlerのリファクタリング手法を適用:
+- Extract Class: SceneManager, EventBus
+- Move Method: シーン固有のメソッドを各シーンに移動
+- Replace Data Value with Object: イベント駆動アーキテクチャ
+"""
 
 import pygame
 import sys
@@ -8,6 +14,8 @@ from . import dbg_api
 from src.core.config_manager import config_manager
 from src.core.input_manager import InputManager
 from src.core.save_manager import SaveManager
+from src.core.scene_manager import SceneManager, SceneType
+from src.core.event_bus import EventBus, EventType, GameEvent, EventHandler, publish_event
 from src.overworld.overworld_manager import OverworldManager
 from src.dungeon.dungeon_manager import DungeonManager
 from src.combat.combat_manager import CombatManager
@@ -20,8 +28,12 @@ from src.utils.constants import *
 from src.utils.constants import GameLocation
 
 
-class GameManager:
-    """メインゲーム管理クラス"""
+class GameManager(EventHandler):
+    """メインゲーム管理クラス - リファクタリング版
+    
+    責務を大幅に削減し、シーン管理とイベント処理に特化。
+    個別の機能は各シーンとマネージャーに移譲。
+    """
     
     def __init__(self):
         # Pygame初期化
@@ -32,25 +44,29 @@ class GameManager:
         self.clock = pygame.time.Clock()
         self.running = False
         
-        # ゲーム状態
+        # ゲーム状態（簡素化）
         self.game_state = "startup"
         self.paused = False
-        self.current_location = GameLocation.OVERWORLD  # GameLocation.OVERWORLD or GameLocation.DUNGEON
+        self.current_location = GameLocation.OVERWORLD
         
-        # マネージャーの初期化（名前衝突を避ける）
+        # コア設定
         self.game_config = config_manager
         self.input_manager = InputManager()
+        self.save_manager = SaveManager()
+        
+        # マネージャー（シーンから参照される）
         self.overworld_manager = None
         self.dungeon_manager = None
         self.combat_manager = None
         self.encounter_manager = None
         self.dungeon_renderer = None
         
-        # 現在のパーティ
+        # パーティ情報
         self.current_party = None
         
-        # セーブマネージャー
-        self.save_manager = SaveManager()
+        # 新アーキテクチャコンポーネント
+        self.event_bus = EventBus()
+        self.scene_manager = None  # 後で初期化
         
         # 初期設定の読み込み
         self._load_initial_config()
@@ -73,7 +89,82 @@ class GameManager:
         # 遷移システムの初期化
         self._setup_transition_system()
         
+        # シーン管理システム初期化
+        self._setup_scene_management()
+        
+        # イベントバス設定
+        self._setup_event_handlers()
+        
         logger.info(self.game_config.get_text("app_log.game_manager_initialized"))
+    
+    def _setup_scene_management(self):
+        """シーン管理システム初期化"""
+        self.scene_manager = SceneManager(self)
+        logger.info("シーン管理システム初期化完了")
+    
+    def _setup_event_handlers(self):
+        """イベントハンドラーの設定"""
+        # GameManagerをイベントハンドラーとして登録
+        event_types = [
+            EventType.SCENE_TRANSITION_REQUESTED,
+            EventType.PARTY_CREATED,
+            EventType.COMBAT_STARTED,
+            EventType.COMBAT_ENDED
+        ]
+        
+        for event_type in event_types:
+            self.event_bus.subscribe(event_type, self)
+        
+        logger.info("イベントハンドラー設定完了")
+    
+    def handle_event(self, event: GameEvent) -> bool:
+        """EventHandler インターフェースの実装"""
+        try:
+            if event.event_type == EventType.SCENE_TRANSITION_REQUESTED:
+                return self._handle_scene_transition_request(event)
+            elif event.event_type == EventType.PARTY_CREATED:
+                return self._handle_party_created(event)
+            elif event.event_type == EventType.COMBAT_STARTED:
+                return self._handle_combat_started(event)
+            elif event.event_type == EventType.COMBAT_ENDED:
+                return self._handle_combat_ended(event)
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"イベント処理エラー: {event.event_type.value}: {e}")
+            return False
+    
+    def _handle_scene_transition_request(self, event: GameEvent) -> bool:
+        """シーン遷移リクエストの処理"""
+        scene_type_str = event.data.get('scene_type')
+        context = event.data.get('context', {})
+        
+        if scene_type_str == 'overworld':
+            return self.scene_manager.transition_to_overworld(context.get('from_dungeon', False))
+        elif scene_type_str == 'dungeon':
+            return self.scene_manager.transition_to_dungeon(context.get('dungeon_id', 'main_dungeon'))
+        elif scene_type_str == 'combat':
+            return self.scene_manager.transition_to_combat(context.get('monsters', []))
+        
+        return False
+    
+    def _handle_party_created(self, event: GameEvent) -> bool:
+        """パーティ作成イベントの処理"""
+        party = event.data.get('party')
+        if party:
+            self.set_current_party(party)
+        return True
+    
+    def _handle_combat_started(self, event: GameEvent) -> bool:
+        """戦闘開始イベントの処理"""
+        logger.info("戦闘開始イベントを受信")
+        return True
+    
+    def _handle_combat_ended(self, event: GameEvent) -> bool:
+        """戦闘終了イベントの処理"""
+        logger.info("戦闘終了イベントを受信")
+        return True
         
     def _load_initial_config(self):
         """初期設定の読み込み"""
@@ -466,22 +557,31 @@ class GameManager:
         logger.info(self.game_config.get_text("app_log.game_state_changed").format(old_state=old_state, new_state=state))
     
     def set_current_party(self, party: Party):
-        """現在のパーティを設定"""
+        """現在のパーティを設定 - イベント駆動版"""
+        old_party = self.current_party
         self.current_party = party
         
-        # 戦闘・エンカウンターマネージャーにもパーティを設定
+        # マネージャーにパーティを設定（既存の依存関係を維持）
         if self.encounter_manager:
             self.encounter_manager.set_party(party)
         
-        # ダンジョンレンダラーにもパーティを設定（無効化されていても設定）
         if self.dungeon_renderer:
             self.dungeon_renderer.set_party(party)
             
-            # ダンジョンUIマネージャーにもパーティを設定
             if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
                 self.dungeon_renderer.dungeon_ui_manager.set_party(party)
         
+        # パーティ変更イベントを発行
         if party is not None:
+            publish_event(
+                EventType.PARTY_CREATED,
+                "game_manager",
+                {
+                    "party": party,
+                    "old_party": old_party,
+                    "member_count": len(party.get_living_characters())
+                }
+            )
             logger.info(self.game_config.get_text("app_log.party_set").format(name=party.name, count=len(party.get_living_characters())))
         else:
             logger.info("パーティをクリアしました")
@@ -610,7 +710,7 @@ class GameManager:
         return self.current_location == GameLocation.DUNGEON
     
     def transition_to_dungeon(self, dungeon_id: str = "main_dungeon"):
-        """ダンジョンへの遷移"""
+        """ダンジョンへの遷移 - イベント駆動版"""
         if not self.current_party:
             logger.error(self.game_config.get_text("game_manager.party_error_no_party"))
             raise Exception(self.game_config.get_text("game_manager.party_error_no_party"))
@@ -618,6 +718,18 @@ class GameManager:
         if not self.current_party.get_living_characters():
             logger.error(self.game_config.get_text("game_manager.party_error_no_living"))
             raise Exception(self.game_config.get_text("game_manager.party_error_no_living"))
+        
+        # イベントでシーン遷移をリクエスト
+        publish_event(
+            EventType.SCENE_TRANSITION_REQUESTED,
+            "game_manager",
+            {
+                "scene_type": "dungeon",
+                "context": {"dungeon_id": dungeon_id}
+            }
+        )
+        
+        return True
         
         logger.info(self.game_config.get_text("game_manager.dungeon_transition_start").format(dungeon_id=dungeon_id))
         
@@ -694,29 +806,23 @@ class GameManager:
             raise e
     
     def transition_to_overworld(self):
-        """地上部への遷移"""
+        """地上部への遷移 - イベント駆動版"""
         if not self.current_party:
             logger.error(self.game_config.get_text("game_manager.party_error_no_party"))
             return False
         
-        logger.info(self.game_config.get_text("game_manager.overworld_transition_start"))
-        
-        # ダンジョンを退場（ダンジョンにいる場合のみ）
-        if self.current_location == GameLocation.DUNGEON:
-            self.dungeon_manager.exit_dungeon()
-        
-        # 地上部に入場（自動回復付き）
+        # イベントでシーン遷移をリクエスト
         from_dungeon = (self.current_location == GameLocation.DUNGEON)
-        success = self.overworld_manager.enter_overworld(self.current_party, from_dungeon)
+        publish_event(
+            EventType.SCENE_TRANSITION_REQUESTED,
+            "game_manager",
+            {
+                "scene_type": "overworld",
+                "context": {"from_dungeon": from_dungeon}
+            }
+        )
         
-        if success:
-            self.current_location = GameLocation.OVERWORLD
-            self.set_game_state("overworld_exploration")
-            logger.info(self.game_config.get_text("game_manager.overworld_transition_complete"))
-            return True
-        else:
-            logger.error(self.game_config.get_text("game_manager.overworld_transition_failed"))
-            return False
+        return True
     
     def _generate_dungeon_seed(self, dungeon_id: str) -> str:
         """ダンジョンIDに基づいてシードを生成"""
@@ -861,7 +967,7 @@ class GameManager:
         pygame.quit()
         
     def run_game(self):
-        """ゲームの実行"""
+        """ゲームの実行 - リファクタリング版"""
         logger.info(self.game_config.get_text("game_manager.game_start"))
         
         # 初回起動処理
@@ -869,12 +975,118 @@ class GameManager:
         
         # メインループの開始
         self.running = True
-        self._main_loop()
+        self._main_loop_refactored()
+    
+    def _main_loop_refactored(self):
+        """Pygameメインループ - リファクタリング版
+        
+        複雑なイベント処理をシーンマネージャーに委譲し、
+        GameManagerの責務を簡素化。
+        """
+        while self.running:
+            # イベント処理
+            events = pygame.event.get()
+            
+            for event in events:
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    continue
+                
+                # シーンマネージャーでイベント処理（優先）
+                scene_handled = self.scene_manager.handle_event(event)
+                
+                if not scene_handled:
+                    # WindowManagerでイベント処理
+                    ui_handled = self._handle_ui_events(event)
+                    
+                    # UIで処理されなかった場合のみ入力マネージャーに送信
+                    if not ui_handled and hasattr(self, 'input_manager'):
+                        self.input_manager.handle_event(event)
+            
+            # システム更新
+            self._update_systems()
+            
+            # 描画
+            self._render_frame()
+    
+    def _handle_ui_events(self, event) -> bool:
+        """統合UIイベント処理"""
+        ui_handled = False
+        
+        # WindowManagerでイベント処理
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        
+        if not window_manager.screen:
+            window_manager.initialize_pygame(self.screen, self.clock)
+        
+        ui_handled = window_manager.handle_global_events([event])
+        
+        # WindowManagerで処理されなかった場合のみ、既存UIマネージャーで処理
+        if not ui_handled and hasattr(self, 'ui_manager') and self.ui_manager:
+            ui_handled = self.ui_manager.handle_event(event)
+        
+        return ui_handled
+    
+    def _update_systems(self):
+        """システム更新処理"""
+        # FPS制限と時間更新
+        time_delta = self.clock.tick(self.target_fps) / 1000.0
+        
+        # 入力マネージャー更新
+        if hasattr(self, 'input_manager'):
+            self.input_manager.update()
+        
+        # イベントバス更新（キューにたまったイベント処理）
+        # イベントバスは自動処理されるため、明示的な更新は不要
+        
+        # シーンマネージャー更新
+        self.scene_manager.update(time_delta)
+        
+        # WindowManager更新
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        window_manager.update(time_delta)
+        
+        # 既存UIマネージャー更新（WindowManagerがアクティブでない場合のみ）
+        if not window_manager.get_active_window() and hasattr(self, 'ui_manager') and self.ui_manager:
+            self.ui_manager.update(time_delta)
+    
+    def _render_frame(self):
+        """フレーム描画処理"""
+        # 画面をクリア
+        self.screen.fill((0, 0, 0))
+        
+        # シーン描画
+        self.scene_manager.render(self.screen)
+        
+        # WindowManager描画
+        from src.ui.window_system import WindowManager
+        window_manager = WindowManager.get_instance()
+        window_manager.draw(self.screen)
+        
+        # 既存UIマネージャー描画（WindowManagerがアクティブでない場合のみ）
+        if not window_manager.get_active_window() and hasattr(self, 'ui_manager') and self.ui_manager:
+            self.ui_manager.render()
+        else:
+            # 永続要素の描画
+            self._render_persistent_elements()
+        
+        # デバッグ情報描画
+        if self.debug_enabled:
+            self._render_debug_info()
+        
+        # 画面更新
+        pygame.display.flip()
     
     def _main_loop(self):
-        """Pygameメインループ"""
+        """旧メインループ（互換性のため保持）"""
+        # 新しいメインループにリダイレクト
+        self._main_loop_refactored()
+        return
+        
+        # 以下は旧コード（コメントアウト）
         while self.running:
-            # イベント処理 - pygame-guiが生成する新しいイベントも同じフレームで処理
             events_to_process = pygame.event.get()
             
             # 最大3回までイベント処理ループを繰り返し（無限ループ防止）
@@ -1042,7 +1254,7 @@ class GameManager:
             self.screen.blit(fps_surface, (10, 10))
     
     def _initialize_game_flow(self):
-        """ゲーム開始時の初期化フロー"""
+        """ゲーム開始時の初期化フロー - リファクタリング版"""
         # 自動セーブデータロードを試行
         auto_load_success = self._try_auto_load()
         
@@ -1050,10 +1262,8 @@ class GameManager:
         if not auto_load_success and not self.current_party:
             self._create_test_party()
         
-        # 地上部に遷移
-        self.transition_to_overworld()
-        
-        self.set_game_state("startup")
+        # シーンマネージャーでスタートアップシーンから開始
+        self.scene_manager.transition_to(SceneType.STARTUP)
     
     def _try_auto_load(self):
         """自動セーブデータロードを試行"""
@@ -1199,22 +1409,35 @@ class GameManager:
             return False
     
     def start_combat(self, monsters):
-        """戦闘開始"""
+        """戦闘開始 - イベント駆動版"""
         if not self.combat_manager or not self.current_party:
             logger.error("戦闘開始に必要な条件が満たされていません")
             return False
         
         try:
-            # 戦闘開始
-            success = self.combat_manager.start_combat(self.current_party, monsters)
+            # イベントで戦闘シーン遷移をリクエスト
+            publish_event(
+                EventType.SCENE_TRANSITION_REQUESTED,
+                "game_manager",
+                {
+                    "scene_type": "combat",
+                    "context": {"monsters": monsters}
+                }
+            )
             
-            if success:
-                # ゲーム状態を戦闘に変更
-                self.set_game_state("combat")
-                logger.info(f"戦闘開始: {len(monsters)}体のモンスターと戦闘")
-                return True
+            # 戦闘開始イベントを発行
+            publish_event(
+                EventType.COMBAT_STARTED,
+                "game_manager",
+                {
+                    "party": self.current_party,
+                    "monsters": monsters,
+                    "monster_count": len(monsters)
+                }
+            )
             
-            return False
+            logger.info(f"戦闘開始: {len(monsters)}体のモンスターと戦闘")
+            return True
             
         except Exception as e:
             logger.error(f"戦闘開始エラー: {e}")
