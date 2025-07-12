@@ -171,7 +171,7 @@
     },
     "magic_guild": {
       "id": "magic_guild",
-      "name": "魔法ギルド",
+      "name": "魔術師ギルド",
       "service_class": "MagicGuildService",
       "icon": "assets/icons/magic_guild_icon.png",
       "welcome_message": "魔術の探求者よ、ようこそ。",
@@ -184,35 +184,11 @@
           "categories": ["offensive", "defensive", "healing", "utility", "special"],
           "level_requirements": true
         },
-        "spell_learning": {
-          "type": "wizard",
-          "name": "魔法習得",
-          "description": "新しい魔法を習得します",
-          "requirements": {
-            "check_class": true,
-            "check_level": true,
-            "check_intelligence": true
-          }
-        },
-        "identification": {
-          "type": "action",
-          "name": "魔法鑑定",
-          "description": "魔法的なアイテムを鑑定します",
-          "cost": 200,
-          "success_rate": 0.95
-        },
         "analysis": {
           "type": "panel",
           "name": "魔法分析",
           "description": "魔法の詳細を分析します",
           "services": ["spell_analysis", "item_analysis", "character_analysis"]
-        },
-        "enchantment": {
-          "type": "wizard",
-          "name": "魔法付与",
-          "description": "アイテムに魔法を付与します",
-          "cost_formula": "item_level * 1000",
-          "success_rate_formula": "0.5 + (caster_level * 0.02)"
         }
       }
     }
