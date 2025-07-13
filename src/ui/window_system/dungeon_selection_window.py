@@ -222,6 +222,22 @@ class DungeonSelectionWindow(Window):
             object_id="#dungeon_list"
         )
         
+        # 自動で先頭項目を選択（ダンジョンがある場合）
+        if self.dungeons:
+            self.selected_index = 0
+            # pygame_guiでリストの先頭項目を選択状態にする
+            if len(self.dungeon_list.item_list) > 0:
+                try:
+                    # 非公開メソッドだが、利用可能な選択設定方法
+                    self.dungeon_list._set_default_selection()
+                    logger.info(f"先頭ダンジョンを自動選択: {self.dungeon_list.item_list[0]}")
+                except Exception as e:
+                    logger.warning(f"自動選択に失敗しました: {e}")
+                    # フォールバック: 手動でselected_indexを設定
+                    logger.info("手動で選択インデックスを設定")
+        else:
+            self.selected_index = None
+        
         # ボタン（下部）
         button_width = 150
         button_height = 40
@@ -299,6 +315,13 @@ class DungeonSelectionWindow(Window):
         if self.state != WindowState.SHOWN:
             return False
         
+        # キーボードイベント処理
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:
+                logger.info("Enterキーでダンジョン選択を実行")
+                self._on_select_dungeon()
+                return True
+        
         # デバッグ: イベント検出をログ
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             logger.info(f"DungeonSelectionWindow: UI_BUTTON_PRESSED検出: {event.ui_element}")
@@ -325,15 +348,21 @@ class DungeonSelectionWindow(Window):
         elif event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
             if event.ui_element == self.dungeon_list:
                 selection = self.dungeon_list.get_single_selection()
-                if selection:
+                if selection and self.dungeons:
                     # 選択されたアイテムのインデックスを取得
                     try:
                         self.selected_index = self.dungeon_list.item_list.index(selection)
                         logger.info(f"ダンジョン選択変更: インデックス={self.selected_index}, アイテム={selection}")
                     except ValueError:
-                        # アイテムが見つからない場合
+                        # アイテムが見つからない場合、先頭を選択
                         self.selected_index = 0
-                        logger.warning(f"選択されたアイテムが見つかりません: {selection}")
+                        logger.warning(f"選択されたアイテムが見つかりません: {selection}, 先頭を選択します")
+                        # 強制的に先頭項目を選択状態にする
+                        if len(self.dungeon_list.item_list) > 0:
+                            try:
+                                self.dungeon_list._set_default_selection()
+                            except Exception as e:
+                                logger.warning(f"強制選択に失敗: {e}")
                 else:
                     self.selected_index = None
                 
@@ -392,8 +421,16 @@ class DungeonSelectionWindow(Window):
             logger.warning("選択可能なダンジョンがありません")
             return
         
+        # 選択インデックスを検証・修正
         if self.selected_index is None or self.selected_index >= len(self.dungeons):
             self.selected_index = 0
+            logger.info(f"選択インデックスを修正: {self.selected_index}")
+        
+        logger.info(f"ダンジョン選択処理開始: インデックス={self.selected_index}, 総数={len(self.dungeons)}")
+        
+        # UI上でダンジョンが選択されていない場合でも、selected_indexが有効なら処理を続行
+        if self.selected_index is not None and 0 <= self.selected_index < len(self.dungeons):
+            logger.info("selected_indexが有効なため、処理を続行します")
         
         selected_dungeon = self.dungeons[self.selected_index]
         logger.info(f"ダンジョン選択: {selected_dungeon.hash_value}")

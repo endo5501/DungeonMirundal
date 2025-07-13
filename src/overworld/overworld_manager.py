@@ -1600,16 +1600,27 @@ class OverworldManager:
         # TODO: OverworldMainWindowでのダイアログクローズ実装後に置換
     
     def _cleanup_ui(self):
-        """UI要素のクリーンアップ"""
-        # 新システム: OverworldMainWindowで統合処理される予定
-        # レガシーメニューのクリーンアップは段階的に削除
+        """UI要素のクリーンアップ（地上部専用UI要素のみ非表示）"""
         logger.info("UI要素クリーンアップ要求")
+        
+        # WindowManagerでOverworldMainWindowのUI要素のみを非表示にする
+        # ウィンドウ自体は削除せず、UI要素だけを非表示にしてダンジョンUI基盤を保持
+        if self.window_manager:
+            # overworld_mainウィンドウのUI要素を非表示にする
+            overworld_window = self.window_manager.get_window('overworld_main')
+            if overworld_window:
+                logger.info("OverworldMainWindowのUI要素を非表示にします（ウィンドウ基盤は保持）")
+                overworld_window.hide_ui_elements()
+                # hide_window()は呼ばない - Window Stackを保持してダンジョンUI基盤を維持
+            else:
+                logger.warning("OverworldMainWindowが見つかりません")
+        
+        # レガシーメニューのクリーンアップ
         if hasattr(self, 'main_menu'):
             self.main_menu = None
         if hasattr(self, 'location_menu'):
             self.location_menu = None
         self._close_dialog()
-        # TODO: OverworldMainWindowでのUIクリーンアップ実装後に置換
     
     def _emergency_menu_recovery(self):
         """緊急メニュー復元処理"""

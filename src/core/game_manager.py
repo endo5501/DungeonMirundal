@@ -463,9 +463,13 @@ class GameManager(EventHandler):
     
     def _on_movement_action(self, action: str, pressed: bool, input_type):
         """移動アクションの処理"""
+        logger.info(f"[DEBUG] 移動アクション: action={action}, pressed={pressed}, location={self.current_location}, renderer={self.dungeon_renderer is not None}")
+        
         if pressed and self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
             # ダンジョンレンダラーに移動処理を委譲
             from src.core.input_manager import InputAction
+            
+            logger.info(f"[DEBUG] ダンジョン移動処理開始: {action}")
             
             if action == InputAction.MOVE_FORWARD.value:
                 self.dungeon_renderer._move_forward()
@@ -1060,16 +1064,28 @@ class GameManager(EventHandler):
                     self.running = False
                     continue
                 
+                # デバッグ: WASDキーのイベント処理フローをログ出力
+                if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
+                    logger.info(f"[DEBUG] GameManager: WASD キー検出 key={pygame.key.name(event.key)}")
+                
                 # シーンマネージャーでイベント処理（優先）
                 scene_handled = self.scene_manager.handle_event(event)
+                
+                if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
+                    logger.info(f"[DEBUG] GameManager: scene_handled={scene_handled}")
                 
                 if not scene_handled:
                     # WindowManagerでイベント処理
                     ui_handled = self._handle_ui_events(event)
                     
+                    if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
+                        logger.info(f"[DEBUG] GameManager: ui_handled={ui_handled}")
+                    
                     # UIで処理されなかった場合のみ入力マネージャーに送信
                     if not ui_handled and hasattr(self, 'input_manager'):
                         self.input_manager.handle_event(event)
+                        if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
+                            logger.info(f"[DEBUG] GameManager: InputManagerに送信しました")
             
             # システム更新
             self._update_systems()
@@ -1081,6 +1097,14 @@ class GameManager(EventHandler):
         """統合UIイベント処理"""
         ui_handled = False
         
+        # ダンジョン内での移動キー（WASD）はUIで処理せず、InputManagerに委譲
+        if (event.type == pygame.KEYDOWN and 
+            event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d] and 
+            self.current_location == GameLocation.DUNGEON):
+            if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
+                logger.info(f"[DEBUG] GameManager._handle_ui_events: ダンジョン内移動キーのため、UIスキップしてInputManagerに委譲")
+            return False
+        
         # WindowManagerでイベント処理
         from src.ui.window_system import WindowManager
         window_manager = WindowManager.get_instance()
@@ -1090,9 +1114,15 @@ class GameManager(EventHandler):
         
         ui_handled = window_manager.handle_global_events([event])
         
+        # デバッグ: WASDキーの処理をログ出力
+        if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
+            logger.info(f"[DEBUG] GameManager._handle_ui_events: WindowManager処理結果={ui_handled}")
+        
         # WindowManagerで処理されなかった場合のみ、既存UIマネージャーで処理
         if not ui_handled and hasattr(self, 'ui_manager') and self.ui_manager:
             ui_handled = self.ui_manager.handle_event(event)
+            if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
+                logger.info(f"[DEBUG] GameManager._handle_ui_events: ui_manager処理結果={ui_handled}")
         
         return ui_handled
     
@@ -1125,7 +1155,7 @@ class GameManager(EventHandler):
         # 画面をクリア
         self.screen.fill((0, 0, 0))
         
-        # シーン描画
+        # シーン描画（ダンジョン3D描画など）- 常に実行
         self.scene_manager.render(self.screen)
         
         # WindowManager描画
@@ -1133,11 +1163,15 @@ class GameManager(EventHandler):
         window_manager = WindowManager.get_instance()
         window_manager.draw(self.screen)
         
-        # 既存UIマネージャー描画（WindowManagerがアクティブでない場合のみ）
-        if not window_manager.get_active_window() and hasattr(self, 'ui_manager') and self.ui_manager:
+        # UI描画の判定と実行
+        if window_manager.get_active_window():
+            # WindowManagerがアクティブな場合でも永続要素は描画
+            self._render_persistent_elements()
+        elif hasattr(self, 'ui_manager') and self.ui_manager:
+            # WindowManagerがアクティブでない場合は既存UIマネージャーで描画
             self.ui_manager.render()
         else:
-            # 永続要素の描画
+            # フォールバック：永続要素のみ描画
             self._render_persistent_elements()
         
         # デバッグ情報描画

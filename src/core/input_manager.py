@@ -203,10 +203,19 @@ class InputManager:
         # Pygameキーコードを文字列に変換
         key_name = pygame.key.name(key)
         
+        # デバッグ: WASDキーのみログ出力
+        if key_name in ['w', 'a', 's', 'd']:
+            logger.info(f"[DEBUG] InputManager: key={key_name}, pressed={pressed}, enabled={self.keyboard_enabled}")
+        
         # バインディングをチェック
         if key_name in self.keyboard_bindings:
             action = self.keyboard_bindings[key_name]
+            if key_name in ['w', 'a', 's', 'd']:
+                logger.info(f"[DEBUG] InputManager: バインド検出 {key_name} -> {action}")
             self._handle_action(action, pressed, InputType.KEYBOARD)
+        else:
+            if key_name in ['w', 'a', 's', 'd']:
+                logger.info(f"[DEBUG] InputManager: バインドなし {key_name}, available={list(self.keyboard_bindings.keys())[:10]}")
     
     def _handle_joystick_button(self, button: int, pressed: bool):
         """ジョイスティックボタンの処理"""

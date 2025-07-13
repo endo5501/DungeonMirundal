@@ -195,9 +195,22 @@ class DungeonScene(GameScene):
     
     def handle_event(self, event: pygame.event.Event) -> bool:
         # ダンジョン固有のイベント処理
+        # デバッグ: WASDキーの処理をログ出力
+        if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
+            logger.info(f"[DEBUG] DungeonScene.handle_event: WASD キー検出 key={pygame.key.name(event.key)}")
+            logger.info(f"[DEBUG] dungeon_renderer存在: {self.dungeon_renderer is not None}")
+            if self.dungeon_renderer:
+                logger.info(f"[DEBUG] dungeon_ui_manager存在: {hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager is not None}")
+        
         if self.dungeon_renderer and hasattr(self.dungeon_renderer, 'dungeon_ui_manager'):
             if self.dungeon_renderer.dungeon_ui_manager:
-                return self.dungeon_renderer.dungeon_ui_manager.handle_input(event)
+                result = self.dungeon_renderer.dungeon_ui_manager.handle_input(event)
+                if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
+                    logger.info(f"[DEBUG] DungeonScene: DungeonUIManager処理結果={result}")
+                return result
+        
+        if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
+            logger.info(f"[DEBUG] DungeonScene: DungeonUIManagerなし、Falseを返します")
         return False
     
     def _enter_dungeon(self, dungeon_id: str) -> bool:
@@ -363,8 +376,19 @@ class SceneManager:
     
     def handle_event(self, event: pygame.event.Event) -> bool:
         """現在のシーンのイベント処理"""
+        # デバッグ: WASDキーの処理をログ出力
+        if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
+            scene_type = self.current_scene.scene_type.value if self.current_scene else "None"
+            logger.info(f"[DEBUG] SceneManager.handle_event: WASD キー検出 key={pygame.key.name(event.key)}, current_scene={scene_type}")
+        
         if self.current_scene:
-            return self.current_scene.handle_event(event)
+            result = self.current_scene.handle_event(event)
+            if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
+                logger.info(f"[DEBUG] SceneManager: シーン処理結果={result}")
+            return result
+        
+        if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
+            logger.info(f"[DEBUG] SceneManager: current_sceneなし、Falseを返します")
         return False
     
     def get_current_scene_type(self) -> Optional[SceneType]:

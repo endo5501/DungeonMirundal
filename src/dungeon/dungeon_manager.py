@@ -288,6 +288,42 @@ class DungeonManager:
         logger.debug(f"プレイヤーが{direction.value}を向きました")
         return True
     
+    def turn_player_left(self) -> bool:
+        """プレイヤーを左に回転"""
+        if not self.current_dungeon or not self.current_dungeon.player_position:
+            return False
+        
+        current_facing = self.current_dungeon.player_position.facing
+        
+        # 左回転のマッピング
+        left_mapping = {
+            Direction.NORTH: Direction.WEST,
+            Direction.WEST: Direction.SOUTH,
+            Direction.SOUTH: Direction.EAST,
+            Direction.EAST: Direction.NORTH
+        }
+        
+        new_direction = left_mapping.get(current_facing, Direction.NORTH)
+        return self.turn_player(new_direction)
+    
+    def turn_player_right(self) -> bool:
+        """プレイヤーを右に回転"""
+        if not self.current_dungeon or not self.current_dungeon.player_position:
+            return False
+        
+        current_facing = self.current_dungeon.player_position.facing
+        
+        # 右回転のマッピング
+        right_mapping = {
+            Direction.NORTH: Direction.EAST,
+            Direction.EAST: Direction.SOUTH,
+            Direction.SOUTH: Direction.WEST,
+            Direction.WEST: Direction.NORTH
+        }
+        
+        new_direction = right_mapping.get(current_facing, Direction.NORTH)
+        return self.turn_player(new_direction)
+    
     def change_level(self, target_level: int) -> Tuple[bool, str]:
         """レベルを変更（階段使用）"""
         if not self.current_dungeon or not self.current_dungeon.player_position:
