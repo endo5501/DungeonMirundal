@@ -342,8 +342,6 @@ class OverworldManager:
             'title': config_manager.get_text("overworld.surface_map"),
             'menu_items': menu_items,
             'party': self.current_party,
-            'show_party_info': False,  # CharacterStatusBarで代替
-            'show_gold': True
         }
     
     def handle_main_menu_message(self, message_type: str, data: dict) -> bool:

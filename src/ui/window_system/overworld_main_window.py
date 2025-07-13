@@ -53,8 +53,6 @@ class OverworldMainWindow(Window):
                 - title: タイトル  
                 - menu_items: メニュー項目リスト
                 - party: 現在のパーティ
-                - show_party_info: パーティ情報表示フラグ
-                - show_gold: ゴールド表示フラグ
             parent: 親ウィンドウ（オプション）
             **kwargs: その他のウィンドウ引数
         """
@@ -63,15 +61,11 @@ class OverworldMainWindow(Window):
         self.config = config
         self.current_menu_type = OverworldMenuType(config.get('menu_type', 'main'))
         self.party = config.get('party')
-        self.show_party_info = config.get('show_party_info', False)
-        self.show_gold = config.get('show_gold', False)
         
         # UI要素
         self.title_label: Optional[pygame_gui.elements.UILabel] = None
         self.menu_items: List[pygame_gui.elements.UIButton] = []
-        self.party_info_panel: Optional[pygame_gui.elements.UIPanel] = None
         self.party_labels: List[pygame_gui.elements.UILabel] = []
-        self.gold_label: Optional[pygame_gui.elements.UILabel] = None
         self.character_status_bar: Optional[CharacterStatusBar] = None
         
         # 操作状態
@@ -148,13 +142,6 @@ class OverworldMainWindow(Window):
             
             self.menu_items.append(button)
         
-        # パーティ情報パネルは削除（CharacterStatusBarで代替）
-        # if self.show_party_info and self.party:
-        #     self._create_party_info_panel()
-        
-        # ゴールド表示
-        if self.show_gold and self.party:
-            self._create_gold_display()
         
         # CharacterStatusBarを作成
         self._create_character_status_bar()
@@ -309,51 +296,7 @@ class OverworldMainWindow(Window):
         back_button.menu_item_data = {'action': 'back'}
         self.menu_items.append(back_button)
     
-    def _create_party_info_panel(self) -> None:
-        """パーティ情報パネル作成"""
-        if not self.party:
-            return
-        
-        # パーティ情報パネル
-        self.party_info_panel = pygame_gui.elements.UIPanel(
-            relative_rect=pygame.Rect(400, 100, 350, 400),
-            manager=self.ui_manager
-        )
-        
-        # パーティ名
-        party_name_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(10, 10, 330, 30),
-            text=f"パーティ: {self.party.name}",
-            manager=self.ui_manager,
-            container=self.party_info_panel
-        )
-        self.party_labels.append(party_name_label)
-        
-        # メンバー一覧
-        y_offset = 50
-        for i, character in enumerate(self.party.get_all_characters()[:3]):  # 最大3人表示
-            char_info = f"{character.name} Lv.{character.experience.level}"
-            char_info += f" HP:{character.derived_stats.current_hp}/{character.derived_stats.max_hp}"
-            char_info += f" [{character.status.value}]"
-            
-            char_label = pygame_gui.elements.UILabel(
-                relative_rect=pygame.Rect(10, y_offset + i * 40, 330, 35),
-                text=char_info,
-                manager=self.ui_manager,
-                container=self.party_info_panel
-            )
-            self.party_labels.append(char_label)
     
-    def _create_gold_display(self) -> None:
-        """ゴールド表示作成"""
-        if not self.party:
-            return
-        
-        self.gold_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(400, 520, 200, 30),
-            text=f"ゴールド: {self.party.gold}G",
-            manager=self.ui_manager
-        )
     
     def _create_character_status_bar(self) -> None:
         """CharacterStatusBarを作成"""
@@ -590,9 +533,7 @@ class OverworldMainWindow(Window):
             'menu_type': self.current_menu_type.value,
             'title': self.config.get('title', ''),
             'menu_items': self.config.get('menu_items', []),
-            'party': self.party,
-            'show_party_info': self.show_party_info,
-            'show_gold': self.show_gold
+            'party': self.party
         }
         self.menu_stack.append(current_config)
         
@@ -624,19 +565,6 @@ class OverworldMainWindow(Window):
         """パーティ情報更新"""
         self.party = party
         
-        # パーティ情報パネルの更新
-        if self.show_party_info and self.party_info_panel:
-            # 既存のラベルをクリア
-            for label in self.party_labels:
-                label.kill()
-            self.party_labels.clear()
-            
-            # パーティ情報を再作成
-            self._create_party_info_panel()
-        
-        # ゴールド表示の更新
-        if self.show_gold and self.gold_label:
-            self.gold_label.set_text(f"ゴールド: {self.party.gold}G")
         
         # CharacterStatusBarの更新
         if self.character_status_bar:
@@ -653,17 +581,11 @@ class OverworldMainWindow(Window):
             button.kill()
         self.menu_items.clear()
         
-        if self.party_info_panel:
-            self.party_info_panel.kill()
-            self.party_info_panel = None
         
         for label in self.party_labels:
             label.kill()
         self.party_labels.clear()
         
-        if self.gold_label:
-            self.gold_label.kill()
-            self.gold_label = None
         
         # CharacterStatusBarのクリーンアップ
         if self.character_status_bar:
@@ -680,11 +602,6 @@ class OverworldMainWindow(Window):
         for button in self.menu_items:
             button.hide()
         
-        if self.party_info_panel:
-            self.party_info_panel.hide()
-        
-        if self.gold_label:
-            self.gold_label.hide()
         
         # CharacterStatusBarの非表示
         if self.character_status_bar:
@@ -700,11 +617,6 @@ class OverworldMainWindow(Window):
         for button in self.menu_items:
             button.show()
         
-        if self.party_info_panel:
-            self.party_info_panel.show()
-        
-        if self.gold_label:
-            self.gold_label.show()
         
         # CharacterStatusBarの表示
         if self.character_status_bar:
