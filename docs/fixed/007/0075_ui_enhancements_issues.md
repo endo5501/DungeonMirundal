@@ -9,14 +9,17 @@ Phase 5のUI/UX最終調整中に発見された問題をまとめています�
 ### 1. カスタム設定の名前設定問題
 
 **問題**:
+
 - `create_custom_difficulty`でカスタム設定を作成する際、名前が正しく "カスタム" に設定されない
 - `create_custom_quality`でも同様の問題が発生
 
 **発生箇所**:
+
 - `src/dungeon/quality_settings.py` の `create_custom_difficulty` メソッド
 - `src/dungeon/quality_settings.py` の `create_custom_quality` メソッド
 
 **テストケース**:
+
 ```python
 # tests/test_ui_enhancements.py:267
 self.assertEqual(custom.name, "カスタム")
@@ -35,19 +38,23 @@ self.assertEqual(custom.name, "カスタム")
 ### 2. UI設定辞書のキー不一致
 
 **問題**:
+
 - `DungeonUIEnhancer`の`ui_settings`に`ui_animation_speed`キーが存在しない
 - `QualitySettings`との統合でキーエラーが発生
 
 **発生箇所**:
+
 - `src/dungeon/ui_enhancements.py` の `ui_settings` 初期化
 - `tests/test_ui_enhancements.py` の統合テスト
 
 **エラーメッセージ**:
-```
+
+```md
 KeyError: 'ui_animation_speed'
 ```
 
 **修正方法**:
+
 1. `DungeonUIEnhancer`の`ui_settings`に不足しているキーを追加
 2. 統合時のキーマッピングを見直し
 
@@ -56,10 +63,12 @@ KeyError: 'ui_animation_speed'
 ### 3. テストカバレッジの向上
 
 **状況**:
+
 - 基本機能のテストは通過している（20/23テストが成功）
 - エラーハンドリング、境界値テストの追加が必要
 
 **必要な作業**:
+
 1. カスタム設定の境界値テスト
 2. 無効な値での設定テスト
 3. ファイル保存・読み込みエラーのテスト
@@ -67,15 +76,18 @@ KeyError: 'ui_animation_speed'
 ## 修正計画
 
 ### Phase 1: 緊急修正
+
 1. カスタム設定の名前設定問題の修正
 2. UI設定辞書のキー追加・統合修正
 
 ### Phase 2: 機能強化
+
 1. 設定値のバリデーション強化
 2. エラーハンドリングの改善
 3. 設定ファイルの互換性確保
 
 ### Phase 3: テスト充実
+
 1. 境界値テストの追加
 2. 統合テストの拡充
 3. パフォーマンステストの追加

@@ -13,34 +13,37 @@
 ### 名前入力部品の詳細調査
 
 **使用クラス**: `pygame_gui.elements.UITextEntryLine`
-- ファイル: `src/facilities/ui/guild/character_creation_wizard.py:94-99`
-- プレースホルダーテキスト: "キャラクター名を入力"
+
+* ファイル: `src/facilities/ui/guild/character_creation_wizard.py:94-99`
+* プレースホルダーテキスト: "キャラクター名を入力"
 
 **二重入力問題の根本原因**:
+
 1. **イベントの二重処理**: pygame イベントが2箇所で処理されている
-   - `WindowManager.handle_global_events()` (src/ui/window_system/window_manager.py:842)
-   - `FacilityWindow.handle_event()` (src/facilities/ui/facility_window.py:486)
+   * `WindowManager.handle_global_events()` (src/ui/window_system/window_manager.py:842)
+   * `FacilityWindow.handle_event()` (src/facilities/ui/facility_window.py:486)
 
 2. **イベントフロー**:
-   ```
+
+   ```md
    GameManager -> WindowManager.handle_global_events() -> ui_manager.process_events()
                                                         -> FacilityWindow.handle_event() 
                                                         -> ui_manager.process_events() (重複!)
    ```
 
 3. **実際の症状**:
-   - 'a' を入力 → "aa" が表示
-   - 'abcdef' を入力 → "aabbccddeeff" が表示
+   * 'a' を入力 → "aa" が表示
+   * 'abcdef' を入力 → "aabbccddeeff" が表示
 
 **修正方法**: `FacilityWindow.handle_event()` での適切なイベント処理とWindowManagerでの重複回避
 
 **修正結果**: ✅ 二重入力問題は解決済み - バックエンドでの処理は正常
 
 **追加修正**: ✅ UITextEntryLineでの文字表示問題も解決済み
-- UIテーマ設定を改善：背景色を明るく、フォントサイズを18px太字に変更
-- 境界線を3pxに拡大し、フォーカス時の青色境界線を追加
-- テキストが明確に表示されるようになりました
 
+* UIテーマ設定を改善：背景色を明るく、フォントサイズを18px太字に変更
+* 境界線を3pxに拡大し、フォーカス時の青色境界線を追加
+* テキストが明確に表示されるようになりました
 
 ## パーティ編成
 

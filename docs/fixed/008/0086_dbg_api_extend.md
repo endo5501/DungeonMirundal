@@ -9,7 +9,7 @@
 
 def get_ui_hierarchy()の処理を見直し、階層化されたUI Elementsの情報を取得するようにしてください
 
-```
+```md
 UI Hierarchy Tree:
 ├── Window Stack:
 │   ├── OverworldMainWindow(overworld_main, main, stack_depth=0)
