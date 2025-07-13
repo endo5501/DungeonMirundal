@@ -8,6 +8,7 @@ import pygame_gui
 from typing import Dict, List, Any, Optional, Callable
 import hashlib
 import random
+import secrets
 from datetime import datetime
 
 from .window import Window, WindowState
@@ -401,9 +402,9 @@ class DungeonSelectionWindow(Window):
     
     def _generate_random_dungeon(self) -> DungeonInfo:
         """ランダムダンジョンを生成"""
-        # ランダムハッシュ値生成
-        random_seed = f"{datetime.now().isoformat()}_{random.randint(1000, 9999)}"
-        hash_value = hashlib.md5(random_seed.encode()).hexdigest()
+        # セキュアな乱数を使用してハッシュ値生成
+        secure_random_bytes = secrets.token_bytes(16)
+        hash_value = secure_random_bytes.hex()
         
         # ランダム難易度（1-10）
         difficulty = random.randint(1, 10)

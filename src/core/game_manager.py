@@ -898,7 +898,13 @@ class GameManager(EventHandler):
     
     def _generate_dungeon_seed(self, dungeon_id: str) -> str:
         """ダンジョンIDに基づいてシードを生成"""
-        # ダンジョン設定を読み込み
+        # ダンジョンIDがハッシュ値の場合（ダンジョン選択で渡される）は直接使用
+        if len(dungeon_id) == 32 and all(c in '0123456789abcdef' for c in dungeon_id):
+            # 32文字の16進文字列（MD5ハッシュ）の場合はそのまま使用
+            logger.info(f"ハッシュ値をシードとして使用: {dungeon_id[:8]}...")
+            return dungeon_id
+        
+        # 従来の処理（固定ダンジョン名等）
         try:
             import yaml
             with open("config/dungeons.yaml", 'r', encoding='utf-8') as f:
