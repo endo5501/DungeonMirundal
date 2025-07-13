@@ -611,6 +611,11 @@ class OverworldMainWindow(Window):
     
     def show_ui_elements(self) -> None:
         """UI要素を表示する"""
+        # ダンジョン内の場合は地上UIを表示しない
+        if self._is_in_dungeon():
+            logger.info(f"OverworldMainWindow: ダンジョン内のため、UI要素表示をスキップ: {self.window_id}")
+            return
+        
         if self.title_label:
             self.title_label.show()
         
@@ -631,6 +636,28 @@ class OverworldMainWindow(Window):
     def get_menu_stack_depth(self) -> int:
         """メニュー階層の深さを取得"""
         return len(self.menu_stack)
+    
+    def _is_in_dungeon(self) -> bool:
+        """現在ダンジョン内にいるかチェック"""
+        try:
+            # GameManagerから現在位置を取得
+            from src.core.game_manager import GameLocation
+            import main
+            
+            if hasattr(main, 'game_manager') and main.game_manager:
+                return main.game_manager.current_location == GameLocation.DUNGEON
+            
+            # フォールバック：sys.modulesから取得を試行
+            import sys
+            main_module = sys.modules.get('main')
+            if main_module and hasattr(main_module, 'game_manager') and main_module.game_manager:
+                return main_module.game_manager.current_location == GameLocation.DUNGEON
+            
+            return False
+            
+        except Exception as e:
+            logger.warning(f"ダンジョン状態チェック中にエラー: {e}")
+            return False
     
     def draw(self, surface: pygame.Surface) -> None:
         """ウィンドウの描画"""
