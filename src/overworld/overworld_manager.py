@@ -342,7 +342,7 @@ class OverworldManager:
             'title': config_manager.get_text("overworld.surface_map"),
             'menu_items': menu_items,
             'party': self.current_party,
-            'show_party_info': True,
+            'show_party_info': False,  # CharacterStatusBarで代替
             'show_gold': True
         }
     

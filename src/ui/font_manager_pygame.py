@@ -14,6 +14,7 @@ class FontManager:
     def __init__(self):
         self.fonts: Dict[str, pygame.font.Font] = {}
         self.default_font = None
+        self._cross_platform_font_path = None
         self._initialize_fonts()
     
     def _initialize_fonts(self):
@@ -199,6 +200,104 @@ class FontManager:
     def get_available_fonts(self) -> list:
         """利用可能なフォントリストを取得"""
         return list(self.fonts.keys())
+    
+    def get_cross_platform_font_path(self) -> Optional[str]:
+        """クロスプラットフォーム対応日本語フォントパスを取得"""
+        if self._cross_platform_font_path:
+            return self._cross_platform_font_path
+        
+        # まず同梱フォントを優先
+        local_fonts = [
+            "assets/fonts/NotoSansCJKJP-Regular.otf",
+            "assets/fonts/NotoSansJP-Regular.otf", 
+            "assets/fonts/ipag.ttf"
+        ]
+        for f in local_fonts:
+            if os.path.exists(f):
+                self._cross_platform_font_path = os.path.abspath(f)
+                logger.info(f"FontManager: 同梱フォントを発見: {self._cross_platform_font_path}")
+                return self._cross_platform_font_path
+
+        # 次にシステムフォント候補
+        system_font_candidates = [
+            "Hiragino Sans", "YuGothic", "Apple SD Gothic Neo",  # macOS
+            "Yu Gothic UI", "Meiryo UI", "MS Gothic",  # Windows
+            "Noto Sans CJK JP", "IPAGothic", "Takao Gothic"  # Linux
+        ]
+        
+        for name in system_font_candidates:
+            path = pygame.font.match_font(name)
+            if path:
+                self._cross_platform_font_path = path
+                logger.info(f"FontManager: システムフォントを発見: {name} -> {path}")
+                return self._cross_platform_font_path
+
+        logger.warning("FontManager: 日本語対応フォントが見つかりませんでした")
+        return None
+    
+    def initialize_pygame_gui_fonts(self, ui_manager):
+        """pygame_guiに日本語フォントを統合（WindowManagerの処理を統合）"""
+        try:
+            font_path = self.get_cross_platform_font_path()
+            if not font_path:
+                logger.warning("FontManager: pygame_gui統合用フォントが見つかりません")
+                return False
+            
+            # エイリアス "jp_font" として登録
+            ui_manager.add_font_paths("jp_font", font_path)
+            logger.info(f"FontManager: pygame_guiフォント登録成功: jp_font -> {font_path}")
+            
+            # 必要なサイズでプリロード
+            ui_manager.preload_fonts([
+                {"name": "jp_font", "style": "regular", "point_size": 14},
+                {"name": "jp_font", "style": "regular", "point_size": 16},
+                {"name": "jp_font", "style": "regular", "point_size": 18},
+                {"name": "jp_font", "style": "regular", "point_size": 20},
+                {"name": "jp_font", "style": "regular", "point_size": 24}
+            ])
+            logger.info("FontManager: pygame_guiフォントプリロード完了")
+            
+            # テーマ設定で階層を考慮した設定
+            theme_data = {
+                "defaults": {
+                    "font": {"name": "jp_font", "size": "16", "style": "regular"}
+                },
+                "button": {
+                    "font": {"name": "jp_font", "size": "16", "style": "regular"}
+                },
+                "label": {
+                    "font": {"name": "jp_font", "size": "16", "style": "regular"}
+                }
+            }
+            
+            ui_manager.get_theme().load_theme(theme_data)
+            logger.info("FontManager: pygame_gui動的テーマ読み込み成功（日本語フォント対応）")
+            return True
+            
+        except Exception as e:
+            logger.error(f"FontManager: pygame_gui統合処理でエラー: {e}")
+            return False
+    
+    def get_font_for_ui_component(self, component_type: str = "default", size: int = 16) -> Optional[pygame.font.Font]:
+        """UIコンポーネント用フォントを取得（統一API）"""
+        try:
+            # Pygameフォントモジュールが初期化されているか確認
+            if not pygame.font.get_init():
+                pygame.font.init()
+            
+            # クロスプラットフォーム対応フォントを優先使用
+            font_path = self.get_cross_platform_font_path()
+            if font_path:
+                font = pygame.font.Font(font_path, size)
+                logger.debug(f"FontManager: UIコンポーネント用フォント作成 - {component_type}({size}px): {font_path}")
+                return font
+            
+            # フォールバック：既存のfont_managerから取得
+            return self.get_japanese_font(size)
+            
+        except Exception as e:
+            logger.warning(f"FontManager: UIコンポーネント用フォント取得エラー: {e}")
+            return self.get_font('default', size)
     
     def create_multiline_text(self, text: str, font_name: str = 'default', size: int = 24, 
                              color: tuple = (255, 255, 255), max_width: int = 400) -> list:

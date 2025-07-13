@@ -13,6 +13,7 @@ from .window import Window, WindowState
 from src.character.party import Party
 from src.core.config_manager import config_manager
 from src.core.save_manager import save_manager
+from src.ui.character_status_bar import CharacterStatusBar
 from src.utils.logger import logger
 
 
@@ -71,6 +72,7 @@ class OverworldMainWindow(Window):
         self.party_info_panel: Optional[pygame_gui.elements.UIPanel] = None
         self.party_labels: List[pygame_gui.elements.UILabel] = []
         self.gold_label: Optional[pygame_gui.elements.UILabel] = None
+        self.character_status_bar: Optional[CharacterStatusBar] = None
         
         # 操作状態
         self.selected_index = 0
@@ -146,13 +148,16 @@ class OverworldMainWindow(Window):
             
             self.menu_items.append(button)
         
-        # パーティ情報パネル
-        if self.show_party_info and self.party:
-            self._create_party_info_panel()
+        # パーティ情報パネルは削除（CharacterStatusBarで代替）
+        # if self.show_party_info and self.party:
+        #     self._create_party_info_panel()
         
         # ゴールド表示
         if self.show_gold and self.party:
             self._create_gold_display()
+        
+        # CharacterStatusBarを作成
+        self._create_character_status_bar()
         
         # デバッグ: 作成されたUI要素を確認
         if self.ui_manager and hasattr(self.ui_manager, 'get_root_container'):
@@ -349,6 +354,35 @@ class OverworldMainWindow(Window):
             text=f"ゴールド: {self.party.gold}G",
             manager=self.ui_manager
         )
+    
+    def _create_character_status_bar(self) -> None:
+        """CharacterStatusBarを作成"""
+        try:
+            # 画面サイズを取得
+            if self.surface:
+                screen_width = self.surface.get_width()
+                screen_height = self.surface.get_height()
+            else:
+                screen_width = 1024
+                screen_height = 768
+            
+            # CharacterStatusBarを作成（画面下部に配置）
+            self.character_status_bar = CharacterStatusBar(
+                x=0, 
+                y=screen_height - 100, 
+                width=screen_width, 
+                height=100
+            )
+            
+            # パーティが設定されている場合はキャラクター情報を設定
+            if self.party:
+                self.character_status_bar.set_party(self.party)
+            
+            logger.info("CharacterStatusBarを作成しました")
+            
+        except Exception as e:
+            logger.error(f"CharacterStatusBar作成エラー: {e}")
+            self.character_status_bar = None
     
     def handle_event(self, event: pygame.event.Event) -> bool:
         """イベント処理"""
@@ -603,6 +637,10 @@ class OverworldMainWindow(Window):
         # ゴールド表示の更新
         if self.show_gold and self.gold_label:
             self.gold_label.set_text(f"ゴールド: {self.party.gold}G")
+        
+        # CharacterStatusBarの更新
+        if self.character_status_bar:
+            self.character_status_bar.set_party(self.party)
     
     def cleanup_ui(self) -> None:
         """UI要素のクリーンアップ"""
@@ -627,6 +665,10 @@ class OverworldMainWindow(Window):
             self.gold_label.kill()
             self.gold_label = None
         
+        # CharacterStatusBarのクリーンアップ
+        if self.character_status_bar:
+            self.character_status_bar = None
+        
         # 親クラスのクリーンアップ
         super().cleanup_ui()
     
@@ -644,6 +686,10 @@ class OverworldMainWindow(Window):
         if self.gold_label:
             self.gold_label.hide()
         
+        # CharacterStatusBarの非表示
+        if self.character_status_bar:
+            self.character_status_bar.hide()
+        
         logger.info(f"OverworldMainWindow UI要素を非表示: {self.window_id}")
     
     def show_ui_elements(self) -> None:
@@ -660,6 +706,10 @@ class OverworldMainWindow(Window):
         if self.gold_label:
             self.gold_label.show()
         
+        # CharacterStatusBarの表示
+        if self.character_status_bar:
+            self.character_status_bar.show()
+        
         logger.info(f"OverworldMainWindow UI要素を表示: {self.window_id}")
     
     def get_current_menu_type(self) -> OverworldMenuType:
@@ -669,6 +719,27 @@ class OverworldMainWindow(Window):
     def get_menu_stack_depth(self) -> int:
         """メニュー階層の深さを取得"""
         return len(self.menu_stack)
+    
+    def draw(self, surface: pygame.Surface) -> None:
+        """ウィンドウの描画"""
+        # 親クラスの描画処理
+        super().draw(surface)
+        
+        # CharacterStatusBarの描画
+        if self.character_status_bar and self.state == WindowState.SHOWN:
+            logger.debug(f"OverworldMainWindow: CharacterStatusBarを描画開始")
+            self.character_status_bar.render(surface)
+        else:
+            logger.debug(f"OverworldMainWindow: CharacterStatusBar描画スキップ (bar={bool(self.character_status_bar)}, state={self.state})")
+    
+    def update(self, time_delta: float) -> None:
+        """ウィンドウの更新"""
+        # 親クラスの更新処理
+        super().update(time_delta)
+        
+        # CharacterStatusBarの更新
+        if self.character_status_bar:
+            self.character_status_bar.update()
     
     def __str__(self) -> str:
         return f"OverworldMainWindow({self.window_id}, {self.current_menu_type.value}, stack_depth={len(self.menu_stack)})"

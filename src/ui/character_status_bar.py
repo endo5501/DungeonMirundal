@@ -8,6 +8,7 @@ from src.ui.base_ui_pygame import UIElement, UIState
 from src.character.party import Party
 from src.character.character import Character, CharacterStatus
 from src.utils.logger import logger
+from src.ui.font_manager_pygame import font_manager
 
 
 class CharacterSlot:
@@ -209,44 +210,32 @@ class CharacterStatusBar(UIElement):
             slot = CharacterSlot(slot_x, y, slot_width, height, i)
             self.slots.append(slot)
         
-        # フォント
-        self.font = None
-        self._initialize_font()
+        # フォント（統一されたfont_managerを使用）
+        self.font = font_manager.get_font_for_ui_component("character_status_bar", 16)
+        self._cached_font = self.font
         
         # 自動的に表示状態にする
         self.show()
         
         logger.info("CharacterStatusBarを初期化しました")
     
-    def _initialize_font(self):
-        """フォントを初期化"""
-        try:
-            # Pygameフォントモジュールが初期化されているか確認
-            if not pygame.font.get_init():
-                pygame.font.init()
-            
-            # まず日本語フォントマネージャーから取得を試行
-            from src.ui.font_manager_pygame import font_manager
-            self.font = font_manager.get_japanese_font(16)
-            if self.font:
-                # フォントをキャッシュして再初期化を防ぐ
-                self._cached_font = self.font
-                return
-        except Exception as e:
-            logger.warning(f"フォントマネージャーの取得に失敗: {e}")
-        
-        try:
-            # Pygameフォントモジュールが初期化されているか再確認
-            if not pygame.font.get_init():
-                pygame.font.init()
-                
-            # フォールバック：デフォルトフォント（安定性優先）
-            self.font = pygame.font.Font(None, 16)
+    def _ensure_font_available(self):
+        """フォントが利用可能であることを確認（統一されたfont_manager使用）"""
+        if not self.font:
+            # font_managerから再取得を試行
+            self.font = font_manager.get_font_for_ui_component("character_status_bar", 16)
             self._cached_font = self.font
-        except Exception as e:
-            logger.error(f"デフォルトフォントの取得に失敗: {e}")
-            self.font = None
-            self._cached_font = None
+            
+            if self.font:
+                logger.info("CharacterStatusBar: font_managerからフォントを再取得しました")
+                # テスト描画で実際にフォントが動作するか確認
+                try:
+                    test_surface = self.font.render("テスト", True, (255, 255, 255))
+                    logger.info(f"CharacterStatusBar: フォントテスト成功 - サイズ: {test_surface.get_size()}")
+                except Exception as test_error:
+                    logger.error(f"CharacterStatusBar: フォントテスト失敗: {test_error}")
+            else:
+                logger.warning("CharacterStatusBar: font_managerからフォントを取得できませんでした")
     
     def set_party(self, party: Optional[Party]):
         """パーティを設定してキャラクター情報を更新"""
@@ -271,7 +260,10 @@ class CharacterStatusBar(UIElement):
     def render(self, screen: pygame.Surface, font: Optional[pygame.font.Font] = None):
         """ステータスバーを描画"""
         if self.state != UIState.VISIBLE:
+            logger.debug(f"CharacterStatusBar: 非表示状態のため描画スキップ (state: {self.state})")
             return
+        
+        logger.debug(f"CharacterStatusBar: 描画開始 (パーティ: {self.party.name if self.party else 'None'})")
         
         # フォントを決定（安定性のためキャッシュを優先）
         if hasattr(self, '_cached_font') and self._cached_font:
@@ -280,8 +272,8 @@ class CharacterStatusBar(UIElement):
             use_font = font if font else self.font
             
         if not use_font:
-            # フォントがない場合は再初期化を試みる
-            self._initialize_font()
+            # フォントがない場合は再取得を試みる
+            self._ensure_font_available()
             use_font = self.font
             if not use_font:
                 return
@@ -291,9 +283,9 @@ class CharacterStatusBar(UIElement):
             # テストレンダリングでフォントの有効性を確認
             test_surface = use_font.render("", True, (255, 255, 255))
         except pygame.error:
-            # フォントが無効の場合、再初期化を試行
-            logger.warning("フォントが無効になっているため再初期化します")
-            self._initialize_font()
+            # フォントが無効の場合、再取得を試行
+            logger.warning("フォントが無効になっているため再取得します")
+            self._ensure_font_available()
             use_font = self.font
             if not use_font:
                 return

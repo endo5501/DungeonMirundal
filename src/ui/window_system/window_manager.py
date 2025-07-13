@@ -7,7 +7,6 @@ Window Systemの中核となる管理クラス
 from typing import Dict, Optional, List, Type, Any
 import pygame
 import pygame_gui
-import os
 from datetime import datetime
 
 from src.utils.logger import logger
@@ -17,6 +16,7 @@ from .focus_manager import FocusManager
 from .event_router import EventRouter
 from .statistics_manager import StatisticsManager
 from .window_pool import get_window_pool
+from src.ui.font_manager_pygame import font_manager
 
 
 class WindowManager:
@@ -51,26 +51,6 @@ class WindowManager:
         self._initialized = True
         logger.info("WindowManagerを初期化しました")
     
-    def _load_jp_font_path(self):
-        """日本語フォントのパスを取得（ChatGPTのload_jp_fontアプローチ）"""
-        # まず同梱フォントを優先
-        local_fonts = [
-            "assets/fonts/NotoSansCJKJP-Regular.otf",
-            "assets/fonts/NotoSansJP-Regular.otf", 
-            "assets/fonts/ipag.ttf"
-        ]
-        for f in local_fonts:
-            if os.path.exists(f):
-                return os.path.abspath(f)
-
-        # 次にシステムフォント候補
-        for name in ["Hiragino Sans", "YuGothic", "Apple SD Gothic Neo"]:
-            path = pygame.font.match_font(name)
-            if path:
-                return path
-
-        # 最後の手段
-        return None
     
     def _initialize_core_components(self):
         """コアコンポーネントを初期化"""
@@ -163,9 +143,8 @@ class WindowManager:
         logger.info("WindowManager: Pygame統合を初期化しました")
     
     def _initialize_fonts(self):
-        """フォント初期化（既存システムと同じ方法）"""
+        """フォント初期化（統一されたfont_managerを使用）"""
         try:
-            from src.ui.font_manager_pygame import font_manager
             # 日本語フォントを優先して取得
             self.default_font = font_manager.get_japanese_font(24)
             self.title_font = font_manager.get_japanese_font(32)
@@ -182,70 +161,16 @@ class WindowManager:
             logger.error(f"WindowManager: フォント初期化エラー: {e}")
     
     def _register_japanese_fonts_to_pygame_gui(self):
-        """pygame-guiに日本語フォントを直接登録（ChatGPTアプローチ）"""
+        """pygame_guiに日本語フォントを統合（font_managerの統合機能を使用）"""
         try:
-            # 日本語フォントパスを取得
-            jp_font_path = self._load_jp_font_path()
-            if not jp_font_path:
-                logger.warning("WindowManager: 日本語フォントが見つかりません")
-                return
-            
-            logger.info(f"WindowManager: 日本語フォントを発見: {jp_font_path}")
-            
-            # ① エイリアス "jp_font" として登録
-            try:
-                self.ui_manager.add_font_paths("jp_font", jp_font_path)
-                logger.info(f"WindowManager: 日本語フォント登録成功: jp_font -> {jp_font_path}")
-            except Exception as e:
-                logger.error(f"WindowManager: フォントパス登録失敗: {e}")
-                return
-            
-            # ② 必要なサイズでプリロード
-            try:
-                self.ui_manager.preload_fonts([
-                    {"name": "jp_font", "style": "regular", "point_size": 14},
-                    {"name": "jp_font", "style": "regular", "point_size": 16},
-                    {"name": "jp_font", "style": "regular", "point_size": 18},
-                    {"name": "jp_font", "style": "regular", "point_size": 20},
-                    {"name": "jp_font", "style": "regular", "point_size": 24}
-                ])
-                logger.info("WindowManager: 日本語フォント事前ロード完了")
-            except Exception as e:
-                logger.error(f"WindowManager: フォントプリロード失敗: {e}")
-            
-            # ③ テーマ設定で名前だけ指定（ChatGPTアプローチ）
-            theme_data = {
-                "defaults": {
-                    "font": {
-                        "name": "jp_font",
-                        "size": "16",
-                        "style": "regular"
-                    }
-                },
-                "button": {  # ボタン専用のフォント設定
-                    "font": {
-                        "name": "jp_font",
-                        "size": "16",
-                        "style": "regular"
-                    }
-                },
-                "label": {   # ラベル専用のフォント設定
-                    "font": {
-                        "name": "jp_font", 
-                        "size": "16",
-                        "style": "regular"
-                    }
-                }
-            }
-            
-            try:
-                self.ui_manager.get_theme().load_theme(theme_data)
-                logger.info("WindowManager: 動的テーマ読み込み成功（日本語フォント対応）")
-            except Exception as e:
-                logger.error(f"WindowManager: テーマ読み込み失敗: {e}")
+            success = font_manager.initialize_pygame_gui_fonts(self.ui_manager)
+            if success:
+                logger.info("WindowManager: font_manager経由でpygame_gui統合成功")
+            else:
+                logger.warning("WindowManager: font_manager経由でpygame_gui統合失敗")
                     
         except Exception as e:
-            logger.error(f"WindowManager: 日本語フォント登録処理でエラー: {e}")
+            logger.error(f"WindowManager: font_manager経由pygame_gui統合エラー: {e}")
     
     def create_window(self, window_class: Type[Window], window_id: str = None, 
                      parent: Optional[Window] = None, **kwargs) -> Window:
