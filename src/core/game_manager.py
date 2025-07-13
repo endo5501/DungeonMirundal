@@ -599,6 +599,65 @@ class GameManager(EventHandler):
         """パーティを設定（GuildService用のエイリアス）"""
         self.set_current_party(party)
     
+    # === ダンジョン管理メソッド ===
+    
+    def get_dungeon_list(self):
+        """作成済みダンジョン一覧を取得"""
+        try:
+            if not self.save_manager.current_save:
+                logger.warning("セーブデータが存在しません")
+                return []
+            
+            return self.save_manager.current_save.dungeon_list
+            
+        except Exception as e:
+            logger.error(f"ダンジョン一覧取得エラー: {e}")
+            return []
+    
+    def add_dungeon_to_list(self, dungeon_info: Dict[str, Any]):
+        """ダンジョン情報をセーブデータに追加"""
+        try:
+            if not self.save_manager.current_save:
+                logger.warning("セーブデータが存在しません。新しいセーブデータを作成します")
+                return False
+            
+            # 重複チェック
+            current_dungeons = self.save_manager.current_save.dungeon_list
+            for existing_dungeon in current_dungeons:
+                if existing_dungeon.get('hash_value') == dungeon_info.get('hash_value'):
+                    logger.warning(f"ダンジョン {dungeon_info.get('hash_value')} は既に登録済みです")
+                    return False
+            
+            current_dungeons.append(dungeon_info)
+            logger.info(f"ダンジョンを追加しました: {dungeon_info.get('hash_value', 'Unknown')}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"ダンジョン追加エラー: {e}")
+            return False
+    
+    def remove_dungeon_from_list(self, hash_value: str):
+        """ダンジョン情報をセーブデータから削除"""
+        try:
+            if not self.save_manager.current_save:
+                logger.warning("セーブデータが存在しません")
+                return False
+            
+            dungeons = self.save_manager.current_save.dungeon_list
+            
+            for i, dungeon in enumerate(dungeons):
+                if dungeon.get('hash_value') == hash_value:
+                    removed_dungeon = dungeons.pop(i)
+                    logger.info(f"ダンジョン {removed_dungeon.get('hash_value')} を削除しました")
+                    return True
+            
+            logger.warning(f"ダンジョン {hash_value} が見つかりません")
+            return False
+            
+        except Exception as e:
+            logger.error(f"ダンジョン削除エラー: {e}")
+            return False
+    
     # === ギルド管理メソッド ===
     
     def add_guild_character(self, character):
@@ -686,6 +745,9 @@ class GameManager(EventHandler):
             # ギルドキャラクターを取得
             guild_characters = self.get_guild_characters()
             
+            # ダンジョン情報を取得
+            dungeon_list = self.get_dungeon_list()
+            
             # ゲーム状態を作成
             game_state = {
                 'location': self.current_location.value if hasattr(self.current_location, 'value') else str(self.current_location)
@@ -697,11 +759,12 @@ class GameManager(EventHandler):
                 slot_id=slot_id,
                 save_name=save_name,
                 game_state=game_state,
-                guild_characters=guild_characters
+                guild_characters=guild_characters,
+                dungeon_list=dungeon_list
             )
             
             if success:
-                logger.info(f"ゲームを保存しました: スロット{slot_id}, ギルドキャラクター{len(guild_characters)}人")
+                logger.info(f"ゲームを保存しました: スロット{slot_id}, ギルドキャラクター{len(guild_characters)}人, ダンジョン{len(dungeon_list)}個")
             
             return success
             

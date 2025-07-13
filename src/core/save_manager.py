@@ -61,6 +61,7 @@ class GameSave:
     settings: Dict[str, Any] = field(default_factory=dict)
     flags: Dict[str, bool] = field(default_factory=dict)
     guild_characters: List[Character] = field(default_factory=list)  # ギルド登録済み冒険者一覧
+    dungeon_list: List[Dict[str, Any]] = field(default_factory=list)  # 作成済みダンジョン一覧
     version: str = "0.1.0"
     
     def to_dict(self) -> Dict[str, Any]:
@@ -71,6 +72,7 @@ class GameSave:
             'settings': self.settings,
             'flags': self.flags,
             'guild_characters': [char.to_dict() for char in self.guild_characters],
+            'dungeon_list': self.dungeon_list,
             'version': self.version
         }
     
@@ -91,6 +93,7 @@ class GameSave:
             settings=data.get('settings', {}),
             flags=data.get('flags', {}),
             guild_characters=guild_characters,
+            dungeon_list=data.get('dungeon_list', []),
             version=data.get('version', '0.1.0')
         )
 
@@ -174,7 +177,8 @@ class SaveManager:
         save_name: str = "",
         game_state: Optional[Dict[str, Any]] = None,
         create_backup: bool = True,
-        guild_characters: Optional[List] = None
+        guild_characters: Optional[List] = None,
+        dungeon_list: Optional[List[Dict[str, Any]]] = None
     ) -> bool:
         """ゲームを保存"""
         try:
@@ -203,8 +207,16 @@ class SaveManager:
             if self.current_save and self.current_save.guild_characters:
                 existing_guild_characters = self.current_save.guild_characters
             
+            # 既存のセーブデータからダンジョン情報を保持
+            existing_dungeon_list = []
+            if self.current_save and self.current_save.dungeon_list:
+                existing_dungeon_list = self.current_save.dungeon_list
+            
             # 新しいギルドキャラクターが指定されていればそれを使用
             final_guild_characters = guild_characters if guild_characters is not None else existing_guild_characters
+            
+            # 新しいダンジョン情報が指定されていればそれを使用
+            final_dungeon_list = dungeon_list if dungeon_list is not None else existing_dungeon_list
             
             # ゲームセーブデータの作成
             game_save = GameSave(
@@ -213,7 +225,8 @@ class SaveManager:
                 game_state=game_state or {},
                 settings={},
                 flags={},
-                guild_characters=final_guild_characters
+                guild_characters=final_guild_characters,
+                dungeon_list=final_dungeon_list
             )
             
             # JSONファイルに保存
@@ -232,7 +245,7 @@ class SaveManager:
             # 現在のセーブとして設定
             self.current_save = game_save
             
-            logger.info(f"ゲームを保存しました: スロット {slot_id}, パーティ: {party.name}")
+            logger.info(f"ゲームを保存しました: スロット {slot_id}, パーティ: {party.name}, ギルドキャラクター: {len(final_guild_characters)}人, ダンジョン: {len(final_dungeon_list)}個")
             return True
             
         except Exception as e:

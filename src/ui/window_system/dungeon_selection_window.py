@@ -74,6 +74,9 @@ class DungeonSelectionWindow(Window):
         self.on_dungeon_selected: Optional[Callable[[str], None]] = None
         self.on_cancelled: Optional[Callable[[], None]] = None
         
+        # GameManagerの参照
+        self.game_manager = None
+        
         # UI要素
         self.container: Optional[pygame_gui.elements.UIPanel] = None
         self.title_label: Optional[pygame_gui.elements.UILabel] = None
@@ -83,7 +86,42 @@ class DungeonSelectionWindow(Window):
         self.delete_button: Optional[pygame_gui.elements.UIButton] = None
         self.back_button: Optional[pygame_gui.elements.UIButton] = None
         
+        # GameManagerの参照を取得
+        self._get_game_manager()
+        
         logger.info("DungeonSelectionWindowを初期化しました")
+    
+    def _get_game_manager(self):
+        """GameManagerの参照を取得"""
+        try:
+            # main.pyからGameManagerを取得
+            import main
+            if hasattr(main, 'game_manager') and main.game_manager:
+                self.game_manager = main.game_manager
+                logger.info("GameManagerの参照を取得しました")
+                # セーブデータからダンジョン一覧を読み込み
+                self._load_dungeons_from_save()
+            else:
+                logger.warning("GameManagerが見つかりません")
+        except Exception as e:
+            logger.error(f"GameManager取得エラー: {e}")
+    
+    def _load_dungeons_from_save(self):
+        """セーブデータからダンジョン一覧を読み込み"""
+        if not self.game_manager:
+            return
+        
+        try:
+            dungeon_data_list = self.game_manager.get_dungeon_list()
+            self.dungeons = []
+            
+            for dungeon_data in dungeon_data_list:
+                dungeon_info = DungeonInfo.from_dict(dungeon_data)
+                self.dungeons.append(dungeon_info)
+            
+            logger.info(f"セーブデータから {len(self.dungeons)} のダンジョンを読み込みました")
+        except Exception as e:
+            logger.error(f"ダンジョン一覧読み込みエラー: {e}")
     
     def hide_ui_elements(self) -> None:
         """UI要素を非表示にする"""
@@ -315,7 +353,7 @@ class DungeonSelectionWindow(Window):
         items = []
         for i, dungeon in enumerate(self.dungeons):
             explored_text = "探索済み" if dungeon.explored else "未探索"
-            item_text = f"{i+1}. ハッシュ: {dungeon.hash_value[:8]}... 難易度: {dungeon.difficulty} 階数: {dungeon.floors}F {explored_text}"
+            item_text = f"{i+1}. {dungeon.hash_value[:8]}... 難易度: {dungeon.difficulty} 階数: {dungeon.floors}F {explored_text}"
             items.append(item_text)
         
         if not items:
@@ -375,6 +413,15 @@ class DungeonSelectionWindow(Window):
         
         logger.info(f"新規ダンジョン作成: ハッシュ={new_dungeon.hash_value[:8]}..., 難易度={new_dungeon.difficulty}, 階数={new_dungeon.floors}")
         
+        # セーブデータに保存
+        if self.game_manager:
+            dungeon_dict = new_dungeon.to_dict()
+            success = self.game_manager.add_dungeon_to_list(dungeon_dict)
+            if success:
+                logger.info("ダンジョン情報をセーブデータに保存しました")
+            else:
+                logger.warning("ダンジョン情報の保存に失敗しました")
+        
         # リスト更新
         if self.dungeon_list:
             self.dungeon_list.set_item_list(self._get_dungeon_list_items())
@@ -392,6 +439,14 @@ class DungeonSelectionWindow(Window):
         
         deleted_dungeon = self.dungeons.pop(self.selected_index)
         logger.info(f"ダンジョン削除: {deleted_dungeon.hash_value[:8]}...")
+        
+        # セーブデータからも削除
+        if self.game_manager:
+            success = self.game_manager.remove_dungeon_from_list(deleted_dungeon.hash_value)
+            if success:
+                logger.info("ダンジョン情報をセーブデータから削除しました")
+            else:
+                logger.warning("ダンジョン情報の削除に失敗しました")
         
         # 選択インデックス調整
         if self.selected_index >= len(self.dungeons) and self.dungeons:
