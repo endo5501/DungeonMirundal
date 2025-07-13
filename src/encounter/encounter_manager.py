@@ -111,6 +111,10 @@ class EncounterManager:
     
     def set_party(self, party: Optional[Party]):
         """パーティ設定"""
+        # 循環参照防止：既に同じパーティが設定されている場合はスキップ
+        if self.current_party is party:
+            return
+            
         self.current_party = party
         if party is not None:
             logger.info(f"パーティ{party.name}を設定しました")

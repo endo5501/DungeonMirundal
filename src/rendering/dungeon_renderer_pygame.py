@@ -114,6 +114,10 @@ class DungeonRendererPygame:
     
     def set_party(self, party: Party):
         """パーティ設定"""
+        # 循環参照防止：既に同じパーティが設定されている場合はスキップ
+        if self.current_party is party:
+            return
+            
         self.current_party = party
         
         # ダンジョンUIマネージャーにもパーティを設定
@@ -127,10 +131,14 @@ class DungeonRendererPygame:
     
     def set_dungeon_ui_manager(self, dungeon_ui_manager):
         """ダンジョンUIマネージャーを設定"""
+        # 循環参照防止：既に同じUIマネージャーが設定されている場合はスキップ
+        if self.dungeon_ui_manager is dungeon_ui_manager:
+            return
+            
         self.dungeon_ui_manager = dungeon_ui_manager
         
         # 現在のパーティが設定されている場合は設定
-        if self.current_party:
+        if self.current_party and dungeon_ui_manager:
             dungeon_ui_manager.set_party(self.current_party)
         
         logger.info("ダンジョンUIマネージャーを設定しました")

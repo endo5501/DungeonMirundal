@@ -558,6 +558,10 @@ class GameManager(EventHandler):
     
     def set_current_party(self, party: Party):
         """現在のパーティを設定 - イベント駆動版"""
+        # 循環参照防止：既に同じパーティが設定されている場合はスキップ
+        if self.current_party is party:
+            return
+            
         old_party = self.current_party
         self.current_party = party
         
@@ -568,8 +572,9 @@ class GameManager(EventHandler):
         if self.dungeon_renderer:
             self.dungeon_renderer.set_party(party)
             
-            if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
-                self.dungeon_renderer.dungeon_ui_manager.set_party(party)
+            # dungeon_ui_managerは既にdungeon_renderer.set_party()内で設定されるので重複呼び出しを削除
+            # if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
+            #     self.dungeon_renderer.dungeon_ui_manager.set_party(party)
         
         # パーティ変更イベントを発行
         if party is not None:

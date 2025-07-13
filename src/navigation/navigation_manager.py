@@ -106,6 +106,10 @@ class NavigationManager:
     
     def set_party(self, party: Party):
         """パーティ設定"""
+        # 循環参照防止：既に同じパーティが設定されている場合はスキップ
+        if self.current_party is party:
+            return
+            
         self.current_party = party
         logger.info(f"パーティ{party.name}を設定しました")
     
