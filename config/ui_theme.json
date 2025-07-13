@@ -35,7 +35,17 @@
         },
         "misc": {
             "shape": "rectangle",
-            "list_item_height": "30"
+            "list_item_height": "30",
+            "text_horiz_alignment": "left",
+            "text_vert_alignment": "center",
+            "text_horiz_alignment_padding": "5"
+        }
+    },
+    "selection_list.list_item": {
+        "misc": {
+            "text_horiz_alignment": "left",
+            "text_vert_alignment": "center",
+            "text_horiz_alignment_padding": "5"
         }
     },
     "button": {
