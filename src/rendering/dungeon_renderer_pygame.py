@@ -289,31 +289,49 @@ class DungeonRendererPygame:
     def _move_forward(self):
         """前進（GameManagerからの呼び出し用）"""
         result = self.input_handler.handle_action(DungeonInputAction.MOVE_FORWARD)
+        if result.success and self.dungeon_manager and self.dungeon_manager.current_dungeon:
+            # 移動後は必ず再描画
+            self.render_dungeon(self.dungeon_manager.current_dungeon)
         return result.success
     
     def _move_backward(self):
         """後退（GameManagerからの呼び出し用）"""
         result = self.input_handler.handle_action(DungeonInputAction.MOVE_BACKWARD)
+        if result.success and self.dungeon_manager and self.dungeon_manager.current_dungeon:
+            # 移動後は必ず再描画
+            self.render_dungeon(self.dungeon_manager.current_dungeon)
         return result.success
     
     def _move_left(self):
         """左移動（GameManagerからの呼び出し用）"""
         result = self.input_handler.handle_action(DungeonInputAction.MOVE_LEFT)
+        if result.success and self.dungeon_manager and self.dungeon_manager.current_dungeon:
+            # 移動後は必ず再描画
+            self.render_dungeon(self.dungeon_manager.current_dungeon)
         return result.success
     
     def _move_right(self):
         """右移動（GameManagerからの呼び出し用）"""
         result = self.input_handler.handle_action(DungeonInputAction.MOVE_RIGHT)
+        if result.success and self.dungeon_manager and self.dungeon_manager.current_dungeon:
+            # 移動後は必ず再描画
+            self.render_dungeon(self.dungeon_manager.current_dungeon)
         return result.success
     
     def _turn_left(self):
         """左回転（GameManagerからの呼び出し用）"""
         result = self.input_handler.handle_action(DungeonInputAction.TURN_LEFT)
+        if result.success and self.dungeon_manager and self.dungeon_manager.current_dungeon:
+            # 回転後は必ず再描画
+            self.render_dungeon(self.dungeon_manager.current_dungeon)
         return result.success
     
     def _turn_right(self):
         """右回転（GameManagerからの呼び出し用）"""
         result = self.input_handler.handle_action(DungeonInputAction.TURN_RIGHT)
+        if result.success and self.dungeon_manager and self.dungeon_manager.current_dungeon:
+            # 回転後は必ず再描画
+            self.render_dungeon(self.dungeon_manager.current_dungeon)
         return result.success
     
     def _show_menu(self):

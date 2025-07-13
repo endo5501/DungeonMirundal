@@ -152,7 +152,8 @@ class DungeonInputHandler:
             return MovementResult(True, message, {
                 "movement_type": "forward",
                 "running": self.is_running,
-                "sneaking": self.is_sneaking
+                "sneaking": self.is_sneaking,
+                "needs_redraw": True  # 移動時は再描画が必要
             })
         else:
             return MovementResult(False, "前進できません")
@@ -172,7 +173,8 @@ class DungeonInputHandler:
             return MovementResult(True, "後退しました", {
                 "movement_type": "backward",
                 "running": self.is_running,
-                "sneaking": self.is_sneaking
+                "sneaking": self.is_sneaking,
+                "needs_redraw": True  # 移動時は再描画が必要
             })
         else:
             return MovementResult(False, "後退できません")
@@ -226,7 +228,8 @@ class DungeonInputHandler:
         
         if success:
             return MovementResult(True, "左を向きました", {
-                "movement_type": "turn_left"
+                "movement_type": "turn_left",
+                "needs_redraw": True  # 回転時は再描画が必要
             })
         else:
             return MovementResult(False, "左に回転できません")
@@ -240,7 +243,8 @@ class DungeonInputHandler:
         
         if success:
             return MovementResult(True, "右を向きました", {
-                "movement_type": "turn_right"
+                "movement_type": "turn_right",
+                "needs_redraw": True  # 回転時は再描画が必要
             })
         else:
             return MovementResult(False, "右に回転できません")
