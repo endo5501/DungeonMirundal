@@ -45,7 +45,7 @@ class FacilityController:
         # サービスにGameManagerの参照を設定
         if hasattr(self.service, 'set_game_manager'):
             self.service.set_game_manager(game_manager)
-            logger.info(f"[DEBUG] FacilityController: GameManager set to service: {self.facility_id}")
+            logger.debug(f"[DEBUG] FacilityController: GameManager set to service: {self.facility_id}")
     
     def enter(self, party: Party) -> bool:
         """施設に入る
@@ -140,13 +140,13 @@ class FacilityController:
         
         # サービス実行
         try:
-            logger.info(f"[DEBUG] FacilityController: Calling service.execute_action({action_id}, {params})")
-            logger.info(f"[DEBUG] FacilityController: Service instance: {self.service}")
-            logger.info(f"[DEBUG] FacilityController: Service type: {type(self.service)}")
+            logger.debug(f"[DEBUG] FacilityController: Calling service.execute_action({action_id}, {params})")
+            logger.debug(f"[DEBUG] FacilityController: Service instance: {self.service}")
+            logger.debug(f"[DEBUG] FacilityController: Service type: {type(self.service)}")
             
             result = self.service.execute_action(action_id, params)
             
-            logger.info(f"[DEBUG] FacilityController: Service returned: {result}")
+            logger.debug(f"[DEBUG] FacilityController: Service returned: {result}")
             
             # 成功時はUIを更新（ただし情報取得系のアクションは除く）
             if result.is_success() and self.window and not self._is_info_action(action_id, params):
@@ -164,14 +164,14 @@ class FacilityController:
         Returns:
             メニュー項目のリスト
         """
-        logger.info(f"[DEBUG] get_menu_items called: is_active={self.is_active}, facility_id={self.facility_id}")
+        logger.debug(f"[DEBUG] get_menu_items called: is_active={self.is_active}, facility_id={self.facility_id}")
         if not self.is_active:
             logger.warning(f"[DEBUG] get_menu_items: facility not active, returning empty list")
             return []
         
         try:
             menu_items = self.service.get_menu_items()
-            logger.info(f"[DEBUG] get_menu_items: service returned {len(menu_items)} items")
+            logger.debug(f"[DEBUG] get_menu_items: service returned {len(menu_items)} items")
             return menu_items
         except Exception:
             logger.error(f"Failed to get menu items: {self.facility_id}", exc_info=True)

@@ -100,7 +100,6 @@ class Item:
         # 戦闘関連
         self.usable_in_combat = item_data.get('usable_in_combat', False)
         
-        logger.debug(f"アイテムを初期化: {item_id} ({self.item_type.value})")
     
     def get_name(self) -> str:
         """アイテム名を取得"""
@@ -205,7 +204,7 @@ class ItemManager:
         self.item_config = {}
         
         self._load_items()
-        logger.info("ItemManagerを初期化しました")
+        logger.debug("ItemManagerを初期化しました")
     
     def _load_items(self):
         """アイテム定義の読み込み"""

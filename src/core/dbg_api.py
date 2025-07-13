@@ -409,7 +409,7 @@ def get_screenshot():
             
             jpeg_data = base64.b64encode(buf.getvalue()).decode()
             
-            logger.info(f"Screenshot captured: size={size}")
+            logger.debug(f"Screenshot captured: size={size}")
             
             return ScreenshotResponse(
                 jpeg=jpeg_data,
@@ -443,7 +443,7 @@ def send_key_input(code: int, down: bool = True):
             "char": chr(code) if 32 <= code <= 126 else f"<{code}>"
         })
         
-        logger.info(f"Key input: code={code}, down={down}")
+        logger.debug(f"Key input: code={code}, down={down}")
         
         return InputResponse(
             ok=True,
@@ -500,7 +500,7 @@ def send_mouse_input(x: int, y: int, button: int = 1, action: str = "down"):
             "action": action
         })
         
-        logger.info(f"Mouse input: pos=({x}, {y}), action={action}, button={button}")
+        logger.debug(f"Mouse input: pos=({x}, {y}), action={action}, button={button}")
         
         return InputResponse(
             ok=True,
@@ -1305,7 +1305,7 @@ def get_adventure_guild_list():
 # サーバー起動関数
 def _run_server():
     """サーバーを起動"""
-    logger.info(f"Starting debug server on {DEFAULT_HOST}:{DEFAULT_PORT}")
+    logger.debug(f"Starting debug server on {DEFAULT_HOST}:{DEFAULT_PORT}")
     uvicorn.run(app, host=DEFAULT_HOST, port=DEFAULT_PORT, log_level="warning")
 
 def start(screen: pygame.Surface, game_manager=None, port: int = DEFAULT_PORT):
@@ -1327,15 +1327,15 @@ def start(screen: pygame.Surface, game_manager=None, port: int = DEFAULT_PORT):
                 if _game_manager is not None:
                     old_address = hex(id(_game_manager))
                     new_address = hex(id(game_manager))
-                    logger.info(f"Debug server GameManager updated: {old_address} -> {new_address}")
+                    logger.debug(f"Debug server GameManager updated: {old_address} -> {new_address}")
                 else:
-                    logger.info(f"Debug server GameManager initialized: {hex(id(game_manager))}")
+                    logger.debug(f"Debug server GameManager initialized: {hex(id(game_manager))}")
                 _game_manager = game_manager
     
     DEFAULT_PORT = port
-    logger.info(f"Initializing debug server with screen size: {screen.get_size()}")
+    logger.debug(f"Initializing debug server with screen size: {screen.get_size()}")
     if game_manager:
-        logger.info(f"Debug server initialized with GameManager: {type(game_manager)} at {hex(id(game_manager))}")
+        logger.debug(f"Debug server initialized with GameManager: {type(game_manager)} at {hex(id(game_manager))}")
     else:
         logger.warning("Debug server initialized without GameManager - some features may not work")
     
@@ -1346,7 +1346,7 @@ def start(screen: pygame.Surface, game_manager=None, port: int = DEFAULT_PORT):
     server_thread = threading.Thread(target=_run_server, daemon=True)
     server_thread.start()
     
-    logger.info("Debug server thread started")
+    logger.debug("Debug server thread started")
 
 # MCP設定を起動関数内に移動
 def setup_mcp():

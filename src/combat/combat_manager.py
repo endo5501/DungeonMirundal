@@ -134,7 +134,7 @@ class CombatManager:
         self.show_damage_numbers = True
         self.critical_hit_chance = CRITICAL_HIT_CHANCE
         
-        logger.info("CombatManager初期化完了")
+        logger.debug("CombatManager初期化完了")
     
     def start_combat(self, party: Party, monsters: List[Monster]) -> bool:
         """戦闘開始"""

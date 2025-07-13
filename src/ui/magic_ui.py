@@ -37,7 +37,7 @@ class MagicUI:
         self.window_manager = WindowManager.get_instance()
         self.magic_window: Optional[MagicWindow] = None
         
-        logger.info("MagicUI（WindowSystem版）を初期化しました")
+        logger.debug("MagicUI（WindowSystem版）を初期化しました")
     
     def _get_magic_window(self) -> MagicWindow:
         """MagicWindowインスタンスを取得または作成"""

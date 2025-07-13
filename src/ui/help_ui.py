@@ -25,7 +25,7 @@ class HelpUI:
         self.window_manager = WindowManager.get_instance()
         self.help_window: Optional[HelpWindow] = None
         
-        logger.info("HelpUI（WindowSystem版）を初期化しました")
+        logger.debug("HelpUI（WindowSystem版）を初期化しました")
     
     def _get_help_window(self) -> HelpWindow:
         """HelpWindowインスタンスを取得または作成"""

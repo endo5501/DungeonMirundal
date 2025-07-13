@@ -44,7 +44,6 @@ class FocusManager:
         # イベントリスナー
         self.focus_change_listeners: List[Callable[[FocusChange], None]] = []
         
-        logger.debug("FocusManagerを初期化しました")
     
     def set_focus(self, window: Optional[Window]) -> bool:
         """

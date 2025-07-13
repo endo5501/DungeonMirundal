@@ -25,7 +25,6 @@ class WindowStack:
         self.history: List[Window] = []  # 閉じられたウィンドウの履歴
         self.max_history_size = 50  # 履歴の最大サイズ
         
-        logger.debug("WindowStackを初期化しました")
     
     def push(self, window: Window) -> None:
         """

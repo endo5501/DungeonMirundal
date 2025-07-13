@@ -363,7 +363,7 @@ class InventoryManager:
         self.character_inventories: Dict[str, Inventory] = {}
         self.party_inventory: Optional[Inventory] = None
         
-        logger.info("InventoryManagerを初期化しました")
+        logger.debug("InventoryManagerを初期化しました")
     
     def create_character_inventory(self, character_id: str) -> Inventory:
         """キャラクター用インベントリを作成"""

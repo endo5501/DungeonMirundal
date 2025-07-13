@@ -117,7 +117,7 @@ class FacilityWindow(Window):
             
             # メニュー項目を取得
             menu_items = self.controller.get_menu_items()
-            logger.info(f"[DEBUG] NavigationPanel: controller.is_active={self.controller.is_active}, menu_items count={len(menu_items)}")
+            logger.debug(f"[DEBUG] NavigationPanel: controller.is_active={self.controller.is_active}, menu_items count={len(menu_items)}")
             
             self.navigation_panel = NavigationPanel(
                 rect=nav_rect,
@@ -240,7 +240,7 @@ class FacilityWindow(Window):
         try:
             # サービス自体に専用パネル作成を委任
             if hasattr(self.controller.service, 'create_service_panel'):
-                logger.info(f"[DEBUG] Calling create_service_panel for {service_id}")
+                logger.debug(f"[DEBUG] Calling create_service_panel for {service_id}")
                 custom_panel = self.controller.service.create_service_panel(
                     service_id, content_rect, self.main_panel, self.ui_manager
                 )

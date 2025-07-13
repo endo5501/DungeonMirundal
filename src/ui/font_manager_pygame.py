@@ -215,7 +215,7 @@ class FontManager:
         for f in local_fonts:
             if os.path.exists(f):
                 self._cross_platform_font_path = os.path.abspath(f)
-                logger.info(f"FontManager: 同梱フォントを発見: {self._cross_platform_font_path}")
+                logger.debug(f"FontManager: 同梱フォントを発見: {self._cross_platform_font_path}")
                 return self._cross_platform_font_path
 
         # 次にシステムフォント候補
@@ -229,7 +229,7 @@ class FontManager:
             path = pygame.font.match_font(name)
             if path:
                 self._cross_platform_font_path = path
-                logger.info(f"FontManager: システムフォントを発見: {name} -> {path}")
+                logger.debug(f"FontManager: システムフォントを発見: {name} -> {path}")
                 return self._cross_platform_font_path
 
         logger.warning("FontManager: 日本語対応フォントが見つかりませんでした")
@@ -245,7 +245,7 @@ class FontManager:
             
             # エイリアス "jp_font" として登録
             ui_manager.add_font_paths("jp_font", font_path)
-            logger.info(f"FontManager: pygame_guiフォント登録成功: jp_font -> {font_path}")
+            logger.debug(f"FontManager: pygame_guiフォント登録成功: jp_font -> {font_path}")
             
             # 必要なサイズでプリロード
             ui_manager.preload_fonts([
@@ -255,7 +255,7 @@ class FontManager:
                 {"name": "jp_font", "style": "regular", "point_size": 20},
                 {"name": "jp_font", "style": "regular", "point_size": 24}
             ])
-            logger.info("FontManager: pygame_guiフォントプリロード完了")
+            logger.debug("FontManager: pygame_guiフォントプリロード完了")
             
             # テーマ設定で階層を考慮した設定
             theme_data = {
@@ -271,7 +271,7 @@ class FontManager:
             }
             
             ui_manager.get_theme().load_theme(theme_data)
-            logger.info("FontManager: pygame_gui動的テーマ読み込み成功（日本語フォント対応）")
+            logger.debug("FontManager: pygame_gui動的テーマ読み込み成功（日本語フォント対応）")
             return True
             
         except Exception as e:

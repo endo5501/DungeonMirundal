@@ -33,12 +33,12 @@ class FacilityRegistry:
         # 設定ファイルを読み込み
         self._load_config()
         
-        logger.info("FacilityRegistry initialized")
+        logger.debug("FacilityRegistry initialized")
     
     def set_game_manager(self, game_manager):
         """GameManagerの参照を設定"""
         self._game_manager = game_manager
-        logger.info(f"[DEBUG] FacilityRegistry: GameManager set: {game_manager}")
+        logger.debug(f"[DEBUG] FacilityRegistry: GameManager set: {game_manager}")
         
         # 既存のすべてのコントローラーにGameManagerを設定
         for controller in self.facilities.values():
@@ -69,12 +69,12 @@ class FacilityRegistry:
             try:
                 with open(config_path, "r", encoding="utf-8") as f:
                     self.config = json.load(f)
-                    logger.info(f"Loaded facility config from {config_path}")
+                    logger.debug(f"Loaded facility config from {config_path}")
             except Exception as e:
                 logger.error(f"Failed to load facility config: {e}")
                 self.config = {}
         else:
-            logger.info(f"Facility config not found at {config_path}, using defaults")
+            logger.debug(f"Facility config not found at {config_path}, using defaults")
             self.config = {}
     
     def register_service_class(self, facility_id: str, service_class: Type[FacilityService]) -> None:
@@ -85,7 +85,7 @@ class FacilityRegistry:
             service_class: サービスクラス
         """
         self.service_classes[facility_id] = service_class
-        logger.info(f"Registered service class: {facility_id} -> {service_class.__name__}")
+        logger.debug(f"Registered service class: {facility_id} -> {service_class.__name__}")
     
     def register_all_services(self) -> None:
         """すべてのサービスクラスを自動登録"""
@@ -94,31 +94,31 @@ class FacilityRegistry:
             from ..services.guild_service import GuildService
             self.register_service_class("guild", GuildService)
         except ImportError:
-            logger.info("GuildService not available")
+            logger.debug("GuildService not available")
         
         try:
             from ..services.inn_service import InnService
             self.register_service_class("inn", InnService)
         except ImportError:
-            logger.info("InnService not available")
+            logger.debug("InnService not available")
         
         try:
             from ..services.shop_service import ShopService
             self.register_service_class("shop", ShopService)
         except ImportError:
-            logger.info("ShopService not available")
+            logger.debug("ShopService not available")
         
         try:
             from ..services.temple_service import TempleService
             self.register_service_class("temple", TempleService)
         except ImportError:
-            logger.info("TempleService not available")
+            logger.debug("TempleService not available")
         
         try:
             from ..services.magic_guild_service import MagicGuildService
             self.register_service_class("magic_guild", MagicGuildService)
         except ImportError:
-            logger.info("MagicGuildService not available")
+            logger.debug("MagicGuildService not available")
     
     def get_facility_controller(self, facility_id: str) -> Optional[FacilityController]:
         """施設コントローラーを取得
@@ -163,7 +163,7 @@ class FacilityRegistry:
             controller.set_config(facility_config)
             
             self.facilities[facility_id] = controller
-            logger.info(f"Created facility controller: {facility_id}")
+            logger.debug(f"Created facility controller: {facility_id}")
             return controller
             
         except Exception as e:
@@ -202,7 +202,7 @@ class FacilityRegistry:
             if controller.enter(party):
                 self.current_facility_id = facility_id
                 self.current_party = party
-                logger.info(f"Successfully entered facility: {facility_id}")
+                logger.debug(f"Successfully entered facility: {facility_id}")
                 return True
             else:
                 logger.error(f"Failed to enter facility: {facility_id}")
@@ -308,7 +308,7 @@ class FacilityRegistry:
         self.current_facility_id = None
         self.current_party = None
         
-        logger.info("FacilityRegistry cleaned up")
+        logger.debug("FacilityRegistry cleaned up")
 
 
 # グローバルインスタンス

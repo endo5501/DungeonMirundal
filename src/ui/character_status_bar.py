@@ -217,7 +217,7 @@ class CharacterStatusBar(UIElement):
         # 自動的に表示状態にする
         self.show()
         
-        logger.info("CharacterStatusBarを初期化しました")
+        logger.debug("CharacterStatusBarを初期化しました")
     
     def _ensure_font_available(self):
         """フォントが利用可能であることを確認（統一されたfont_manager使用）"""

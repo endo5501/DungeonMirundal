@@ -386,7 +386,7 @@ class MonsterManager:
         self.monster_templates: Dict[str, Dict[str, Any]] = {}
         self._load_monster_data()
         
-        logger.info("MonsterManager初期化完了")
+        logger.debug("MonsterManager初期化完了")
     
     def _load_monster_data(self):
         """モンスターデータ読み込み"""

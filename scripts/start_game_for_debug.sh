@@ -1,6 +1,7 @@
 #!/bin/bash
 # デバッグ用ゲーム起動スクリプト
 # APIサーバーの起動を待機し、準備完了後に制御を返す
+# デバッグ時の詳細ログを有効にしてゲーム内の状況を把握可能にする
 
 # カラー出力の定義
 GREEN='\033[0;32m'
@@ -28,8 +29,9 @@ if [ -f "$PID_FILE" ]; then
     fi
 fi
 
-# ゲームを起動
-echo -e "Starting game process..."
+# ゲームを起動（INFOレベルのログを有効化）
+echo -e "Starting game process with INFO logging..."
+export DUNGEON_LOG_LEVEL=INFO
 uv run python main.py > "$LOG_FILE" 2>&1 &
 GAME_PID=$!
 echo $GAME_PID > "$PID_FILE"
@@ -44,7 +46,8 @@ while [ $WAIT_COUNT -lt $((MAX_WAIT_SECONDS * 10)) ]; do
         echo -e "${GREEN}✓ Debug API is ready!${NC}"
         echo -e "${GREEN}Game is running (PID: $GAME_PID)${NC}"
         echo -e "${GREEN}API endpoint: http://localhost:$API_PORT${NC}"
-        echo -e "${YELLOW}Log file: $LOG_FILE${NC}"
+        echo -e "${YELLOW}Debug log file: $LOG_FILE (INFO level enabled)${NC}"
+        echo -e "${YELLOW}To view logs in real-time: tail -f $LOG_FILE${NC}"
         exit 0
     fi
     sleep 0.1

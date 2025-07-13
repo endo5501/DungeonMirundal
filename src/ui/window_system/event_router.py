@@ -74,7 +74,6 @@ class EventRouter:
         self.max_queue_size = 1000
         self.debug_mode = False
         
-        logger.debug("EventRouterを初期化しました")
     
     def route_event(self, event: pygame.event.Event, target_window: Optional[Window] = None) -> bool:
         """

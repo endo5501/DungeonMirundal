@@ -315,7 +315,7 @@ class SceneManager:
         # シーンの初期化
         self._initialize_scenes()
         
-        logger.info("シーン管理システムを初期化しました")
+        logger.debug("シーン管理システムを初期化しました")
     
     def _initialize_scenes(self):
         """シーンの初期化"""

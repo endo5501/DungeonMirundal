@@ -136,7 +136,7 @@ class DungeonManager:
         # セーブディレクトリを作成
         os.makedirs(self.save_directory, exist_ok=True)
         
-        logger.info("DungeonManager初期化完了")
+        logger.debug("DungeonManager初期化完了")
     
     def set_return_to_overworld_callback(self, callback):
         """地上部帰還コールバックを設定"""

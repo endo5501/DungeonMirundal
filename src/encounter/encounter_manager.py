@@ -107,7 +107,7 @@ class EncounterManager:
             'avoided_encounters': 0
         }
         
-        logger.info("EncounterManager初期化完了")
+        logger.debug("EncounterManager初期化完了")
     
     def set_party(self, party: Optional[Party]):
         """パーティ設定"""

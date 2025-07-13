@@ -125,7 +125,7 @@ class DialogTemplate:
         self.button_height = 40
         self.button_spacing = 20
         
-        logger.info("DialogTemplateを初期化しました")
+        logger.debug("DialogTemplateを初期化しました")
     
     def create_information_dialog(self, dialog_id: str, title: str, message: str, 
                                 on_close: Optional[Callable] = None) -> UIDialog:

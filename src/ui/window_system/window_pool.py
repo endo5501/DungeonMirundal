@@ -48,7 +48,6 @@ class WindowPool:
         # スレッドセーフティ
         self._lock = threading.Lock()
         
-        logger.debug(f"WindowPoolを初期化（最大プールサイズ: {max_pool_size}）")
     
     def get_window(self, window_class: Type[Window], window_id: str, **kwargs) -> Window:
         """

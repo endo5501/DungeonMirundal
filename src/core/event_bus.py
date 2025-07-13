@@ -115,7 +115,7 @@ class EventBus:
         self._processing = False
         self._initialized = True
         
-        logger.info("イベントバス初期化完了")
+        logger.debug("イベントバス初期化完了")
     
     def subscribe(self, event_type: EventType, handler: EventHandler):
         """イベントタイプにハンドラーを登録"""

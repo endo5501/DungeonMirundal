@@ -112,7 +112,7 @@ class SaveManager:
         self.current_save: Optional[GameSave] = None
         self.max_save_slots = 10
         
-        logger.info(f"SaveManagerを初期化しました: {self.save_dir}")
+        logger.debug(f"SaveManagerを初期化しました: {self.save_dir}")
     
     def _get_file_path(self, slot_id: int, file_type: str = 'save') -> Path:
         """ファイルパス取得の統一メソッド"""

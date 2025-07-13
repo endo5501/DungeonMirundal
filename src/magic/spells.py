@@ -86,7 +86,6 @@ class Spell:
         # 効果
         self.effect = self._parse_effect(spell_data)
         
-        logger.debug(f"魔法を初期化: {spell_id} (Lv.{self.level} {self.school.value})")
     
     def _parse_effect(self, data: Dict[str, Any]) -> SpellEffect:
         """効果データを解析"""
@@ -458,7 +457,7 @@ class SpellManager:
         self.spell_config = {}
         
         self._load_spells()
-        logger.info("SpellManagerを初期化しました")
+        logger.debug("SpellManagerを初期化しました")
     
     def _load_spells(self):
         """魔法定義の読み込み"""

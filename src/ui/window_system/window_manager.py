@@ -49,7 +49,7 @@ class WindowManager:
         self._initialize_event_handling()
         
         self._initialized = True
-        logger.info("WindowManagerを初期化しました")
+        logger.debug("WindowManagerを初期化しました")
     
     
     def _initialize_core_components(self):
@@ -140,7 +140,7 @@ class WindowManager:
         # デバッグモードの設定
         self.event_router.set_debug_mode(self.debug_mode)
         
-        logger.info("WindowManager: Pygame統合を初期化しました")
+        logger.debug("WindowManager: Pygame統合を初期化しました")
     
     def _initialize_fonts(self):
         """フォント初期化（統一されたfont_managerを使用）"""

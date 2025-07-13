@@ -109,7 +109,7 @@ class DungeonQualityManager:
         # 設定をロード
         self.load_settings()
         
-        logger.info("DungeonQualityManager初期化完了")
+        logger.debug("DungeonQualityManager初期化完了")
     
     def _initialize_difficulty_presets(self) -> Dict[DifficultyLevel, DifficultySettings]:
         """難易度プリセット初期化"""

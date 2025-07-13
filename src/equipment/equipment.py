@@ -306,7 +306,7 @@ class EquipmentManager:
     
     def __init__(self):
         self.character_equipment: Dict[str, Equipment] = {}
-        logger.info("EquipmentManagerを初期化しました")
+        logger.debug("EquipmentManagerを初期化しました")
     
     def create_character_equipment(self, character_id: str) -> Equipment:
         """キャラクター用装備システムを作成"""

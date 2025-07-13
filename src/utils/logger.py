@@ -1,11 +1,12 @@
 import logging
 import sys
+import os
 from pathlib import Path
 from typing import Optional
 
 # ログシステム定数
 DEFAULT_LOGGER_NAME = "dungeon"
-DEFAULT_LOG_LEVEL = logging.INFO
+DEFAULT_LOG_LEVEL = logging.WARNING
 DEFAULT_DEBUG_LEVEL = logging.DEBUG
 DEFAULT_ENCODING = "utf-8"
 LOG_DIR_NAME = "logs"
@@ -16,7 +17,22 @@ LOG_FORMAT_STANDARD = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
-def setup_logger(name: str = DEFAULT_LOGGER_NAME, level: int = DEFAULT_LOG_LEVEL) -> logging.Logger:
+def get_log_level_from_env() -> int:
+    """環境変数からログレベルを取得"""
+    env_level = os.getenv('DUNGEON_LOG_LEVEL', 'WARNING').upper()
+    
+    level_map = {
+        'DEBUG': logging.DEBUG,
+        'INFO': logging.INFO,
+        'WARNING': logging.WARNING,
+        'ERROR': logging.ERROR,
+        'CRITICAL': logging.CRITICAL
+    }
+    
+    return level_map.get(env_level, DEFAULT_LOG_LEVEL)
+
+
+def setup_logger(name: str = DEFAULT_LOGGER_NAME, level: Optional[int] = None) -> logging.Logger:
     """ゲーム用ロガーの設定"""
     logger = logging.getLogger(name)
     
@@ -25,6 +41,10 @@ def setup_logger(name: str = DEFAULT_LOGGER_NAME, level: int = DEFAULT_LOG_LEVEL
     
     # 重複ハンドラーを防ぐため、既存のハンドラーをクリア
     logger.handlers.clear()
+    
+    # ログレベルを決定（環境変数 > 引数 > デフォルト）
+    if level is None:
+        level = get_log_level_from_env()
     
     logger.setLevel(level)
     

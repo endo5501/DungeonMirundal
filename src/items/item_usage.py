@@ -47,7 +47,7 @@ class ItemUsageManager:
             'buff_all_stats': self._handle_buff_all_stats
         }
         
-        logger.info("ItemUsageManagerを初期化しました")
+        logger.debug("ItemUsageManagerを初期化しました")
     
     def can_use_item(self, item: Item, user: Character, target: Optional[Character] = None) -> Tuple[bool, str]:
         """アイテムが使用可能かチェック"""

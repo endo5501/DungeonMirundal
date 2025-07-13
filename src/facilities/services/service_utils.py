@@ -265,9 +265,9 @@ class ActionExecutorMixin:
                 return ServiceResultFactory.error(f"不明なアクション: {action_id}")
             
             action_method = action_map[action_id]
-            logger.info(f"[DEBUG] Calling action method: {action_method}")
+            logger.debug(f"[DEBUG] Calling action method: {action_method}")
             result = action_method(params)
-            logger.info(f"[DEBUG] Action method returned: {result}")
+            logger.debug(f"[DEBUG] Action method returned: {result}")
             return result
             
         except Exception as e:

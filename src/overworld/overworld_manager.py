@@ -100,7 +100,7 @@ class OverworldManager:
         self.window_manager = WindowManager.get_instance()
         self.main_window = None
         
-        logger.info("OverworldManagerを初期化しました")
+        logger.debug("OverworldManagerを初期化しました")
     
     def set_game_manager(self, game_manager) -> None:
         """GameManagerの参照を設定"""

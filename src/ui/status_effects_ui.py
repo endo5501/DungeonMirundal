@@ -28,7 +28,7 @@ class StatusEffectsUI:
         self.window_manager = WindowManager.get_instance()
         self.status_effects_window: Optional[StatusEffectsWindow] = None
         
-        logger.info("StatusEffectsUI（WindowSystem版）を初期化しました")
+        logger.debug("StatusEffectsUI（WindowSystem版）を初期化しました")
     
     def _get_status_effects_window(self) -> StatusEffectsWindow:
         """StatusEffectsWindowインスタンスを取得または作成"""

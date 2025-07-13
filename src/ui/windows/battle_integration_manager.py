@@ -34,7 +34,7 @@ class BattleIntegrationManager:
         self.current_combat_manager: Optional[CombatManager] = None
         self.battle_context: Optional[BattleContext] = None
         
-        logger.info("BattleIntegrationManagerを初期化しました")
+        logger.debug("BattleIntegrationManagerを初期化しました")
     
     def start_battle(self, party: Party, enemies: list[Monster], 
                      battle_context: BattleContext) -> bool:

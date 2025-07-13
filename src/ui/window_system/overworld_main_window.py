@@ -149,12 +149,12 @@ class OverworldMainWindow(Window):
         # デバッグ: 作成されたUI要素を確認
         if self.ui_manager and hasattr(self.ui_manager, 'get_root_container'):
             element_count = len(self.ui_manager.get_root_container().elements)
-            logger.info(f"OverworldMainWindow UIManager内のUI要素総数: {element_count}")
+            logger.debug(f"OverworldMainWindow UIManager内のUI要素総数: {element_count}")
             
             # 各ボタンの状態を確認
             for i, button in enumerate(self.menu_items):
                 if button:
-                    logger.info(f"地上メニューボタン{i}: visible={button.visible}, alive={button.alive}")
+                    logger.debug(f"地上メニューボタン{i}: visible={button.visible}, alive={button.alive}")
     
     def _create_settings_menu(self) -> None:
         """設定メニューUI作成"""
@@ -334,18 +334,18 @@ class OverworldMainWindow(Window):
         
         # マウスクリックのデバッグログ
         if event.type == pygame.MOUSEBUTTONDOWN:
-            logger.info(f"[DEBUG] マウスクリック検出: pos={event.pos}, button={event.button}")
+            logger.debug(f"[DEBUG] マウスクリック検出: pos={event.pos}, button={event.button}")
         
         # pygame-guiイベント処理
         if self.ui_manager:
             handled = self.ui_manager.process_events(event)
             if handled:
-                logger.info(f"[DEBUG] pygame-guiがイベントを処理しました: {event.type}")
+                logger.debug(f"[DEBUG] pygame-guiがイベントを処理しました: {event.type}")
                 return True
         
         # ボタンクリック処理
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
-            logger.info(f"[DEBUG] UI_BUTTON_PRESSED検出: {event.ui_element}")
+            logger.debug(f"[DEBUG] UI_BUTTON_PRESSED検出: {event.ui_element}")
             for button in self.menu_items:
                 if event.ui_element == button:
                     return self._handle_button_click(button)
@@ -369,14 +369,14 @@ class OverworldMainWindow(Window):
     
     def _handle_button_click(self, button: pygame_gui.elements.UIButton) -> bool:
         """ボタンクリック処理"""
-        logger.info(f"[DEBUG] ボタンクリック: {button.text}")
+        logger.debug(f"[DEBUG] ボタンクリック: {button.text}")
         
         if not hasattr(button, 'menu_item_data'):
             logger.warning(f"[DEBUG] ボタンにmenu_item_dataがありません: {button.text}")
             return False
         
         item_data = button.menu_item_data
-        logger.info(f"[DEBUG] ボタンのmenu_item_data: {item_data}")
+        logger.debug(f"[DEBUG] ボタンのmenu_item_data: {item_data}")
         return self._process_menu_action(item_data)
     
     def _process_menu_action(self, item_data: Dict[str, Any]) -> bool:
@@ -387,7 +387,7 @@ class OverworldMainWindow(Window):
         # 施設アクセス
         if item_type == 'facility':
             facility_id = item_data.get('facility_id')
-            logger.info(f"[DEBUG] 施設クリック検出: facility_id={facility_id}")
+            logger.debug(f"[DEBUG] 施設クリック検出: facility_id={facility_id}")
             return self._send_message('menu_item_selected', {
                 'item_id': facility_id,
                 'facility_id': facility_id
@@ -459,16 +459,16 @@ class OverworldMainWindow(Window):
         Returns:
             bool: 処理されたかどうか
         """
-        logger.info(f"[DEBUG] 数字キー押下: {number}")
+        logger.debug(f"[DEBUG] 数字キー押下: {number}")
         
         # メニューアイテムの範囲チェック
         if not self.menu_items or number < 1 or number > len(self.menu_items):
-            logger.info(f"[DEBUG] 数字キー範囲外: {number}, メニュー数: {len(self.menu_items) if self.menu_items else 0}")
+            logger.debug(f"[DEBUG] 数字キー範囲外: {number}, メニュー数: {len(self.menu_items) if self.menu_items else 0}")
             return False
         
         # 対象ボタンを取得（1-basedなので-1）
         target_button = self.menu_items[number - 1]
-        logger.info(f"[DEBUG] 数字キーでボタン選択: {number} -> {target_button.text}")
+        logger.debug(f"[DEBUG] 数字キーでボタン選択: {number} -> {target_button.text}")
         
         # ボタンクリック処理を呼び出し
         return self._handle_button_click(target_button)

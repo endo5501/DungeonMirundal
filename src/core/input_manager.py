@@ -98,7 +98,7 @@ class InputManager:
         self._setup_default_bindings()
         self.setup_controllers()
         
-        logger.info("拡張入力システムを初期化しました")
+        logger.debug("拡張入力システムを初期化しました")
         
     def _setup_default_bindings(self):
         """デフォルトキーバインディングの設定"""

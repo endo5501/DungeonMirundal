@@ -7,8 +7,24 @@ Dungeonゲームの開発時に利用可能なデバッグツールとAPIにつ�
 ## 基本設定
 
 - **ベースURL**: `http://localhost:8765`
-- **起動方法**: `./scripts/start_game_for_debug.sh` でゲームと同時にAPIサーバーが起動。 `uv run main.py&` はCalude Codeが実行すると処理が戻らなくなるため、使用してはならない
+- **起動方法**: `./scripts/start_game_for_debug.sh` でゲームと同時にAPIサーバーが起動（DEBUGログ有効）
 - **プロトコル**: REST API（HTTP）
+- **注意**: `uv run main.py&` はClaude Codeが実行すると処理が戻らなくなるため、使用してはならない
+
+### ログレベル設定
+
+デバッグスクリプトは自動的にDEBUGレベルのログを有効にします。これによりゲーム内の詳細な動作を把握できます。
+
+- **デバッグ時**: `DEBUG` レベル（初期化、状態変更、API呼び出し等の詳細ログ）
+- **通常実行**: `WARNING` レベル（エラーと警告のみ）
+
+```bash
+# デバッグ用起動（自動的にDEBUGログ有効）
+./scripts/start_game_for_debug.sh
+
+# 通常実行（最小限のログ）
+uv run python main.py
+```
 
 ## 推奨デバッグ方法
 

@@ -97,7 +97,7 @@ class NavigationManager:
         self.animation_enabled = True
         self.animation_duration = ANIMATION_DURATION
         
-        logger.info("NavigationManager初期化完了")
+        logger.debug("NavigationManager初期化完了")
     
     def set_dungeon_manager(self, dungeon_manager: DungeonManager):
         """ダンジョンマネージャー設定"""

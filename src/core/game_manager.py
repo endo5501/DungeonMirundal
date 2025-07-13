@@ -100,7 +100,7 @@ class GameManager(EventHandler):
     def _setup_scene_management(self):
         """シーン管理システム初期化"""
         self.scene_manager = SceneManager(self)
-        logger.info("シーン管理システム初期化完了")
+        logger.debug("シーン管理システム初期化完了")
     
     def _setup_event_handlers(self):
         """イベントハンドラーの設定"""
@@ -502,7 +502,7 @@ class GameManager(EventHandler):
         from src.ui.window_system.window_manager import WindowManager
         window_manager = WindowManager.get_instance()
         window_manager.initialize_pygame(self.screen, self.clock)
-        logger.info("WindowManagerをPygameで初期化しました")
+        logger.debug("WindowManagerをPygameで初期化しました")
         
         # 地上部マネージャーの初期化
         try:
@@ -528,7 +528,7 @@ class GameManager(EventHandler):
         self.combat_manager = CombatManager()
         self.encounter_manager = EncounterManager()
         
-        logger.info("戦闘・エンカウンターシステム初期化完了")
+        logger.debug("戦闘・エンカウンターシステム初期化完了")
         
         # ダンジョンレンダラーの初期化
         try:

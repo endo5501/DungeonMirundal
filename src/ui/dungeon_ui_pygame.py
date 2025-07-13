@@ -360,14 +360,14 @@ class DungeonUIManagerPygame:
         """入力処理（WindowSystem版）"""
         # デバッグ: WASDキーの処理をログ出力
         if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-            logger.info(f"[DEBUG] DungeonUIManager: WASD キー検出 key={pygame.key.name(event.key)}, menu_open={self.is_menu_open}")
+            logger.debug(f"[DEBUG] DungeonUIManager: WASD キー検出 key={pygame.key.name(event.key)}, menu_open={self.is_menu_open}")
         
         # BattleUIWindowが存在する場合、そちらに委譲
         if self.battle_ui_window:
             try:
                 result = self.battle_ui_window.handle_event(event)
                 if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                    logger.info(f"[DEBUG] BattleUIWindow処理結果: {result}")
+                    logger.debug(f"[DEBUG] BattleUIWindow処理結果: {result}")
                 return result
             except Exception as e:
                 logger.error(f"BattleUIWindow入力処理エラー: {e}")
@@ -376,13 +376,13 @@ class DungeonUIManagerPygame:
         if self.small_map_ui:
             small_map_result = self.small_map_ui.handle_event(event)
             if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                logger.info(f"[DEBUG] SmallMapUI処理結果: {small_map_result}")
+                logger.debug(f"[DEBUG] SmallMapUI処理結果: {small_map_result}")
             if small_map_result:
                 return True
         
         if not self.is_menu_open:
             if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                logger.info(f"[DEBUG] DungeonUIManager: メニュー未開封のためFalseを返します")
+                logger.debug(f"[DEBUG] DungeonUIManager: メニュー未開封のためFalseを返します")
             return False
         
         if event.type == pygame.KEYDOWN:
