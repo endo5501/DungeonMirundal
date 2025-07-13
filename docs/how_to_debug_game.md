@@ -111,6 +111,7 @@ test_all_visible_buttons()
 | `GET /ui/hierarchy` | UI階層情報取得 | ~1ms | `{"window_stack": ["OverworldMainWindow(...)"], "window_manager_available": true}` |
 
 **提供される情報:**
+
 - WindowManagerの可用性
 - リアルタイムウィンドウスタック情報
 - 最小限の安全な階層データ
@@ -137,17 +138,18 @@ test_all_visible_buttons()
 | `GET /debug/game_manager` | GameManagerアクセス診断 | ~1ms | `curl "http://localhost:8765/debug/game_manager"` |
 
 **パーティ・キャラクター情報で提供される情報:**
+
 - パーティ名、ID、所持金
 - パーティメンバーの基本情報（名前、レベル、HP/MAX_HP、状態）
 - キャラクター詳細（種族、職業、ステータス、装備・所持アイテム）
 - 冒険者ギルド登録キャラクター一覧
 
 **デバッグ・診断情報で提供される情報:**
+
 - GameManagerインスタンスの存在・状態確認
 - パーティオブジェクトへのアクセス状況
 - セーブ・ロード後の参照整合性診断
 - 複数の取得方法（キャッシュ、main.py、sys.modules）の成功/失敗状況
-
 
 ## 注意: ボタンナビゲーション機能は制限あり
 
@@ -332,7 +334,7 @@ uv run pytest tests/debug/test_ui_hierarchy.py -v
 
 ### ファイル構成
 
-```
+```md
 src/debug/
 ├── game_debug_client.py      # Python APIクライアント
 ├── debug_helper.py           # 高レベルデバッグ機能
@@ -380,6 +382,7 @@ uv run python -m src.debug.debug_cli ui-dump --save ui_hierarchy.json
 ### 取得可能な情報（現在の実装）
 
 **JSON形式:**
+
 ```json
 {
   "windows": [],
@@ -416,7 +419,8 @@ uv run python -m src.debug.debug_cli ui-dump --save ui_hierarchy.json
 ```
 
 **Tree形式:**
-```
+
+```md
 UI Hierarchy Tree:
 ├── Window Stack:
 │   └── OverworldMainWindow(overworld_main, main, stack_depth=0)
@@ -560,6 +564,7 @@ curl "http://localhost:8765/party/info" | jq .
 ```
 
 **対処法**:
+
 1. ゲームを再起動して問題が解決するか確認
 2. `debug_gm`コマンドで取得方法の診断を実行
 3. ログを確認して動的取得が正常に機能しているかチェック
@@ -748,7 +753,7 @@ if hierarchy:
 
 ## まとめ
 
-**🎉 Dungeonゲームのデバッグシステム (2025年7月12日 現在)**
+🎉 **Dungeonゲームのデバッグシステム (2025年7月12日 現在)**
 
 ### ✅ 完全利用可能な機能
 

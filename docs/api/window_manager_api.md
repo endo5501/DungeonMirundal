@@ -8,6 +8,7 @@
 WindowManagerは、Dungeon RPGのWindowSystemの中核を成すAPIです。すべてのWindow作成、管理、破棄を担当し、統一されたUIアーキテクチャを提供します。
 
 ### 主要機能
+
 - Window生命周期管理（作成・表示・非表示・破棄）
 - WindowPool連携によるメモリ効率化
 - 統計情報収集・パフォーマンス監視
@@ -712,6 +713,7 @@ def safe_destroy_window(manager, window):
 ---
 
 **ドキュメント管理**:
+
 - **作成者**: Claude Code
 - **レビュー**: WindowSystemチーム
 - **承認**: プロジェクトリーダー

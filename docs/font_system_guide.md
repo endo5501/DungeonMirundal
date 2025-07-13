@@ -14,6 +14,7 @@
 ## 📋 問題の背景
 
 ### 発生した問題
+
 2025年7月、Linux環境で開発されていたDungeon RPGをmacOSで実行した際、以下の問題が発生：
 
 1. **pygameインポートエラー**: `DIRECTION_LTR`が見つからない
@@ -21,6 +22,7 @@
 3. **pygame_gui固有の問題**: 基本的なpygameでは表示できるがpygame_guiでは文字化け
 
 ### 根本原因
+
 - **プラットフォーム依存性**: pygame 2.6.1がmacOSで非互換
 - **フォントパス問題**: ハードコードされたLinux固有のフォントパス
 - **pygame_guiアーキテクチャ**: テーマ階層とフォントエイリアスシステムの理解不足
@@ -176,31 +178,37 @@ WindowManager: 動的テーマ読み込み成功（日本語フォント対応�
 ## 📁 プロジェクト内フォント関連ファイル
 
 ### コアファイル
+
 - `src/ui/font_manager_pygame.py` - pygame用フォント管理
 - `src/ui/window_system/window_manager.py` - pygame_gui統合
 - `config/ui_theme.json` - UIテーマ設定
 
 ### テスト・サンプル
+
 - `test_pygame_gui_correct_approach.py` - 成功パターンのサンプル
 - `docs/samples/test_font_from_chatgpt.py` - 基本的なフォントテスト
 
 ### フォントファイル
+
 - `assets/fonts/NotoSansCJKJP-Regular.otf` - 同梱日本語フォント
 - `assets/fonts/ipag.ttf` - IPA Gothic フォント
 
 ## 🚀 ベストプラクティス
 
 ### 1. クロスプラットフォーム対応
+
 - 同梱フォントを最優先にする
 - OS固有フォントはフォールバックとして使用
 - 絶対パスではなくプロジェクト相対パスを使用
 
 ### 2. pygame_gui使用時
+
 - フォントエイリアス登録を必ず行う
 - テーマ階層を理解してUI要素ごとに設定
 - プリロードで性能を向上させる
 
 ### 3. 開発・保守
+
 - 新しいフォント追加時は各OSでテスト
 - ログを活用した問題診断
 - 段階的アプローチ（簡単なテストから本格統合へ）
@@ -208,12 +216,14 @@ WindowManager: 動的テーマ読み込み成功（日本語フォント対応�
 ## 🎯 今後の拡張
 
 ### 予定されている改善
+
 - [ ] フォント自動フォールバック機能
 - [ ] 動的フォントサイズ調整
 - [ ] より詳細なフォントメトリクス取得
 - [ ] RTL（右から左）言語対応
 
 ### 参考資料
+
 - [pygame_gui Font Documentation](https://pygame-gui.readthedocs.io/en/latest/theme_reference/theme_font.html)
 - [pygame Font Documentation](https://www.pygame.org/docs/ref/font.html)
 - [@docs/pygame_gui_font_integration.md](./pygame_gui_font_integration.md) - 詳細な技術解説

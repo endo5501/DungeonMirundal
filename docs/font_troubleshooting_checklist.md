@@ -28,6 +28,7 @@ ls -la assets/fonts/
 ```
 
 **期待される結果**:
+
 - pygame: 2.5.x (macOS), 2.6.x (Linux)
 - pygame_gui: 0.6.14
 - フォントファイル: NotoSansCJKJP-Regular.otf, ipag.ttf など
@@ -83,7 +84,8 @@ uv run python test_pygame_gui_correct_approach.py
 ```
 
 **期待される出力**:
-```
+
+```md
 ✓ フォントパス登録成功: jp_font -> /path/to/font.otf
 ✓ フォントプリロード成功
 ✓ テーマデータ読み込み成功
@@ -97,6 +99,7 @@ uv run python test_pygame_gui_correct_approach.py
 **原因**: pygame 2.6.1がmacOSで非対応
 
 **解決手順**:
+
 ```bash
 # 1. 現在のpygameバージョン確認
 uv run python -c "import pygame; print(pygame.version.ver)"
@@ -114,6 +117,7 @@ uv run python -c "import pygame; print('pygame-ce:', pygame.version.ver)"
 **原因**: フォントファイルが見つからない
 
 **解決手順**:
+
 ```bash
 # 1. フォントファイル確認
 ls -la assets/fonts/
@@ -132,7 +136,9 @@ chmod 644 assets/fonts/*.otf
 **原因**: pygame_guiのテーマ階層問題
 
 **解決手順**:
+
 1. 現在のテーマ設定確認:
+
 ```python
 # デバッグコード追加
 theme = manager.get_theme()
@@ -141,6 +147,7 @@ print(f"ボタンフォント設定: {button_font}")
 ```
 
 2. 修正:
+
 ```python
 theme_data = {
     "defaults": {"font": {"name": "jp_font", "size": "16"}},
@@ -154,6 +161,7 @@ theme_data = {
 **原因**: プリロードされていないサイズを使用
 
 **解決手順**:
+
 ```python
 # 使用するすべてのサイズをプリロード
 manager.preload_fonts([
@@ -171,6 +179,7 @@ manager.preload_fonts([
 **原因**: テーマ読み込みエラー
 
 **解決手順**:
+
 ```python
 # エラー詳細を確認
 try:
@@ -398,7 +407,7 @@ tail -f game_debug.log | grep -i font
 
 以下の情報を収集してください：
 
-```
+```md
 - OS: macOS/Linux/Windows + バージョン
 - Python: バージョン
 - pygame: バージョン 
@@ -411,6 +420,7 @@ tail -f game_debug.log | grep -i font
 ### 3. フォールバック手順
 
 1. **デフォルトフォントに戻す**:
+
 ```python
 # pygame_guiテーマからフォント設定を削除
 theme_data = {
@@ -424,6 +434,7 @@ theme_data = {
 ```
 
 2. **基本的なpygameのみ使用**:
+
 ```python
 # pygame_guiを一時的に無効化してpygameで確認
 font = pygame.font.Font("assets/fonts/NotoSansCJKJP-Regular.otf", 24)

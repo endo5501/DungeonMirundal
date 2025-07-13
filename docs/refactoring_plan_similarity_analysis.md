@@ -20,7 +20,7 @@
 
 | クラス | 重複メソッド | 類似度 | 影響度 |
 |--------|-------------|--------|--------|
-| SaveManager | save_game vs _update_metadata | 87.61% | 高 |
+| SaveManager | save_game vs_update_metadata | 87.61% | 高 |
 | SaveManager | load_game vs import_save | 89.45% | 高 |
 | SaveManager | get_save_path vs get_backup_path | 91.29% | 中 |
 | DebugHelper | verify_esc_transition vs capture_transition_sequence | 89.92% | 中 |
@@ -30,6 +30,7 @@
 ### 1. MagicUI クラス（最優先）
 
 **問題点：**
+
 - `show_spellbook_management`, `show_slot_management`, `show_spell_learning`, `show_spell_casting`, `show_party_magic_overview` が100%同一実装
 - すべて `pass` のみのスタブメソッド
 
@@ -56,12 +57,14 @@ def show_slot_management(self):
 ```
 
 **利益：**
+
 - コード行数削減：約40行 → 15行
 - 将来の実装時の一貫性保証
 
 ### 2. DungeonRendererPygame クラス（高優先）
 
 **問題点：**
+
 - 方向判定メソッド（`_get_opposite_direction`, `_get_left_direction`, `_get_right_direction`）が100%同一
 - 移動メソッド（`_move_left`, `_move_right`）が100%同一
 - UI描画メソッドで87-94%の重複
@@ -69,6 +72,7 @@ def show_slot_management(self):
 **リファクタリング戦略：**
 
 #### 2.1 方向判定の統合
+
 ```python
 # 現在の実装（重複）
 def _get_opposite_direction(self):
@@ -89,6 +93,7 @@ def _calculate_direction(self, direction_type: str):
 ```
 
 #### 2.2 移動メソッドの統合
+
 ```python
 # リファクタリング後
 def _move_horizontal(self, direction: int):
@@ -104,6 +109,7 @@ def _move_right(self):
 ```
 
 **利益：**
+
 - コード行数削減：約200行 → 80行
 - バグ修正時の工数削減
 - テスト容易性向上
@@ -111,12 +117,14 @@ def _move_right(self):
 ### 3. SaveManager クラス（高優先）
 
 **問題点：**
+
 - ファイル操作ロジックで87-96%の重複
 - セーブ・ロード処理の冗長性
 
 **リファクタリング戦略：**
 
 #### 3.1 ファイル操作の基底メソッド作成
+
 ```python
 class SaveManager:
     def _execute_file_operation(self, operation_type: str, file_path: str, **kwargs):
@@ -139,6 +147,7 @@ class SaveManager:
 ```
 
 **利益：**
+
 - エラーハンドリングの一貫性
 - ファイル操作のテスト容易性向上
 - ログ出力の統一
@@ -146,12 +155,14 @@ class SaveManager:
 ### 4. SettingsWindow クラス（中優先）
 
 **問題点：**
+
 - UI要素作成メソッドで88-100%の重複
 - タブ管理ロジックの冗長性
 
 **リファクタリング戦略：**
 
 #### 4.1 UI要素生成の統合
+
 ```python
 class SettingsWindow:
     def _create_ui_element(self, element_type: str, config: dict):
@@ -165,22 +176,26 @@ class SettingsWindow:
 ```
 
 **利益：**
+
 - UI生成ロジックの一貫性
 - レイアウト変更時の影響範囲限定
 
 ## 実装順序とスケジュール
 
 ### Phase 1: 緊急対応（100%重複の解消）
+
 1. **MagicUI** の重複メソッド統合（0.5日）
 2. **DungeonRendererPygame** の方向判定メソッド統合（1日）
 3. **テスト実行とデバッグ**（0.5日）
 
 ### Phase 2: 高重複度の解消（87-96%重複）
+
 1. **SaveManager** のファイル操作統合（2日）
 2. **DungeonRendererPygame** の移動メソッド統合（1日）
 3. **テスト実行とデバッグ**（1日）
 
 ### Phase 3: 中重複度の解消（85-90%重複）
+
 1. **SettingsWindow** のUI生成統合（1.5日）
 2. **その他クラス** の重複解消（2日）
 3. **総合テストとリグレッションテスト**（1日）
@@ -188,25 +203,30 @@ class SettingsWindow:
 ## リスク評価と対策
 
 ### リスク：高
+
 - **DungeonRendererPygame**: ゲーム描画の核心部分、バグ発生時の影響甚大
 - **対策**: 段階的リファクタリング、各ステップでのvisualテスト実行
 
 ### リスク：中
+
 - **SaveManager**: セーブデータ破損の可能性
 - **対策**: バックアップ機能の事前強化、テストデータでの検証
 
 ### リスク：低
+
 - **MagicUI**: 未実装メソッドのリファクタリング
 - **対策**: 実装時の一貫性確保のみ
 
 ## 成果指標
 
 ### 定量的指標
+
 - コード行数削減：約400行 → 200行（50%削減目標）
 - 重複度90%以上のメソッド：完全解消
 - 重複度80%以上のメソッド：50%削減
 
 ### 定性的指標
+
 - 保守性向上：バグ修正時の影響範囲限定
 - テスト容易性向上：モック作成の簡素化
 - 実装一貫性向上：新機能追加時のガイドライン確立

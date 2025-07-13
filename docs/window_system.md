@@ -56,6 +56,7 @@ graph TB
 #### 1. WindowManager
 
 **責務**: システム全体の中央管理
+
 - Window作成・削除・管理
 - 生命周期の制御
 - 統計情報の集約
@@ -78,6 +79,7 @@ class WindowManager:
 #### 2. WindowStack
 
 **責務**: Window階層管理
+
 - 表示順序の制御
 - 親子関係の管理
 - 適切な重ね順の維持
@@ -99,6 +101,7 @@ class WindowStack:
 #### 3. FocusManager
 
 **責務**: フォーカス制御の一元管理
+
 - アクティブWindowの追跡
 - フォーカス移行の制御
 - キーボードナビゲーション
@@ -120,6 +123,7 @@ class FocusManager:
 #### 4. EventRouter
 
 **責務**: イベント分配・ウィンドウ間通信
+
 - 優先度ベースのイベント配信
 - ウィンドウ間メッセージング
 - イベント監視・ロギング
@@ -142,6 +146,7 @@ class EventRouter:
 #### 5. StatisticsManager
 
 **責務**: 統計情報収集・分析
+
 - パフォーマンスメトリクス
 - 使用状況分析
 - 問題検出・アラート
@@ -163,6 +168,7 @@ class StatisticsManager:
 #### 6. WindowPool
 
 **責務**: メモリ効率化・Window再利用
+
 - Windowオブジェクトプーリング
 - メモリアロケーション削減
 - ガベージコレクション負荷軽減
@@ -218,7 +224,9 @@ class Window:
 ### 具象Window実装
 
 #### 1. MenuWindow
+
 **用途**: 一般的なメニューUI
+
 - ボタンベースのナビゲーション
 - 階層化メニュー対応
 - キーボード・マウス操作
@@ -234,7 +242,9 @@ class MenuWindow(Window):
 ```
 
 #### 2. DialogWindow
+
 **用途**: 情報表示・確認ダイアログ
+
 - モーダル表示対応
 - Yes/No/Cancel選択
 - 情報表示・入力フォーム
@@ -252,7 +262,9 @@ class DialogWindow(Window):
 ```
 
 #### 3. FacilityMenuWindow
+
 **用途**: 施設メニュー（ギルド、宿屋、商店等）
+
 - 施設固有のUI
 - サブメニュー管理
 - データ表示・操作
@@ -269,31 +281,41 @@ class FacilityMenuWindow(Window):
 ```
 
 #### 4. BattleUIWindow
+
 **用途**: 戦闘UI
+
 - リアルタイム戦闘表示
 - アクション選択
 - ステータス表示
 
 #### 5. InventoryWindow
+
 **用途**: インベントリ管理
+
 - アイテム一覧表示
 - ドラッグ&ドロップ操作
 - ソート・フィルタ機能
 
 #### 6. MagicWindow
+
 **用途**: 魔法システム
+
 - スペル一覧・詳細表示
 - 装備管理
 - 魔法発動
 
 #### 7. EquipmentWindow
+
 **用途**: 装備管理
+
 - 装備品表示・変更
 - ステータス影響確認
 - 装備比較機能
 
 #### 8. SettingsWindow
+
 **用途**: 設定画面
+
 - ゲーム設定変更
 - キー配置設定
 - 表示設定
@@ -310,6 +332,7 @@ class FacilityMenuWindow(Window):
 ### 実装パターン
 
 #### 1. Factory Pattern
+
 ```python
 class WindowFactory:
     """Window作成ファクトリー"""
@@ -324,6 +347,7 @@ class WindowFactory:
 ```
 
 #### 2. Observer Pattern
+
 ```python
 class WindowEventObserver:
     """Windowイベント監視"""
@@ -336,6 +360,7 @@ class WindowEventObserver:
 ```
 
 #### 3. Strategy Pattern
+
 ```python
 class LayoutStrategy:
     """レイアウト戦略パターン"""
@@ -353,6 +378,7 @@ class FlexLayoutStrategy(LayoutStrategy):
 ```
 
 #### 4. Command Pattern
+
 ```python
 class WindowCommand:
     """Windowコマンドパターン"""
@@ -377,18 +403,21 @@ class CloseWindowCommand(WindowCommand):
 ### 達成性能指標
 
 #### 基本性能
+
 - **Window作成**: 100個を1秒未満
 - **Window検索**: O(1)ハッシュテーブル検索
 - **イベント処理**: 1000イベントを50ms未満
 - **メモリ効率**: WindowPool活用で50%再利用率
 
 #### 高度性能
+
 - **フレームレート**: 60FPS維持・一貫性確保
 - **並行処理**: 10個Window同時処理で高性能
 - **メモリ安定性**: 長期実行でリークなし
 - **スケーラビリティ**: 100個Window管理で高性能
 
 #### WindowPool効果
+
 - **メモリ削減**: オブジェクト増加1500個未満に制御
 - **作成高速化**: プールからの再利用で性能向上
 - **境界管理**: プールサイズ上限で安定運用
@@ -417,12 +446,14 @@ class CloseWindowCommand(WindowCommand):
 ### 📊 移行効果測定
 
 #### 技術的効果
+
 - **性能向上**: 30-50%のフレームレート向上
 - **メモリ効率**: 20-40%のメモリ使用量削減  
 - **安定性**: クラッシュ・フリーズ問題解決
 - **保守性**: コードベース20%削減
 
 #### 開発効率効果
+
 - **新機能開発**: Window追加が簡単
 - **バグ修正**: 問題の特定・修正が迅速
 - **テスト**: 包括的テストスイート確立
@@ -433,12 +464,14 @@ class CloseWindowCommand(WindowCommand):
 ### 新しいWindow実装
 
 #### 基本実装手順
+
 1. **設計**: Window仕様・UI設計
 2. **実装**: Window基底クラス継承
 3. **テスト**: 単体・統合テスト作成
 4. **統合**: WindowManagerへの登録
 
 #### 実装例
+
 ```python
 class CustomWindow(Window):
     """カスタムWindow実装テンプレート"""
@@ -476,6 +509,7 @@ class CustomWindow(Window):
 ### テスト実装ガイド
 
 #### 単体テスト
+
 ```python
 class TestCustomWindow:
     """CustomWindowテストクラス"""
@@ -495,6 +529,7 @@ class TestCustomWindow:
 ```
 
 #### 統合テスト
+
 ```python
 class TestWindowIntegration:
     """Window統合テストクラス"""
@@ -521,34 +556,41 @@ class TestWindowIntegration:
 ### よくある問題と解決法
 
 #### 1. Windowが表示されない
+
 **原因**: create()メソッドが未実装または呼び出されていない
 **解決**: create()メソッドの実装確認、WindowManager.show_window()の呼び出し確認
 
 #### 2. イベントが処理されない
+
 **原因**: handle_event()の戻り値が不正
 **解決**: イベント処理した場合はTrue、しなかった場合はFalseを返却
 
 #### 3. メモリリーク
+
 **原因**: Window破棄時のクリーンアップ不足
 **解決**: 破棄時の参照除去、WindowPoolのクリーンアップ処理確認
 
 #### 4. フォーカス問題
+
 **原因**: FocusManagerとの連携不足
 **解決**: フォーカス取得・解除のタイミング確認
 
 ## 将来の拡張計画
 
 ### 短期拡張（1-3ヶ月）
+
 - アニメーションシステム統合
 - ドラッグ&ドロップ機能強化
 - キーボードナビゲーション改善
 
 ### 中期拡張（3-6ヶ月）
+
 - マルチモニター対応
 - ウィンドウタイリング機能
 - 高DPI対応
 
 ### 長期拡張（6ヶ月以上）
+
 - WebGL描画バックエンド
 - モバイル対応UI
 - アクセシビリティ機能

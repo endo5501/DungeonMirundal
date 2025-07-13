@@ -406,15 +406,18 @@ def _register_japanese_fonts_to_pygame_gui(self):
 ## 📚 参考資料
 
 ### 公式ドキュメント
+
 - [pygame_gui Font Documentation](https://pygame-gui.readthedocs.io/en/latest/theme_reference/theme_font.html)
 - [pygame_gui Theme Guide](https://pygame-gui.readthedocs.io/en/latest/theme_guide.html)
 
 ### プロジェクト内関連ファイル
+
 - `test_pygame_gui_correct_approach.py` - 動作する完全例
 - `src/ui/window_system/window_manager.py` - プロダクション実装
 - `assets/fonts/` - 同梱フォントファイル
 
 ### 関連ドキュメント
+
 - [@docs/font_system_guide.md](./font_system_guide.md) - 包括的フォントガイド
 - [@docs/font_troubleshooting_checklist.md](./font_troubleshooting_checklist.md) - 問題解決チェックリスト
 
