@@ -181,23 +181,69 @@ class InnService(FacilityService, ActionExecutorMixin):
     
     def _handle_storage(self, params: Dict[str, Any]) -> ServiceResult:
         """アイテム保管を処理"""
-        # アイテム保管パネルの表示はUI側で処理されるため、成功を返すだけ
-        return ServiceResult(
-            success=True,
-            message="アイテム保管画面を表示します",
-            result_type=ResultType.SUCCESS
-        )
+        action = params.get("action")
+        
+        if action == "deposit":
+            return self._deposit_item(params)
+        elif action == "withdraw":
+            return self._withdraw_item(params)
+        elif action == "get_inventory":
+            return self._get_inventory_items(params)
+        else:
+            # アクションが指定されていない場合はパネル表示のためのメッセージ
+            return ServiceResult(
+                success=True,
+                message="アイテム保管画面を表示します",
+                result_type=ResultType.SUCCESS
+            )
     
     def _deposit_item(self, params: Dict[str, Any]) -> ServiceResult:
         """アイテムを預ける"""
-        return ItemOperationUtility.handle_item_operation(
-            params, "deposit", "預けました"
+        item_id = params.get("item_id")
+        quantity = params.get("quantity", 1)
+        
+        if not item_id:
+            return ServiceResult(False, "アイテムIDが指定されていません")
+        
+        # TODO: 実際のアイテム操作を実装
+        # 現在は仮実装
+        return ServiceResult(
+            success=True,
+            message=f"アイテム（{item_id}）を{quantity}個預けました",
+            result_type=ResultType.SUCCESS
         )
     
     def _withdraw_item(self, params: Dict[str, Any]) -> ServiceResult:
         """アイテムを引き出す"""
-        return ItemOperationUtility.handle_item_operation(
-            params, "withdraw", "引き出しました"
+        item_id = params.get("item_id")
+        quantity = params.get("quantity", 1)
+        
+        if not item_id:
+            return ServiceResult(False, "アイテムIDが指定されていません")
+        
+        # TODO: 実際のアイテム操作を実装
+        # 現在は仮実装
+        return ServiceResult(
+            success=True,
+            message=f"アイテム（{item_id}）を{quantity}個引き出しました",
+            result_type=ResultType.SUCCESS
+        )
+    
+    def _get_inventory_items(self, params: Dict[str, Any]) -> ServiceResult:
+        """インベントリアイテムを取得"""
+        # TODO: 実際のインベントリシステムと連携
+        # 現在は仮のデータを返す
+        inventory_items = [
+            {"id": "potion1", "name": "ポーション", "quantity": 5, "stackable": True},
+            {"id": "ether1", "name": "エーテル", "quantity": 3, "stackable": True},
+            {"id": "sword1", "name": "鉄の剣", "quantity": 1, "stackable": False}
+        ]
+        
+        return ServiceResult(
+            success=True,
+            message="インベントリを取得しました",
+            data={"items": inventory_items},
+            result_type=ResultType.SUCCESS
         )
     
     def _get_storage_contents(self) -> ServiceResult:

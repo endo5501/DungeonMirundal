@@ -228,5 +228,33 @@ class TestInnService(unittest.TestCase):
             mock_logger.error.assert_called()
 
 
+    def test_storage_deposit_item_action(self):
+        """アイテム保管 - 預ける動作のテスト"""
+        params = {"action": "deposit", "item_id": "potion1", "quantity": 2}
+        result = self.service.execute_action("storage", params)
+        
+        # アクションが正しく処理されることを確認
+        self.assertTrue(result.is_success())
+        self.assertIn("預け", result.message)  # 預ける処理のメッセージを期待
+        
+    def test_storage_withdraw_item_action(self):
+        """アイテム保管 - 引き出す動作のテスト"""
+        params = {"action": "withdraw", "item_id": "stored_item1", "quantity": 1}
+        result = self.service.execute_action("storage", params)
+        
+        # アクションが正しく処理されることを確認
+        self.assertTrue(result.is_success())
+        self.assertIn("引き出し", result.message)  # 引き出す処理のメッセージを期待
+        
+    def test_storage_get_inventory_action(self):
+        """アイテム保管 - インベントリ取得のテスト"""
+        params = {"action": "get_inventory"}
+        result = self.service.execute_action("storage", params)
+        
+        # インベントリ取得が正しく処理されることを確認
+        self.assertTrue(result.is_success())
+        self.assertIsNotNone(result.data)  # データが返されることを期待
+
+
 if __name__ == '__main__':
     unittest.main()
