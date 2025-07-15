@@ -85,9 +85,9 @@ def validate_action_params(self, action_id: str, params: Dict[str, Any]) -> bool
 
 ### 2. 宿屋 (InnService)
 
-- **機能**: 休憩、冒険準備、アイテム保管、パーティ名変更
-- **特徴**: HP/MP回復、アイテム管理統合
-- **メニュー項目**: 5項目
+- **機能**: 装備、アイテム保管、パーティ名変更
+- **特徴**: アイテム管理統合
+- **メニュー項目**: 3項目
 
 ### 3. 商店 (ShopService)
 
