@@ -236,10 +236,17 @@ class SellPanel(ServicePanel):
     def _get_party(self):
         """パーティ情報を取得"""
         try:
-            from src.core.game_manager import GameManager
-            game_manager = GameManager.get_instance()
-            return game_manager.get_current_party()
-        except:
+            # FacilityControllerからパーティ情報を取得
+            if hasattr(self.controller, '_party') and self.controller._party:
+                return self.controller._party
+            
+            # FacilityServiceからパーティ情報を取得
+            if hasattr(self.controller, 'service') and hasattr(self.controller.service, 'party'):
+                return self.controller.service.party
+            
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to get party: {e}")
             return None
     
     def _organize_items_by_owner(self) -> None:
@@ -272,8 +279,8 @@ class SellPanel(ServicePanel):
                 owner_names.append(member.name)
                 owner_ids.append(member.character_id)
         
-        # パーティインベントリも追加
-        owner_names.append("パーティ")
+        # パーティ共有インベントリも追加
+        owner_names.append("共有アイテム")
         owner_ids.append("party")
         
         self.owner_list.set_item_list(owner_names)
