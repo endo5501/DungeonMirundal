@@ -180,11 +180,23 @@ class IdentifyPanel(ServicePanel):
             # 所持金を更新
             self._update_gold_display(party_gold)
             
+            # パーティ情報を取得
+            self.party = self._get_party()
+            
             # 所有者ごとにアイテムを整理
             self._organize_items_by_owner()
             
             # 所有者リストを更新
             self._update_owner_list()
+    
+    def _get_party(self):
+        """パーティ情報を取得"""
+        try:
+            from src.core.game_manager import GameManager
+            game_manager = GameManager.get_instance()
+            return game_manager.get_current_party()
+        except:
+            return None
     
     def _organize_items_by_owner(self) -> None:
         """所有者ごとにアイテムを整理"""
@@ -201,31 +213,27 @@ class IdentifyPanel(ServicePanel):
         if not self.owner_list:
             return
         
+        # パーティメンバーを常に表示
+        if not self.party:
+            self.owner_list.set_item_list(["パーティが存在しません"])
+            self.owner_ids = []
+            return
+        
+        # 生きているパーティメンバーを所有者として表示
         owner_names = []
         owner_ids = []
         
-        # 重複を避ける
-        added_owners = set()
+        for member in self.party.members:
+            if member.is_alive():
+                owner_names.append(member.name)
+                owner_ids.append(member.character_id)
         
-        for item in self.unidentified_items:
-            owner_id = item.get("owner_id", "party")
-            owner_name = item.get("owner_name", "パーティ")
-            
-            if owner_id not in added_owners:
-                owner_names.append(owner_name)
-                owner_ids.append(owner_id)
-                added_owners.add(owner_id)
+        # パーティインベントリも追加
+        owner_names.append("パーティ")
+        owner_ids.append("party")
         
-        # アイテムがない場合
-        if not owner_names:
-            self.owner_list.set_item_list(["未鑑定アイテムがありません"])
-            self.owner_ids = []
-            if self.detail_box:
-                self.detail_box.html_text = "未鑑定アイテムがありません"
-                self.detail_box.rebuild()
-        else:
-            self.owner_list.set_item_list(owner_names)
-            self.owner_ids = owner_ids
+        self.owner_list.set_item_list(owner_names)
+        self.owner_ids = owner_ids
     
     def _update_item_list(self) -> None:
         """アイテムリストを更新"""
@@ -237,6 +245,14 @@ class IdentifyPanel(ServicePanel):
         # 選択された所有者のアイテムを表示
         items = self.items_by_owner.get(self.selected_owner, [])
         self.displayed_items = items
+        
+        if not items:
+            # アイテムがない場合のメッセージ
+            self.item_list.set_item_list(["未鑑定アイテムがありません"])
+            self.selected_item = None
+            self._update_detail_view()
+            self._update_controls()
+            return
         
         item_strings = []
         for item in items:
@@ -339,6 +355,13 @@ class IdentifyPanel(ServicePanel):
             elif event.ui_element == self.item_list:
                 selection = self.item_list.get_single_selection()
                 if selection is not None:
+                    # 「未鑑定アイテムがありません」メッセージの場合は無視
+                    if selection == "未鑑定アイテムがありません":
+                        self.selected_item = None
+                        self._update_detail_view()
+                        self._update_controls()
+                        return True
+                    
                     indices = [i for i, item in enumerate(self.item_list.item_list) if item == selection]
                     if indices:
                         index = indices[0]

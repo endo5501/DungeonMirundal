@@ -224,11 +224,23 @@ class SellPanel(ServicePanel):
             # 所持金を更新
             self._update_gold_display(party_gold)
             
+            # パーティ情報を取得
+            self.party = self._get_party()
+            
             # 所有者ごとにアイテムを整理
             self._organize_items_by_owner()
             
             # 所有者リストを更新
             self._update_owner_list()
+    
+    def _get_party(self):
+        """パーティ情報を取得"""
+        try:
+            from src.core.game_manager import GameManager
+            game_manager = GameManager.get_instance()
+            return game_manager.get_current_party()
+        except:
+            return None
     
     def _organize_items_by_owner(self) -> None:
         """所有者ごとにアイテムを整理"""
@@ -245,33 +257,27 @@ class SellPanel(ServicePanel):
         if not self.owner_list:
             return
         
-        # 所有者名のリストを作成
+        # パーティメンバーを常に表示
+        if not self.party:
+            self.owner_list.set_item_list(["パーティが存在しません"])
+            self.owner_ids = []
+            return
+        
+        # 生きているパーティメンバーを所有者として表示
         owner_names = []
         owner_ids = []
         
-        # 重複を避けるため、既に追加した所有者を記録
-        added_owners = set()
+        for member in self.party.members:
+            if member.is_alive():
+                owner_names.append(member.name)
+                owner_ids.append(member.character_id)
         
-        for item in self.sellable_items:
-            owner_id = item["owner_id"]
-            owner_name = item["owner_name"]
-            
-            if owner_id not in added_owners:
-                owner_names.append(owner_name)
-                owner_ids.append(owner_id)
-                added_owners.add(owner_id)
+        # パーティインベントリも追加
+        owner_names.append("パーティ")
+        owner_ids.append("party")
         
-        # アイテムがない場合の処理
-        if not owner_names:
-            self.owner_list.set_item_list(["売却可能なアイテムがありません"])
-            self.owner_ids = []
-            # 詳細表示も更新
-            if self.detail_box:
-                self.detail_box.html_text = "売却可能なアイテムがありません"
-                self.detail_box.rebuild()
-        else:
-            self.owner_list.set_item_list(owner_names)
-            self.owner_ids = owner_ids  # IDリストを保持
+        self.owner_list.set_item_list(owner_names)
+        self.owner_ids = owner_ids
     
     def _update_item_list(self) -> None:
         """アイテムリストを更新"""
@@ -283,6 +289,14 @@ class SellPanel(ServicePanel):
         # 選択された所有者のアイテムを表示
         items = self.items_by_owner.get(self.selected_owner, [])
         self.displayed_items = items
+        
+        if not items:
+            # アイテムがない場合のメッセージ
+            self.item_list.set_item_list(["売却可能なアイテムがありません"])
+            self.selected_item = None
+            self._update_detail_view()
+            self._update_controls()
+            return
         
         item_strings = []
         for item in items:
@@ -414,9 +428,10 @@ class SellPanel(ServicePanel):
                 # 所有者が選択された
                 selection = self.owner_list.get_single_selection()
                 if selection is not None:
-                    index = self.owner_list.item_list.index(selection)
-                    if 0 <= index < len(self.owner_ids):
-                        self.selected_owner = self.owner_ids[index]
+                    # 安全にインデックスを取得
+                    indices = [i for i, item in enumerate(self.owner_list.item_list) if item == selection]
+                    if indices and indices[0] < len(self.owner_ids):
+                        self.selected_owner = self.owner_ids[indices[0]]
                         self._update_item_list()
                     else:
                         self.selected_owner = None
@@ -430,15 +445,25 @@ class SellPanel(ServicePanel):
                 # アイテムが選択された
                 selection = self.item_list.get_single_selection()
                 if selection is not None:
-                    index = self.item_list.item_list.index(selection)
-                    if 0 <= index < len(self.displayed_items):
-                        self.selected_item = self.displayed_items[index]
+                    # 「売却可能なアイテムがありません」メッセージの場合は無視
+                    if selection == "売却可能なアイテムがありません":
+                        self.selected_item = None
+                        self._update_detail_view()
+                        self._update_controls()
+                        return True
+                    
+                    # 安全にインデックスを取得
+                    indices = [i for i, item in enumerate(self.item_list.item_list) if item == selection]
+                    if indices and indices[0] < len(self.displayed_items):
+                        self.selected_item = self.displayed_items[indices[0]]
                         self._update_detail_view()
                         self._update_controls()
                     else:
                         self.selected_item = None
                 else:
                     self.selected_item = None
+                    self._update_detail_view()
+                    self._update_controls()
                 
                 return True
         
