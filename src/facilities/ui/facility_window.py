@@ -191,9 +191,22 @@ class FacilityWindow(Window):
         Args:
             service_id: 表示するサービスID
         """
-        # 現在のサービスを隠す
+        # 以前と同じサービスの場合は何もしない
+        if service_id == self.current_service_id:
+            return
+        
+        # 現在のサービスを破棄（完全にクリア）
         if self.current_service_id and self.current_service_id in self.service_panels:
-            self.service_panels[self.current_service_id].hide()
+            logger.info(f"FacilityWindow: Destroying current service panel: {self.current_service_id}")
+            
+            # パネルを破棄してUIを完全にクリア
+            current_panel = self.service_panels[self.current_service_id]
+            if hasattr(current_panel, 'destroy'):
+                current_panel.destroy()
+            else:
+                # 汎用UIPanelの場合はkillメソッドを使用
+                current_panel.kill()
+            del self.service_panels[self.current_service_id]
         
         # 新しいサービスパネルを作成/表示
         if service_id not in self.service_panels:

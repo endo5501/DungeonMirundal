@@ -19,7 +19,7 @@ Dungeonゲームの開発時に利用可能なデバッグツールとAPIにつ�
 - **通常実行**: `WARNING` レベル（エラーと警告のみ）
 
 ```bash
-# デバッグ用起動（自動的にDEBUGログ有効）
+# デバッグ用起動（自動的にINFOログ有効）
 ./scripts/start_game_for_debug.sh
 
 # 通常実行（最小限のログ）

@@ -89,6 +89,12 @@ class ServicePanel(ABC):
         if self.container:
             self.container.kill()
         
+        # 強制的なUIクリアは削除 - NavigationPanelや地上メニューまで消えてしまうため
+        
+        # 破棄完了まで少し待機
+        import time
+        time.sleep(0.01)  # 10ms待機
+        
         logger.info(f"ServicePanel destroyed: {self.service_id}")
     
     # 保護されたメソッド（サブクラスでオーバーライド可能）

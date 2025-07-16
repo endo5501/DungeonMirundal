@@ -62,21 +62,30 @@ class InnService(FacilityService, ActionExecutorMixin):
         """メニュー項目を取得"""
         items = []
         
-        # 冒険準備
+        # アイテム管理（旧：アイテム保管）
         items.append(MenuItem(
-            id="adventure_prep",
-            label="冒険準備",
-            description="冒険の準備を整えます",
+            id="storage",
+            label="アイテム管理",
+            description="アイテムを保管庫に預けます",
+            enabled=True,
+            service_type="panel"
+        ))
+        
+        # アイテム装備
+        items.append(MenuItem(
+            id="equipment",
+            label="アイテム装備",
+            description="キャラクターの装備を変更します",
             enabled=self.party is not None,
             service_type="panel"
         ))
         
-        # アイテム保管
+        # 魔術/祈祷
         items.append(MenuItem(
-            id="storage",
-            label="アイテム保管",
-            description="アイテムを保管庫に預けます",
-            enabled=True,
+            id="spell_management",
+            label="魔術/祈祷",
+            description="魔術・祈祷スロットを管理します",
+            enabled=self.party is not None,
             service_type="panel"
         ))
         
@@ -86,7 +95,7 @@ class InnService(FacilityService, ActionExecutorMixin):
             label="パーティ名変更",
             description="パーティの名前を変更します",
             enabled=self.party is not None,
-            service_type="action"
+            service_type="panel"
         ))
         
         # 退出
@@ -102,7 +111,7 @@ class InnService(FacilityService, ActionExecutorMixin):
     
     def can_execute(self, action_id: str) -> bool:
         """アクション実行可能かチェック"""
-        valid_actions = ["adventure_prep", "storage", "party_name", "exit"]
+        valid_actions = ["storage", "party_name", "exit"]
         return action_id in valid_actions
     
     def execute_action(self, action_id: str, params: Dict[str, Any]) -> ServiceResult:
@@ -205,13 +214,52 @@ class InnService(FacilityService, ActionExecutorMixin):
         if not item_id:
             return ServiceResult(False, "アイテムIDが指定されていません")
         
-        # TODO: 実際のアイテム操作を実装
-        # 現在は仮実装
-        return ServiceResult(
-            success=True,
-            message=f"アイテム（{item_id}）を{quantity}個預けました",
-            result_type=ResultType.SUCCESS
-        )
+        if not self.party:
+            return ServiceResult(False, "パーティが存在しません")
+        
+        # パーティからアイテムを検索
+        item_found = False
+        item_name = ""
+        
+        for member in self.party.members:
+            if hasattr(member, 'inventory') and member.inventory:
+                for item in member.inventory.get_all_items():
+                    if item.id == item_id:
+                        item_found = True
+                        item_name = item.name
+                        
+                        # 数量チェック
+                        available_quantity = getattr(item, 'quantity', 1)
+                        if quantity > available_quantity:
+                            return ServiceResult(
+                                False, 
+                                f"指定された数量（{quantity}）が所持数（{available_quantity}）を超えています"
+                            )
+                        
+                        # アイテムを保管庫に移動
+                        try:
+                            # 宿屋保管庫に追加
+                            self.storage_manager.add_item(item_id, item_name, quantity)
+                            
+                            # メンバーのインベントリから削除
+                            member.inventory.remove_item(item_id, quantity)
+                            
+                            return ServiceResult(
+                                success=True,
+                                message=f"{item_name}を{quantity}個預けました",
+                                result_type=ResultType.SUCCESS
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to deposit item: {e}")
+                            return ServiceResult(
+                                False,
+                                f"アイテムの預け入れに失敗しました: {str(e)}"
+                            )
+        
+        if not item_found:
+            return ServiceResult(False, "指定されたアイテムが見つかりません")
+        
+        return ServiceResult(False, "アイテムの預け入れに失敗しました")
     
     def _withdraw_item(self, params: Dict[str, Any]) -> ServiceResult:
         """アイテムを引き出す"""
@@ -221,23 +269,99 @@ class InnService(FacilityService, ActionExecutorMixin):
         if not item_id:
             return ServiceResult(False, "アイテムIDが指定されていません")
         
-        # TODO: 実際のアイテム操作を実装
-        # 現在は仮実装
-        return ServiceResult(
-            success=True,
-            message=f"アイテム（{item_id}）を{quantity}個引き出しました",
-            result_type=ResultType.SUCCESS
-        )
+        if not self.party:
+            return ServiceResult(False, "パーティが存在しません")
+        
+        # 保管庫からアイテムを検索
+        try:
+            storage_items = self.storage_manager.get_all_items()
+            item_found = False
+            item_name = ""
+            
+            for storage_item in storage_items:
+                if storage_item.get("id") == item_id:
+                    item_found = True
+                    item_name = storage_item.get("name", item_id)
+                    
+                    # 数量チェック
+                    available_quantity = storage_item.get("quantity", 1)
+                    if quantity > available_quantity:
+                        return ServiceResult(
+                            False,
+                            f"指定された数量（{quantity}）が保管数（{available_quantity}）を超えています"
+                        )
+                    
+                    # 最初のアクティブなメンバーのインベントリに追加
+                    target_member = None
+                    for member in self.party.members:
+                        if member.is_alive() and hasattr(member, 'inventory'):
+                            target_member = member
+                            break
+                    
+                    if not target_member:
+                        return ServiceResult(
+                            False,
+                            "アイテムを受け取れるメンバーがいません"
+                        )
+                    
+                    # アイテムを移動
+                    try:
+                        # 保管庫から削除
+                        self.storage_manager.remove_item(item_id, quantity)
+                        
+                        # メンバーのインベントリに追加
+                        target_member.inventory.add_item(item_id, quantity)
+                        
+                        return ServiceResult(
+                            success=True,
+                            message=f"{item_name}を{quantity}個引き出しました（{target_member.name}が受け取りました）",
+                            result_type=ResultType.SUCCESS
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to withdraw item: {e}")
+                        return ServiceResult(
+                            False,
+                            f"アイテムの引き出しに失敗しました: {str(e)}"
+                        )
+            
+            if not item_found:
+                return ServiceResult(False, "指定されたアイテムが保管庫に見つかりません")
+                
+        except Exception as e:
+            logger.error(f"Failed to access storage: {e}")
+            return ServiceResult(
+                False,
+                f"保管庫へのアクセスに失敗しました: {str(e)}"
+            )
+        
+        return ServiceResult(False, "アイテムの引き出しに失敗しました")
     
     def _get_inventory_items(self, params: Dict[str, Any]) -> ServiceResult:
         """インベントリアイテムを取得"""
-        # TODO: 実際のインベントリシステムと連携
-        # 現在は仮のデータを返す
-        inventory_items = [
-            {"id": "potion1", "name": "ポーション", "quantity": 5, "stackable": True},
-            {"id": "ether1", "name": "エーテル", "quantity": 3, "stackable": True},
-            {"id": "sword1", "name": "鉄の剣", "quantity": 1, "stackable": False}
-        ]
+        if not self.party:
+            return ServiceResult(False, "パーティが存在しません")
+        
+        inventory_items = []
+        
+        # 全メンバーのアイテムを収集
+        for member in self.party.members:
+            if hasattr(member, 'inventory') and member.inventory:
+                for item in member.inventory.get_all_items():
+                    inventory_items.append({
+                        "id": item.id,
+                        "name": item.name,
+                        "quantity": getattr(item, 'quantity', 1),
+                        "stackable": getattr(item, 'stackable', True),
+                        "owner": member.name
+                    })
+        
+        # アイテムがない場合はデモデータを返す
+        if not inventory_items:
+            inventory_items = [
+                {"id": "demo_potion", "name": "ポーション", "quantity": 5, "stackable": True, "owner": "Demo"},
+                {"id": "demo_ether", "name": "エーテル", "quantity": 3, "stackable": True, "owner": "Demo"},
+                {"id": "demo_sword", "name": "鉄の剣", "quantity": 1, "stackable": False, "owner": "Demo"}
+            ]
         
         return ServiceResult(
             success=True,
@@ -248,19 +372,30 @@ class InnService(FacilityService, ActionExecutorMixin):
     
     def _get_storage_contents(self) -> ServiceResult:
         """保管庫の内容を取得"""
-        # TODO: 保管庫システムの実装
-        # 現在は仮のデータを返す
-        storage_items = []
-        
-        return ServiceResult(
-            success=True,
-            message="保管庫の内容",
-            data={
-                "items": storage_items,
-                "capacity": 100,
-                "used": len(storage_items)
-            }
-        )
+        try:
+            storage_items = self.storage_manager.get_all_items()
+            
+            return ServiceResult(
+                success=True,
+                message="保管庫の内容",
+                data={
+                    "items": storage_items,
+                    "capacity": 100,
+                    "used": len(storage_items)
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to get storage contents: {e}")
+            # フォールバック: 空の保管庫を返す
+            return ServiceResult(
+                success=True,
+                message="保管庫の内容",
+                data={
+                    "items": [],
+                    "capacity": 100,
+                    "used": 0
+                }
+            )
     
     # パーティ名変更関連
     
@@ -415,20 +550,43 @@ class InnService(FacilityService, ActionExecutorMixin):
                            ui_manager: 'pygame_gui.UIManager') -> Optional['ServicePanel']:
         """宿屋専用のサービスパネルを作成"""
         try:
-            if service_id == "adventure_prep":
-                # 冒険準備パネル
-                from src.facilities.ui.inn.adventure_prep_panel import AdventurePrepPanel
-                return AdventurePrepPanel(
+            if service_id == "storage":
+                # アイテム管理パネル（旧：アイテム保管パネル）
+                from src.facilities.ui.inn.storage_panel import StoragePanel
+                return StoragePanel(
                     rect=rect,
                     parent=parent,
                     controller=self._controller,
                     ui_manager=ui_manager
                 )
                 
-            elif service_id == "storage":
-                # アイテム保管パネル
-                from src.facilities.ui.inn.storage_panel import StoragePanel
-                return StoragePanel(
+            elif service_id == "equipment":
+                # アイテム装備パネル
+                from src.facilities.ui.inn.equipment_management_panel import EquipmentManagementPanel
+                return EquipmentManagementPanel(
+                    rect=rect,
+                    parent=parent,
+                    controller=self._controller,
+                    ui_manager=ui_manager
+                )
+                
+            elif service_id == "spell_management":
+                # 魔術/祈祷パネル
+                from src.facilities.ui.inn.spell_management_panel import SpellManagementPanel
+                return SpellManagementPanel(
+                    rect=rect,
+                    parent=parent,
+                    controller=self._controller,
+                    ui_manager=ui_manager
+                )
+                
+            elif service_id == "party_name":
+                # パーティ名変更パネル
+                logger.info(f"Creating PartyNamePanel with controller: {self._controller}")
+                logger.info(f"Controller service: {getattr(self._controller, 'service', 'None')}")
+                logger.info(f"Service party: {getattr(getattr(self._controller, 'service', None), 'party', 'None')}")
+                from src.facilities.ui.inn.party_name_panel import PartyNamePanel
+                return PartyNamePanel(
                     rect=rect,
                     parent=parent,
                     controller=self._controller,

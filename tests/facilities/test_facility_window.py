@@ -279,8 +279,8 @@ class TestFacilityWindowServiceManagement:
         with patch.object(window, '_create_service_panel', return_value=new_panel):
             window._show_service("service1")
         
-        # 現在のパネルが隠される
-        current_panel.hide.assert_called_once()
+        # 現在のパネルが破棄される
+        current_panel.destroy.assert_called_once()
 
 
 class TestFacilityWindowServicePanelCreation:

@@ -19,9 +19,7 @@ class StoragePanel(ServicePanel):
     def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
-        super().__init__(rect, parent, controller, "storage", ui_manager)
-        
-        # UI要素
+        # UI要素の初期化（_create_ui()で使用するため先に設定）
         self.inventory_list: Optional[pygame_gui.elements.UISelectionList] = None
         self.storage_list: Optional[pygame_gui.elements.UISelectionList] = None
         self.deposit_button: Optional[pygame_gui.elements.UIButton] = None
@@ -29,7 +27,7 @@ class StoragePanel(ServicePanel):
         self.quantity_input: Optional[pygame_gui.elements.UITextEntryLine] = None
         self.info_box: Optional[pygame_gui.elements.UITextBox] = None
         
-        # データ
+        # データの初期化（_create_ui()で使用するため先に設定）
         self.inventory_items: List[Dict[str, Any]] = []
         self.storage_items: List[Dict[str, Any]] = []
         self.selected_inventory_item: Optional[Dict[str, Any]] = None
@@ -41,34 +39,41 @@ class StoragePanel(ServicePanel):
         if controller and hasattr(controller, 'service') and hasattr(controller.service, 'storage_manager'):
             self.storage_manager = controller.service.storage_manager
         
+        # 親クラスの初期化（_create_ui()が呼ばれる）
+        super().__init__(rect, parent, controller, "storage", ui_manager)
+        
         logger.info("StoragePanel initialized")
     
     def _create_ui(self) -> None:
         """UI要素を作成"""
-        # タイトル
+        # タイトル（重複を防ぐため固有IDを設定）
         title_rect = pygame.Rect(10, 10, self.rect.width - 20, 40)
         title_label = pygame_gui.elements.UILabel(
             relative_rect=title_rect,
-            text="アイテム保管庫",
+            text="アイテム管理",
             manager=self.ui_manager,
-            container=self.container
+            container=self.container,
+            object_id="#storage_panel_title"
         )
         self.ui_elements.append(title_label)
         
-        # レイアウト定数
-        list_width = (self.rect.width - 60) // 2
-        list_height = 250
+        # パネルの高さを考慮したレイアウト定数
+        list_width = min(280, (self.rect.width - 140) // 2)  # 最大幅を制限
+        list_height = min(200, self.rect.height - 180)  # パネルの高さに応じて調整
+        
+        # 左右のマージンを計算
+        side_margin = max(10, (self.rect.width - 2 * list_width - 120) // 2)
         
         # インベントリリスト（左側）
         inv_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(10, 60, list_width, 25),
+            relative_rect=pygame.Rect(side_margin, 60, list_width, 25),
             text="所持アイテム",
             manager=self.ui_manager,
             container=self.container
         )
         self.ui_elements.append(inv_label)
         
-        inv_rect = pygame.Rect(10, 90, list_width, list_height)
+        inv_rect = pygame.Rect(side_margin, 90, list_width, list_height)
         self.inventory_list = pygame_gui.elements.UISelectionList(
             relative_rect=inv_rect,
             item_list=[],
@@ -80,17 +85,18 @@ class StoragePanel(ServicePanel):
         
         # 中央のボタンと入力欄
         center_x = self.rect.width // 2
+        button_y_start = 120  # ボタンの開始位置を上に調整
         
         # 数量入力
         quantity_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(center_x - 50, 150, 100, 25),
+            relative_rect=pygame.Rect(center_x - 50, button_y_start, 100, 25),
             text="数量:",
             manager=self.ui_manager,
             container=self.container
         )
         self.ui_elements.append(quantity_label)
         
-        quantity_rect = pygame.Rect(center_x - 50, 180, 100, 30)
+        quantity_rect = pygame.Rect(center_x - 50, button_y_start + 30, 100, 30)
         self.quantity_input = pygame_gui.elements.UITextEntryLine(
             relative_rect=quantity_rect,
             manager=self.ui_manager,
@@ -100,7 +106,7 @@ class StoragePanel(ServicePanel):
         self.ui_elements.append(self.quantity_input)
         
         # 預けるボタン
-        deposit_rect = pygame.Rect(center_x - 50, 220, 100, 35)
+        deposit_rect = pygame.Rect(center_x - 50, button_y_start + 70, 100, 35)
         self.deposit_button = self._create_button(
             "預ける →",
             deposit_rect,
@@ -109,7 +115,7 @@ class StoragePanel(ServicePanel):
         )
         
         # 引き出すボタン
-        withdraw_rect = pygame.Rect(center_x - 50, 265, 100, 35)
+        withdraw_rect = pygame.Rect(center_x - 50, button_y_start + 115, 100, 35)
         self.withdraw_button = self._create_button(
             "← 引き出す",
             withdraw_rect,
@@ -119,7 +125,7 @@ class StoragePanel(ServicePanel):
         
         # 保管庫リスト（右側）
         storage_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(self.rect.width - list_width - 10, 60, list_width, 25),
+            relative_rect=pygame.Rect(self.rect.width - side_margin - list_width, 60, list_width, 25),
             text="保管庫",
             manager=self.ui_manager,
             container=self.container
@@ -127,7 +133,7 @@ class StoragePanel(ServicePanel):
         self.ui_elements.append(storage_label)
         
         storage_rect = pygame.Rect(
-            self.rect.width - list_width - 10, 90,
+            self.rect.width - side_margin - list_width, 90,
             list_width, list_height
         )
         self.storage_list = pygame_gui.elements.UISelectionList(
@@ -139,8 +145,9 @@ class StoragePanel(ServicePanel):
         )
         self.ui_elements.append(self.storage_list)
         
-        # 情報ボックス
-        info_rect = pygame.Rect(10, 350, self.rect.width - 20, 40)
+        # 情報ボックス（下部に配置、高さを確保）
+        info_y = max(list_height + 100, self.rect.height - 60)
+        info_rect = pygame.Rect(10, info_y, self.rect.width - 20, 40)
         self.info_box = pygame_gui.elements.UITextBox(
             html_text="",
             relative_rect=info_rect,
@@ -154,33 +161,90 @@ class StoragePanel(ServicePanel):
     
     def _load_storage_data(self) -> None:
         """保管庫データを読み込み"""
-        # インベントリアイテムを取得
-        result = self._execute_service_action("storage", {"action": "get_inventory"})
-        if result.is_success() and result.data:
-            self.inventory_items = result.data.get("items", [])
+        # NavigationPanel再作成を避けるため、直接storage_managerから取得
+        if self.storage_manager:
+            try:
+                # インベントリアイテムを直接取得
+                if hasattr(self.storage_manager, 'get_inventory_items'):
+                    self.inventory_items = self.storage_manager.get_inventory_items()
+                else:
+                    self.inventory_items = []
+                
+                # 保管庫アイテムを直接取得
+                if hasattr(self.storage_manager, 'get_storage_items'):
+                    self.storage_items = self.storage_manager.get_storage_items()
+                else:
+                    self.storage_items = []
+                
+                # 容量を直接取得
+                if hasattr(self.storage_manager, 'get_capacity'):
+                    self.storage_capacity = self.storage_manager.get_capacity()
+                else:
+                    self.storage_capacity = 100
+                    
+                logger.info("StoragePanel: Data loaded directly from storage_manager")
+            except Exception as e:
+                logger.warning(f"StoragePanel: Failed to load from storage_manager: {e}")
+                self._load_demo_data()
         else:
-            # デモ用の仮データ
-            self.inventory_items = [
-                {"id": "item1", "name": "ポーション", "quantity": 5, "stackable": True},
-                {"id": "item2", "name": "エーテル", "quantity": 3, "stackable": True},
-                {"id": "item3", "name": "鉄の剣", "quantity": 1, "stackable": False}
-            ]
-        
-        # 保管庫の内容を取得
-        result = self._execute_service_action("storage", {})
-        if result.is_success() and result.data:
-            self.storage_items = result.data.get("items", [])
-            self.storage_capacity = result.data.get("capacity", 100)
-        else:
-            # デモ用の仮データ
-            self.storage_items = [
-                {"id": "item4", "name": "ハイポーション", "quantity": 10, "stackable": True},
-                {"id": "item5", "name": "魔法の杖", "quantity": 1, "stackable": False}
-            ]
+            logger.info("StoragePanel: storage_manager not available, loading demo data")
+            self._load_demo_data()
         
         self._update_lists()
         self._update_info()
         self._update_buttons()
+    
+    def _load_demo_data(self) -> None:
+        """デモ用データを読み込み"""
+        self.inventory_items = [
+            {"id": "item1", "name": "ポーション", "quantity": 5, "stackable": True},
+            {"id": "item2", "name": "エーテル", "quantity": 3, "stackable": True},
+            {"id": "item3", "name": "鉄の剣", "quantity": 1, "stackable": False}
+        ]
+        
+        self.storage_items = [
+            {"id": "item4", "name": "ハイポーション", "quantity": 10, "stackable": True},
+            {"id": "item5", "name": "魔法の杖", "quantity": 1, "stackable": False}
+        ]
+    
+    def destroy(self) -> None:
+        """パネルを破棄（強化版）"""
+        logger.info("StoragePanel: Starting enhanced destroy process")
+        
+        # 特定のUI要素を明示的に破棄
+        specific_elements = [
+            self.inventory_list,
+            self.storage_list,
+            self.deposit_button,
+            self.withdraw_button,
+            self.quantity_input,
+            self.info_box
+        ]
+        
+        for element in specific_elements:
+            if element and hasattr(element, 'kill'):
+                try:
+                    element.kill()
+                    logger.debug(f"StoragePanel: Destroyed specific element {type(element).__name__}")
+                except Exception as e:
+                    logger.warning(f"StoragePanel: Failed to destroy {type(element).__name__}: {e}")
+        
+        # 親クラスのdestroy()を呼び出し
+        super().destroy()
+        
+        # 参照をクリア
+        self.inventory_list = None
+        self.storage_list = None
+        self.deposit_button = None
+        self.withdraw_button = None
+        self.quantity_input = None
+        self.info_box = None
+        self.inventory_items = []
+        self.storage_items = []
+        self.selected_inventory_item = None
+        self.selected_storage_item = None
+        
+        logger.info("StoragePanel: Enhanced destroy completed")
     
     def _update_lists(self) -> None:
         """リストを更新"""
@@ -210,9 +274,10 @@ class StoragePanel(ServicePanel):
             return
         
         used_space = sum(item["quantity"] for item in self.storage_items)
-        free_space = self.storage_capacity - used_space
+        capacity = getattr(self, 'storage_capacity', 100)  # デフォルト値100を設定
+        free_space = capacity - used_space
         
-        info_text = f"<b>保管庫容量:</b> {used_space}/{self.storage_capacity} "
+        info_text = f"<b>保管庫容量:</b> {used_space}/{capacity} "
         info_text += f"（空き: {free_space}）"
         
         if self.controller and self.controller.service.party:

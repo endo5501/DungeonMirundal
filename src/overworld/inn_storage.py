@@ -266,6 +266,48 @@ class InnStorageManager:
             'usage_percentage': (used_slots / storage.capacity) * FULL_PERCENTAGE_MULTIPLIER
         }
     
+    def get_all_items(self) -> List[Dict[str, Any]]:
+        """全アイテムを辞書形式で取得（サービス用）"""
+        storage = self.get_storage()
+        items = []
+        
+        for slot_index, item_instance in storage.get_all_items():
+            items.append({
+                "id": item_instance.item_id,
+                "name": item_instance.item_id,  # 仮実装：実際のアイテム名は後で取得
+                "quantity": item_instance.quantity,
+                "slot_index": slot_index,
+                "stackable": True  # 仮実装
+            })
+        
+        return items
+    
+    def add_item(self, item_id: str, item_name: str, quantity: int = 1) -> bool:
+        """アイテムを追加（サービス用）"""
+        storage = self.get_storage()
+        
+        # ItemInstanceを作成
+        item_instance = ItemInstance(
+            item_id=item_id,
+            quantity=quantity,
+            identified=True,
+            condition=100.0
+        )
+        
+        return storage.add_item(item_instance)
+    
+    def remove_item(self, item_id: str, quantity: int = 1) -> bool:
+        """アイテムを削除（サービス用）"""
+        storage = self.get_storage()
+        
+        # 指定されたアイテムを探す
+        for slot_index, item_instance in storage.get_all_items():
+            if item_instance.item_id == item_id:
+                removed_item = storage.remove_item(slot_index, quantity)
+                return removed_item is not None
+        
+        return False
+    
     def save_storage_data(self) -> Dict[str, Any]:
         """倉庫データを保存用辞書で取得"""
         if self._storage:
