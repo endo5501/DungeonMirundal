@@ -261,8 +261,17 @@ class SellPanel(ServicePanel):
                 owner_ids.append(owner_id)
                 added_owners.add(owner_id)
         
-        self.owner_list.set_item_list(owner_names)
-        self.owner_ids = owner_ids  # IDリストを保持
+        # アイテムがない場合の処理
+        if not owner_names:
+            self.owner_list.set_item_list(["売却可能なアイテムがありません"])
+            self.owner_ids = []
+            # 詳細表示も更新
+            if self.detail_box:
+                self.detail_box.html_text = "売却可能なアイテムがありません"
+                self.detail_box.rebuild()
+        else:
+            self.owner_list.set_item_list(owner_names)
+            self.owner_ids = owner_ids  # IDリストを保持
     
     def _update_item_list(self) -> None:
         """アイテムリストを更新"""

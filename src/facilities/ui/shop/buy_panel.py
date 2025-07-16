@@ -402,14 +402,17 @@ class BuyPanel(ServicePanel):
             if event.ui_element == self.item_list:
                 selection = self.item_list.get_single_selection()
                 if selection is not None:
-                    index = self.item_list.item_list.index(selection)
-                    if 0 <= index < len(self.displayed_items):
-                        self.selected_item_id, self.selected_item = self.displayed_items[index]
-                        self._update_detail_view()
-                        self._update_controls()
-                    else:
-                        self.selected_item = None
-                        self.selected_item_id = None
+                    # UISelectionListの選択されたインデックスを直接取得
+                    indices = [i for i, item in enumerate(self.item_list.item_list) if item == selection]
+                    if indices:
+                        index = indices[0]
+                        if 0 <= index < len(self.displayed_items):
+                            self.selected_item_id, self.selected_item = self.displayed_items[index]
+                            self._update_detail_view()
+                            self._update_controls()
+                        else:
+                            self.selected_item = None
+                            self.selected_item_id = None
                 else:
                     self.selected_item = None
                     self.selected_item_id = None

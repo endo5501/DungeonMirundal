@@ -79,7 +79,7 @@ class ShopService(FacilityService, ActionExecutorMixin):
             id="sell",
             label="売却",
             description="アイテムを売却します",
-            enabled=self._has_items_to_sell(),
+            enabled=True,  # 常に有効にしてアイテムがなくても表示
             service_type="panel"
         ))
         
@@ -88,8 +88,8 @@ class ShopService(FacilityService, ActionExecutorMixin):
             id="identify",
             label="鑑定",
             description="未鑑定のアイテムを鑑定します",
-            enabled=self._has_unidentified_items(),
-            service_type="action"
+            enabled=True,  # 常に有効にしてアイテムがなくても表示
+            service_type="panel"  # actionからpanelに変更
         ))
         
         # 退出
@@ -741,17 +741,14 @@ class ShopService(FacilityService, ActionExecutorMixin):
                 )
                 
             elif service_id == "identify":
-                # 鑑定パネル（売却パネルを鑑定モードで使用）
-                from src.facilities.ui.shop.sell_panel import SellPanel
-                panel = SellPanel(
+                # 鑑定パネル
+                from src.facilities.ui.shop.identify_panel import IdentifyPanel
+                return IdentifyPanel(
                     rect=rect,
                     parent=parent,
                     controller=self._controller,
                     ui_manager=ui_manager
                 )
-                # 鑑定モードに設定
-                panel.set_mode("identify")
-                return panel
                 
         except ImportError as e:
             logger.error(f"Failed to import shop panel: {e}")
