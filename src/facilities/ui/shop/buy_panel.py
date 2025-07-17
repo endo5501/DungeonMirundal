@@ -44,6 +44,56 @@ class BuyPanel(ServicePanel):
         
         logger.info("BuyPanel initialized")
     
+    def destroy(self) -> None:
+        """パネルを破棄（宿屋パターンを採用した強化版）"""
+        logger.info("BuyPanel: Starting enhanced destroy process")
+        
+        # 特定のUI要素を明示的に破棄（宿屋パターン）
+        specific_elements = [
+            self.item_list,
+            self.detail_box,
+            self.quantity_input,
+            self.buy_button,
+            self.gold_label,
+            self.total_label
+        ]
+        
+        # カテゴリボタンも個別に破棄
+        if hasattr(self, 'category_buttons'):
+            for button in self.category_buttons.values():
+                if button and hasattr(button, 'kill'):
+                    specific_elements.append(button)
+        
+        for element in specific_elements:
+            if element and hasattr(element, 'kill'):
+                try:
+                    element.kill()
+                    logger.debug(f"BuyPanel: Destroyed specific element {type(element).__name__}")
+                except Exception as e:
+                    logger.warning(f"BuyPanel: Failed to destroy {type(element).__name__}: {e}")
+        
+        # 親クラスのdestroy()を呼び出し
+        super().destroy()
+        
+        # 参照をクリア
+        if hasattr(self, 'category_buttons'):
+            self.category_buttons.clear()
+        self.item_list = None
+        self.detail_box = None
+        self.quantity_input = None
+        self.buy_button = None
+        self.gold_label = None
+        self.total_label = None
+        
+        # データをクリア
+        self.shop_items.clear()
+        self.displayed_items.clear()
+        self.selected_item_id = None
+        self.selected_category = None
+        self.selected_item = None
+        
+        logger.info("BuyPanel: Enhanced destroy completed")
+    
     def _create_ui(self) -> None:
         """UI要素を作成"""
         # タイトルと所持金表示
@@ -322,8 +372,10 @@ class BuyPanel(ServicePanel):
         # 購入ボタンの有効/無効
         if self.buy_button:
             if self.selected_item and self.selected_item["stock"] > 0:
+                logger.info(f"BuyPanel: 購入ボタンを有効化 - {self.selected_item['name']}")
                 self.buy_button.enable()
             else:
+                logger.info(f"BuyPanel: 購入ボタンを無効化 - selected_item={self.selected_item is not None}")
                 self.buy_button.disable()
         
         # 合計金額を更新
@@ -352,13 +404,20 @@ class BuyPanel(ServicePanel):
     
     def _execute_purchase(self) -> None:
         """購入を実行"""
+        logger.info(f"BuyPanel: _execute_purchase called")
+        logger.info(f"BuyPanel: selected_item_id: {self.selected_item_id}")
+        logger.info(f"BuyPanel: selected_item: {self.selected_item}")
+        
         if not self.selected_item_id:
+            logger.warning("BuyPanel: No item selected, cannot execute purchase")
             return
         
         try:
             quantity = int(self.quantity_input.get_text())
             quantity = max(1, min(quantity, self.selected_item["stock"]))
-        except:
+            logger.info(f"BuyPanel: Purchase quantity: {quantity}")
+        except Exception as e:
+            logger.warning(f"BuyPanel: Failed to parse quantity, using default: {e}")
             quantity = 1
         
         params = {
@@ -366,58 +425,168 @@ class BuyPanel(ServicePanel):
             "quantity": quantity,
             "confirmed": True
         }
+        logger.info(f"BuyPanel: Purchase params: {params}")
         
         result = self._execute_service_action("buy", params)
+        logger.info(f"BuyPanel: Purchase result: {result}")
         
         if result.is_success():
+            logger.info(f"BuyPanel: Purchase successful: {result.message}")
             self._show_message(result.message, "info")
             
-            # データを再読み込み
-            self._load_shop_data()
-            
-            # 所持金を更新
-            if result.data and "remaining_gold" in result.data:
-                self._update_gold_display(result.data["remaining_gold"])
+            # 購入結果からデータを直接更新（UI要素の重複作成を避ける）
+            if result.data:
+                # 所持金を更新
+                if "remaining_gold" in result.data:
+                    self._update_gold_display(result.data["remaining_gold"])
+                
+                # 在庫を更新
+                if "updated_items" in result.data:
+                    self.shop_items = result.data["updated_items"]
+                    self._update_item_list()
+                elif self.selected_item_id in self.shop_items:
+                    # フォールバック：購入したアイテムの在庫を手動で更新
+                    purchased_quantity = quantity
+                    self.shop_items[self.selected_item_id]["stock"] = max(0, 
+                        self.shop_items[self.selected_item_id]["stock"] - purchased_quantity)
+                    self._update_item_list()
+                
+                # 選択をクリア
+                self.selected_item = None
+                self.selected_item_id = None
+                self._update_detail_view()
+                self._update_controls()
         else:
+            logger.error(f"BuyPanel: Purchase failed: {result.message}")
             self._show_message(result.message, "error")
     
     def handle_button_click(self, button: pygame_gui.elements.UIButton) -> bool:
         """ボタンクリックを処理"""
+        logger.info(f"BuyPanel: handle_button_click called with button: {button}")
+        
         # カテゴリボタン
         for cat_id, cat_button in self.category_buttons.items():
             if button == cat_button:
+                logger.info(f"BuyPanel: Category button clicked: {cat_id}")
                 self._select_category(cat_id)
                 return True
         
+        # アイテムリストの個別ボタン処理
+        if self.item_list:
+            # UISelectionListの内部ボタンかどうかチェック
+            # ボタンのコンテナがUISelectionListの内部にあるかを確認
+            try:
+                # UISelectionListの内部構造を確認
+                if hasattr(self.item_list, 'list_and_scroll_bar_container'):
+                    container = self.item_list.list_and_scroll_bar_container
+                    if hasattr(container, 'get_container'):
+                        list_container = container.get_container()
+                        if button.ui_container == list_container:
+                            logger.info(f"BuyPanel: Item list button clicked: {button.text}")
+                            self._handle_item_button_click(button)
+                            return True
+                
+                # より直接的なチェック: ボタンテキストがアイテムリストの内容と一致するか
+                if button.text and any(item_text.startswith(button.text.split(' - ')[0]) for item_text in self.item_list.item_list):
+                    logger.info(f"BuyPanel: Item list button clicked by text match: {button.text}")
+                    self._handle_item_button_click(button)
+                    return True
+            except Exception as e:
+                logger.error(f"BuyPanel: Error checking item list button: {e}")
+                # フォールバック: テキストベースのチェック
+                if button.text and " - " in button.text and " G " in button.text:
+                    logger.info(f"BuyPanel: Item list button clicked by pattern match: {button.text}")
+                    self._handle_item_button_click(button)
+                    return True
+        
         # 購入ボタン
         if button == self.buy_button:
+            logger.info(f"BuyPanel: 購入ボタンがクリックされました - {self.selected_item_id}")
+            logger.info(f"BuyPanel: 購入ボタンの状態 - enabled: {self.buy_button.is_enabled}")
+            logger.info(f"BuyPanel: 選択されたアイテム: {self.selected_item}")
             self._execute_purchase()
             return True
         
+        logger.info(f"BuyPanel: Button click not handled")
         return False
+    
+    def _handle_item_button_click(self, button: pygame_gui.elements.UIButton) -> None:
+        """アイテムボタンのクリックを処理"""
+        logger.info(f"BuyPanel: _handle_item_button_click called with button text: {button.text}")
+        
+        # ボタンテキストからアイテムを検索
+        button_text = button.text
+        logger.info(f"BuyPanel: Searching for item with text: {button_text}")
+        
+        # displayed_itemsから該当するアイテムを検索
+        for i, (item_id, item_data) in enumerate(self.displayed_items):
+            # アイテム表示文字列を再構築して比較
+            name = item_data["name"]
+            price = item_data["price"]
+            stock = item_data["stock"]
+            
+            if stock > 0:
+                expected_text = f"{name} - {price} G (在庫: {stock})"
+            else:
+                expected_text = f"{name} - {price} G (売り切れ)"
+            
+            logger.info(f"BuyPanel: Comparing '{button_text}' with '{expected_text}'")
+            
+            if button_text == expected_text:
+                logger.info(f"BuyPanel: Found matching item: {item_id} - {name}")
+                self.selected_item_id = item_id
+                self.selected_item = item_data
+                self._update_detail_view()
+                self._update_controls()
+                return
+        
+        logger.warning(f"BuyPanel: No matching item found for button text: {button_text}")
     
     def handle_selection_list_changed(self, event: pygame.event.Event) -> bool:
         """選択リスト変更イベントを処理"""
+        logger.info(f"BuyPanel: handle_selection_list_changed called with event type: {event.type}")
+        
         if event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
+            logger.info(f"BuyPanel: UI_SELECTION_LIST_NEW_SELECTION event received")
+            logger.info(f"BuyPanel: event.ui_element: {event.ui_element}")
+            logger.info(f"BuyPanel: self.item_list: {self.item_list}")
+            
             if event.ui_element == self.item_list:
+                logger.info(f"BuyPanel: Selection list event matches item_list")
                 selection = self.item_list.get_single_selection()
+                logger.info(f"BuyPanel: get_single_selection returned: {selection}")
+                
                 if selection is not None:
                     # UISelectionListの選択されたインデックスを直接取得
                     indices = [i for i, item in enumerate(self.item_list.item_list) if item == selection]
+                    logger.info(f"BuyPanel: Found indices: {indices}")
+                    logger.info(f"BuyPanel: item_list.item_list: {self.item_list.item_list}")
+                    logger.info(f"BuyPanel: displayed_items: {[item[0] for item in self.displayed_items]}")
+                    
                     if indices:
                         index = indices[0]
+                        logger.info(f"BuyPanel: Using index: {index}")
                         if 0 <= index < len(self.displayed_items):
                             self.selected_item_id, self.selected_item = self.displayed_items[index]
+                            logger.info(f"BuyPanel: アイテム選択 - {self.selected_item_id}: {self.selected_item['name']}")
                             self._update_detail_view()
                             self._update_controls()
                         else:
+                            logger.warning(f"BuyPanel: Index {index} out of range for displayed_items (length: {len(self.displayed_items)})")
                             self.selected_item = None
                             self.selected_item_id = None
+                    else:
+                        logger.warning(f"BuyPanel: No matching indices found for selection: {selection}")
+                        self.selected_item = None
+                        self.selected_item_id = None
                 else:
+                    logger.info(f"BuyPanel: Selection is None, clearing selection")
                     self.selected_item = None
                     self.selected_item_id = None
                 
                 return True
+            else:
+                logger.info(f"BuyPanel: Selection list event does not match item_list")
         
         return False
     

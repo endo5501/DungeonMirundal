@@ -46,6 +46,53 @@ class SellPanel(ServicePanel):
         
         logger.info("SellPanel initialized")
     
+    def destroy(self) -> None:
+        """パネルを破棄（宿屋パターンを採用した強化版）"""
+        logger.info("SellPanel: Starting enhanced destroy process")
+        
+        # 特定のUI要素を明示的に破棄（宿屋パターン）
+        specific_elements = [
+            self.owner_list,
+            self.item_list,
+            self.detail_box,
+            self.quantity_input,
+            self.sell_button,
+            self.gold_label,
+            self.sell_info_label,
+            self.sell_price_label
+        ]
+        
+        for element in specific_elements:
+            if element and hasattr(element, 'kill'):
+                try:
+                    element.kill()
+                    logger.debug(f"SellPanel: Destroyed specific element {type(element).__name__}")
+                except Exception as e:
+                    logger.warning(f"SellPanel: Failed to destroy {type(element).__name__}: {e}")
+        
+        # 親クラスのdestroy()を呼び出し
+        super().destroy()
+        
+        # 参照をクリア
+        self.owner_list = None
+        self.item_list = None
+        self.detail_box = None
+        self.quantity_input = None
+        self.sell_button = None
+        self.gold_label = None
+        self.sell_info_label = None
+        self.sell_price_label = None
+        
+        # データをクリア
+        self.sellable_items.clear()
+        self.items_by_owner.clear()
+        self.owner_ids.clear()
+        self.displayed_items.clear()
+        self.selected_owner = None
+        self.selected_item = None
+        
+        logger.info("SellPanel: Enhanced destroy completed")
+    
     def set_mode(self, mode: str):
         """パネルモードを設定（identify用）"""
         if mode == "identify":
@@ -254,6 +301,11 @@ class SellPanel(ServicePanel):
         self.items_by_owner = {}
         
         for item in self.sellable_items:
+            # owner_idが存在しない場合のエラー処理を追加
+            if "owner_id" not in item:
+                logger.warning(f"SellPanel: Item missing owner_id: {item}")
+                continue
+                
             owner_id = item["owner_id"]
             if owner_id not in self.items_by_owner:
                 self.items_by_owner[owner_id] = []

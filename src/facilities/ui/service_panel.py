@@ -78,22 +78,31 @@ class ServicePanel(ABC):
         self._refresh_content()
     
     def destroy(self) -> None:
-        """パネルを破棄"""
-        # すべてのUI要素を破棄
-        for element in self.ui_elements:
-            if hasattr(element, 'kill'):
-                element.kill()
+        """パネルを破棄（基底クラス版、サブクラスでオーバーライド推奨）"""
+        logger.info(f"ServicePanel.destroy() called for: {self.service_id}")
+        
+        # UI要素リストからすべて破棄
+        destroyed_count = 0
+        for element in self.ui_elements[:]:  # コピーを作って安全に反復
+            try:
+                if hasattr(element, 'kill'):
+                    element.kill()
+                    destroyed_count += 1
+            except Exception as e:
+                logger.warning(f"ServicePanel: Failed to kill element {element}: {e}")
         self.ui_elements.clear()
+        logger.debug(f"ServicePanel: Destroyed {destroyed_count} UI elements from list")
         
         # コンテナを破棄
-        if self.container:
-            self.container.kill()
+        if self.container and hasattr(self.container, 'kill'):
+            try:
+                self.container.kill()
+                logger.debug(f"ServicePanel: Container killed for {self.service_id}")
+            except Exception as e:
+                logger.error(f"ServicePanel: Failed to destroy container for {self.service_id}: {e}")
         
-        # 強制的なUIクリアは削除 - NavigationPanelや地上メニューまで消えてしまうため
-        
-        # 破棄完了まで少し待機
-        import time
-        time.sleep(0.01)  # 10ms待機
+        # 属性をクリア
+        self.container = None
         
         logger.info(f"ServicePanel destroyed: {self.service_id}")
     

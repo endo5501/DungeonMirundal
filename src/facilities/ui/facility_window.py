@@ -201,12 +201,32 @@ class FacilityWindow(Window):
             
             # パネルを破棄してUIを完全にクリア
             current_panel = self.service_panels[self.current_service_id]
-            if hasattr(current_panel, 'destroy'):
-                current_panel.destroy()
-            else:
-                # 汎用UIPanelの場合はkillメソッドを使用
-                current_panel.kill()
-            del self.service_panels[self.current_service_id]
+            try:
+                if hasattr(current_panel, 'destroy'):
+                    current_panel.destroy()
+                    logger.info(f"FacilityWindow: Successfully destroyed panel {self.current_service_id} using destroy() method")
+                else:
+                    # 汎用UIPanelの場合はkillメソッドを使用
+                    if hasattr(current_panel, 'kill'):
+                        current_panel.kill()
+                        logger.info(f"FacilityWindow: Successfully killed panel {self.current_service_id} using kill() method")
+                    else:
+                        logger.warning(f"FacilityWindow: Panel {self.current_service_id} has no destroy() or kill() method")
+            except Exception as e:
+                logger.error(f"FacilityWindow: Error destroying panel {self.current_service_id}: {e}")
+            
+            # パネルを辞書から削除
+            try:
+                del self.service_panels[self.current_service_id]
+                logger.debug(f"FacilityWindow: Removed panel {self.current_service_id} from service_panels dict")
+            except KeyError:
+                logger.warning(f"FacilityWindow: Panel {self.current_service_id} was not in service_panels dict")
+            
+            # UIマネージャーの強制的なクリーンアップ
+            self._force_clear_ui_manager()
+            import time
+            time.sleep(0.05)  # 破棄完了を待機
+            logger.debug("FacilityWindow: Panel destruction and UI cleanup completed, ready for new panel creation")
         
         # 新しいサービスパネルを作成/表示
         if service_id not in self.service_panels:
@@ -374,6 +394,45 @@ class FacilityWindow(Window):
         }
         return facility_names.get(self.controller.facility_id, self.controller.facility_id)
     
+    def _force_clear_ui_manager(self) -> None:
+        """UIマネージャーの強制的なクリーンアップ"""
+        logger.info("FacilityWindow: Starting forced UI manager cleanup")
+        
+        try:
+            # UIマネージャー内の orphaned elements をクリア
+            if hasattr(self.ui_manager, 'get_sprite_group'):
+                sprite_group = self.ui_manager.get_sprite_group()
+                if sprite_group:
+                    # main_panelに属さないスプライトをチェック
+                    orphaned_sprites = []
+                    for sprite in sprite_group.sprites():
+                        if (hasattr(sprite, 'container') and 
+                            sprite.container != self.main_panel and
+                            sprite.container != self.navigation_panel.container if self.navigation_panel else True):
+                            orphaned_sprites.append(sprite)
+                    
+                    # orphaned sprites を削除
+                    for sprite in orphaned_sprites:
+                        try:
+                            if hasattr(sprite, 'kill'):
+                                sprite.kill()
+                                logger.debug(f"FacilityWindow: Killed orphaned sprite {type(sprite).__name__}")
+                        except Exception as e:
+                            logger.warning(f"FacilityWindow: Failed to kill orphaned sprite: {e}")
+                    
+                    if orphaned_sprites:
+                        logger.info(f"FacilityWindow: Cleaned up {len(orphaned_sprites)} orphaned UI elements")
+            
+            # UIマネージャーの内部リストをクリア
+            if hasattr(self.ui_manager, 'clear_and_reset'):
+                # clear_and_reset は存在しないので、代替手段を使用
+                pass
+            
+        except Exception as e:
+            logger.error(f"FacilityWindow: Error in forced UI cleanup: {e}")
+        
+        logger.debug("FacilityWindow: Forced UI manager cleanup completed")
+    
     def show(self) -> None:
         """ウィンドウを表示"""
         if self.main_panel:
@@ -494,7 +553,11 @@ class FacilityWindow(Window):
             button_number = event.key - pygame.K_1 + 1
             logger.info(f"[DEBUG] FacilityWindow({self.window_id}) received number key: {button_number}")
         
-        # pygame_gui のイベント処理
+        # デバッグ: ボタンクリックイベントのログ
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            logger.info(f"[DEBUG] FacilityWindow({self.window_id}) received UI_BUTTON_PRESSED event: {event.ui_element}")
+        
+        # pygame_gui のイベント処理を最初に実行
         # WindowManagerの統一UIManagerとは別のUIManagerを使用しているため、
         # ここで処理する必要がある
         ui_consumed = False
@@ -504,6 +567,41 @@ class FacilityWindow(Window):
             if event.type in [pygame.KEYDOWN, pygame.TEXTINPUT, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION]:
                 self.ui_manager.process_events(event)
                 ui_consumed = True
+        
+        # サービスパネルのイベント処理（UIManagerの処理の後に実行）
+        if self.current_service_id and self.current_service_id in self.service_panels:
+            service_panel = self.service_panels[self.current_service_id]
+            
+            # UISelectionListのイベント処理
+            if hasattr(service_panel, 'handle_selection_list_changed'):
+                if (event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION or
+                    event.type == pygame_gui.UI_SELECTION_LIST_DOUBLE_CLICKED_SELECTION):
+                    logger.info(f"[DEBUG] Processing selection list event: {event.type}")
+                    if service_panel.handle_selection_list_changed(event):
+                        return True
+            
+            # ボタンクリック（UI_BUTTON_PRESSED）イベントの処理
+            if hasattr(service_panel, 'handle_button_click') and event.type == pygame_gui.UI_BUTTON_PRESSED:
+                logger.info(f"[DEBUG] Processing button click event: {event.ui_element}")
+                logger.info(f"[DEBUG] Service panel: {service_panel.__class__.__name__}")
+                logger.info(f"[DEBUG] Service panel has handle_button_click: {hasattr(service_panel, 'handle_button_click')}")
+                if service_panel.handle_button_click(event.ui_element):
+                    logger.info(f"[DEBUG] Button click handled by service panel")
+                    return True
+                else:
+                    logger.info(f"[DEBUG] Button click not handled by service panel")
+            
+            # テキスト変更イベント処理
+            if hasattr(service_panel, 'handle_text_changed'):
+                if (event.type == pygame_gui.UI_TEXT_ENTRY_CHANGED or
+                    event.type == pygame_gui.UI_TEXT_ENTRY_FINISHED):
+                    if service_panel.handle_text_changed(event):
+                        return True
+            
+            # ENTERキーやその他のキーイベントの処理（ウィザード用）
+            if hasattr(service_panel, 'handle_key_event') and event.type == pygame.KEYDOWN:
+                if service_panel.handle_key_event(event):
+                    return True
         
         # ESCキー処理
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -528,27 +626,6 @@ class FacilityWindow(Window):
         if self.navigation_panel and hasattr(self.navigation_panel, 'handle_button_click'):
             if self.navigation_panel.handle_button_click(event):
                 return True
-        
-        # サービスパネルのイベント処理
-        if self.current_service_id and self.current_service_id in self.service_panels:
-            service_panel = self.service_panels[self.current_service_id]
-            
-            # UISelectionListのイベント処理
-            if hasattr(service_panel, 'handle_selection_list_changed'):
-                if (event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION or
-                    event.type == pygame_gui.UI_SELECTION_LIST_DOUBLE_CLICKED_SELECTION):
-                    if service_panel.handle_selection_list_changed(event):
-                        return True
-            
-            # ボタンクリック（UI_BUTTON_PRESSED）イベントの処理
-            if hasattr(service_panel, 'handle_button_click') and event.type == pygame_gui.UI_BUTTON_PRESSED:
-                if service_panel.handle_button_click(event.ui_element):
-                    return True
-            
-            # ENTERキーやその他のキーイベントの処理（ウィザード用）
-            if hasattr(service_panel, 'handle_key_event') and event.type == pygame.KEYDOWN:
-                if service_panel.handle_key_event(event):
-                    return True
         
         # シンプルナビゲーションのボタンクリック処理（フォールバック）
         if hasattr(self, 'nav_buttons') and event.type == pygame_gui.UI_BUTTON_PRESSED:

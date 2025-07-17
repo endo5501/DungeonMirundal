@@ -352,6 +352,8 @@ class ShopService(FacilityService, ActionExecutorMixin):
                         "base_price": item.price,
                         "sell_price": sell_price,
                         "owner_type": "party",
+                        "owner_id": "party",  # パーティアイテムのowner_idを追加
+                        "owner_name": "パーティ",
                         "condition": item_instance.condition,
                         "identified": item_instance.identified
                     })

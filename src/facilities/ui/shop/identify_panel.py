@@ -41,6 +41,49 @@ class IdentifyPanel(ServicePanel):
         
         logger.info("IdentifyPanel initialized")
     
+    def destroy(self) -> None:
+        """パネルを破棄（宿屋パターンを採用した強化版）"""
+        logger.info("IdentifyPanel: Starting enhanced destroy process")
+        
+        # 特定のUI要素を明示的に破棄（宿屋パターン）
+        specific_elements = [
+            self.owner_list,
+            self.item_list,
+            self.detail_box,
+            self.identify_button,
+            self.gold_label,
+            self.identify_cost_label
+        ]
+        
+        for element in specific_elements:
+            if element and hasattr(element, 'kill'):
+                try:
+                    element.kill()
+                    logger.debug(f"IdentifyPanel: Destroyed specific element {type(element).__name__}")
+                except Exception as e:
+                    logger.warning(f"IdentifyPanel: Failed to destroy {type(element).__name__}: {e}")
+        
+        # 親クラスのdestroy()を呼び出し
+        super().destroy()
+        
+        # 参照をクリア
+        self.owner_list = None
+        self.item_list = None
+        self.detail_box = None
+        self.identify_button = None
+        self.gold_label = None
+        self.identify_cost_label = None
+        
+        # データをクリア
+        self.unidentified_items.clear()
+        self.items_by_owner.clear()
+        self.owner_ids.clear()
+        self.displayed_items.clear()
+        self.selected_owner = None
+        self.selected_item = None
+        
+        logger.info("IdentifyPanel: Enhanced destroy completed")
+    
     def _create_ui(self) -> None:
         """UI要素を作成"""
         # ヘッダー
