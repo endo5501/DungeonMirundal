@@ -31,6 +31,8 @@ class BuyPanel(ServicePanel):
         self.buy_button: Optional[pygame_gui.elements.UIButton] = None
         self.gold_label: Optional[pygame_gui.elements.UILabel] = None
         self.total_label: Optional[pygame_gui.elements.UILabel] = None
+        self.buyer_label: Optional[pygame_gui.elements.UILabel] = None
+        self.buyer_dropdown: Optional[pygame_gui.elements.UIDropDownMenu] = None
         
         # データ（_create_ui()で参照される可能性があるため先に初期化）
         self.shop_items: Dict[str, Dict[str, Any]] = {}
@@ -38,6 +40,10 @@ class BuyPanel(ServicePanel):
         self.selected_item: Optional[Dict[str, Any]] = None
         self.selected_item_id: Optional[str] = None
         self.displayed_items: List[Tuple[str, Dict[str, Any]]] = []
+        self.selected_buyer: str = "party"  # デフォルトはパーティ共有
+        
+        # コントローラーへの参照を保存
+        self._controller = controller
         
         # ServicePanelの初期化（この中で_create_ui()が呼ばれる）
         super().__init__(rect, parent, controller, "buy", ui_manager)
@@ -55,7 +61,9 @@ class BuyPanel(ServicePanel):
             self.quantity_input,
             self.buy_button,
             self.gold_label,
-            self.total_label
+            self.total_label,
+            self.buyer_label,
+            self.buyer_dropdown
         ]
         
         # カテゴリボタンも個別に破棄
@@ -84,6 +92,8 @@ class BuyPanel(ServicePanel):
         self.buy_button = None
         self.gold_label = None
         self.total_label = None
+        self.buyer_label = None
+        self.buyer_dropdown = None
         
         # データをクリア
         self.shop_items.clear()
@@ -189,7 +199,7 @@ class BuyPanel(ServicePanel):
     def _create_detail_area(self) -> None:
         """詳細エリアを作成"""
         # 詳細パネルを動的に作成（ItemDetailPanelを使用）
-        detail_rect = pygame.Rect(420, 105, self.rect.width - 430, 230)
+        detail_rect = pygame.Rect(420, 105, self.rect.width - 430, 190)
         
         # プレースホルダー（詳細パネルは選択時に作成）
         detail_label = pygame_gui.elements.UILabel(
@@ -202,15 +212,41 @@ class BuyPanel(ServicePanel):
         
         self.detail_box = pygame_gui.elements.UITextBox(
             html_text="商品を選択してください",
-            relative_rect=pygame.Rect(420, 135, detail_rect.width, 200),
+            relative_rect=pygame.Rect(420, 135, detail_rect.width, 160),
             manager=self.ui_manager,
-            container=self.container
+            container=self.container,
+            object_id="#detail_text_box"
         )
         self.ui_elements.append(self.detail_box)
     
     def _create_purchase_controls(self) -> None:
         """購入コントロールを作成"""
         y_position = 345
+        
+        # 購入者選択エリア
+        buyer_label_rect = pygame.Rect(10, y_position, 80, 30)
+        self.buyer_label = pygame_gui.elements.UILabel(
+            relative_rect=buyer_label_rect,
+            text="購入者:",
+            manager=self.ui_manager,
+            container=self.container
+        )
+        self.ui_elements.append(self.buyer_label)
+        
+        # 購入者ドロップダウン
+        buyer_options = self._get_buyer_options()
+        buyer_dropdown_rect = pygame.Rect(95, y_position, 200, 30)
+        self.buyer_dropdown = pygame_gui.elements.UIDropDownMenu(
+            options_list=buyer_options,
+            starting_option=buyer_options[0] if buyer_options else "パーティ共有",
+            relative_rect=buyer_dropdown_rect,
+            manager=self.ui_manager,
+            container=self.container
+        )
+        self.ui_elements.append(self.buyer_dropdown)
+        
+        # 数量と購入ボタンを下の行に配置
+        y_position += 40
         
         # 数量ラベル
         quantity_label = pygame_gui.elements.UILabel(
@@ -227,7 +263,8 @@ class BuyPanel(ServicePanel):
             relative_rect=quantity_rect,
             manager=self.ui_manager,
             container=self.container,
-            initial_text="1"
+            initial_text="1",
+            object_id="#quantity_input"
         )
         self.ui_elements.append(self.quantity_input)
         
@@ -252,8 +289,8 @@ class BuyPanel(ServicePanel):
     
     def _load_shop_data(self) -> None:
         """商店データを読み込み"""
-        # 初期カテゴリで商品を取得
-        result = self._execute_service_action("buy", {"category": "weapons"})
+        # 全商品を取得
+        result = self._execute_service_action("buy", {})
         
         if result.is_success() and result.data:
             self.shop_items = result.data.get("items", {})
@@ -276,6 +313,14 @@ class BuyPanel(ServicePanel):
             else:
                 if hasattr(button, 'selected'):
                     button.selected = False
+        
+        # 選択されたカテゴリの商品を再取得
+        result = self._execute_service_action("buy", {"category": category})
+        
+        if result.is_success() and result.data:
+            self.shop_items = result.data.get("items", {})
+            party_gold = result.data.get("party_gold", 0)
+            self._update_gold_display(party_gold)
         
         # 商品リストを更新
         self._update_item_list()
@@ -402,6 +447,20 @@ class BuyPanel(ServicePanel):
         if self.gold_label:
             self.gold_label.set_text(f"所持金: {gold} G")
     
+    def _get_buyer_options(self) -> List[str]:
+        """購入者オプションを取得"""
+        options = ["パーティ共有"]
+        
+        # パーティメンバーを追加
+        if hasattr(self, '_controller') and self._controller:
+            party = self._controller.get_party()
+            if party:
+                for member in party.members:
+                    if member.is_alive():
+                        options.append(member.name)
+        
+        return options
+    
     def _execute_purchase(self) -> None:
         """購入を実行"""
         logger.info(f"BuyPanel: _execute_purchase called")
@@ -420,9 +479,22 @@ class BuyPanel(ServicePanel):
             logger.warning(f"BuyPanel: Failed to parse quantity, using default: {e}")
             quantity = 1
         
+        # 選択された購入者を取得
+        buyer_text = self.buyer_dropdown.selected_option if self.buyer_dropdown else "パーティ共有"
+        buyer_id = "party"  # デフォルトはパーティ
+        
+        if buyer_text != "パーティ共有" and hasattr(self, '_controller') and self._controller:
+            party = self._controller.get_party()
+            if party:
+                for member in party.members:
+                    if member.name == buyer_text:
+                        buyer_id = member.character_id
+                        break
+        
         params = {
             "item_id": self.selected_item_id,
             "quantity": quantity,
+            "buyer_id": buyer_id,
             "confirmed": True
         }
         logger.info(f"BuyPanel: Purchase params: {params}")
@@ -594,6 +666,15 @@ class BuyPanel(ServicePanel):
         """テキスト変更イベントを処理"""
         if hasattr(event, 'ui_element') and event.ui_element == self.quantity_input:
             self._update_total_cost()
+            return True
+        
+        return False
+    
+    def handle_dropdown_changed(self, event: pygame.event.Event) -> bool:
+        """ドロップダウン変更イベントを処理"""
+        if hasattr(event, 'ui_element') and event.ui_element == self.buyer_dropdown:
+            # 購入者が変更されたときの処理
+            logger.info(f"BuyPanel: Buyer changed to {self.buyer_dropdown.selected_option}")
             return True
         
         return False

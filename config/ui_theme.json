@@ -87,6 +87,34 @@
             "normal_border": "#DDDDDD"
         }
     },
+    "text_box": {
+        "colours": {
+            "normal_text": "#000000",
+            "normal_bg": "#FFFFFF",
+            "normal_border": "#DDDDDD",
+            "dark_bg": "#F5F5F5"
+        }
+    },
+    "#detail_text_box": {
+        "colours": {
+            "normal_text": "#000000",
+            "normal_bg": "#FFFFFF",
+            "normal_border": "#DDDDDD",
+            "dark_bg": "#F5F5F5"
+        }
+    },
+    "#quantity_input": {
+        "colours": {
+            "normal_text": "#000000",
+            "normal_bg": "#FFFFFF",
+            "selected_bg": "#3390FF",
+            "selected_text": "#FFFFFF",
+            "normal_border": "#DDDDDD",
+            "focused_bg": "#FFFFFF",
+            "focused_text": "#000000",
+            "focused_border": "#0066CC"
+        }
+    },
     "#character_name_input": {
         "colours": {
             "normal_text": "#000000",

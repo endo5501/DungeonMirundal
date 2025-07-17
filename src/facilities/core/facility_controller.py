@@ -38,6 +38,14 @@ class FacilityController:
         
         logger.info(f"FacilityController created: {facility_id}")
     
+    def get_party(self) -> Optional[Party]:
+        """現在のパーティを取得
+        
+        Returns:
+            現在のパーティ、または None
+        """
+        return self._party
+    
     def set_game_manager(self, game_manager):
         """GameManagerの参照を設定"""
         self._game_manager = game_manager

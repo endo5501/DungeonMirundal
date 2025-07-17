@@ -211,10 +211,16 @@ class IdentifyPanel(ServicePanel):
         """未鑑定アイテムを読み込み"""
         result = self._execute_service_action("identify", {"list_only": True})
         
-        if result.is_success() and result.data:
-            self.unidentified_items = result.data.get("items", [])
-            self.identify_cost = result.data.get("identify_cost", 100)
-            party_gold = result.data.get("party_gold", 0)
+        if result.is_success():
+            # データが存在する場合は設定、存在しない場合は初期値を使用
+            if result.data:
+                self.unidentified_items = result.data.get("items", [])
+                self.identify_cost = result.data.get("identify_cost", 100)
+                party_gold = result.data.get("party_gold", 0)
+            else:
+                self.unidentified_items = []
+                self.identify_cost = 100
+                party_gold = 0
             
             # 鑑定料金表示を更新
             if self.identify_cost_label:
@@ -231,17 +237,19 @@ class IdentifyPanel(ServicePanel):
             
             # 所有者リストを更新
             self._update_owner_list()
+        else:
+            logger.warning(f"IdentifyPanel: Service failed - success: {result.is_success()}, message: {result.message}")
     
     def _get_party(self):
         """パーティ情報を取得"""
         try:
             # FacilityControllerからパーティ情報を取得
+            if hasattr(self.controller, 'get_party'):
+                return self.controller.get_party()
+            
+            # フォールバック：直接_partyアクセス
             if hasattr(self.controller, '_party') and self.controller._party:
                 return self.controller._party
-            
-            # FacilityServiceからパーティ情報を取得
-            if hasattr(self.controller, 'service') and hasattr(self.controller.service, 'party'):
-                return self.controller.service.party
             
             return None
         except Exception as e:
@@ -269,21 +277,29 @@ class IdentifyPanel(ServicePanel):
             self.owner_ids = []
             return
         
-        # 生きているパーティメンバーを所有者として表示
+        # 所有者リストを構築
         owner_names = []
         owner_ids = []
         
+        # パーティ共有インベントリを最初に追加
+        owner_names.append("共有アイテム")
+        owner_ids.append("party")
+        
+        # 生きているパーティメンバーを所有者として表示
         for member in self.party.members:
             if member.is_alive():
                 owner_names.append(member.name)
                 owner_ids.append(member.character_id)
         
-        # パーティ共有インベントリも追加
-        owner_names.append("共有アイテム")
-        owner_ids.append("party")
-        
+        # 所有者リストを更新
         self.owner_list.set_item_list(owner_names)
         self.owner_ids = owner_ids
+        
+        # 初期選択を設定（共有アイテムを最初に選択）
+        if owner_names:
+            # pygame_gui 0.6.x では set_selection メソッドが存在しないため、手動で設定
+            self.selected_owner = owner_ids[0]
+            self._update_item_list()
     
     def _update_item_list(self) -> None:
         """アイテムリストを更新"""

@@ -133,8 +133,8 @@ class ShopService(FacilityService, ActionExecutorMixin):
         # 確認→実行フローを使用
         return ConfirmationFlowUtility.handle_confirmation_flow(
             params,
-            lambda p: self._confirm_purchase(p.get("item_id"), p.get("quantity", 1)),
-            lambda p: self._execute_purchase(p.get("item_id"), p.get("quantity", 1))
+            lambda p: self._confirm_purchase(p.get("item_id"), p.get("quantity", 1), p.get("buyer_id", "party")),
+            lambda p: self._execute_purchase(p.get("item_id"), p.get("quantity", 1), p.get("buyer_id", "party"))
         )
     
     def _get_shop_inventory(self, category: Optional[str] = None) -> ServiceResult:
@@ -229,7 +229,7 @@ class ShopService(FacilityService, ActionExecutorMixin):
                 "item_object": item
             }
     
-    def _confirm_purchase(self, item_id: str, quantity: int) -> ServiceResult:
+    def _confirm_purchase(self, item_id: str, quantity: int, buyer_id: str = "party") -> ServiceResult:
         """購入確認"""
         if item_id not in self._shop_inventory:
             return ServiceResultFactory.error("そのアイテムは取り扱っていません")
@@ -251,17 +251,26 @@ class ShopService(FacilityService, ActionExecutorMixin):
                 result_type=ResultType.WARNING
             )
         
+        # 購入者名を取得
+        buyer_name = "パーティ共有"
+        if buyer_id != "party" and self.party:
+            for member in self.party.members:
+                if member.character_id == buyer_id:
+                    buyer_name = member.name
+                    break
+        
         return ServiceResultFactory.confirm(
-            f"{item['name']}を{quantity}個購入しますか？（{total_cost} G）",
+            f"{item['name']}を{quantity}個購入して{buyer_name}に渡しますか？（{total_cost} G）",
             data={
                 "item_id": item_id,
                 "quantity": quantity,
                 "total_cost": total_cost,
+                "buyer_id": buyer_id,
                 "action": "buy"
             }
         )
     
-    def _execute_purchase(self, item_id: str, quantity: int) -> ServiceResult:
+    def _execute_purchase(self, item_id: str, quantity: int, buyer_id: str = "party") -> ServiceResult:
         """購入を実行"""
         if not self.party:
             return ServiceResult(False, "パーティが存在しません")
@@ -288,17 +297,31 @@ class ShopService(FacilityService, ActionExecutorMixin):
         if not item_instance:
             return ServiceResult(False, "アイテムの作成に失敗しました")
         
-        # パーティインベントリに追加
-        party_inventory = inventory_manager.get_party_inventory()
-        if not party_inventory:
-            # パーティインベントリがない場合は作成
-            party_inventory = inventory_manager.create_party_inventory(self.party.party_id)
-        
-        if not party_inventory.add_item(item_instance):
-            # インベントリに追加できない場合は返金
-            self.party.gold += total_cost
-            self._shop_inventory[item_id]["stock"] += quantity
-            return ServiceResult(False, "インベントリが満杯のため購入できません")
+        # 購入者のインベントリに追加
+        if buyer_id == "party":
+            # パーティインベントリに追加
+            party_inventory = inventory_manager.get_party_inventory()
+            if not party_inventory:
+                # パーティインベントリがない場合は作成
+                party_inventory = inventory_manager.create_party_inventory(self.party.party_id)
+            
+            if not party_inventory.add_item(item_instance):
+                # インベントリに追加できない場合は返金
+                self.party.gold += total_cost
+                self._shop_inventory[item_id]["stock"] += quantity
+                return ServiceResult(False, "パーティインベントリが満杯のため購入できません")
+        else:
+            # キャラクターインベントリに追加
+            char_inventory = inventory_manager.get_character_inventory(buyer_id)
+            if not char_inventory:
+                # キャラクターインベントリがない場合は作成
+                char_inventory = inventory_manager.create_character_inventory(buyer_id)
+            
+            if not char_inventory.add_item(item_instance):
+                # インベントリに追加できない場合は返金
+                self.party.gold += total_cost
+                self._shop_inventory[item_id]["stock"] += quantity
+                return ServiceResult(False, "キャラクターインベントリが満杯のため購入できません")
         
         return ServiceResult(
             success=True,
