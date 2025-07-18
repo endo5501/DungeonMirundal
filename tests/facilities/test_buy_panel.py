@@ -217,8 +217,8 @@ class TestBuyPanelUICreation:
             
             BuyPanel._create_purchase_controls(panel)
             
-            # 数量ラベル、合計ラベル、入力フィールド、購入ボタンが作成される
-            assert mock_label.call_count == 2  # quantity_label and total_label
+            # 購入者ラベル、数量ラベル、合計ラベル、入力フィールド、購入ボタンが作成される
+            assert mock_label.call_count == 3  # buyer_label, quantity_label, total_label
             mock_entry.assert_called_once()
             panel._create_button.assert_called_once()
 
@@ -431,15 +431,15 @@ class TestBuyPanelPurchase:
         
         with patch.object(panel, '_execute_service_action', return_value=result), \
              patch.object(panel, '_show_message') as mock_message, \
-             patch.object(panel, '_load_shop_data') as mock_reload:
+             patch.object(panel, '_update_gold_display') as mock_update_gold:
             
             BuyPanel._execute_purchase(panel)
             
             # 成功メッセージが表示される
             mock_message.assert_called_with("鉄の剣を2個購入しました", "info")
             
-            # データが再読み込みされる
-            mock_reload.assert_called_once()
+            # 所持金が更新される
+            mock_update_gold.assert_called_once_with(1000)
     
     def test_handle_purchase_failure(self, sample_shop_items, sample_service_result):
         """購入処理失敗"""

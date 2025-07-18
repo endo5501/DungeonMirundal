@@ -586,15 +586,30 @@ class TestSellPanelUIUpdates:
         panel = Mock()
         panel.items_by_owner = {"戦士アレン": [], "魔法使いベラ": []}
         panel.owner_list = Mock()
+        panel.owner_ids = []
         panel.sellable_items = [  # Set actual items to generate owner lists
             {"owner_id": "char1", "owner_name": "戦士アレン"},
             {"owner_id": "char2", "owner_name": "魔法使いベラ"}
         ]
         
+        # パーティをモックとして設定し、メンバーを適切に設定
+        panel.party = Mock()
+        mock_member1 = Mock()
+        mock_member1.name = "戦士アレン"
+        mock_member1.character_id = "char1"
+        mock_member1.is_alive.return_value = True
+        
+        mock_member2 = Mock()
+        mock_member2.name = "魔法使いベラ"
+        mock_member2.character_id = "char2"
+        mock_member2.is_alive.return_value = True
+        
+        panel.party.members = [mock_member1, mock_member2]
+        
         SellPanel._update_owner_list(panel)
         
-        # オーナーリストが設定される
-        expected_owners = ["戦士アレン", "魔法使いベラ"]
+        # オーナーリストが設定される（共有アイテムも含む）
+        expected_owners = ["共有アイテム", "戦士アレン", "魔法使いベラ"]
         panel.owner_list.set_item_list.assert_called_with(expected_owners)
     
     def test_update_sell_controls_with_selection(self, sample_sellable_items):
