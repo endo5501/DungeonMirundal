@@ -5,7 +5,6 @@ import pygame_gui
 from typing import Dict, Any, Optional, List, Tuple
 import logging
 from ..service_panel import ServicePanel
-from ...core.service_result import ServiceResult
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -128,122 +127,65 @@ class SellPanel(ServicePanel):
         """ヘッダーを作成"""
         # タイトル
         title_rect = pygame.Rect(10, 10, 200, 35)
-        title_label = pygame_gui.elements.UILabel(
-            relative_rect=title_rect,
-            text="アイテム売却",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(title_label)
+        title_label = self._create_label("title", "アイテム売却", title_rect)
         
         # 所持金表示
         gold_rect = pygame.Rect(self.rect.width - 200, 10, 190, 35)
-        self.gold_label = pygame_gui.elements.UILabel(
-            relative_rect=gold_rect,
-            text="所持金: 0 G",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.gold_label)
+        self.gold_label = self._create_label("gold_label", "所持金: 0 G", gold_rect)
         
         # 売却レート表示
         rate_rect = pygame.Rect(220, 10, 300, 35)
-        self.sell_info_label = pygame_gui.elements.UILabel(
-            relative_rect=rate_rect,
-            text=f"買取率: {int(self.sell_rate * 100)}%",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.sell_info_label)
+        self.sell_info_label = self._create_label("sell_info_label", f"買取率: {int(self.sell_rate * 100)}%", rate_rect)
     
     def _create_lists(self) -> None:
         """リストエリアを作成"""
         list_height = 250
         
         # 所有者リスト
-        owner_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(10, 55, 200, 25),
-            text="所持者",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(owner_label)
+        owner_label = self._create_label("owner_label", "所持者", pygame.Rect(10, 55, 200, 25))
         
         owner_rect = pygame.Rect(10, 85, 200, list_height)
-        self.owner_list = pygame_gui.elements.UISelectionList(
-            relative_rect=owner_rect,
-            item_list=[],
-            manager=self.ui_manager,
-            container=self.container,
-            allow_multi_select=False
-        )
-        self.ui_elements.append(self.owner_list)
+        self.owner_list = self._create_selection_list("owner_list", owner_rect, [])
         
         # アイテムリスト
-        item_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(220, 55, 280, 25),
-            text="所持アイテム",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(item_label)
+        item_label = self._create_label("item_label", "所持アイテム", pygame.Rect(220, 55, 280, 25))
         
         item_rect = pygame.Rect(220, 85, 280, list_height)
-        self.item_list = pygame_gui.elements.UISelectionList(
-            relative_rect=item_rect,
-            item_list=[],
-            manager=self.ui_manager,
-            container=self.container,
-            allow_multi_select=False
-        )
-        self.ui_elements.append(self.item_list)
+        self.item_list = self._create_selection_list("item_list", item_rect, [])
     
     def _create_detail_area(self) -> None:
         """詳細エリアを作成"""
         # 詳細表示
-        detail_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(510, 55, 280, 25),
-            text="アイテム詳細",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(detail_label)
+        detail_label = self._create_label("detail_label", "アイテム詳細", pygame.Rect(510, 55, 280, 25))
         
         detail_rect = pygame.Rect(510, 85, 280, 250)
-        self.detail_box = pygame_gui.elements.UITextBox(
-            html_text="アイテムを選択してください",
-            relative_rect=detail_rect,
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.detail_box)
+        self.detail_box = self._create_text_box("detail_box", "アイテムを選択してください", detail_rect)
     
     def _create_sell_controls(self) -> None:
         """売却コントロールを作成"""
         y_position = 345
         
         # 数量ラベル
-        quantity_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(10, y_position, 60, 35),
-            text="数量:",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(quantity_label)
+        quantity_label = self._create_label("quantity_label", "数量:", pygame.Rect(10, y_position, 60, 35))
         
         # 数量入力
         quantity_rect = pygame.Rect(75, y_position, 80, 35)
-        self.quantity_input = pygame_gui.elements.UITextEntryLine(
-            relative_rect=quantity_rect,
-            manager=self.ui_manager,
-            container=self.container,
-            initial_text="1"
-        )
-        self.ui_elements.append(self.quantity_input)
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.quantity_input = self.ui_element_manager.create_text_entry("quantity_input", quantity_rect, initial_text="1")
+        else:
+            # フォールバック（レガシー）
+            self.quantity_input = pygame_gui.elements.UITextEntryLine(
+                relative_rect=quantity_rect,
+                manager=self.ui_manager,
+                container=self.container,
+                initial_text="1"
+            )
+            self.ui_elements.append(self.quantity_input)
         
         # 売却ボタン
         sell_rect = pygame.Rect(170, y_position, 120, 35)
         self.sell_button = self._create_button(
+            "sell_button",
             "売却する",
             sell_rect,
             container=self.container,
@@ -252,13 +194,7 @@ class SellPanel(ServicePanel):
         self.sell_button.disable()
         
         # 売却金額表示
-        self.sell_price_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(300, y_position, 200, 35),
-            text="売却額: 0 G",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.sell_price_label)
+        self.sell_price_label = self._create_label("sell_price_label", "売却額: 0 G", pygame.Rect(300, y_position, 200, 35))
     
     def _load_sellable_items(self) -> None:
         """売却可能アイテムを読み込み"""

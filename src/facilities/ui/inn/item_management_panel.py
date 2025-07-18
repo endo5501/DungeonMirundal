@@ -19,9 +19,7 @@ class ItemManagementPanel(ServicePanel):
     def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  controller, ui_manager: pygame_gui.UIManager):
         """初期化"""
-        super().__init__(rect, parent, controller, "item_management", ui_manager)
-        
-        # UI要素
+        # UI要素の初期化（_create_ui()で使用するため先に設定）
         self.back_button: Optional[pygame_gui.elements.UIButton] = None
         self.member_list: Optional[pygame_gui.elements.UISelectionList] = None
         self.item_list: Optional[pygame_gui.elements.UISelectionList] = None
@@ -36,13 +34,31 @@ class ItemManagementPanel(ServicePanel):
         self.selected_item_index: Optional[int] = None
         self.member_items: Dict[str, List[Dict[str, Any]]] = {}
         
+        # 親クラスの初期化（この中で_create_ui()が呼ばれる）
+        super().__init__(rect, parent, controller, "item_management", ui_manager)
+        
         logger.info("ItemManagementPanel initialized")
     
     def _create_ui(self) -> None:
         """UI要素を作成"""
+        # ヘッダー
+        self._create_header()
+        
+        # メインレイアウト
+        self._create_main_layout()
+        
+        # アクションボタン
+        self._create_action_buttons()
+        
+        # 初期データを読み込み
+        self._load_party_data()
+    
+    def _create_header(self) -> None:
+        """ヘッダーを作成"""
         # 戻るボタン
         back_rect = pygame.Rect(10, 10, 80, 35)
         self.back_button = self._create_button(
+            "back_button",
             "← 戻る",
             back_rect,
             container=self.container,
@@ -51,79 +67,43 @@ class ItemManagementPanel(ServicePanel):
         
         # タイトル
         title_rect = pygame.Rect(100, 10, self.rect.width - 200, 35)
-        title_label = pygame_gui.elements.UILabel(
-            relative_rect=title_rect,
-            text="アイテム管理",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(title_label)
-        
+        title_label = self._create_label("title_label", "アイテム管理", title_rect)
+    
+    def _create_main_layout(self) -> None:
+        """メインレイアウトを作成"""
         # レイアウト
         list_width = (self.rect.width - 40) // 3
         list_height = 250
         
         # メンバーリスト
-        member_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(10, 55, list_width, 25),
-            text="パーティメンバー",
-            manager=self.ui_manager,
-            container=self.container
+        member_label = self._create_label(
+            "member_label",
+            "パーティメンバー",
+            pygame.Rect(10, 55, list_width, 25)
         )
-        self.ui_elements.append(member_label)
         
         member_rect = pygame.Rect(10, 80, list_width, list_height)
-        self.member_list = pygame_gui.elements.UISelectionList(
-            relative_rect=member_rect,
-            item_list=[],
-            manager=self.ui_manager,
-            container=self.container,
-            allow_multi_select=False
-        )
-        self.ui_elements.append(self.member_list)
+        self.member_list = self._create_selection_list("member_list", member_rect, [])
         
         # アイテムリスト
-        item_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(list_width + 20, 55, list_width, 25),
-            text="所持アイテム",
-            manager=self.ui_manager,
-            container=self.container
+        item_label = self._create_label(
+            "item_label",
+            "所持アイテム",
+            pygame.Rect(list_width + 20, 55, list_width, 25)
         )
-        self.ui_elements.append(item_label)
         
         item_rect = pygame.Rect(list_width + 20, 80, list_width, list_height)
-        self.item_list = pygame_gui.elements.UISelectionList(
-            relative_rect=item_rect,
-            item_list=[],
-            manager=self.ui_manager,
-            container=self.container,
-            allow_multi_select=False
-        )
-        self.ui_elements.append(self.item_list)
+        self.item_list = self._create_selection_list("item_list", item_rect, [])
         
         # 詳細表示
-        detail_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(2 * list_width + 30, 55, list_width, 25),
-            text="アイテム詳細",
-            manager=self.ui_manager,
-            container=self.container
+        detail_label = self._create_label(
+            "detail_label",
+            "アイテム詳細",
+            pygame.Rect(2 * list_width + 30, 55, list_width, 25)
         )
-        self.ui_elements.append(detail_label)
         
         detail_rect = pygame.Rect(2 * list_width + 30, 80, list_width, list_height)
-        self.detail_box = pygame_gui.elements.UITextBox(
-            html_text="アイテムを選択してください",
-            relative_rect=detail_rect,
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.detail_box)
-        
-        # アクションボタン
-        self._create_action_buttons()
-        
-        # 初期データを読み込み
-        self._load_party_data()
+        self.detail_box = self._create_text_box("detail_box", "アイテムを選択してください", detail_rect)
     
     def _create_action_buttons(self) -> None:
         """アクションボタンを作成"""
@@ -146,11 +126,11 @@ class ItemManagementPanel(ServicePanel):
             button_rect = pygame.Rect(x_position, y_position, button_width, button_height)
             
             button = self._create_button(
+                f"action_{action_id}",
                 label,
                 button_rect,
                 container=self.container,
-                object_id=f"#action_{action_id}",
-                tool_tip_text=tooltip
+                object_id=f"#action_{action_id}"
             )
             
             # 初期状態は無効

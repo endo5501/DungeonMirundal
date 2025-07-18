@@ -105,93 +105,37 @@ class IdentifyPanel(ServicePanel):
         """ヘッダーを作成"""
         # タイトル
         title_rect = pygame.Rect(10, 10, 200, 35)
-        title_label = pygame_gui.elements.UILabel(
-            relative_rect=title_rect,
-            text="アイテム鑑定",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(title_label)
+        title_label = self._create_label("title", "アイテム鑑定", title_rect)
         
         # 所持金表示
         gold_rect = pygame.Rect(self.rect.width - 200, 10, 190, 35)
-        self.gold_label = pygame_gui.elements.UILabel(
-            relative_rect=gold_rect,
-            text="所持金: 0 G",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.gold_label)
+        self.gold_label = self._create_label("gold_label", "所持金: 0 G", gold_rect)
         
         # 鑑定料金表示
         cost_rect = pygame.Rect(220, 10, 300, 35)
-        self.identify_cost_label = pygame_gui.elements.UILabel(
-            relative_rect=cost_rect,
-            text=f"鑑定料金: {self.identify_cost} G/個",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.identify_cost_label)
+        self.identify_cost_label = self._create_label("identify_cost_label", f"鑑定料金: {self.identify_cost} G/個", cost_rect)
     
     def _create_lists(self) -> None:
         """リストエリアを作成"""
         # 所有者リスト
-        owner_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(10, 55, 200, 25),
-            text="所有者",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(owner_label)
+        owner_label = self._create_label("owner_label", "所有者", pygame.Rect(10, 55, 200, 25))
         
         owner_rect = pygame.Rect(10, 85, 200, 250)
-        self.owner_list = pygame_gui.elements.UISelectionList(
-            relative_rect=owner_rect,
-            item_list=[],
-            manager=self.ui_manager,
-            container=self.container,
-            allow_multi_select=False
-        )
-        self.ui_elements.append(self.owner_list)
+        self.owner_list = self._create_selection_list("owner_list", owner_rect, [])
         
         # アイテムリスト
-        item_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(220, 55, 280, 25),
-            text="未鑑定アイテム",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(item_label)
+        item_label = self._create_label("item_label", "未鑑定アイテム", pygame.Rect(220, 55, 280, 25))
         
         item_rect = pygame.Rect(220, 85, 280, 250)
-        self.item_list = pygame_gui.elements.UISelectionList(
-            relative_rect=item_rect,
-            item_list=[],
-            manager=self.ui_manager,
-            container=self.container,
-            allow_multi_select=False
-        )
-        self.ui_elements.append(self.item_list)
+        self.item_list = self._create_selection_list("item_list", item_rect, [])
     
     def _create_detail_area(self) -> None:
         """詳細エリアを作成"""
         # 詳細表示
-        detail_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(510, 55, 280, 25),
-            text="アイテム詳細",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(detail_label)
+        detail_label = self._create_label("detail_label", "アイテム詳細", pygame.Rect(510, 55, 280, 25))
         
         detail_rect = pygame.Rect(510, 85, 280, 250)
-        self.detail_box = pygame_gui.elements.UITextBox(
-            html_text="アイテムを選択してください",
-            relative_rect=detail_rect,
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.detail_box)
+        self.detail_box = self._create_text_box("detail_box", "アイテムを選択してください", detail_rect)
     
     def _create_identify_controls(self) -> None:
         """鑑定コントロールを作成"""
@@ -200,6 +144,7 @@ class IdentifyPanel(ServicePanel):
         # 鑑定ボタン
         identify_rect = pygame.Rect(220, y_position, 150, 35)
         self.identify_button = self._create_button(
+            "identify_button",
             "鑑定する",
             identify_rect,
             container=self.container,

@@ -46,17 +46,39 @@ class StoragePanel(ServicePanel):
     
     def _create_ui(self) -> None:
         """UI要素を作成"""
+        # ヘッダー
+        self._create_header()
+        
+        # メインレイアウト
+        self._create_main_layout()
+        
+        # 初期データを読み込み
+        self._load_storage_data()
+    
+    def _create_header(self) -> None:
+        """ヘッダーを作成"""
         # タイトル（重複を防ぐため固有IDを設定）
         title_rect = pygame.Rect(10, 10, self.rect.width - 20, 40)
-        title_label = pygame_gui.elements.UILabel(
-            relative_rect=title_rect,
-            text="アイテム管理",
-            manager=self.ui_manager,
-            container=self.container,
-            object_id="#storage_panel_title"
-        )
-        self.ui_elements.append(title_label)
-        
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            title_label = self.ui_element_manager.create_label(
+                "storage_panel_title",
+                "アイテム管理",
+                title_rect,
+                object_id="#storage_panel_title"
+            )
+        else:
+            # フォールバック（レガシー）
+            title_label = pygame_gui.elements.UILabel(
+                relative_rect=title_rect,
+                text="アイテム管理",
+                manager=self.ui_manager,
+                container=self.container,
+                object_id="#storage_panel_title"
+            )
+            self.ui_elements.append(title_label)
+    
+    def _create_main_layout(self) -> None:
+        """メインレイアウトを作成"""
         # パネルの高さを考慮したレイアウト定数
         list_width = min(280, (self.rect.width - 140) // 2)  # 最大幅を制限
         list_height = min(200, self.rect.height - 180)  # パネルの高さに応じて調整
@@ -65,49 +87,69 @@ class StoragePanel(ServicePanel):
         side_margin = max(10, (self.rect.width - 2 * list_width - 120) // 2)
         
         # インベントリリスト（左側）
-        inv_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(side_margin, 60, list_width, 25),
-            text="所持アイテム",
-            manager=self.ui_manager,
-            container=self.container
+        inv_label = self._create_label(
+            "inventory_label",
+            "所持アイテム",
+            pygame.Rect(side_margin, 60, list_width, 25)
         )
-        self.ui_elements.append(inv_label)
         
         inv_rect = pygame.Rect(side_margin, 90, list_width, list_height)
-        self.inventory_list = pygame_gui.elements.UISelectionList(
-            relative_rect=inv_rect,
-            item_list=[],
-            manager=self.ui_manager,
-            container=self.container,
-            allow_multi_select=False
-        )
-        self.ui_elements.append(self.inventory_list)
+        self.inventory_list = self._create_selection_list("inventory_list", inv_rect, [])
         
-        # 中央のボタンと入力欄
+        # 中央のコントロールエリア
+        self._create_control_area(list_width, side_margin)
+        
+        # 保管庫リスト（右側）
+        storage_label = self._create_label(
+            "storage_label",
+            "保管庫",
+            pygame.Rect(self.rect.width - side_margin - list_width, 60, list_width, 25)
+        )
+        
+        storage_rect = pygame.Rect(
+            self.rect.width - side_margin - list_width, 90,
+            list_width, list_height
+        )
+        self.storage_list = self._create_selection_list("storage_list", storage_rect, [])
+        
+        # 情報ボックス（下部に配置、高さを確保）
+        info_y = max(list_height + 100, self.rect.height - 60)
+        info_rect = pygame.Rect(10, info_y, self.rect.width - 20, 40)
+        self.info_box = self._create_text_box("info_box", "", info_rect)
+    
+    def _create_control_area(self, list_width: int, side_margin: int) -> None:
+        """中央のコントロールエリアを作成"""
         center_x = self.rect.width // 2
         button_y_start = 120  # ボタンの開始位置を上に調整
         
         # 数量入力
-        quantity_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(center_x - 50, button_y_start, 100, 25),
-            text="数量:",
-            manager=self.ui_manager,
-            container=self.container
+        quantity_label = self._create_label(
+            "quantity_label",
+            "数量:",
+            pygame.Rect(center_x - 50, button_y_start, 100, 25)
         )
-        self.ui_elements.append(quantity_label)
         
         quantity_rect = pygame.Rect(center_x - 50, button_y_start + 30, 100, 30)
-        self.quantity_input = pygame_gui.elements.UITextEntryLine(
-            relative_rect=quantity_rect,
-            manager=self.ui_manager,
-            container=self.container,
-            initial_text="1"
-        )
-        self.ui_elements.append(self.quantity_input)
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.quantity_input = self.ui_element_manager.create_text_entry(
+                "quantity_input",
+                quantity_rect,
+                initial_text="1"
+            )
+        else:
+            # フォールバック（レガシー）
+            self.quantity_input = pygame_gui.elements.UITextEntryLine(
+                relative_rect=quantity_rect,
+                manager=self.ui_manager,
+                container=self.container,
+                initial_text="1"
+            )
+            self.ui_elements.append(self.quantity_input)
         
         # 預けるボタン
         deposit_rect = pygame.Rect(center_x - 50, button_y_start + 70, 100, 35)
         self.deposit_button = self._create_button(
+            "deposit_button",
             "預ける →",
             deposit_rect,
             container=self.container,
@@ -117,47 +159,12 @@ class StoragePanel(ServicePanel):
         # 引き出すボタン
         withdraw_rect = pygame.Rect(center_x - 50, button_y_start + 115, 100, 35)
         self.withdraw_button = self._create_button(
+            "withdraw_button",
             "← 引き出す",
             withdraw_rect,
             container=self.container,
             object_id="#withdraw_button"
         )
-        
-        # 保管庫リスト（右側）
-        storage_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(self.rect.width - side_margin - list_width, 60, list_width, 25),
-            text="保管庫",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(storage_label)
-        
-        storage_rect = pygame.Rect(
-            self.rect.width - side_margin - list_width, 90,
-            list_width, list_height
-        )
-        self.storage_list = pygame_gui.elements.UISelectionList(
-            relative_rect=storage_rect,
-            item_list=[],
-            manager=self.ui_manager,
-            container=self.container,
-            allow_multi_select=False
-        )
-        self.ui_elements.append(self.storage_list)
-        
-        # 情報ボックス（下部に配置、高さを確保）
-        info_y = max(list_height + 100, self.rect.height - 60)
-        info_rect = pygame.Rect(10, info_y, self.rect.width - 20, 40)
-        self.info_box = pygame_gui.elements.UITextBox(
-            html_text="",
-            relative_rect=info_rect,
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.info_box)
-        
-        # 初期データを読み込み
-        self._load_storage_data()
     
     def _load_storage_data(self) -> None:
         """保管庫データを読み込み"""

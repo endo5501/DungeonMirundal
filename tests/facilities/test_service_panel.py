@@ -95,9 +95,9 @@ class TestServicePanel(unittest.TestCase):
         class TestServicePanelImpl(ServicePanel):
             def _create_ui(self):
                 # テスト用のボタンを3つ作成
-                self.button1 = self._create_button("ボタン1", pygame.Rect(10, 10, 100, 30))
-                self.button2 = self._create_button("ボタン2", pygame.Rect(10, 50, 100, 30))
-                self.button3 = self._create_button("ボタン3", pygame.Rect(10, 90, 100, 30))
+                self.button1 = self._create_button("button1", "ボタン1", pygame.Rect(10, 10, 100, 30))
+                self.button2 = self._create_button("button2", "ボタン2", pygame.Rect(10, 50, 100, 30))
+                self.button3 = self._create_button("button3", "ボタン3", pygame.Rect(10, 90, 100, 30))
         
         mock_button_instances = []
         for i in range(3):
@@ -128,7 +128,7 @@ class TestServicePanel(unittest.TestCase):
         """ラベル作成のテスト"""
         class TestServicePanelImpl(ServicePanel):
             def _create_ui(self):
-                self.test_label = self._create_label("テストラベル", pygame.Rect(10, 10, 200, 30))
+                self.test_label = self._create_label("test_label", "テストラベル", pygame.Rect(10, 10, 200, 30))
         
         mock_label_instance = Mock()
         mock_label.return_value = mock_label_instance
@@ -154,6 +154,7 @@ class TestServicePanel(unittest.TestCase):
         class TestServicePanelImpl(ServicePanel):
             def _create_ui(self):
                 self.test_text_box = self._create_text_box(
+                    "test_text_box",
                     "テストテキスト", 
                     pygame.Rect(10, 10, 200, 100)
                 )
@@ -387,7 +388,7 @@ class TestServicePanelEdgeCases(unittest.TestCase):
                 # 10個のボタンを作成（ショートカットキーは1-9まで）
                 self.buttons = []
                 for i in range(10):
-                    button = self._create_button(f"ボタン{i+1}", pygame.Rect(10, 10+i*40, 100, 30))
+                    button = self._create_button(f"button{i+1}", f"ボタン{i+1}", pygame.Rect(10, 10+i*40, 100, 30))
                     self.buttons.append(button)
         
         mock_button_instances = []
