@@ -318,6 +318,9 @@ def _extract_element_info(sprite):
         if isinstance(sprite.button_index, int) and 0 <= sprite.button_index < 9:
             element_info['details']['auto_shortcut'] = str(sprite.button_index + 1)
     
+    # 施設UI専用情報の追加
+    _add_facility_ui_info(sprite, element_info)
+    
     # 追加属性（存在する場合のみ）
     for attr_name in ['value', 'selected', 'placeholder_text', 'is_focused']:
         if hasattr(sprite, attr_name):
@@ -332,6 +335,38 @@ def _extract_element_info(sprite):
         del element_info['details']
     
     return element_info
+
+def _add_facility_ui_info(sprite, element_info):
+    """施設UI専用の情報を追加"""
+    try:
+        # ServicePanel関連の情報
+        if hasattr(sprite, 'service_id'):
+            element_info['details']['service_id'] = sprite.service_id
+        
+        # FacilityWindow関連の情報
+        if hasattr(sprite, 'window_id'):
+            element_info['details']['window_id'] = sprite.window_id
+        
+        # NavigationPanel関連の情報
+        if hasattr(sprite, 'menu_items'):
+            element_info['details']['menu_items_count'] = len(sprite.menu_items)
+        
+        # UI要素の破棄状況をチェック
+        if hasattr(sprite, 'container'):
+            element_info['details']['has_container'] = sprite.container is not None
+        
+        # UI要素の親子関係
+        if hasattr(sprite, 'parent'):
+            element_info['details']['has_parent'] = sprite.parent is not None
+        
+        # メモリリークの可能性を示す情報
+        if hasattr(sprite, 'ui_elements'):
+            element_info['details']['managed_elements_count'] = len(sprite.ui_elements)
+        
+    except Exception as e:
+        # 施設UI情報の取得に失敗した場合でも、基本情報の取得は続行
+        logger.debug(f"Failed to add facility UI info: {e}")
+        pass
 
 def _is_element_inside(element, container):
     """要素がコンテナの内部にあるかチェック"""
@@ -1315,6 +1350,302 @@ def get_adventure_guild_list():
             status_code=500,
             detail=f"Failed to get adventure guild list: {str(e)}"
         )
+
+@app.get("/debug/facility-ui",
+         summary="Get facility UI debug information",
+         description="Returns detailed debug information about facility UI structure")
+def get_facility_ui_debug():
+    """施設UI専用のデバッグ情報を取得"""
+    try:
+        debug_info = {
+            "timestamp": get_timestamp(),
+            "facility_windows": [],
+            "service_panels": [],
+            "navigation_panels": [],
+            "ui_memory_issues": [],
+            "destruction_analysis": {}
+        }
+        
+        # WindowManagerから詳細情報を取得
+        try:
+            from src.ui.window_system import WindowManager
+            wm = WindowManager.get_instance()
+            
+            if wm and hasattr(wm, 'ui_manager') and wm.ui_manager:
+                # 施設UI専用の分析を実行
+                debug_info.update(_analyze_facility_ui_structure(wm.ui_manager))
+                
+                # パネル破棄状況の診断
+                debug_info["destruction_analysis"] = _diagnose_panel_destruction(wm.ui_manager)
+                
+                # メモリリークの可能性を分析
+                debug_info["ui_memory_issues"] = _detect_ui_memory_issues(wm.ui_manager)
+                
+            else:
+                debug_info["error"] = "WindowManager or UIManager not available"
+                
+        except Exception as e:
+            debug_info["error"] = str(e)
+            logger.error(f"Failed to analyze facility UI: {e}")
+        
+        return debug_info
+        
+    except Exception as e:
+        logger.error(f"Failed to get facility UI debug info: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get facility UI debug info: {str(e)}"
+        )
+
+def _analyze_facility_ui_structure(ui_manager):
+    """施設UI専用の構造分析"""
+    analysis = {
+        "facility_windows": [],
+        "service_panels": [],
+        "navigation_panels": [],
+        "ui_element_counts": {}
+    }
+    
+    try:
+        # スプライトグループから要素を取得
+        sprite_group = ui_manager.get_sprite_group()
+        sprites = sprite_group.sprites() if hasattr(sprite_group, 'sprites') else list(sprite_group)
+        
+        # 施設UI要素の分類
+        for sprite in sprites:
+            element_type = sprite.__class__.__name__
+            
+            # 要素タイプ別のカウント
+            if element_type not in analysis["ui_element_counts"]:
+                analysis["ui_element_counts"][element_type] = 0
+            analysis["ui_element_counts"][element_type] += 1
+            
+            # FacilityWindow の検出
+            if "FacilityWindow" in element_type or hasattr(sprite, 'window_id'):
+                facility_window = {
+                    "type": element_type,
+                    "window_id": getattr(sprite, 'window_id', 'unknown'),
+                    "visible": bool(getattr(sprite, 'visible', 0)),
+                    "has_main_panel": hasattr(sprite, 'main_panel'),
+                    "current_service_id": getattr(sprite, 'current_service_id', None),
+                    "service_panel_count": len(getattr(sprite, 'service_panels', {}))
+                }
+                analysis["facility_windows"].append(facility_window)
+            
+            # ServicePanel の検出
+            elif "ServicePanel" in element_type or hasattr(sprite, 'service_id'):
+                service_panel = {
+                    "type": element_type,
+                    "service_id": getattr(sprite, 'service_id', 'unknown'),
+                    "visible": bool(getattr(sprite, 'visible', 0)),
+                    "has_container": hasattr(sprite, 'container'),
+                    "ui_elements_count": len(getattr(sprite, 'ui_elements', [])),
+                    "container_valid": getattr(sprite, 'container', None) is not None
+                }
+                analysis["service_panels"].append(service_panel)
+            
+            # NavigationPanel の検出
+            elif "NavigationPanel" in element_type or hasattr(sprite, 'menu_items'):
+                navigation_panel = {
+                    "type": element_type,
+                    "visible": bool(getattr(sprite, 'visible', 0)),
+                    "menu_items_count": len(getattr(sprite, 'menu_items', [])),
+                    "has_buttons": hasattr(sprite, 'buttons')
+                }
+                analysis["navigation_panels"].append(navigation_panel)
+        
+        return analysis
+        
+    except Exception as e:
+        logger.error(f"Failed to analyze facility UI structure: {e}")
+        return analysis
+
+def _diagnose_panel_destruction(ui_manager):
+    """パネル破棄の完全性を診断"""
+    diagnosis = {
+        "orphaned_elements": [],
+        "incomplete_destructions": [],
+        "memory_leak_indicators": [],
+        "destruction_completeness": "unknown"
+    }
+    
+    try:
+        # スプライトグループから要素を取得
+        sprite_group = ui_manager.get_sprite_group()
+        sprites = sprite_group.sprites() if hasattr(sprite_group, 'sprites') else list(sprite_group)
+        
+        for sprite in sprites:
+            element_info = {
+                "type": sprite.__class__.__name__,
+                "object_id": getattr(sprite, 'object_ids', ['unknown'])[0] if hasattr(sprite, 'object_ids') else 'unknown'
+            }
+            
+            # 孤立要素の検出
+            if hasattr(sprite, 'container'):
+                container = sprite.container
+                if container is None:
+                    element_info["issue"] = "container is None"
+                    diagnosis["orphaned_elements"].append(element_info)
+                elif not hasattr(container, 'rect'):
+                    element_info["issue"] = "container has no rect"
+                    diagnosis["orphaned_elements"].append(element_info)
+            
+            # 不完全な破棄の検出
+            if hasattr(sprite, 'ui_elements'):
+                ui_elements = sprite.ui_elements
+                if isinstance(ui_elements, list) and len(ui_elements) > 0:
+                    # ui_elements リストに要素が残っている場合
+                    dead_elements = []
+                    for elem in ui_elements:
+                        if not hasattr(elem, 'rect') or not hasattr(elem, 'visible'):
+                            dead_elements.append(str(type(elem)))
+                    
+                    if dead_elements:
+                        element_info["dead_elements"] = dead_elements
+                        diagnosis["incomplete_destructions"].append(element_info)
+            
+            # メモリリークの兆候
+            if hasattr(sprite, 'parent') and sprite.parent is not None:
+                # 親要素が存在するが、親のコンテナが無効な場合
+                parent = sprite.parent
+                if hasattr(parent, 'container') and parent.container is None:
+                    element_info["issue"] = "parent container is None"
+                    diagnosis["memory_leak_indicators"].append(element_info)
+        
+        # 全体的な破棄の完全性を評価
+        total_issues = (len(diagnosis["orphaned_elements"]) + 
+                       len(diagnosis["incomplete_destructions"]) + 
+                       len(diagnosis["memory_leak_indicators"]))
+        
+        if total_issues == 0:
+            diagnosis["destruction_completeness"] = "excellent"
+        elif total_issues < 3:
+            diagnosis["destruction_completeness"] = "good"
+        elif total_issues < 10:
+            diagnosis["destruction_completeness"] = "moderate"
+        else:
+            diagnosis["destruction_completeness"] = "poor"
+        
+        return diagnosis
+        
+    except Exception as e:
+        logger.error(f"Failed to diagnose panel destruction: {e}")
+        diagnosis["error"] = str(e)
+        return diagnosis
+
+def _detect_ui_memory_issues(ui_manager):
+    """UIメモリ問題の検出"""
+    issues = []
+    
+    try:
+        # スプライトグループから要素を取得
+        sprite_group = ui_manager.get_sprite_group()
+        sprites = sprite_group.sprites() if hasattr(sprite_group, 'sprites') else list(sprite_group)
+        
+        # 要素タイプ別のカウント
+        type_counts = {}
+        for sprite in sprites:
+            element_type = sprite.__class__.__name__
+            type_counts[element_type] = type_counts.get(element_type, 0) + 1
+        
+        # 異常に多い要素タイプを検出
+        for element_type, count in type_counts.items():
+            if count > 50:  # 閾値: 50個を超える同じタイプの要素
+                issues.append({
+                    "type": "excessive_elements",
+                    "element_type": element_type,
+                    "count": count,
+                    "severity": "high" if count > 100 else "medium"
+                })
+        
+        # 重複する object_id の検出
+        object_ids = {}
+        for sprite in sprites:
+            if hasattr(sprite, 'object_ids') and sprite.object_ids:
+                obj_id = sprite.object_ids[0]
+                if obj_id != 'unknown':
+                    object_ids[obj_id] = object_ids.get(obj_id, 0) + 1
+        
+        for obj_id, count in object_ids.items():
+            if count > 1:
+                issues.append({
+                    "type": "duplicate_object_ids",
+                    "object_id": obj_id,
+                    "count": count,
+                    "severity": "medium"
+                })
+        
+        return issues
+        
+    except Exception as e:
+        logger.error(f"Failed to detect UI memory issues: {e}")
+        return [{"type": "detection_error", "error": str(e)}]
+
+@app.get("/debug/ui-snapshot",
+         summary="Create UI snapshot",
+         description="Creates a snapshot of the current UI state for comparison")
+def create_ui_snapshot():
+    """現在のUI状態のスナップショットを作成"""
+    try:
+        snapshot = {
+            "timestamp": get_timestamp(),
+            "ui_elements": [],
+            "element_count": 0,
+            "facility_ui_count": 0
+        }
+        
+        # WindowManagerから詳細情報を取得
+        try:
+            from src.ui.window_system import WindowManager
+            wm = WindowManager.get_instance()
+            
+            if wm and hasattr(wm, 'ui_manager') and wm.ui_manager:
+                # 階層化されたUI要素情報を取得
+                snapshot["ui_elements"] = _get_hierarchical_ui_elements(wm.ui_manager)
+                snapshot["element_count"] = len(snapshot["ui_elements"])
+                
+                # 施設UI要素の数をカウント
+                for element in snapshot["ui_elements"]:
+                    if _is_facility_ui_element(element):
+                        snapshot["facility_ui_count"] += 1
+                
+            else:
+                snapshot["error"] = "WindowManager or UIManager not available"
+                
+        except Exception as e:
+            snapshot["error"] = str(e)
+            logger.error(f"Failed to create UI snapshot: {e}")
+        
+        return snapshot
+        
+    except Exception as e:
+        logger.error(f"Failed to create UI snapshot: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create UI snapshot: {str(e)}"
+        )
+
+def _is_facility_ui_element(element):
+    """要素が施設UI要素かどうかを判定"""
+    element_type = element.get('type', '')
+    
+    # 施設UI関連のクラス名をチェック
+    facility_ui_types = [
+        'FacilityWindow', 'ServicePanel', 'NavigationPanel',
+        'BuyPanel', 'SellPanel', 'StoragePanel', 'IdentifyPanel',
+        'CharacterListPanel', 'PartyFormationPanel', 'CharacterCreationWizard'
+    ]
+    
+    for ui_type in facility_ui_types:
+        if ui_type in element_type:
+            return True
+    
+    # 詳細情報から判定
+    details = element.get('details', {})
+    if 'service_id' in details or 'window_id' in details:
+        return True
+    
+    return False
 
 # サーバー起動関数
 def _run_server():

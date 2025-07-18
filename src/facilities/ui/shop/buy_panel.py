@@ -5,7 +5,6 @@ import pygame_gui
 from typing import Dict, Any, Optional, List, Tuple
 import logging
 from ..service_panel import ServicePanel
-from ...core.service_result import ServiceResult, ResultType
 
 logger = logging.getLogger(__name__)
 
@@ -128,23 +127,11 @@ class BuyPanel(ServicePanel):
         """ヘッダーを作成"""
         # タイトル
         title_rect = pygame.Rect(10, 10, 200, 35)
-        title_label = pygame_gui.elements.UILabel(
-            relative_rect=title_rect,
-            text="商品購入",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(title_label)
+        title_label = self._create_label("title", "商品購入", title_rect)
         
         # 所持金表示
         gold_rect = pygame.Rect(self.rect.width - 200, 10, 190, 35)
-        self.gold_label = pygame_gui.elements.UILabel(
-            relative_rect=gold_rect,
-            text="所持金: 0 G",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.gold_label)
+        self.gold_label = self._create_label("gold_label", "所持金: 0 G", gold_rect)
     
     def _create_category_buttons(self) -> None:
         """カテゴリボタンを作成"""
@@ -166,6 +153,7 @@ class BuyPanel(ServicePanel):
             button_rect = pygame.Rect(x_position, y_position, button_width, button_height)
             
             button = self._create_button(
+                f"category_{cat_id}",
                 f"{icon} {cat_name}",
                 button_rect,
                 container=self.container,
@@ -177,24 +165,15 @@ class BuyPanel(ServicePanel):
     def _create_item_list(self) -> None:
         """商品リストを作成"""
         # リストラベル
-        list_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(10, 105, 200, 25),
-            text="商品一覧",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(list_label)
+        list_label = self._create_label("list_label", "商品一覧", pygame.Rect(10, 105, 200, 25))
         
         # アイテムリスト
         list_rect = pygame.Rect(10, 135, 400, 200)
-        self.item_list = pygame_gui.elements.UISelectionList(
-            relative_rect=list_rect,
-            item_list=[],
-            manager=self.ui_manager,
-            container=self.container,
-            allow_multi_select=False
+        self.item_list = self._create_selection_list(
+            "item_list",
+            list_rect,
+            []
         )
-        self.ui_elements.append(self.item_list)
     
     def _create_detail_area(self) -> None:
         """詳細エリアを作成"""
@@ -202,22 +181,13 @@ class BuyPanel(ServicePanel):
         detail_rect = pygame.Rect(420, 105, self.rect.width - 430, 190)
         
         # プレースホルダー（詳細パネルは選択時に作成）
-        detail_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(420, 105, detail_rect.width, 25),
-            text="商品詳細",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(detail_label)
+        detail_label = self._create_label("detail_label", "商品詳細", pygame.Rect(420, 105, detail_rect.width, 25))
         
-        self.detail_box = pygame_gui.elements.UITextBox(
-            html_text="商品を選択してください",
-            relative_rect=pygame.Rect(420, 135, detail_rect.width, 160),
-            manager=self.ui_manager,
-            container=self.container,
-            object_id="#detail_text_box"
+        self.detail_box = self._create_text_box(
+            "detail_box",
+            "商品を選択してください",
+            pygame.Rect(420, 135, detail_rect.width, 160)
         )
-        self.ui_elements.append(self.detail_box)
     
     def _create_purchase_controls(self) -> None:
         """購入コントロールを作成"""
@@ -225,13 +195,7 @@ class BuyPanel(ServicePanel):
         
         # 購入者選択エリア
         buyer_label_rect = pygame.Rect(10, y_position, 80, 30)
-        self.buyer_label = pygame_gui.elements.UILabel(
-            relative_rect=buyer_label_rect,
-            text="購入者:",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.buyer_label)
+        self.buyer_label = self._create_label("buyer_label", "購入者:", buyer_label_rect)
         
         # 購入者ドロップダウン
         buyer_options = self._get_buyer_options()
@@ -249,12 +213,11 @@ class BuyPanel(ServicePanel):
             starting_option = "パーティ共有"
         
         try:
-            self.buyer_dropdown = pygame_gui.elements.UIDropDownMenu(
-                options_list=buyer_options,
-                starting_option=starting_option,
-                relative_rect=buyer_dropdown_rect,
-                manager=self.ui_manager,
-                container=self.container
+            self.buyer_dropdown = self.ui_element_manager.create_dropdown(
+                "buyer_dropdown",
+                buyer_dropdown_rect,
+                buyer_options,
+                starting_option
             )
         except (ValueError, TypeError) as e:
             logger.warning(f"BuyPanel: Error creating buyer dropdown: {e}")
@@ -262,34 +225,42 @@ class BuyPanel(ServicePanel):
             from unittest.mock import Mock
             self.buyer_dropdown = Mock()
             self.buyer_dropdown.selected_option = starting_option
-        self.ui_elements.append(self.buyer_dropdown)
+        except Exception as e:
+            logger.warning(f"BuyPanel: UIElementManager create_dropdown failed: {e}")
+            # フォールバック: 従来の方法
+            try:
+                self.buyer_dropdown = pygame_gui.elements.UIDropDownMenu(
+                    options_list=buyer_options,
+                    starting_option=starting_option,
+                    relative_rect=buyer_dropdown_rect,
+                    manager=self.ui_manager,
+                    container=self.container
+                )
+                self.ui_elements.append(self.buyer_dropdown)
+            except Exception as e2:
+                logger.error(f"BuyPanel: Both dropdown creation methods failed: {e2}")
+                from unittest.mock import Mock
+                self.buyer_dropdown = Mock()
+                self.buyer_dropdown.selected_option = starting_option
         
         # 数量と購入ボタンを下の行に配置
         y_position += 40
         
         # 数量ラベル
-        quantity_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(10, y_position, 60, 35),
-            text="数量:",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(quantity_label)
+        quantity_label = self._create_label("quantity_label", "数量:", pygame.Rect(10, y_position, 60, 35))
         
         # 数量入力
         quantity_rect = pygame.Rect(75, y_position, 80, 35)
-        self.quantity_input = pygame_gui.elements.UITextEntryLine(
-            relative_rect=quantity_rect,
-            manager=self.ui_manager,
-            container=self.container,
-            initial_text="1",
-            object_id="#quantity_input"
+        self.quantity_input = self.ui_element_manager.create_text_entry(
+            "quantity_input",
+            quantity_rect,
+            initial_text="1"
         )
-        self.ui_elements.append(self.quantity_input)
         
         # 購入ボタン
         buy_rect = pygame.Rect(170, y_position, 120, 35)
         self.buy_button = self._create_button(
+            "buy_button",
             "購入する",
             buy_rect,
             container=self.container,
@@ -298,13 +269,7 @@ class BuyPanel(ServicePanel):
         self.buy_button.disable()  # 初期状態は無効
         
         # 合計金額表示
-        self.total_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(300, y_position, 200, 35),
-            text="合計: 0 G",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.total_label)
+        self.total_label = self._create_label("total_label", "合計: 0 G", pygame.Rect(300, y_position, 200, 35))
     
     def _load_shop_data(self) -> None:
         """商店データを読み込み"""

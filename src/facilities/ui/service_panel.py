@@ -7,11 +7,12 @@ import logging
 from abc import ABC, abstractmethod
 from ..core.facility_controller import FacilityController
 from ..core.service_result import ServiceResult
+from .ui_element_manager import UIElementManager, DestructionMixin
 
 logger = logging.getLogger(__name__)
 
 
-class ServicePanel(ABC):
+class ServicePanel(ABC, DestructionMixin):
     """サービスパネルの基底クラス
     
     各施設サービスのUI表示を担当する基底クラス。
@@ -30,6 +31,9 @@ class ServicePanel(ABC):
             service_id: サービスID
             ui_manager: UIマネージャー
         """
+        # DestructionMixinを初期化
+        super().__init__()
+        
         self.rect = rect
         self.parent = parent
         self.controller = controller
@@ -44,7 +48,10 @@ class ServicePanel(ABC):
             element_id=f"{service_id}_panel"
         )
         
-        # UI要素
+        # UIElementManagerを初期化
+        self.ui_element_manager = UIElementManager(ui_manager, self.container)
+        
+        # 後方互換性のためのUI要素リスト（非推奨）
         self.ui_elements: List[pygame_gui.core.UIElement] = []
         self.is_visible = False
         
@@ -78,20 +85,29 @@ class ServicePanel(ABC):
         self._refresh_content()
     
     def destroy(self) -> None:
-        """パネルを破棄（基底クラス版、サブクラスでオーバーライド推奨）"""
+        """パネルを破棄（統一された破棄処理）"""
         logger.info(f"ServicePanel.destroy() called for: {self.service_id}")
         
-        # UI要素リストからすべて破棄
-        destroyed_count = 0
-        for element in self.ui_elements[:]:  # コピーを作って安全に反復
+        # UIElementManagerを使用して統一的に破棄
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
             try:
-                if hasattr(element, 'kill'):
-                    element.kill()
-                    destroyed_count += 1
+                self.ui_element_manager.destroy_all()
+                logger.debug(f"ServicePanel: UIElementManager destroyed for {self.service_id}")
             except Exception as e:
-                logger.warning(f"ServicePanel: Failed to kill element {element}: {e}")
-        self.ui_elements.clear()
-        logger.debug(f"ServicePanel: Destroyed {destroyed_count} UI elements from list")
+                logger.error(f"ServicePanel: Failed to destroy UIElementManager for {self.service_id}: {e}")
+        
+        # 後方互換性のためのui_elementsリストを破棄
+        if self.ui_elements:
+            destroyed_count = 0
+            for element in self.ui_elements[:]:  # コピーを作って安全に反復
+                try:
+                    if hasattr(element, 'kill'):
+                        element.kill()
+                        destroyed_count += 1
+                except Exception as e:
+                    logger.warning(f"ServicePanel: Failed to kill element {element}: {e}")
+            self.ui_elements.clear()
+            logger.debug(f"ServicePanel: Destroyed {destroyed_count} legacy UI elements from list")
         
         # コンテナを破棄
         if self.container and hasattr(self.container, 'kill'):
@@ -103,6 +119,7 @@ class ServicePanel(ABC):
         
         # 属性をクリア
         self.container = None
+        self.ui_element_manager = None
         
         logger.info(f"ServicePanel destroyed: {self.service_id}")
     
@@ -134,11 +151,12 @@ class ServicePanel(ABC):
         """
         return self.controller.execute_service(action_id, params)
     
-    def _create_label(self, text: str, rect: pygame.Rect, 
+    def _create_label(self, element_id: str, text: str, rect: pygame.Rect, 
                      container: Optional[pygame_gui.core.UIContainer] = None) -> pygame_gui.elements.UILabel:
-        """ラベルを作成
+        """ラベルを作成（UIElementManager使用）
         
         Args:
+            element_id: 要素ID
             text: ラベルテキスト
             rect: 矩形領域
             container: コンテナ（省略時はself.container）
@@ -146,42 +164,56 @@ class ServicePanel(ABC):
         Returns:
             作成したラベル
         """
-        if container is None:
-            container = self.container
-            
-        label = pygame_gui.elements.UILabel(
-            relative_rect=rect,
-            text=text,
-            manager=self.ui_manager,
-            container=container
-        )
-        self.ui_elements.append(label)
-        return label
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            return self.ui_element_manager.create_label(element_id, text, rect, container)
+        else:
+            # フォールバック（レガシー）
+            if container is None:
+                container = self.container
+                
+            label = pygame_gui.elements.UILabel(
+                relative_rect=rect,
+                text=text,
+                manager=self.ui_manager,
+                container=container
+            )
+            self.ui_elements.append(label)
+            return label
     
-    def _create_button(self, text: str, rect: pygame.Rect,
+    def _create_button(self, element_id: str, text: str, rect: pygame.Rect,
                       container: Optional[pygame_gui.core.UIContainer] = None,
-                      object_id: Optional[str] = None) -> pygame_gui.elements.UIButton:
-        """ボタンを作成
+                      object_id: Optional[str] = None,
+                      on_click: Optional[callable] = None) -> pygame_gui.elements.UIButton:
+        """ボタンを作成（UIElementManager使用）
         
         Args:
+            element_id: 要素ID
             text: ボタンテキスト
             rect: 矩形領域
             container: コンテナ（省略時はself.container）
             object_id: オブジェクトID
+            on_click: クリック時のコールバック
             
         Returns:
             作成したボタン
         """
-        if container is None:
-            container = self.container
-            
-        button = pygame_gui.elements.UIButton(
-            relative_rect=rect,
-            text=text,
-            manager=self.ui_manager,
-            container=container,
-            object_id=object_id
-        )
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            button = self.ui_element_manager.create_button(
+                element_id, text, rect, container, on_click, object_id=object_id
+            )
+        else:
+            # フォールバック（レガシー）
+            if container is None:
+                container = self.container
+                
+            button = pygame_gui.elements.UIButton(
+                relative_rect=rect,
+                text=text,
+                manager=self.ui_manager,
+                container=container,
+                object_id=object_id
+            )
+            self.ui_elements.append(button)
         
         # ショートカットキー情報を設定
         if self._button_index_counter < 9:  # 1-9の数字キーまで対応
@@ -189,14 +221,14 @@ class ServicePanel(ABC):
             button.shortcut_key = str(self._button_index_counter + 1)
             self._button_index_counter += 1
         
-        self.ui_elements.append(button)
         return button
     
-    def _create_text_box(self, initial_text: str, rect: pygame.Rect,
+    def _create_text_box(self, element_id: str, initial_text: str, rect: pygame.Rect,
                         container: Optional[pygame_gui.core.UIContainer] = None) -> pygame_gui.elements.UITextBox:
-        """テキストボックスを作成
+        """テキストボックスを作成（UIElementManager使用）
         
         Args:
+            element_id: 要素ID
             initial_text: 初期テキスト
             rect: 矩形領域
             container: コンテナ（省略時はself.container）
@@ -204,17 +236,51 @@ class ServicePanel(ABC):
         Returns:
             作成したテキストボックス
         """
-        if container is None:
-            container = self.container
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            return self.ui_element_manager.create_text_box(element_id, initial_text, rect, container)
+        else:
+            # フォールバック（レガシー）
+            if container is None:
+                container = self.container
+                
+            text_box = pygame_gui.elements.UITextBox(
+                html_text=initial_text,
+                relative_rect=rect,
+                manager=self.ui_manager,
+                container=container
+            )
+            self.ui_elements.append(text_box)
+            return text_box
+    
+    def _create_selection_list(self, element_id: str, rect: pygame.Rect,
+                              item_list: List[str],
+                              container: Optional[pygame_gui.core.UIContainer] = None) -> pygame_gui.elements.UISelectionList:
+        """選択リストを作成（UIElementManager使用）
+        
+        Args:
+            element_id: 要素ID
+            rect: 矩形領域
+            item_list: 選択項目リスト
+            container: コンテナ（省略時はself.container）
             
-        text_box = pygame_gui.elements.UITextBox(
-            html_text=initial_text,
-            relative_rect=rect,
-            manager=self.ui_manager,
-            container=container
-        )
-        self.ui_elements.append(text_box)
-        return text_box
+        Returns:
+            作成した選択リスト
+        """
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            return self.ui_element_manager.create_selection_list(element_id, rect, item_list, container)
+        else:
+            # フォールバック（レガシー）
+            if container is None:
+                container = self.container
+                
+            selection_list = pygame_gui.elements.UISelectionList(
+                relative_rect=rect,
+                item_list=item_list,
+                manager=self.ui_manager,
+                container=container
+            )
+            self.ui_elements.append(selection_list)
+            return selection_list
     
     def _show_message(self, message: str, message_type: str = "info") -> None:
         """メッセージを表示
@@ -225,6 +291,25 @@ class ServicePanel(ABC):
         """
         # TODO: メッセージダイアログの実装
         logger.info(f"Message ({message_type}): {message}")
+    
+    def get_debug_info(self) -> Dict[str, Any]:
+        """デバッグ情報を取得
+        
+        Returns:
+            デバッグ情報
+        """
+        debug_info = {
+            "service_id": self.service_id,
+            "is_visible": self.is_visible,
+            "container_valid": self.container is not None,
+            "legacy_ui_elements_count": len(self.ui_elements),
+            "destruction_verified": getattr(self, 'destruction_verified', False)
+        }
+        
+        if self.ui_element_manager:
+            debug_info["ui_element_manager"] = self.ui_element_manager.get_debug_info()
+        
+        return debug_info
 
 
 class StandardServicePanel(ServicePanel):
@@ -237,12 +322,12 @@ class StandardServicePanel(ServicePanel):
         """UI要素を作成"""
         # タイトル
         title_rect = pygame.Rect(10, 10, self.rect.width - 20, 30)
-        self._create_label(f"Service: {self.service_id}", title_rect)
+        self._create_label("title", f"Service: {self.service_id}", title_rect)
         
         # サービス説明
         desc_rect = pygame.Rect(10, 50, self.rect.width - 20, 60)
         description = self._get_service_description()
-        self._create_text_box(description, desc_rect)
+        self._create_text_box("description", description, desc_rect)
         
         # アクションボタン
         self._create_action_buttons()
@@ -267,6 +352,7 @@ class StandardServicePanel(ServicePanel):
         )
         
         self.action_button = self._create_button(
+            "action_button",
             "実行",
             action_rect,
             object_id=f"{self.service_id}_execute"
