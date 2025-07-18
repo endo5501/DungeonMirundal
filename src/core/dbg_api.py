@@ -26,6 +26,9 @@ from fastapi_mcp import FastApiMCP
 import uvicorn
 from pydantic import BaseModel
 
+# インベントリシステムのインポート
+from src.inventory.inventory import inventory_manager
+
 # ログ設定
 logging.basicConfig(
     level=logging.INFO,
@@ -1151,72 +1154,83 @@ def get_character_details(character_index: int):
                                 
                                 character_info["equipment"].append(equipment_item)
                     
-                    # 所持品（インベントリ）
-                    if hasattr(char, 'inventory'):
-                        inventory = char.inventory
+                    # 所持品（インベントリ）- 新しいインベントリシステムを使用
+                    # キャラクターIDを取得
+                    char_id = getattr(char, 'character_id', None)
+                    logger.info(f"DBG_API: Getting inventory for character_id={char_id}")
+                    
+                    if char_id:
+                        # 新しいインベントリシステムから取得
+                        char_inventory = inventory_manager.get_character_inventory(char_id)
                         
-                        # インベントリの種類に応じて取得方法を変える
-                        inventory_items = []
+                        # インベントリが存在しない場合は作成
+                        if not char_inventory:
+                            logger.info(f"DBG_API: Creating inventory for character_id={char_id}")
+                            char_inventory = inventory_manager.create_character_inventory(char_id)
                         
-                        # 方法1: inventory.items属性から取得
-                        if hasattr(inventory, 'items') and inventory.items:
-                            inventory_items = inventory.items
-                        # 方法2: inventory.get_all_items()メソッドから取得
-                        elif hasattr(inventory, 'get_all_items'):
-                            try:
-                                inventory_items = inventory.get_all_items()
-                            except Exception as e:
-                                logger.debug(f"get_all_items() failed: {e}")
-                        # 方法3: inventory.__dict__の内容を確認
-                        elif hasattr(inventory, '__dict__'):
-                            for attr_name, attr_value in inventory.__dict__.items():
-                                if attr_name.endswith('_items') or attr_name == 'items':
-                                    if isinstance(attr_value, list):
-                                        inventory_items = attr_value
-                                        break
-                        
-                        character_info["inventory_count"] = len(inventory_items) if inventory_items else 0
-                        
-                        # 各アイテムの詳細情報を取得
-                        for item in inventory_items if inventory_items else []:
-                            inventory_item = {
-                                "item_name": getattr(item, 'name', 'Unknown Item'),
-                                "item_id": getattr(item, 'item_id', 'Unknown ID'),
-                                "equipped": False
-                            }
+                        if char_inventory:
+                            logger.info(f"DBG_API: Found character inventory for {char_id}")
+                            inventory_items = []
                             
-                            # アイテムの詳細情報を追加
-                            if hasattr(item, 'item_type'):
-                                item_type = item.item_type
-                                if hasattr(item_type, 'value'):
-                                    inventory_item["item_type"] = item_type.value
+                            # get_all_items()メソッドを使用してアイテムを取得
+                            for slot_index, item_instance in char_inventory.get_all_items():
+                                inventory_items.append((slot_index, item_instance))
+                            
+                            character_info["inventory_count"] = len(inventory_items)
+                            logger.info(f"DBG_API: Character {char_id} has {len(inventory_items)} items")
+                            
+                            # 各アイテムの詳細情報を取得
+                            for slot_index, item_instance in inventory_items:
+                                # アイテムマネージャーからアイテム情報を取得
+                                from src.items.item import item_manager
+                                item = item_manager.get_item(item_instance.item_id)
+                                
+                                if item:
+                                    inventory_item = {
+                                        "item_name": item.get_name(),
+                                        "item_id": item_instance.item_id,
+                                        "equipped": False,
+                                        "slot_index": slot_index,
+                                        "quantity": item_instance.quantity,
+                                        "identified": item_instance.identified,
+                                        "condition": item_instance.condition
+                                    }
+                                    
+                                    # アイテムの詳細情報を追加
+                                    if hasattr(item, 'item_type'):
+                                        inventory_item["item_type"] = item.item_type.value
+                                    
+                                    if hasattr(item, 'description'):
+                                        inventory_item["description"] = item.get_description()
+                                    
+                                    if hasattr(item, 'price'):
+                                        inventory_item["value"] = item.price
+                                    
+                                    # アイテムが装備可能かどうか
+                                    equipable_types = ['weapon', 'armor', 'shield', 'helmet', 'accessory']
+                                    inventory_item["equipable"] = item.item_type.value in equipable_types
+                                    
+                                    character_info["inventory"].append(inventory_item)
                                 else:
-                                    inventory_item["item_type"] = str(item_type)
-                            
-                            if hasattr(item, 'description'):
-                                inventory_item["description"] = item.description
-                                
-                            if hasattr(item, 'quantity'):
-                                inventory_item["quantity"] = item.quantity
-                            else:
-                                inventory_item["quantity"] = 1  # デフォルト数量
-                                
-                            if hasattr(item, 'value'):
-                                inventory_item["value"] = item.value
-                                
-                            if hasattr(item, 'stats_modifier'):
-                                inventory_item["stats_modifier"] = item.stats_modifier
-                                
-                            # アイテムが装備可能かどうか
-                            if hasattr(item, 'is_equipable'):
-                                inventory_item["equipable"] = item.is_equipable
-                            elif hasattr(item, 'item_type'):
-                                # アイテムタイプから装備可能性を推定
-                                equipable_types = ['weapon', 'armor', 'shield', 'helmet', 'accessory']
-                                item_type_str = str(getattr(item.item_type, 'value', item.item_type)).lower()
-                                inventory_item["equipable"] = any(eq_type in item_type_str for eq_type in equipable_types)
-                            
-                            character_info["inventory"].append(inventory_item)
+                                    # アイテム情報が取得できない場合の最小限の情報
+                                    inventory_item = {
+                                        "item_name": f"Unknown Item ({item_instance.item_id})",
+                                        "item_id": item_instance.item_id,
+                                        "equipped": False,
+                                        "slot_index": slot_index,
+                                        "quantity": item_instance.quantity,
+                                        "identified": item_instance.identified,
+                                        "condition": item_instance.condition
+                                    }
+                                    character_info["inventory"].append(inventory_item)
+                        else:
+                            # インベントリが存在しない場合
+                            character_info["inventory_count"] = 0
+                            logger.debug(f"No inventory found for character {char_id}")
+                    else:
+                        # キャラクターIDが取得できない場合
+                        character_info["inventory_count"] = 0
+                        logger.warning("Character ID not found, cannot retrieve inventory")
                 else:
                     raise HTTPException(
                         status_code=404,

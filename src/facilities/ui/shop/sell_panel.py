@@ -8,6 +8,7 @@ from ..service_panel import ServicePanel
 from ...core.service_result import ServiceResult
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class SellPanel(ServicePanel):
@@ -44,11 +45,11 @@ class SellPanel(ServicePanel):
         # ServicePanelの初期化（この中で_create_ui()が呼ばれる）
         super().__init__(rect, parent, controller, "sell", ui_manager)
         
-        logger.info("SellPanel initialized")
+        logger.debug("SellPanel initialized")
     
     def destroy(self) -> None:
         """パネルを破棄（宿屋パターンを採用した強化版）"""
-        logger.info("SellPanel: Starting enhanced destroy process")
+        logger.debug("SellPanel: Starting enhanced destroy process")
         
         # 特定のUI要素を明示的に破棄（宿屋パターン）
         specific_elements = [
@@ -91,7 +92,7 @@ class SellPanel(ServicePanel):
         self.selected_owner = None
         self.selected_item = None
         
-        logger.info("SellPanel: Enhanced destroy completed")
+        logger.debug("SellPanel: Enhanced destroy completed")
     
     def set_mode(self, mode: str):
         """パネルモードを設定（identify用）"""
@@ -101,6 +102,8 @@ class SellPanel(ServicePanel):
     
     def _create_ui(self) -> None:
         """UI要素を作成"""
+        logger.debug("SellPanel: _create_ui() called")
+        
         # ヘッダー
         self._create_header()
         
@@ -118,6 +121,8 @@ class SellPanel(ServicePanel):
         
         # 初期状態の詳細表示を更新
         self._update_detail_view()
+        
+        logger.debug("SellPanel: _create_ui() completed")
     
     def _create_header(self) -> None:
         """ヘッダーを作成"""
@@ -257,12 +262,15 @@ class SellPanel(ServicePanel):
     
     def _load_sellable_items(self) -> None:
         """売却可能アイテムを読み込み"""
+        logger.debug("SellPanel: Loading sellable items")
         result = self._execute_service_action("sell", {})
         
         if result.is_success() and result.data:
             self.sellable_items = result.data.get("items", [])
             self.sell_rate = result.data.get("sell_rate", 0.5)
             party_gold = result.data.get("party_gold", 0)
+            
+            logger.debug(f"SellPanel: Loaded {len(self.sellable_items)} sellable items")
             
             # 売却レート表示を更新
             if self.sell_info_label:
@@ -279,6 +287,8 @@ class SellPanel(ServicePanel):
             
             # 所有者リストを更新
             self._update_owner_list()
+        else:
+            logger.error(f"SellPanel: 売却可能アイテムの取得に失敗: {result.message if result else 'result is None'}")
     
     def _get_party(self):
         """パーティ情報を取得"""
@@ -300,6 +310,8 @@ class SellPanel(ServicePanel):
         """所有者ごとにアイテムを整理"""
         self.items_by_owner = {}
         
+        logger.debug(f"SellPanel: Organizing {len(self.sellable_items)} items by owner")
+        
         for item in self.sellable_items:
             # owner_idが存在しない場合のエラー処理を追加
             if "owner_id" not in item:
@@ -310,6 +322,8 @@ class SellPanel(ServicePanel):
             if owner_id not in self.items_by_owner:
                 self.items_by_owner[owner_id] = []
             self.items_by_owner[owner_id].append(item)
+        
+        logger.debug(f"SellPanel: Items organized by {len(self.items_by_owner)} owners")
     
     def _update_owner_list(self) -> None:
         """所有者リストを更新"""
@@ -336,6 +350,8 @@ class SellPanel(ServicePanel):
                 owner_names.append(member.name)
                 owner_ids.append(member.character_id)
         
+        logger.debug(f"SellPanel: 所有者リストを更新: {owner_names}")
+        
         # 所有者リストを更新
         self.owner_list.set_item_list(owner_names)
         self.owner_ids = owner_ids
@@ -344,6 +360,7 @@ class SellPanel(ServicePanel):
         if owner_names:
             # pygame_gui 0.6.x では set_selection メソッドが存在しないため、手動で設定
             self.selected_owner = owner_ids[0]
+            logger.debug(f"SellPanel: 初期選択を設定: {self.selected_owner}")
             self._update_item_list()
     
     def _update_item_list(self) -> None:
@@ -357,8 +374,11 @@ class SellPanel(ServicePanel):
         items = self.items_by_owner.get(self.selected_owner, [])
         self.displayed_items = items
         
+        logger.debug(f"SellPanel: 所有者 '{self.selected_owner}' のアイテム数: {len(items)}")
+        
         if not items:
             # アイテムがない場合のメッセージ
+            logger.debug(f"SellPanel: 所有者 '{self.selected_owner}' のアイテムがありません")
             self.item_list.set_item_list(["売却可能なアイテムがありません"])
             self.selected_item = None
             self._update_detail_view()
@@ -378,6 +398,7 @@ class SellPanel(ServicePanel):
             
             item_strings.append(item_string)
         
+        logger.debug(f"SellPanel: アイテムリストを更新: {item_strings}")
         self.item_list.set_item_list(item_strings)
         
         # 選択をクリア
@@ -494,16 +515,22 @@ class SellPanel(ServicePanel):
             if event.ui_element == self.owner_list:
                 # 所有者が選択された
                 selection = self.owner_list.get_single_selection()
+                logger.debug(f"SellPanel: Owner selection changed to: {selection}")
+                
                 if selection is not None:
-                    # 安全にインデックスを取得
-                    indices = [i for i, item in enumerate(self.owner_list.item_list) if item == selection]
+                    # 安全にインデックスを取得 - 辞書のtextフィールドと比較
+                    indices = [i for i, item in enumerate(self.owner_list.item_list) if item.get('text') == selection]
+                    
                     if indices and indices[0] < len(self.owner_ids):
                         self.selected_owner = self.owner_ids[indices[0]]
+                        logger.debug(f"SellPanel: Owner changed to: {self.selected_owner}")
                         self._update_item_list()
                     else:
                         self.selected_owner = None
+                        logger.warning(f"SellPanel: Invalid owner selection index")
                 else:
                     self.selected_owner = None
+                    logger.debug(f"SellPanel: Owner selection cleared")
                     self._update_item_list()
                 
                 return True
@@ -519,8 +546,8 @@ class SellPanel(ServicePanel):
                         self._update_controls()
                         return True
                     
-                    # 安全にインデックスを取得
-                    indices = [i for i, item in enumerate(self.item_list.item_list) if item == selection]
+                    # 安全にインデックスを取得 - 辞書のtextフィールドと比較
+                    indices = [i for i, item in enumerate(self.item_list.item_list) if item.get('text') == selection]
                     if indices and indices[0] < len(self.displayed_items):
                         self.selected_item = self.displayed_items[indices[0]]
                         self._update_detail_view()

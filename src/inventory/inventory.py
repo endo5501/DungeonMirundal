@@ -163,12 +163,14 @@ class Inventory:
         if not item_instance:
             return False
         
+        logger.info(f"Inventory.add_item: Adding {item_instance.item_id} x{item_instance.quantity} to inventory {self.owner_id}")
+        
         # まずスタック可能なスロットを探す
         stackable_slot_index = self.find_stackable_slot(item_instance)
         if stackable_slot_index is not None:
             slot = self.slots[stackable_slot_index]
             if slot.add_item(item_instance):
-                logger.debug(f"アイテムをスタック: {item_instance.item_id} x{item_instance.quantity}")
+                logger.info(f"Inventory: アイテムをスタック: {item_instance.item_id} x{item_instance.quantity} in slot {stackable_slot_index} of inventory {self.owner_id}")
                 return True
         
         # 空きスロットを探す
@@ -176,10 +178,10 @@ class Inventory:
         if empty_slot_index is not None:
             slot = self.slots[empty_slot_index]
             if slot.add_item(item_instance):
-                logger.debug(f"アイテムを追加: {item_instance.item_id} x{item_instance.quantity}")
+                logger.info(f"Inventory: アイテムを追加: {item_instance.item_id} x{item_instance.quantity} to slot {empty_slot_index} in inventory {self.owner_id}")
                 return True
         
-        logger.warning(f"インベントリが満杯のためアイテムを追加できません: {item_instance.item_id}")
+        logger.warning(f"インベントリが満杯のためアイテムを追加できません: {item_instance.item_id} for inventory {self.owner_id}")
         return False
     
     def remove_item(self, slot_index: int, quantity: int = None) -> Optional[ItemInstance]:
@@ -373,7 +375,8 @@ class InventoryManager:
             max_slots=DEFAULT_CHARACTER_SLOTS
         )
         self.character_inventories[character_id] = inventory
-        logger.info(f"キャラクターインベントリを作成: {character_id}")
+        logger.info(f"InventoryManager: キャラクターインベントリを作成: {character_id}")
+        logger.info(f"InventoryManager: 現在の character_inventories: {list(self.character_inventories.keys())}")
         return inventory
     
     def create_party_inventory(self, party_id: str) -> Inventory:
@@ -388,7 +391,10 @@ class InventoryManager:
     
     def get_character_inventory(self, character_id: str) -> Optional[Inventory]:
         """キャラクターインベントリを取得"""
-        return self.character_inventories.get(character_id)
+        inventory = self.character_inventories.get(character_id)
+        logger.debug(f"InventoryManager: get_character_inventory({character_id}) -> {'Found' if inventory else 'Not found'}")
+        logger.debug(f"InventoryManager: Available character inventories: {list(self.character_inventories.keys())}")
+        return inventory
     
     def get_party_inventory(self) -> Optional[Inventory]:
         """パーティインベントリを取得"""

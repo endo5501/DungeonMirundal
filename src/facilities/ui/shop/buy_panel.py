@@ -480,16 +480,50 @@ class BuyPanel(ServicePanel):
             quantity = 1
         
         # 選択された購入者を取得
-        buyer_text = self.buyer_dropdown.selected_option if self.buyer_dropdown else "パーティ共有"
+        raw_buyer_text = self.buyer_dropdown.selected_option if self.buyer_dropdown else "パーティ共有"
         buyer_id = "party"  # デフォルトはパーティ
+        
+        logger.info(f"BuyPanel: buyer_dropdown.selected_option = '{raw_buyer_text}'")
+        logger.info(f"BuyPanel: buyer_dropdown exists = {self.buyer_dropdown is not None}")
+        
+        # pygame_guiのUIDropDownMenuが返す値を正しく解析
+        buyer_text = raw_buyer_text
+        logger.info(f"BuyPanel: Raw buyer_text type: {type(raw_buyer_text)}, repr: {repr(raw_buyer_text)}")
+        
+        # タプルの場合、最初の要素を取得
+        if isinstance(raw_buyer_text, tuple):
+            buyer_text = raw_buyer_text[0]
+            logger.info(f"BuyPanel: Extracted from tuple: '{buyer_text}'")
+        elif isinstance(raw_buyer_text, str):
+            # "'('A', 'A')'" のような文字列の場合、最初の値を抽出
+            # 正規表現を使用してより確実に解析
+            import re
+            pattern = r"'?\('([^']+)',\s*'[^']+'\)'?"
+            logger.info(f"BuyPanel: Trying regex pattern: {pattern}")
+            match = re.match(pattern, raw_buyer_text)
+            if match:
+                buyer_text = match.group(1)
+                logger.info(f"BuyPanel: Extracted buyer_text = '{buyer_text}'")
+            else:
+                logger.warning(f"BuyPanel: Failed to parse buyer_text with regex: '{raw_buyer_text}'")
+                buyer_text = raw_buyer_text
+        else:
+            logger.warning(f"BuyPanel: Unexpected buyer_text type: {type(raw_buyer_text)}")
+            buyer_text = str(raw_buyer_text)
         
         if buyer_text != "パーティ共有" and hasattr(self, '_controller') and self._controller:
             party = self._controller.get_party()
+            logger.info(f"BuyPanel: party exists = {party is not None}")
             if party:
+                logger.info(f"BuyPanel: party members = {[m.name for m in party.members]}")
                 for member in party.members:
+                    logger.info(f"BuyPanel: checking member '{member.name}' vs buyer_text '{buyer_text}'")
                     if member.name == buyer_text:
                         buyer_id = member.character_id
+                        logger.info(f"BuyPanel: Found matching member, buyer_id = {buyer_id}")
                         break
+        
+        logger.info(f"BuyPanel: Final buyer_id = {buyer_id}")
         
         params = {
             "item_id": self.selected_item_id,
@@ -559,15 +593,17 @@ class BuyPanel(ServicePanel):
                             return True
                 
                 # より直接的なチェック: ボタンテキストがアイテムリストの内容と一致するか
-                if button.text and any(item_text.startswith(button.text.split(' - ')[0]) for item_text in self.item_list.item_list):
-                    logger.info(f"BuyPanel: Item list button clicked by text match: {button.text}")
+                button_text = str(button.text) if button.text else ""
+                if button_text and any(item_text.startswith(button_text.split(' - ')[0]) for item_text in self.item_list.item_list):
+                    logger.info(f"BuyPanel: Item list button clicked by text match: {button_text}")
                     self._handle_item_button_click(button)
                     return True
             except Exception as e:
                 logger.error(f"BuyPanel: Error checking item list button: {e}")
                 # フォールバック: テキストベースのチェック
-                if button.text and " - " in button.text and " G " in button.text:
-                    logger.info(f"BuyPanel: Item list button clicked by pattern match: {button.text}")
+                button_text = str(button.text) if button.text else ""
+                if button_text and " - " in button_text and " G " in button_text:
+                    logger.info(f"BuyPanel: Item list button clicked by pattern match: {button_text}")
                     self._handle_item_button_click(button)
                     return True
         
@@ -584,10 +620,10 @@ class BuyPanel(ServicePanel):
     
     def _handle_item_button_click(self, button: pygame_gui.elements.UIButton) -> None:
         """アイテムボタンのクリックを処理"""
-        logger.info(f"BuyPanel: _handle_item_button_click called with button text: {button.text}")
+        button_text = str(button.text) if button.text else ""
+        logger.info(f"BuyPanel: _handle_item_button_click called with button text: {button_text}")
         
         # ボタンテキストからアイテムを検索
-        button_text = button.text
         logger.info(f"BuyPanel: Searching for item with text: {button_text}")
         
         # displayed_itemsから該当するアイテムを検索

@@ -272,6 +272,8 @@ class ShopService(FacilityService, ActionExecutorMixin):
     
     def _execute_purchase(self, item_id: str, quantity: int, buyer_id: str = "party") -> ServiceResult:
         """購入を実行"""
+        logger.debug(f"ShopService._execute_purchase: item_id={item_id}, quantity={quantity}, buyer_id={buyer_id}")
+        
         if not self.party:
             return ServiceResult(False, "パーティが存在しません")
         
@@ -297,12 +299,16 @@ class ShopService(FacilityService, ActionExecutorMixin):
         if not item_instance:
             return ServiceResult(False, "アイテムの作成に失敗しました")
         
+        logger.debug(f"ShopService: Created item instance: {item_instance.item_id} x{item_instance.quantity}")
+        
         # 購入者のインベントリに追加
         if buyer_id == "party":
+            logger.debug("ShopService: Adding to party inventory")
             # パーティインベントリに追加
             party_inventory = inventory_manager.get_party_inventory()
             if not party_inventory:
                 # パーティインベントリがない場合は作成
+                logger.debug(f"ShopService: Creating party inventory for party_id={self.party.party_id}")
                 party_inventory = inventory_manager.create_party_inventory(self.party.party_id)
             
             if not party_inventory.add_item(item_instance):
@@ -310,18 +316,24 @@ class ShopService(FacilityService, ActionExecutorMixin):
                 self.party.gold += total_cost
                 self._shop_inventory[item_id]["stock"] += quantity
                 return ServiceResult(False, "パーティインベントリが満杯のため購入できません")
+            logger.debug("ShopService: Successfully added to party inventory")
         else:
+            logger.debug(f"ShopService: Adding to character inventory, buyer_id={buyer_id}")
             # キャラクターインベントリに追加
             char_inventory = inventory_manager.get_character_inventory(buyer_id)
             if not char_inventory:
                 # キャラクターインベントリがない場合は作成
+                logger.debug(f"ShopService: Creating character inventory for buyer_id={buyer_id}")
                 char_inventory = inventory_manager.create_character_inventory(buyer_id)
+            else:
+                logger.debug(f"ShopService: Found existing character inventory for buyer_id={buyer_id}")
             
             if not char_inventory.add_item(item_instance):
                 # インベントリに追加できない場合は返金
                 self.party.gold += total_cost
                 self._shop_inventory[item_id]["stock"] += quantity
                 return ServiceResult(False, "キャラクターインベントリが満杯のため購入できません")
+            logger.debug(f"ShopService: Successfully added to character inventory, buyer_id={buyer_id}")
         
         return ServiceResult(
             success=True,
@@ -356,6 +368,9 @@ class ShopService(FacilityService, ActionExecutorMixin):
         if not self.party:
             return ServiceResult(False, "パーティが存在しません")
         
+        # インベントリマネージャーの状態を確認
+        logger.debug(f"ShopService: Checking {len(inventory_manager.character_inventories)} existing character inventories")
+        
         sellable_items = []
         
         # パーティインベントリから売却可能アイテムを収集
@@ -367,6 +382,7 @@ class ShopService(FacilityService, ActionExecutorMixin):
                     # 重要アイテムでない場合は売却可能
                     sell_price = self.item_manager.get_sell_price(item_instance)
                     sellable_items.append({
+                        "id": item_instance.item_id,  # 売却処理で参照される"id"フィールドを追加
                         "slot_index": slot_index,
                         "item_id": item_instance.item_id,
                         "name": item.get_name(),
@@ -385,12 +401,20 @@ class ShopService(FacilityService, ActionExecutorMixin):
         for member in self.party.members:
             if member.is_alive():
                 char_inventory = inventory_manager.get_character_inventory(member.character_id)
+                
+                # インベントリが存在しない場合は作成
+                if not char_inventory:
+                    logger.debug(f"ShopService: Creating inventory for character {member.name}")
+                    char_inventory = inventory_manager.create_character_inventory(member.character_id)
+                
                 if char_inventory:
-                    for slot_index, item_instance in char_inventory.get_all_items():
+                    items_in_inventory = list(char_inventory.get_all_items())
+                    for slot_index, item_instance in items_in_inventory:
                         item = self.item_manager.get_item_info(item_instance)
                         if item:
                             sell_price = self.item_manager.get_sell_price(item_instance)
-                            sellable_items.append({
+                            sellable_item = {
+                                "id": item_instance.item_id,  # 売却処理で参照される"id"フィールドを追加
                                 "slot_index": slot_index,
                                 "item_id": item_instance.item_id,
                                 "name": item.get_name(),
@@ -403,7 +427,12 @@ class ShopService(FacilityService, ActionExecutorMixin):
                                 "owner_name": member.name,
                                 "condition": item_instance.condition,
                                 "identified": item_instance.identified
-                            })
+                            }
+                            sellable_items.append(sellable_item)
+                        else:
+                            logger.warning(f"ShopService: item_manager.get_item_info returned None for item_id={item_instance.item_id}")
+        
+        logger.debug(f"ShopService: Collected {len(sellable_items)} sellable items")
         
         return ServiceResult(
             success=True,
