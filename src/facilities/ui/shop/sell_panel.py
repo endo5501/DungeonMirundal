@@ -345,10 +345,15 @@ class SellPanel(ServicePanel):
         owner_ids.append("party")
         
         # 生きているパーティメンバーを所有者として表示
-        for member in self.party.members:
-            if member.is_alive():
-                owner_names.append(member.name)
-                owner_ids.append(member.character_id)
+        if hasattr(self.party, 'members'):
+            try:
+                members = list(self.party.members) if self.party.members else []
+                for member in members:
+                    if hasattr(member, 'is_alive') and member.is_alive():
+                        owner_names.append(member.name)
+                        owner_ids.append(member.character_id)
+            except (TypeError, AttributeError) as e:
+                logger.warning(f"SellPanel: Error accessing party members: {e}")
         
         logger.debug(f"SellPanel: 所有者リストを更新: {owner_names}")
         
@@ -518,8 +523,15 @@ class SellPanel(ServicePanel):
                 logger.debug(f"SellPanel: Owner selection changed to: {selection}")
                 
                 if selection is not None:
-                    # 安全にインデックスを取得 - 辞書のtextフィールドと比較
-                    indices = [i for i, item in enumerate(self.owner_list.item_list) if item.get('text') == selection]
+                    # 安全にインデックスを取得 - 文字列と辞書両方に対応
+                    indices = []
+                    for i, item in enumerate(self.owner_list.item_list):
+                        if isinstance(item, dict):
+                            if item.get('text') == selection:
+                                indices.append(i)
+                        elif isinstance(item, str):
+                            if item == selection:
+                                indices.append(i)
                     
                     if indices and indices[0] < len(self.owner_ids):
                         self.selected_owner = self.owner_ids[indices[0]]
@@ -546,8 +558,15 @@ class SellPanel(ServicePanel):
                         self._update_controls()
                         return True
                     
-                    # 安全にインデックスを取得 - 辞書のtextフィールドと比較
-                    indices = [i for i, item in enumerate(self.item_list.item_list) if item.get('text') == selection]
+                    # 安全にインデックスを取得 - 文字列と辞書両方に対応
+                    indices = []
+                    for i, item in enumerate(self.item_list.item_list):
+                        if isinstance(item, dict):
+                            if item.get('text') == selection:
+                                indices.append(i)
+                        elif isinstance(item, str):
+                            if item == selection:
+                                indices.append(i)
                     if indices and indices[0] < len(self.displayed_items):
                         self.selected_item = self.displayed_items[indices[0]]
                         self._update_detail_view()
