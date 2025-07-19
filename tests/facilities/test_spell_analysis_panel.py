@@ -84,24 +84,25 @@ class TestSpellAnalysisPanelBasic:
         
         rect, parent, ui_manager, controller, service = mock_ui_setup
         
-        with patch('pygame_gui.elements.UIPanel'), \
-             patch('pygame_gui.elements.UILabel'), \
-             patch('pygame_gui.elements.UISelectionList'), \
-             patch('pygame_gui.elements.UIButton'), \
-             patch('pygame_gui.elements.UITextBox'), \
+        # ServicePanelの初期化をモック
+        with patch('src.facilities.ui.magic_guild.spell_analysis_panel.ServicePanel.__init__') as mock_super_init, \
              patch.object(SpellAnalysisPanel, '_refresh_characters') as mock_refresh:
             
-            panel = SpellAnalysisPanel(rect, parent, ui_manager, controller, service)
+            mock_super_init.return_value = None
             
-            # パッチを適用
+            # 新しいAPIでは引数順序が変更: (rect, parent, controller, ui_manager)
+            panel = SpellAnalysisPanel(rect, parent, controller, ui_manager)
+            
+            # ServicePanelの初期化が呼ばれることを確認
+            mock_super_init.assert_called_once_with(rect, parent, controller, "spell_analysis", ui_manager)
+            
+            # 初期データ読み込みが呼ばれることを確認
             mock_refresh.assert_called_once()
             
-            # 基本属性の確認
-            assert panel.rect == rect
-            assert panel.parent == parent
-            assert panel.ui_manager == ui_manager
-            assert panel.controller == controller
-            assert panel.service == service
+            # UI要素の初期状態
+            assert panel.title_label is None  # 初期化前は None
+            assert panel.character_list is None
+            assert panel.spell_list is None
             
             # 初期状態の確認
             assert panel.selected_character is None
@@ -115,30 +116,24 @@ class TestSpellAnalysisPanelBasic:
         
         rect, parent, ui_manager, controller, service = mock_ui_setup
         
-        with patch('pygame_gui.elements.UIPanel') as mock_panel, \
-             patch('pygame_gui.elements.UILabel') as mock_label, \
-             patch('pygame_gui.elements.UISelectionList') as mock_list, \
-             patch('pygame_gui.elements.UIButton') as mock_button, \
-             patch('pygame_gui.elements.UITextBox') as mock_text_box, \
+        # ServicePanel.__init__をモックして、各UI作成メソッドをテスト
+        with patch('src.facilities.ui.magic_guild.spell_analysis_panel.ServicePanel.__init__') as mock_super_init, \
+             patch.object(SpellAnalysisPanel, '_create_header') as mock_header, \
+             patch.object(SpellAnalysisPanel, '_create_selection_area') as mock_selection, \
+             patch.object(SpellAnalysisPanel, '_create_action_controls') as mock_actions, \
+             patch.object(SpellAnalysisPanel, '_create_result_area') as mock_result, \
              patch.object(SpellAnalysisPanel, '_refresh_characters') as mock_refresh:
             
-            mock_button_instance = Mock()
-            mock_button.return_value = mock_button_instance
+            mock_super_init.return_value = None
             
-            panel = SpellAnalysisPanel(rect, parent, ui_manager, controller, service)
+            panel = SpellAnalysisPanel(rect, parent, controller, ui_manager)
+            panel._create_ui()  # 明示的に呼び出し
             
-            # パッチを適用
-            mock_refresh.assert_called_once()
-            
-            # UI要素が作成される
-            mock_panel.assert_called_once()
-            assert mock_label.call_count == 5  # タイトル、キャラクター、魔法、コスト、所持金
-            assert mock_list.call_count == 2   # キャラクターリスト、魔法リスト
-            mock_button.assert_called_once()
-            mock_text_box.assert_called_once()
-            
-            # 分析ボタンが初期無効化される
-            mock_button_instance.disable.assert_called_once()
+            # 各UI作成メソッドが呼ばれることを確認
+            mock_header.assert_called_once()
+            mock_selection.assert_called_once()
+            mock_actions.assert_called_once()
+            mock_result.assert_called_once()
 
 
 class TestSpellAnalysisPanelDataLoading:
@@ -152,26 +147,29 @@ class TestSpellAnalysisPanelDataLoading:
         
         # モックUI要素
         mock_character_list = Mock()
-        mock_gold_label = Mock()
+        mock_result_box = Mock()
         
-        # サービス結果のモック
-        result = sample_service_result(
-            success=True,
-            data={
-                "characters": sample_characters,
-                "party_gold": 2000
-            }
-        )
-        service.execute_action.return_value = result
+        # ServiceResultモック（新しいAPI）
+        result = Mock()
+        result.is_success.return_value = True
+        result.data = {
+            "characters": sample_characters,
+            "party_gold": 2000
+        }
+        result.message = ""
         
-        panel = Mock()
-        panel.service = service
+        # パネルのモック
+        panel = Mock(spec=SpellAnalysisPanel)
         panel.character_list = mock_character_list
-        panel.gold_label = mock_gold_label
+        panel.result_box = mock_result_box
+        panel.characters_data = []  # 初期状態
+        panel._execute_service_action = Mock(return_value=result)
         
-        with patch.object(panel, '_refresh_characters') as mock_method:
-            mock_method.__func__ = SpellAnalysisPanel._refresh_characters
-            SpellAnalysisPanel._refresh_characters(panel)
+        # 実際のメソッドを呼び出し
+        SpellAnalysisPanel._refresh_characters(panel)
+        
+        # サービスが呼ばれたことを確認
+        panel._execute_service_action.assert_called_once_with("analyze_magic", {})
         
         # データが設定される
         assert panel.characters_data == sample_characters
@@ -191,19 +189,26 @@ class TestSpellAnalysisPanelDataLoading:
         
         # モックUI要素
         mock_character_list = Mock()
+        mock_result_box = Mock()
         
-        # 失敗結果
-        result = sample_service_result(success=False)
-        service.execute_action.return_value = result
+        # ServiceResultモック（失敗ケース）
+        result = Mock()
+        result.is_success.return_value = False
+        result.data = None
+        result.message = "エラーメッセージ"
         
-        panel = Mock()
-        panel.service = service
+        # パネルのモック
+        panel = Mock(spec=SpellAnalysisPanel)
         panel.character_list = mock_character_list
+        panel.result_box = mock_result_box
         panel.characters_data = []
+        panel._execute_service_action = Mock(return_value=result)
         
-        with patch.object(panel, '_refresh_characters') as mock_method:
-            mock_method.__func__ = SpellAnalysisPanel._refresh_characters
-            SpellAnalysisPanel._refresh_characters(panel)
+        # 実際のメソッドを呼び出し
+        SpellAnalysisPanel._refresh_characters(panel)
+        
+        # サービスが呼ばれたことを確認
+        panel._execute_service_action.assert_called_once_with("analyze_magic", {})
         
         # 空リストが設定される
         mock_character_list.set_item_list.assert_called_with([])
