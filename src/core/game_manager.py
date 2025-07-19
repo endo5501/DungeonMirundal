@@ -26,6 +26,9 @@ from src.ui.dungeon_ui_pygame import create_pygame_dungeon_ui
 from src.utils.logger import logger
 from src.utils.constants import *
 from src.utils.constants import GameLocation
+from src.core.loop import MainLoopManager
+from src.core.combat import CombatStateManager
+from src.core.input import InputHandlerCoordinator
 
 
 class GameManager(EventHandler):
@@ -95,6 +98,15 @@ class GameManager(EventHandler):
         # イベントバス設定
         self._setup_event_handlers()
         
+        # MainLoopManager初期化
+        self._setup_main_loop_manager()
+        
+        # CombatStateManager初期化
+        self._setup_combat_state_manager()
+        
+        # InputHandlerCoordinator初期化
+        self._setup_input_handler_coordinator()
+        
         logger.info(self.game_config.get_text("app_log.game_manager_initialized"))
     
     def _setup_scene_management(self):
@@ -116,6 +128,73 @@ class GameManager(EventHandler):
             self.event_bus.subscribe(event_type, self)
         
         logger.info("イベントハンドラー設定完了")
+    
+    def _setup_main_loop_manager(self):
+        """MainLoopManagerの初期化"""
+        self.main_loop_manager = MainLoopManager()
+        
+        # 初期化コンテキストを準備
+        context = {
+            'screen': self.screen,
+            'clock': self.clock,
+            'target_fps': self.target_fps,
+            'scene_manager': self.scene_manager,
+            'input_manager': getattr(self, 'input_manager', None),
+            'ui_manager': getattr(self, 'ui_manager', None),
+            'debug_enabled': getattr(self, 'debug_enabled', False)
+        }
+        
+        # MainLoopManagerを初期化
+        if self.main_loop_manager.initialize(context):
+            logger.info("MainLoopManager初期化完了")
+        else:
+            logger.error("MainLoopManager初期化失敗")
+    
+    def _setup_combat_state_manager(self):
+        """CombatStateManagerの初期化"""
+        self.combat_state_manager = CombatStateManager()
+        
+        # 初期化コンテキストを準備
+        context = {
+            'combat_manager': getattr(self, 'combat_manager', None),
+            'encounter_manager': getattr(self, 'encounter_manager', None),
+            'dungeon_manager': getattr(self, 'dungeon_manager', None),
+            'current_party': getattr(self, 'current_party', None),
+            'set_game_state_callback': self.set_game_state,
+            'get_game_state_callback': lambda: self.game_state
+        }
+        
+        # CombatStateManagerを初期化
+        if self.combat_state_manager.initialize(context):
+            # 戦闘結果処理ハンドラーを登録
+            self.combat_state_manager.register_victory_handler(self._legacy_handle_combat_victory)
+            self.combat_state_manager.register_defeat_handler(self._legacy_handle_combat_defeat)
+            self.combat_state_manager.register_fled_handler(self._legacy_handle_combat_fled)
+            self.combat_state_manager.register_negotiated_handler(self._legacy_handle_combat_negotiated)
+            
+            logger.info("CombatStateManager初期化完了")
+        else:
+            logger.error("CombatStateManager初期化失敗")
+    
+    def _setup_input_handler_coordinator(self):
+        """InputHandlerCoordinatorの初期化"""
+        self.input_handler_coordinator = InputHandlerCoordinator()
+        
+        # 初期化コンテキストを準備
+        context = {
+            'game_config': self.game_config,
+            'current_location': self.current_location,
+            'dungeon_renderer': getattr(self, 'dungeon_renderer', None),
+            'overworld_manager': getattr(self, 'overworld_manager', None),
+            'toggle_pause_callback': self.toggle_pause,
+            'get_text_callback': self.get_text
+        }
+        
+        # InputHandlerCoordinatorを初期化
+        if self.input_handler_coordinator.initialize(context):
+            logger.info("InputHandlerCoordinator初期化完了")
+        else:
+            logger.error("InputHandlerCoordinator初期化失敗")
     
     def handle_event(self, event: GameEvent) -> bool:
         """EventHandler インターフェースの実装"""
@@ -293,35 +372,32 @@ class GameManager(EventHandler):
         logger.info(self.game_config.get_text("app_log.debug_setting").format(status=status))
     
     def _on_menu_action(self, action: str, pressed: bool, input_type):
-        """メニューアクションの処理"""
-        if pressed:
-            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.menu_action"), input_type=input_type.value))
-            
-            # ダンジョン内ではメニュー表示
-            if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
-                self.dungeon_renderer._show_menu()
-            # 地上部では設定画面をオーバーワールドマネージャーに委譲
-            elif self.current_location == GameLocation.OVERWORLD and self.overworld_manager:
-                # オーバーワールドマネージャーが独自にESCキーを処理するため、
-                # ここでは何もしない（重複処理を避ける）
-                pass
-            else:
-                self.toggle_pause()
+        """メニューアクションの処理 - InputHandlerCoordinatorに委譲"""
+        if hasattr(self, 'input_handler_coordinator'):
+            return self.input_handler_coordinator.handle_input_action('menu', pressed, input_type.value if hasattr(input_type, 'value') else str(input_type))
+        else:
+            logger.error("InputHandlerCoordinator not initialized")
     
     def _on_confirm_action(self, action: str, pressed: bool, input_type):
-        """確認アクションの処理"""
-        if pressed:
-            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.confirm_action"), input_type=input_type.value))
+        """確認アクションの処理 - InputHandlerCoordinatorに委譲"""
+        if hasattr(self, 'input_handler_coordinator'):
+            return self.input_handler_coordinator.handle_input_action('confirm', pressed, input_type.value if hasattr(input_type, 'value') else str(input_type))
+        else:
+            logger.error("InputHandlerCoordinator not initialized")
     
     def _on_cancel_action(self, action: str, pressed: bool, input_type):
-        """キャンセルアクションの処理"""
-        if pressed:
-            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.cancel_action"), input_type=input_type.value))
+        """キャンセルアクションの処理 - InputHandlerCoordinatorに委譲"""
+        if hasattr(self, 'input_handler_coordinator'):
+            return self.input_handler_coordinator.handle_input_action('cancel', pressed, input_type.value if hasattr(input_type, 'value') else str(input_type))
+        else:
+            logger.error("InputHandlerCoordinator not initialized")
     
     def _on_action_action(self, action: str, pressed: bool, input_type):
-        """アクションボタンの処理"""
-        if pressed:
-            logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.action_button"), input_type=input_type.value))
+        """アクションボタンの処理 - InputHandlerCoordinatorに委譲"""
+        if hasattr(self, 'input_handler_coordinator'):
+            return self.input_handler_coordinator.handle_input_action('action', pressed, input_type.value if hasattr(input_type, 'value') else str(input_type))
+        else:
+            logger.error("InputHandlerCoordinator not initialized")
             
             # ダンジョン内でのスペースキー: 3D描画復旧を試行
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
@@ -575,6 +651,10 @@ class GameManager(EventHandler):
         
         if self.dungeon_renderer:
             self.dungeon_renderer.set_party(party)
+        
+        # CombatStateManagerにも反映
+        if hasattr(self, 'combat_state_manager'):
+            self.combat_state_manager.set_current_party(party)
             
             # dungeon_ui_managerは既にdungeon_renderer.set_party()内で設定されるので重複呼び出しを削除
             # if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
@@ -1045,59 +1125,40 @@ class GameManager(EventHandler):
         pygame.quit()
         
     def run_game(self):
-        """ゲームの実行 - リファクタリング版"""
+        """ゲームの実行 - リファクタリング版（MainLoopManager使用）"""
         logger.info(self.game_config.get_text("game_manager.game_start"))
         
         # 初回起動処理
         self._initialize_game_flow()
         
-        # メインループの開始
+        # MainLoopManagerでメインループを実行
         self.running = True
-        self._main_loop_refactored()
-    
-    def _main_loop_refactored(self):
-        """Pygameメインループ - リファクタリング版
         
-        複雑なイベント処理をシーンマネージャーに委譲し、
-        GameManagerの責務を簡素化。
-        """
-        while self.running:
-            # イベント処理
-            events = pygame.event.get()
-            
-            for event in events:
-                if event.type == pygame.QUIT:
-                    self.running = False
-                    continue
-                
-                # デバッグ: WASDキーのイベント処理フローをログ出力
-                if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                    logger.info(f"[DEBUG] GameManager: WASD キー検出 key={pygame.key.name(event.key)}")
-                
-                # シーンマネージャーでイベント処理（優先）
-                scene_handled = self.scene_manager.handle_event(event)
-                
-                if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                    logger.info(f"[DEBUG] GameManager: scene_handled={scene_handled}")
-                
-                if not scene_handled:
-                    # WindowManagerでイベント処理
-                    ui_handled = self._handle_ui_events(event)
-                    
-                    if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                        logger.info(f"[DEBUG] GameManager: ui_handled={ui_handled}")
-                    
-                    # UIで処理されなかった場合のみ入力マネージャーに送信
-                    if not ui_handled and hasattr(self, 'input_manager'):
-                        self.input_manager.handle_event(event)
-                        if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                            logger.info(f"[DEBUG] GameManager: InputManagerに送信しました")
-            
-            # システム更新
-            self._update_systems()
-            
-            # 描画
-            self._render_frame()
+        # 永続要素の描画ハンドラーを登録
+        self.main_loop_manager.register_render_handler(self._render_persistent_elements_handler)
+        
+        # デバッグ情報の描画ハンドラーを登録
+        if self.debug_enabled:
+            self.main_loop_manager.register_render_handler(self._render_debug_info_handler)
+        
+        # メインループ実行
+        try:
+            self.main_loop_manager.run_main_loop()
+        except KeyboardInterrupt:
+            logger.info("ユーザーによる中断")
+        except Exception as e:
+            logger.error(f"メインループエラー: {e}")
+            raise
+        finally:
+            self.running = False
+    
+    def _render_persistent_elements_handler(self, surface: pygame.Surface) -> None:
+        """永続要素描画ハンドラー（MainLoopManager用）"""
+        self._render_persistent_elements()
+    
+    def _render_debug_info_handler(self, surface: pygame.Surface) -> None:
+        """デバッグ情報描画ハンドラー（MainLoopManager用）"""
+        self._render_debug_info()
     
     def _handle_ui_events(self, event) -> bool:
         """統合UIイベント処理"""
@@ -1131,166 +1192,6 @@ class GameManager(EventHandler):
                 logger.info(f"[DEBUG] GameManager._handle_ui_events: ui_manager処理結果={ui_handled}")
         
         return ui_handled
-    
-    def _update_systems(self):
-        """システム更新処理"""
-        # FPS制限と時間更新
-        time_delta = self.clock.tick(self.target_fps) / 1000.0
-        
-        # 入力マネージャー更新
-        if hasattr(self, 'input_manager'):
-            self.input_manager.update()
-        
-        # イベントバス更新（キューにたまったイベント処理）
-        # イベントバスは自動処理されるため、明示的な更新は不要
-        
-        # シーンマネージャー更新
-        self.scene_manager.update(time_delta)
-        
-        # WindowManager更新
-        from src.ui.window_system import WindowManager
-        window_manager = WindowManager.get_instance()
-        window_manager.update(time_delta)
-        
-        # 既存UIマネージャー更新（WindowManagerがアクティブでない場合のみ）
-        if not window_manager.get_active_window() and hasattr(self, 'ui_manager') and self.ui_manager:
-            self.ui_manager.update(time_delta)
-    
-    def _render_frame(self):
-        """フレーム描画処理"""
-        # 画面をクリア
-        self.screen.fill((0, 0, 0))
-        
-        # シーン描画（ダンジョン3D描画など）- 常に実行
-        self.scene_manager.render(self.screen)
-        
-        # WindowManager描画
-        from src.ui.window_system import WindowManager
-        window_manager = WindowManager.get_instance()
-        window_manager.draw(self.screen)
-        
-        # UI描画の判定と実行
-        if window_manager.get_active_window():
-            # WindowManagerがアクティブな場合でも永続要素は描画
-            self._render_persistent_elements()
-        elif hasattr(self, 'ui_manager') and self.ui_manager:
-            # WindowManagerがアクティブでない場合は既存UIマネージャーで描画
-            self.ui_manager.render()
-        else:
-            # フォールバック：永続要素のみ描画
-            self._render_persistent_elements()
-        
-        # デバッグ情報描画
-        if self.debug_enabled:
-            self._render_debug_info()
-        
-        # 画面更新
-        pygame.display.flip()
-    
-    def _main_loop(self):
-        """旧メインループ（互換性のため保持）"""
-        # 新しいメインループにリダイレクト
-        self._main_loop_refactored()
-        return
-        
-        # 以下は旧コード（コメントアウト）
-        while self.running:
-            events_to_process = pygame.event.get()
-            
-            # 最大3回までイベント処理ループを繰り返し（無限ループ防止）
-            for _ in range(3):
-                if not events_to_process:
-                    break
-                    
-                new_events = []
-                for event in events_to_process:
-                    if event.type == pygame.QUIT:
-                        self.running = False
-                    else:
-                        # WindowManagerでイベント処理（最優先）
-                        ui_handled = False
-                        from src.ui.window_system import WindowManager
-                        window_manager = WindowManager.get_instance()
-                        
-                        # WindowManagerが初期化されていない場合は初期化
-                        if not window_manager.screen:
-                            window_manager.initialize_pygame(self.screen, self.clock)
-                        
-                        # WindowManagerで処理（アクティブなウィンドウがある場合は優先処理）
-                        ui_handled = window_manager.handle_global_events([event])
-                        
-                        # WindowManagerで処理されなかった場合のみ、従来のUIマネージャーで処理
-                        if not ui_handled:
-                            # UIマネージャーでイベント処理
-                            if hasattr(self, 'ui_manager') and self.ui_manager:
-                                ui_handled = self.ui_manager.handle_event(event)
-                        
-                        # オーバーワールドマネージャーでのイベント処理は不要（Window Systemで統合）
-                        
-                        # ダンジョンUIマネージャーでイベント処理
-                        if not ui_handled and self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
-                            if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
-                                ui_handled = self.dungeon_renderer.dungeon_ui_manager.handle_input(event)
-                    
-                        # UIで処理されなかった場合のみ入力マネージャーに送信
-                        if not ui_handled and hasattr(self, 'input_manager'):
-                            self.input_manager.handle_event(event)
-                
-                # pygame-guiが生成した新しいイベントを取得
-                new_events = pygame.event.get()
-                events_to_process = new_events
-            
-            # 入力マネージャーの更新
-            if hasattr(self, 'input_manager'):
-                self.input_manager.update()
-            
-            # FPS制限とUIマネージャーの更新（pygame-gui）
-            time_delta = self.clock.tick(self.target_fps) / 1000.0
-            
-            # WindowManagerの更新
-            from src.ui.window_system import WindowManager
-            window_manager = WindowManager.get_instance()
-            window_manager.update(time_delta)
-            
-            # WindowManagerがアクティブでない場合のみ既存のUIManagerを更新
-            if not window_manager.get_active_window():
-                if hasattr(self, 'ui_manager') and self.ui_manager:
-                    self.ui_manager.update(time_delta)
-            
-            # OverworldManagerの更新は不要（Window Systemで統合）
-            
-            # Phase 5: 戦闘状態の監視
-            self.check_combat_state()
-            
-            # Phase 5: ダンジョン内パーティ状態監視
-            self.check_party_status_in_dungeon()
-            
-            # 画面をクリア
-            self.screen.fill((0, 0, 0))
-            
-            # 現在の状態に応じて描画
-            self._render_current_state()
-            
-            # WindowManagerの描画
-            from src.ui.window_system import WindowManager
-            window_manager = WindowManager.get_instance()
-            window_manager.draw(self.screen)
-            
-            # WindowManagerがアクティブでない場合のみ既存のUIManagerを描画
-            if not window_manager.get_active_window():
-                if hasattr(self, 'ui_manager') and self.ui_manager:
-                    self.ui_manager.render()
-            else:
-                # WindowManagerがアクティブでも永続要素（CharacterStatusBar）は常に描画
-                if hasattr(self, 'ui_manager') and self.ui_manager:
-                    self._render_persistent_elements()
-            
-            # デバッグ情報の描画
-            if self.debug_enabled:
-                self._render_debug_info()
-            
-            # 画面更新
-            pygame.display.flip()
     
     def _render_persistent_elements(self):
         """
@@ -1478,129 +1379,36 @@ class GameManager(EventHandler):
     # === Phase 5: 戦闘・エンカウンター統合メソッド ===
     
     def trigger_encounter(self, encounter_type: str = "normal", level: int = 1):
-        """エンカウンターを発生させる"""
-        if not self.encounter_manager or not self.current_party:
-            logger.error("エンカウンター発生に必要な条件が満たされていません")
-            return False
-        
-        if not self.dungeon_manager.current_dungeon:
-            logger.error("ダンジョンが設定されていません")
-            return False
-        
-        try:
-            # ダンジョン情報取得
-            current_dungeon = self.dungeon_manager.current_dungeon
-            player_pos = current_dungeon.player_position
-            dungeon_level = current_dungeon.levels.get(player_pos.level)
-            
-            if not dungeon_level:
-                logger.error(f"レベル {player_pos.level} が見つかりません")
-                return False
-            
-            # エンカウンター生成
-            location = (player_pos.x, player_pos.y, player_pos.level)
-            encounter_event = self.encounter_manager.generate_encounter(
-                encounter_type, 
-                level, 
-                dungeon_level.attribute,
-                location
-            )
-            
-            # 戦闘開始
-            if encounter_event and encounter_event.monster_group:
-                return self.start_combat(encounter_event.monster_group.monsters)
-            
-            return False
-            
-        except Exception as e:
-            logger.error(f"エンカウンター発生エラー: {e}")
+        """エンカウンターを発生させる - CombatStateManagerに委譲"""
+        if hasattr(self, 'combat_state_manager'):
+            return self.combat_state_manager.trigger_encounter(encounter_type, level)
+        else:
+            logger.error("CombatStateManager not initialized")
             return False
     
     def start_combat(self, monsters):
-        """戦闘開始 - イベント駆動版"""
-        if not self.combat_manager or not self.current_party:
-            logger.error("戦闘開始に必要な条件が満たされていません")
-            return False
-        
-        try:
-            # イベントで戦闘シーン遷移をリクエスト
-            publish_event(
-                EventType.SCENE_TRANSITION_REQUESTED,
-                "game_manager",
-                {
-                    "scene_type": "combat",
-                    "context": {"monsters": monsters}
-                }
-            )
-            
-            # 戦闘開始イベントを発行
-            publish_event(
-                EventType.COMBAT_STARTED,
-                "game_manager",
-                {
-                    "party": self.current_party,
-                    "monsters": monsters,
-                    "monster_count": len(monsters)
-                }
-            )
-            
-            logger.info(f"戦闘開始: {len(monsters)}体のモンスターと戦闘")
-            return True
-            
-        except Exception as e:
-            logger.error(f"戦闘開始エラー: {e}")
+        """戦闘開始 - CombatStateManagerに委譲"""
+        if hasattr(self, 'combat_state_manager'):
+            return self.combat_state_manager.start_combat(monsters)
+        else:
+            logger.error("CombatStateManager not initialized")
             return False
     
     def check_combat_state(self):
-        """戦闘状態の確認・戦闘終了処理"""
-        if not self.combat_manager or self.game_state != "combat":
-            return
-        
-        try:
-            from src.combat.combat_manager import CombatState
-            
-            # 戦闘が終了しているかチェック
-            if self.combat_manager.combat_state in [CombatState.VICTORY, CombatState.DEFEAT, 
-                                                   CombatState.FLED, CombatState.NEGOTIATED]:
-                self.end_combat()
-                
-        except Exception as e:
-            logger.error(f"戦闘状態確認エラー: {e}")
+        """戦闘状態の確認・戦闘終了処理 - CombatStateManagerに委譲"""
+        if hasattr(self, 'combat_state_manager'):
+            self.combat_state_manager.check_combat_state()
+        else:
+            logger.error("CombatStateManager not initialized")
     
     def end_combat(self):
-        """戦闘終了処理"""
-        if not self.combat_manager:
-            return
-        
-        try:
-            from src.combat.combat_manager import CombatState
-            
-            combat_result = self.combat_manager.combat_state
-            logger.info(f"戦闘終了: {combat_result.value}")
-            
-            # 戦闘結果に応じた処理
-            if combat_result == CombatState.VICTORY:
-                self._handle_combat_victory()
-                # ボス戦完了処理
-                if hasattr(self, 'current_boss_encounter') and self.current_boss_encounter:
-                    self.handle_boss_encounter_completion(True)
-            elif combat_result == CombatState.DEFEAT:
-                self._handle_combat_defeat()
-                # ボス戦完了処理
-                if hasattr(self, 'current_boss_encounter') and self.current_boss_encounter:
-                    self.handle_boss_encounter_completion(False)
-            elif combat_result == CombatState.FLED:
-                self._handle_combat_fled()
-            elif combat_result == CombatState.NEGOTIATED:
-                self._handle_combat_negotiated()
-            
-            # ダンジョン探索に戻る
-            self.set_game_state("dungeon_exploration")
-            
-        except Exception as e:
-            logger.error(f"戦闘終了処理エラー: {e}")
+        """戦闘終了処理 - CombatStateManagerに委譲"""
+        if hasattr(self, 'combat_state_manager'):
+            self.combat_state_manager.end_combat()
+        else:
+            logger.error("CombatStateManager not initialized")
     
-    def _handle_combat_victory(self):
+    def _legacy_handle_combat_victory(self):
         """戦闘勝利時の処理"""
         logger.info("戦闘勝利!")
         
@@ -1636,7 +1444,7 @@ class GameManager(EventHandler):
         except Exception as e:
             logger.error(f"戦闘勝利処理エラー: {e}")
     
-    def _handle_combat_defeat(self):
+    def _legacy_handle_combat_defeat(self):
         """戦闘敗北時の処理"""
         logger.info("戦闘敗北...")
         
@@ -1672,7 +1480,7 @@ class GameManager(EventHandler):
         except Exception as e:
             logger.error(f"戦闘敗北処理エラー: {e}")
     
-    def _handle_combat_fled(self):
+    def _legacy_handle_combat_fled(self):
         """戦闘逃走時の処理"""
         logger.info("戦闘から逃走しました")
         
@@ -1718,7 +1526,7 @@ class GameManager(EventHandler):
         except Exception as e:
             logger.error(f"戦闘逃走処理エラー: {e}")
     
-    def _handle_combat_negotiated(self):
+    def _legacy_handle_combat_negotiated(self):
         """戦闘交渉成功時の処理"""
         logger.info("交渉成功!")
         
