@@ -77,15 +77,35 @@ class CharacterCreationWizard(WizardServicePanel):
     def _create_step_content(self, step: WizardStep, panel: pygame_gui.elements.UIPanel) -> None:
         """ステップ固有のコンテンツを作成"""
         if step.id == "name":
-            self._create_name_input_content(panel)
+            # UIElementManager版を優先的に使用
+            if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+                self._create_name_input_content_managed(panel)
+            else:
+                self._create_name_input_content(panel)
         elif step.id == "race":
-            self._create_race_selection_content(panel)
+            # UIElementManager版を優先的に使用
+            if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+                self._create_race_selection_content_managed(panel)
+            else:
+                self._create_race_selection_content(panel)
         elif step.id == "stats":
-            self._create_stats_roll_content(panel)
+            # UIElementManager版を優先的に使用
+            if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+                self._create_stats_roll_content_managed(panel)
+            else:
+                self._create_stats_roll_content(panel)
         elif step.id == "class":
-            self._create_class_selection_content(panel)
+            # UIElementManager版を優先的に使用
+            if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+                self._create_class_selection_content_managed(panel)
+            else:
+                self._create_class_selection_content(panel)
         elif step.id == "confirm":
-            self._create_confirmation_content(panel)
+            # UIElementManager版を優先的に使用
+            if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+                self._create_confirmation_content_managed(panel)
+            else:
+                self._create_confirmation_content(panel)
     
     def _create_name_input_content(self, panel: pygame_gui.elements.UIPanel) -> None:
         """名前入力コンテンツを作成"""
@@ -123,6 +143,39 @@ class CharacterCreationWizard(WizardServicePanel):
         )
         self.ui_elements.append(self.test_name_button)
     
+    def _create_name_input_content_managed(self, panel: pygame_gui.elements.UIPanel) -> None:
+        """名前入力コンテンツを作成（UIElementManager版）"""
+        # UIElementManagerはまだTextEntryLineをサポートしていないので、通常のpygame_gui要素として作成
+        # ただし、ボタンはUIElementManager経由で作成する
+        
+        # 名前入力フィールド（直接作成）
+        input_rect = pygame.Rect(10, 60, 300, 40)
+        self.name_input = pygame_gui.elements.UITextEntryLine(
+            relative_rect=input_rect,
+            manager=self.ui_manager,
+            container=panel,
+            placeholder_text="キャラクター名を入力",
+            object_id="#character_name_input"
+        )
+        self.ui_elements.append(self.name_input)
+        
+        # 既存の値を設定
+        if "name" in self.wizard_data:
+            self.name_input.set_text(self.wizard_data["name"])
+        
+        # フォーカスを明示的に設定
+        self.name_input.focus()
+        logger.info(f"[DEBUG] name_input created (direct pygame_gui): {self.name_input}")
+        
+        # テスト用のボタンを追加（UIElementManager版）
+        test_button_rect = pygame.Rect(320, 60, 100, 40)
+        self.test_name_button = self._create_button(
+            "test_name_button",
+            "テスト名前",
+            test_button_rect,
+            panel
+        )
+    
     def _create_race_selection_content(self, panel: pygame_gui.elements.UIPanel) -> None:
         """種族選択コンテンツを作成"""
         races = [
@@ -153,6 +206,38 @@ class CharacterCreationWizard(WizardServicePanel):
             # 選択済みの場合はハイライト
             if self.wizard_data.get("race") == race_id:
                 self._highlight_button(button)
+            
+            y_offset += button_height + button_spacing
+    
+    def _create_race_selection_content_managed(self, panel: pygame_gui.elements.UIPanel) -> None:
+        """種族選択コンテンツを作成（UIElementManager版）"""
+        races = [
+            ("human", "人間", "バランスの取れた種族"),
+            ("elf", "エルフ", "魔法に優れた種族"),
+            ("dwarf", "ドワーフ", "頑強な種族"),
+            ("gnome", "ノーム", "信仰心の高い種族"),
+            ("hobbit", "ホビット", "幸運な種族")
+        ]
+        
+        y_offset = 60
+        button_height = 50
+        button_spacing = 10
+        
+        for race_id, race_name, race_desc in races:
+            button_rect = pygame.Rect(10, y_offset, 380, button_height)
+            button = self._create_button(
+                f"race_{race_id}",
+                f"{race_name} - {race_desc}",
+                button_rect,
+                panel
+            )
+            
+            if button:
+                self.race_buttons[race_id] = button
+                
+                # 選択済みの場合はハイライト
+                if self.wizard_data.get("race") == race_id:
+                    self._highlight_button(button)
             
             y_offset += button_height + button_spacing
     
@@ -194,6 +279,49 @@ class CharacterCreationWizard(WizardServicePanel):
             )
             self.stat_labels[stat] = value_label
             self.ui_elements.append(value_label)
+            
+            y_offset += 35
+        
+        # 既存の値があれば表示
+        if "stats" in self.wizard_data:
+            self._display_stats(self.wizard_data["stats"])
+    
+    def _create_stats_roll_content_managed(self, panel: pygame_gui.elements.UIPanel) -> None:
+        """能力値決定コンテンツを作成（UIElementManager版）"""
+        # ロールボタン
+        roll_rect = pygame.Rect(150, 60, 100, 40)
+        self.roll_button = self._create_button(
+            "roll_button",
+            "ダイスを振る",
+            roll_rect,
+            panel
+        )
+        
+        # 能力値表示
+        stats = ["strength", "intelligence", "faith", "vitality", "agility", "luck"]
+        stat_names = ["筋力", "知力", "信仰心", "生命力", "敏捷性", "幸運"]
+        
+        y_offset = 120
+        for stat, stat_name in zip(stats, stat_names):
+            # ラベル
+            label_rect = pygame.Rect(10, y_offset, 100, 30)
+            self._create_label(
+                f"stat_label_{stat}",
+                f"{stat_name}:",
+                label_rect,
+                panel
+            )
+            
+            # 値表示
+            value_rect = pygame.Rect(120, y_offset, 60, 30)
+            value_label = self._create_label(
+                f"stat_value_{stat}",
+                "--",
+                value_rect,
+                panel
+            )
+            if value_label:
+                self.stat_labels[stat] = value_label
             
             y_offset += 35
         
@@ -244,6 +372,48 @@ class CharacterCreationWizard(WizardServicePanel):
             
             y_offset += button_height + button_spacing
     
+    def _create_class_selection_content_managed(self, panel: pygame_gui.elements.UIPanel) -> None:
+        """職業選択コンテンツを作成（UIElementManager版）"""
+        # 選択可能な職業を判定
+        available_classes = self._get_available_classes()
+        
+        classes = [
+            ("fighter", "戦士", "前衛の物理攻撃職"),
+            ("priest", "僧侶", "回復と支援の職業"),
+            ("thief", "盗賊", "素早い攻撃と探索"),
+            ("mage", "魔法使い", "強力な攻撃魔法"),
+            ("bishop", "司教", "魔法と僧侶魔法の両立"),
+            ("samurai", "侍", "物理と魔法のバランス"),
+            ("lord", "君主", "高い防御と支援"),
+            ("ninja", "忍者", "高速攻撃と隠密")
+        ]
+        
+        y_offset = 60
+        button_height = 45
+        button_spacing = 5
+        
+        for class_id, class_name, class_desc in classes:
+            button_rect = pygame.Rect(10, y_offset, 380, button_height)
+            button = self._create_button(
+                f"class_{class_id}",
+                f"{class_name} - {class_desc}",
+                button_rect,
+                panel
+            )
+            
+            if button:
+                # 選択不可の職業は無効化
+                if class_id not in available_classes:
+                    button.disable()
+                
+                self.class_buttons[class_id] = button
+                
+                # 選択済みの場合はハイライト
+                if self.wizard_data.get("class") == class_id:
+                    self._highlight_button(button)
+            
+            y_offset += button_height + button_spacing
+    
     def _create_confirmation_content(self, panel: pygame_gui.elements.UIPanel) -> None:
         """確認画面コンテンツを作成"""
         # プレーンテキストでキャラクター情報を構築（HTMLタグを使わない）
@@ -264,6 +434,28 @@ class CharacterCreationWizard(WizardServicePanel):
                 )
                 self.confirm_labels.append(label)
                 self.ui_elements.append(label)
+                y_offset += line_height
+    
+    def _create_confirmation_content_managed(self, panel: pygame_gui.elements.UIPanel) -> None:
+        """確認画面コンテンツを作成（UIElementManager版）"""
+        # プレーンテキストでキャラクター情報を構築
+        character_info_lines = self._create_character_info_lines()
+        
+        y_offset = 60
+        line_height = 25
+        
+        self.confirm_labels = []
+        for i, line in enumerate(character_info_lines):
+            if line.strip():  # 空行をスキップ
+                label_rect = pygame.Rect(10, y_offset, 380, line_height)
+                label = self._create_label(
+                    f"confirm_label_{i}",
+                    line,
+                    label_rect,
+                    panel
+                )
+                if label:
+                    self.confirm_labels.append(label)
                 y_offset += line_height
     
     def _create_character_info_lines(self) -> List[str]:

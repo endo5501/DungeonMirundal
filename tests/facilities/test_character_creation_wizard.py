@@ -5,6 +5,7 @@ import pygame
 import pygame_gui
 from unittest.mock import Mock, MagicMock, patch
 from src.facilities.ui.wizard_service_panel import WizardStep
+from src.facilities.ui.ui_element_manager import UIElementManager
 
 
 @pytest.fixture
@@ -592,6 +593,136 @@ class TestCharacterCreationWizardClassStep:
             
             assert result is False
             mock_show.assert_called_with("その職業は選択できません", "error")
+
+
+class TestCharacterCreationWizardUIElementManager:
+    """UIElementManager統合のテスト"""
+    
+    def test_create_step_content_with_ui_element_manager(self):
+        """UIElementManager有効時のステップコンテンツ作成"""
+        from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        
+        wizard = Mock()
+        wizard.ui_element_manager = Mock(spec=UIElementManager)
+        wizard.ui_element_manager.is_destroyed = False
+        wizard.wizard_data = {}
+        wizard.ui_manager = Mock()
+        wizard.ui_elements = []
+        
+        panel = Mock()
+        step = WizardStep(id="name", name="名前入力")
+        
+        # 各管理版メソッドのモック
+        for step_id in ["name", "race", "stats", "class", "confirm"]:
+            method_name = f"_create_{step_id}_{'input_' if step_id == 'name' else 'selection_' if step_id in ['race', 'class'] else 'roll_' if step_id == 'stats' else ''}content_managed"
+            setattr(wizard, method_name, Mock())
+        
+        # nameステップのテスト
+        CharacterCreationWizard._create_step_content(wizard, step, panel)
+        wizard._create_name_input_content_managed.assert_called_once_with(panel)
+    
+    def test_create_step_content_fallback(self):
+        """UIElementManager無効時のフォールバック"""
+        from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        
+        wizard = Mock()
+        wizard.ui_element_manager = None  # UIElementManagerが無効
+        wizard.wizard_data = {}
+        wizard.ui_manager = Mock()
+        wizard.ui_elements = []
+        
+        panel = Mock()
+        step = WizardStep(id="name", name="名前入力")
+        
+        # 通常メソッドのモック
+        wizard._create_name_input_content = Mock()
+        
+        CharacterCreationWizard._create_step_content(wizard, step, panel)
+        wizard._create_name_input_content.assert_called_once_with(panel)
+    
+    def test_race_selection_content_managed(self):
+        """管理版の種族選択コンテンツ作成"""
+        from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        
+        wizard = Mock()
+        wizard.race_buttons = {}
+        wizard.wizard_data = {"race": "human"}
+        wizard._create_button = Mock(return_value=Mock())
+        wizard._highlight_button = Mock()
+        
+        panel = Mock()
+        
+        CharacterCreationWizard._create_race_selection_content_managed(wizard, panel)
+        
+        # 5つの種族ボタンが作成される
+        assert wizard._create_button.call_count == 5
+        
+        # 選択済みの種族がハイライトされる
+        wizard._highlight_button.assert_called_once()
+    
+    def test_stats_roll_content_managed(self):
+        """管理版の能力値決定コンテンツ作成"""
+        from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        
+        wizard = Mock()
+        wizard.stat_labels = {}
+        wizard.wizard_data = {"stats": {"strength": 15}}
+        wizard._create_button = Mock(return_value=Mock())
+        wizard._create_label = Mock(return_value=Mock())
+        wizard._display_stats = Mock()
+        
+        panel = Mock()
+        
+        CharacterCreationWizard._create_stats_roll_content_managed(wizard, panel)
+        
+        # ロールボタンが作成される
+        wizard._create_button.assert_called_once()
+        
+        # 能力値ラベルが作成される（6つの能力値 × 2（名前と値））
+        assert wizard._create_label.call_count == 12
+        
+        # 既存の能力値が表示される
+        wizard._display_stats.assert_called_once_with({"strength": 15})
+    
+    def test_class_selection_content_managed(self):
+        """管理版の職業選択コンテンツ作成"""
+        from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        
+        wizard = Mock()
+        wizard.class_buttons = {}
+        wizard.wizard_data = {"class": "fighter"}
+        wizard._create_button = Mock(return_value=Mock())
+        wizard._highlight_button = Mock()
+        wizard._get_available_classes = Mock(return_value=["fighter", "priest"])
+        
+        panel = Mock()
+        
+        CharacterCreationWizard._create_class_selection_content_managed(wizard, panel)
+        
+        # 8つの職業ボタンが作成される
+        assert wizard._create_button.call_count == 8
+        
+        # 選択済みの職業がハイライトされる
+        wizard._highlight_button.assert_called()
+    
+    def test_confirmation_content_managed(self):
+        """管理版の確認画面コンテンツ作成"""
+        from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        
+        wizard = Mock()
+        wizard.confirm_labels = []
+        wizard._create_character_info_lines = Mock(return_value=["名前: テスト", "種族: 人間", "", "職業: 戦士"])
+        wizard._create_label = Mock(return_value=Mock())
+        
+        panel = Mock()
+        
+        CharacterCreationWizard._create_confirmation_content_managed(wizard, panel)
+        
+        # 空行を除いた3つのラベルが作成される
+        assert wizard._create_label.call_count == 3
+        
+        # confirm_labelsに追加される
+        assert len(wizard.confirm_labels) == 3
 
 
 class TestCharacterCreationWizardConfirmStep:
