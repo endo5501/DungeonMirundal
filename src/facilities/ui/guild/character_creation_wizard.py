@@ -7,6 +7,7 @@ import logging
 import random
 from ..wizard_service_panel import WizardServicePanel, WizardStep
 from ...core.service_result import ServiceResult
+from ...core.character_data_manager import CharacterDataManager
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,9 @@ class CharacterCreationWizard(WizardServicePanel):
         self.confirm_labels: List[pygame_gui.elements.UILabel] = []
         
         super().__init__(rect, parent, controller, "character_creation", ui_manager)
+        
+        # CharacterDataManagerを初期化
+        self.character_data_manager = CharacterDataManager()
         
         logger.info("CharacterCreationWizard initialized")
     
@@ -173,64 +177,54 @@ class CharacterCreationWizard(WizardServicePanel):
     
     def _create_race_selection_content(self, panel: pygame_gui.elements.UIPanel) -> None:
         """種族選択コンテンツを作成"""
-        races = [
-            ("human", "人間", "バランスの取れた種族"),
-            ("elf", "エルフ", "魔法に優れた種族"),
-            ("dwarf", "ドワーフ", "頑強な種族"),
-            ("gnome", "ノーム", "信仰心の高い種族"),
-            ("hobbit", "ホビット", "幸運な種族")
-        ]
+        # CharacterDataManagerから種族データを取得
+        races_data = self.character_data_manager.get_races()
         
         y_offset = 60
         button_height = 50
         button_spacing = 10
         
-        for race_id, race_name, race_desc in races:
+        for race_data in races_data:
             button_rect = pygame.Rect(10, y_offset, 380, button_height)
             button = pygame_gui.elements.UIButton(
                 relative_rect=button_rect,
-                text=f"{race_name} - {race_desc}",
+                text=f"{race_data.name} - {race_data.description}",
                 manager=self.ui_manager,
                 container=panel,
             )
             
-            self.race_buttons[race_id] = button
+            self.race_buttons[race_data.id] = button
             self.ui_elements.append(button)
             
             # 選択済みの場合はハイライト
-            if self.wizard_data.get("race") == race_id:
+            if self.wizard_data.get("race") == race_data.id:
                 self._highlight_button(button)
             
             y_offset += button_height + button_spacing
     
     def _create_race_selection_content_managed(self, panel: pygame_gui.elements.UIPanel) -> None:
         """種族選択コンテンツを作成（UIElementManager版）"""
-        races = [
-            ("human", "人間", "バランスの取れた種族"),
-            ("elf", "エルフ", "魔法に優れた種族"),
-            ("dwarf", "ドワーフ", "頑強な種族"),
-            ("gnome", "ノーム", "信仰心の高い種族"),
-            ("hobbit", "ホビット", "幸運な種族")
-        ]
+        # CharacterDataManagerから種族データを取得
+        races_data = self.character_data_manager.get_races()
         
         y_offset = 60
         button_height = 50
         button_spacing = 10
         
-        for race_id, race_name, race_desc in races:
+        for race_data in races_data:
             button_rect = pygame.Rect(10, y_offset, 380, button_height)
             button = self._create_button(
-                f"character_creation_race_{race_id}",
-                f"{race_name} - {race_desc}",
+                f"character_creation_race_{race_data.id}",
+                f"{race_data.name} - {race_data.description}",
                 button_rect,
                 panel
             )
             
             if button:
-                self.race_buttons[race_id] = button
+                self.race_buttons[race_data.id] = button
                 
                 # 選択済みの場合はハイライト
-                if self.wizard_data.get("race") == race_id:
+                if self.wizard_data.get("race") == race_data.id:
                     self._highlight_button(button)
             
             y_offset += button_height + button_spacing
@@ -328,39 +322,31 @@ class CharacterCreationWizard(WizardServicePanel):
         # 能力値に基づいて選択可能な職業を判定
         available_classes = self._get_available_classes()
         
-        classes = [
-            ("fighter", "戦士", "前衛の物理攻撃職"),
-            ("priest", "僧侶", "回復と支援の職業"),
-            ("thief", "盗賊", "素早い攻撃と探索"),
-            ("mage", "魔法使い", "強力な攻撃魔法"),
-            ("bishop", "司教", "魔法と僧侶魔法の両立"),
-            ("samurai", "侍", "物理と魔法のバランス"),
-            ("lord", "君主", "高い防御と支援"),
-            ("ninja", "忍者", "高速攻撃と隠密")
-        ]
+        # CharacterDataManagerから職業データを取得
+        classes_data = self.character_data_manager.get_classes()
         
         y_offset = 60
         button_height = 45
         button_spacing = 5
         
-        for class_id, class_name, class_desc in classes:
+        for class_data in classes_data:
             button_rect = pygame.Rect(10, y_offset, 380, button_height)
             button = pygame_gui.elements.UIButton(
                 relative_rect=button_rect,
-                text=f"{class_name} - {class_desc}",
+                text=f"{class_data.name} - {class_data.description}",
                 manager=self.ui_manager,
                 container=panel,
             )
             
             # 選択不可の職業は無効化
-            if class_id not in available_classes:
+            if class_data.id not in available_classes:
                 button.disable()
             
-            self.class_buttons[class_id] = button
+            self.class_buttons[class_data.id] = button
             self.ui_elements.append(button)
             
             # 選択済みの場合はハイライト
-            if self.wizard_data.get("class") == class_id:
+            if self.wizard_data.get("class") == class_data.id:
                 self._highlight_button(button)
             
             y_offset += button_height + button_spacing
@@ -370,39 +356,31 @@ class CharacterCreationWizard(WizardServicePanel):
         # 選択可能な職業を判定
         available_classes = self._get_available_classes()
         
-        classes = [
-            ("fighter", "戦士", "前衛の物理攻撃職"),
-            ("priest", "僧侶", "回復と支援の職業"),
-            ("thief", "盗賊", "素早い攻撃と探索"),
-            ("mage", "魔法使い", "強力な攻撃魔法"),
-            ("bishop", "司教", "魔法と僧侶魔法の両立"),
-            ("samurai", "侍", "物理と魔法のバランス"),
-            ("lord", "君主", "高い防御と支援"),
-            ("ninja", "忍者", "高速攻撃と隠密")
-        ]
+        # CharacterDataManagerから職業データを取得
+        classes_data = self.character_data_manager.get_classes()
         
         y_offset = 60
         button_height = 45
         button_spacing = 5
         
-        for class_id, class_name, class_desc in classes:
+        for class_data in classes_data:
             button_rect = pygame.Rect(10, y_offset, 380, button_height)
             button = self._create_button(
-                f"character_creation_class_{class_id}",
-                f"{class_name} - {class_desc}",
+                f"character_creation_class_{class_data.id}",
+                f"{class_data.name} - {class_data.description}",
                 button_rect,
                 panel
             )
             
             if button:
                 # 選択不可の職業は無効化
-                if class_id not in available_classes:
+                if class_data.id not in available_classes:
                     button.disable()
                 
-                self.class_buttons[class_id] = button
+                self.class_buttons[class_data.id] = button
                 
                 # 選択済みの場合はハイライト
-                if self.wizard_data.get("class") == class_id:
+                if self.wizard_data.get("class") == class_data.id:
                     self._highlight_button(button)
             
             y_offset += button_height + button_spacing
@@ -458,23 +436,25 @@ class CharacterCreationWizard(WizardServicePanel):
         char_class = self.wizard_data.get("class", "未設定")
         stats = self.wizard_data.get("stats", {})
         
-        race_names = {
-            "human": "人間", "elf": "エルフ", "dwarf": "ドワーフ",
-            "gnome": "ノーム", "hobbit": "ホビット"
-        }
+        # CharacterDataManagerから表示名を取得
+        race_name = race
+        if race != "未設定":
+            race_data = self.character_data_manager.get_race_by_id(race)
+            if race_data:
+                race_name = race_data.name
         
-        class_names = {
-            "fighter": "戦士", "priest": "僧侶", "thief": "盗賊",
-            "mage": "魔法使い", "bishop": "司教", "samurai": "侍",
-            "lord": "君主", "ninja": "忍者"
-        }
+        class_name = char_class
+        if char_class != "未設定":
+            class_data = self.character_data_manager.get_class_by_id(char_class)
+            if class_data:
+                class_name = class_data.name
         
         lines = [
             "キャラクター情報",
             "",
             f"名前: {name}",
-            f"種族: {race_names.get(race, race)}",
-            f"職業: {class_names.get(char_class, char_class)}",
+            f"種族: {race_name}",
+            f"職業: {class_name}",
             "",
             "能力値:",
             f"  筋力: {stats.get('strength', '--')}",
@@ -506,21 +486,23 @@ class CharacterCreationWizard(WizardServicePanel):
         char_class = self.wizard_data.get("class", "未設定")
         stats = self.wizard_data.get("stats", {})
         
-        race_names = {
-            "human": "人間", "elf": "エルフ", "dwarf": "ドワーフ",
-            "gnome": "ノーム", "hobbit": "ホビット"
-        }
+        # CharacterDataManagerから表示名を取得
+        race_name = race
+        if race != "未設定":
+            race_data = self.character_data_manager.get_race_by_id(race)
+            if race_data:
+                race_name = race_data.name
         
-        class_names = {
-            "fighter": "戦士", "priest": "僧侶", "thief": "盗賊",
-            "mage": "魔法使い", "bishop": "司教", "samurai": "侍",
-            "lord": "君主", "ninja": "忍者"
-        }
+        class_name = char_class
+        if char_class != "未設定":
+            class_data = self.character_data_manager.get_class_by_id(char_class)
+            if class_data:
+                class_name = class_data.name
         
         summary = f"<b>キャラクター情報</b><br><br>"
         summary += f"<b>名前:</b> {name}<br>"
-        summary += f"<b>種族:</b> {race_names.get(race, race)}<br>"
-        summary += f"<b>職業:</b> {class_names.get(char_class, char_class)}<br><br>"
+        summary += f"<b>種族:</b> {race_name}<br>"
+        summary += f"<b>職業:</b> {class_name}<br><br>"
         summary += f"<b>能力値:</b><br>"
         summary += f"筋力: {stats.get('strength', '--')}<br>"
         summary += f"知力: {stats.get('intelligence', '--')}<br>"
@@ -661,37 +643,18 @@ class CharacterCreationWizard(WizardServicePanel):
         """能力値に基づいて選択可能な職業を判定"""
         stats = self.wizard_data.get("stats", {})
         if not stats:
-            return ["fighter", "priest", "thief", "mage"]  # 基本職のみ
+            # 基本職のIDを取得
+            basic_classes = []
+            all_classes = self.character_data_manager.get_classes()
+            for class_data in all_classes:
+                # 要件なしまたは要件が軽微な職業を基本職とする
+                if not class_data.requirements or all(val <= 10 for val in class_data.requirements.values()):
+                    basic_classes.append(class_data.id)
+            return basic_classes if basic_classes else ["fighter", "priest", "thief", "mage"]
         
-        available = ["fighter", "priest", "thief", "mage"]
-        
-        # 上級職の条件判定
-        if (stats.get("intelligence", 0) >= 15 and 
-            stats.get("faith", 0) >= 15):
-            available.append("bishop")
-        
-        if (stats.get("strength", 0) >= 15 and
-            stats.get("intelligence", 0) >= 11 and
-            stats.get("faith", 0) >= 10 and
-            stats.get("vitality", 0) >= 14 and
-            stats.get("agility", 0) >= 10):
-            available.append("samurai")
-        
-        if (stats.get("strength", 0) >= 15 and
-            stats.get("faith", 0) >= 15 and
-            stats.get("vitality", 0) >= 15 and
-            stats.get("agility", 0) >= 14):
-            available.append("lord")
-        
-        if (stats.get("strength", 0) >= 17 and
-            stats.get("intelligence", 0) >= 17 and
-            stats.get("faith", 0) >= 17 and
-            stats.get("vitality", 0) >= 17 and
-            stats.get("agility", 0) >= 17 and
-            stats.get("luck", 0) >= 17):
-            available.append("ninja")
-        
-        return available
+        # CharacterDataManagerを使用して選択可能な職業を判定
+        available_classes = self.character_data_manager.get_available_classes(stats)
+        return [class_data.id for class_data in available_classes]
     
     def _highlight_button(self, button: pygame_gui.elements.UIButton) -> None:
         """ボタンをハイライト"""

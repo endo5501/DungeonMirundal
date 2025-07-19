@@ -186,12 +186,24 @@ class TestCharacterCreationWizardRaceStep:
     def test_create_race_selection_content(self, mock_controller):
         """種族選択コンテンツが作成される"""
         from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        from src.facilities.core.character_data_manager import RaceData
         
         wizard = Mock()
         wizard.wizard_data = {}
         wizard.ui_manager = Mock()
         wizard.ui_elements = []
         wizard.race_buttons = {}
+        
+        # CharacterDataManagerのMockを設定
+        mock_character_data_manager = Mock()
+        mock_races = [
+            RaceData("human", "人間", "バランスの取れた種族", {}, {}),
+            RaceData("elf", "エルフ", "魔法に優れた種族", {}, {}),
+            RaceData("dwarf", "ドワーフ", "頑強な種族", {}, {}),
+            RaceData("hobbit", "ホビット", "幸運な種族", {}, {})
+        ]
+        mock_character_data_manager.get_races.return_value = mock_races
+        wizard.character_data_manager = mock_character_data_manager
         
         panel = Mock()
         
@@ -200,21 +212,33 @@ class TestCharacterCreationWizardRaceStep:
             
             CharacterCreationWizard._create_race_selection_content(wizard, panel)
             
-            # 5つの種族ボタンが作成される
-            assert mock_button.call_count == 5
+            # 4つの種族ボタンが作成される
+            assert mock_button.call_count == 4
             
             # 種族ボタンが辞書に追加される
-            assert len(wizard.race_buttons) == 5
+            assert len(wizard.race_buttons) == 4
     
     def test_create_race_selection_with_existing_selection(self):
         """既存選択がある場合の種族選択"""
         from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        from src.facilities.core.character_data_manager import RaceData
         
         wizard = Mock()
         wizard.wizard_data = {"race": "elf"}
         wizard.ui_manager = Mock()
         wizard.ui_elements = []
         wizard.race_buttons = {}
+        
+        # CharacterDataManagerのMockを設定
+        mock_character_data_manager = Mock()
+        mock_races = [
+            RaceData("human", "人間", "バランスの取れた種族", {}, {}),
+            RaceData("elf", "エルフ", "魔法に優れた種族", {}, {}),
+            RaceData("dwarf", "ドワーフ", "頑強な種族", {}, {}),
+            RaceData("hobbit", "ホビット", "幸運な種族", {}, {})
+        ]
+        mock_character_data_manager.get_races.return_value = mock_races
+        wizard.character_data_manager = mock_character_data_manager
         
         panel = Mock()
         
@@ -469,12 +493,28 @@ class TestCharacterCreationWizardClassStep:
     def test_create_class_selection_content(self):
         """職業選択コンテンツが作成される"""
         from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        from src.facilities.core.character_data_manager import ClassData
         
         wizard = Mock()
         wizard.wizard_data = {}
         wizard.ui_manager = Mock()
         wizard.ui_elements = []
         wizard.class_buttons = {}
+        
+        # CharacterDataManagerのMockを設定
+        mock_character_data_manager = Mock()
+        mock_classes = [
+            ClassData("fighter", "戦士", "近接戦闘のエキスパート", {}, 1.0, 1.0, {}, [], []),
+            ClassData("mage", "魔術師", "攻撃魔法の使い手", {}, 1.0, 1.0, {}, [], []),
+            ClassData("priest", "僧侶", "回復・補助魔法の専門家", {}, 1.0, 1.0, {}, [], []),
+            ClassData("thief", "盗賊", "敏捷性と特殊技能に優れる", {}, 1.0, 1.0, {}, [], []),
+            ClassData("bishop", "司教", "魔法と祈祷の両方を使える", {}, 1.0, 1.0, {}, [], []),
+            ClassData("samurai", "侍", "武士道を極めた戦士", {}, 1.0, 1.0, {}, [], []),
+            ClassData("lord", "君主", "指導力に優れた貴族", {}, 1.0, 1.0, {}, [], []),
+            ClassData("ninja", "忍者", "隠密と暗殺の達人", {}, 1.0, 1.0, {}, [], [])
+        ]
+        mock_character_data_manager.get_classes.return_value = mock_classes
+        wizard.character_data_manager = mock_character_data_manager
         
         panel = Mock()
         
@@ -492,9 +532,21 @@ class TestCharacterCreationWizardClassStep:
     def test_get_available_classes_no_stats(self):
         """能力値なしの場合の選択可能職業"""
         from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        from src.facilities.core.character_data_manager import ClassData
         
         wizard = Mock()
         wizard.wizard_data = {}
+        
+        # CharacterDataManagerのMockを設定
+        mock_character_data_manager = Mock()
+        mock_classes = [
+            ClassData("fighter", "戦士", "近接戦闘のエキスパート", {}, 1.0, 1.0, {}, [], []),
+            ClassData("priest", "僧侶", "回復・補助魔法の専門家", {}, 1.0, 1.0, {}, [], []),
+            ClassData("thief", "盗賊", "敏捷性と特殊技能に優れる", {}, 1.0, 1.0, {}, [], []),
+            ClassData("mage", "魔術師", "攻撃魔法の使い手", {}, 1.0, 1.0, {}, [], [])
+        ]
+        mock_character_data_manager.get_classes.return_value = mock_classes
+        wizard.character_data_manager = mock_character_data_manager
         
         result = CharacterCreationWizard._get_available_classes(wizard)
         
@@ -505,6 +557,7 @@ class TestCharacterCreationWizardClassStep:
     def test_get_available_classes_with_high_stats(self):
         """高い能力値の場合の選択可能職業"""
         from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        from src.facilities.core.character_data_manager import ClassData
         
         wizard = Mock()
         wizard.wizard_data = {
@@ -517,6 +570,21 @@ class TestCharacterCreationWizardClassStep:
                 "luck": 17
             }
         }
+        
+        # CharacterDataManagerのMockを設定
+        mock_character_data_manager = Mock()
+        mock_available_classes = [
+            ClassData("fighter", "戦士", "近接戦闘のエキスパート", {}, 1.0, 1.0, {}, [], []),
+            ClassData("priest", "僧侶", "回復・補助魔法の専門家", {}, 1.0, 1.0, {}, [], []),
+            ClassData("thief", "盗賊", "敏捷性と特殊技能に優れる", {}, 1.0, 1.0, {}, [], []),
+            ClassData("mage", "魔術師", "攻撃魔法の使い手", {}, 1.0, 1.0, {}, [], []),
+            ClassData("bishop", "司教", "魔法と祈祷の両方を使える", {}, 1.0, 1.0, {}, [], []),
+            ClassData("samurai", "侍", "武士道を極めた戦士", {}, 1.0, 1.0, {}, [], []),
+            ClassData("lord", "君主", "指導力に優れた貴族", {}, 1.0, 1.0, {}, [], []),
+            ClassData("ninja", "忍者", "隠密と暗殺の達人", {}, 1.0, 1.0, {}, [], [])
+        ]
+        mock_character_data_manager.get_available_classes.return_value = mock_available_classes
+        wizard.character_data_manager = mock_character_data_manager
         
         result = CharacterCreationWizard._get_available_classes(wizard)
         
@@ -643,6 +711,7 @@ class TestCharacterCreationWizardUIElementManager:
     def test_race_selection_content_managed(self):
         """管理版の種族選択コンテンツ作成"""
         from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        from src.facilities.core.character_data_manager import RaceData
         
         wizard = Mock()
         wizard.race_buttons = {}
@@ -650,12 +719,23 @@ class TestCharacterCreationWizardUIElementManager:
         wizard._create_button = Mock(return_value=Mock())
         wizard._highlight_button = Mock()
         
+        # CharacterDataManagerのMockを設定
+        mock_character_data_manager = Mock()
+        mock_races = [
+            RaceData("human", "人間", "バランスの取れた種族", {}, {}),
+            RaceData("elf", "エルフ", "魔法に優れた種族", {}, {}),
+            RaceData("dwarf", "ドワーフ", "頑強な種族", {}, {}),
+            RaceData("hobbit", "ホビット", "幸運な種族", {}, {})
+        ]
+        mock_character_data_manager.get_races.return_value = mock_races
+        wizard.character_data_manager = mock_character_data_manager
+        
         panel = Mock()
         
         CharacterCreationWizard._create_race_selection_content_managed(wizard, panel)
         
-        # 5つの種族ボタンが作成される
-        assert wizard._create_button.call_count == 5
+        # 4つの種族ボタンが作成される
+        assert wizard._create_button.call_count == 4
         
         # 選択済みの種族がハイライトされる
         wizard._highlight_button.assert_called_once()
@@ -687,6 +767,7 @@ class TestCharacterCreationWizardUIElementManager:
     def test_class_selection_content_managed(self):
         """管理版の職業選択コンテンツ作成"""
         from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        from src.facilities.core.character_data_manager import ClassData
         
         wizard = Mock()
         wizard.class_buttons = {}
@@ -694,6 +775,21 @@ class TestCharacterCreationWizardUIElementManager:
         wizard._create_button = Mock(return_value=Mock())
         wizard._highlight_button = Mock()
         wizard._get_available_classes = Mock(return_value=["fighter", "priest"])
+        
+        # CharacterDataManagerのMockを設定
+        mock_character_data_manager = Mock()
+        mock_classes = [
+            ClassData("fighter", "戦士", "近接戦闘のエキスパート", {}, 1.0, 1.0, {}, [], []),
+            ClassData("mage", "魔術師", "攻撃魔法の使い手", {}, 1.0, 1.0, {}, [], []),
+            ClassData("priest", "僧侶", "回復・補助魔法の専門家", {}, 1.0, 1.0, {}, [], []),
+            ClassData("thief", "盗賊", "敏捷性と特殊技能に優れる", {}, 1.0, 1.0, {}, [], []),
+            ClassData("bishop", "司教", "魔法と祈祷の両方を使える", {}, 1.0, 1.0, {}, [], []),
+            ClassData("samurai", "侍", "武士道を極めた戦士", {}, 1.0, 1.0, {}, [], []),
+            ClassData("lord", "君主", "指導力に優れた貴族", {}, 1.0, 1.0, {}, [], []),
+            ClassData("ninja", "忍者", "隠密と暗殺の達人", {}, 1.0, 1.0, {}, [], [])
+        ]
+        mock_character_data_manager.get_classes.return_value = mock_classes
+        wizard.character_data_manager = mock_character_data_manager
         
         panel = Mock()
         
@@ -852,9 +948,18 @@ class TestCharacterCreationWizardConfirmStep:
     def test_create_character_summary(self, mock_wizard_data):
         """キャラクター情報サマリーの作成"""
         from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        from src.facilities.core.character_data_manager import RaceData, ClassData
         
         wizard = Mock()
         wizard.wizard_data = mock_wizard_data
+        
+        # CharacterDataManagerのMockを設定
+        mock_character_data_manager = Mock()
+        mock_race = RaceData("human", "人間", "バランスの取れた種族", {}, {})
+        mock_class = ClassData("fighter", "戦士", "近接戦闘のエキスパート", {}, 1.0, 1.0, {}, [], [])
+        mock_character_data_manager.get_race_by_id.return_value = mock_race
+        mock_character_data_manager.get_class_by_id.return_value = mock_class
+        wizard.character_data_manager = mock_character_data_manager
         
         result = CharacterCreationWizard._create_character_summary(wizard)
         
@@ -871,6 +976,12 @@ class TestCharacterCreationWizardConfirmStep:
         
         wizard = Mock()
         wizard.wizard_data = {}
+        
+        # CharacterDataManagerのMockを設定（該当データなし）
+        mock_character_data_manager = Mock()
+        mock_character_data_manager.get_race_by_id.return_value = None
+        mock_character_data_manager.get_class_by_id.return_value = None
+        wizard.character_data_manager = mock_character_data_manager
         
         result = CharacterCreationWizard._create_character_summary(wizard)
         
