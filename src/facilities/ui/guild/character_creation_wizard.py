@@ -115,8 +115,7 @@ class CharacterCreationWizard(WizardServicePanel):
             relative_rect=input_rect,
             manager=self.ui_manager,
             container=panel,
-            placeholder_text="キャラクター名を入力",
-            object_id="#character_name_input"
+            placeholder_text="キャラクター名を入力"
         )
         self.ui_elements.append(self.name_input)
         
@@ -139,38 +138,34 @@ class CharacterCreationWizard(WizardServicePanel):
             text="テスト名前",
             manager=self.ui_manager,
             container=panel,
-            object_id="#test_name_button"
         )
         self.ui_elements.append(self.test_name_button)
     
     def _create_name_input_content_managed(self, panel: pygame_gui.elements.UIPanel) -> None:
         """名前入力コンテンツを作成（UIElementManager版）"""
-        # UIElementManagerはまだTextEntryLineをサポートしていないので、通常のpygame_gui要素として作成
-        # ただし、ボタンはUIElementManager経由で作成する
-        
-        # 名前入力フィールド（直接作成）
+        # 名前入力フィールド（UIElementManager経由）
         input_rect = pygame.Rect(10, 60, 300, 40)
-        self.name_input = pygame_gui.elements.UITextEntryLine(
-            relative_rect=input_rect,
-            manager=self.ui_manager,
-            container=panel,
-            placeholder_text="キャラクター名を入力",
-            object_id="#character_name_input"
+        self.name_input = self._create_text_entry(
+            "character_creation_name_input",
+            "",
+            input_rect,
+            panel,
+            placeholder_text="キャラクター名を入力"
         )
-        self.ui_elements.append(self.name_input)
         
         # 既存の値を設定
-        if "name" in self.wizard_data:
+        if "name" in self.wizard_data and self.name_input:
             self.name_input.set_text(self.wizard_data["name"])
         
         # フォーカスを明示的に設定
-        self.name_input.focus()
-        logger.info(f"[DEBUG] name_input created (direct pygame_gui): {self.name_input}")
+        if self.name_input:
+            self.name_input.focus()
+            logger.info(f"[DEBUG] name_input created via UIElementManager: {self.name_input}")
         
         # テスト用のボタンを追加（UIElementManager版）
         test_button_rect = pygame.Rect(320, 60, 100, 40)
         self.test_name_button = self._create_button(
-            "test_name_button",
+            "character_creation_test_name_button",
             "テスト名前",
             test_button_rect,
             panel
@@ -197,7 +192,6 @@ class CharacterCreationWizard(WizardServicePanel):
                 text=f"{race_name} - {race_desc}",
                 manager=self.ui_manager,
                 container=panel,
-                object_id=f"#race_{race_id}"
             )
             
             self.race_buttons[race_id] = button
@@ -226,7 +220,7 @@ class CharacterCreationWizard(WizardServicePanel):
         for race_id, race_name, race_desc in races:
             button_rect = pygame.Rect(10, y_offset, 380, button_height)
             button = self._create_button(
-                f"race_{race_id}",
+                f"character_creation_race_{race_id}",
                 f"{race_name} - {race_desc}",
                 button_rect,
                 panel
@@ -291,7 +285,7 @@ class CharacterCreationWizard(WizardServicePanel):
         # ロールボタン
         roll_rect = pygame.Rect(150, 60, 100, 40)
         self.roll_button = self._create_button(
-            "roll_button",
+            "character_creation_roll_button",
             "ダイスを振る",
             roll_rect,
             panel
@@ -306,7 +300,7 @@ class CharacterCreationWizard(WizardServicePanel):
             # ラベル
             label_rect = pygame.Rect(10, y_offset, 100, 30)
             self._create_label(
-                f"stat_label_{stat}",
+                f"character_creation_stat_label_{stat}",
                 f"{stat_name}:",
                 label_rect,
                 panel
@@ -315,7 +309,7 @@ class CharacterCreationWizard(WizardServicePanel):
             # 値表示
             value_rect = pygame.Rect(120, y_offset, 60, 30)
             value_label = self._create_label(
-                f"stat_value_{stat}",
+                f"character_creation_stat_value_{stat}",
                 "--",
                 value_rect,
                 panel
@@ -356,7 +350,6 @@ class CharacterCreationWizard(WizardServicePanel):
                 text=f"{class_name} - {class_desc}",
                 manager=self.ui_manager,
                 container=panel,
-                object_id=f"#class_{class_id}"
             )
             
             # 選択不可の職業は無効化
@@ -395,7 +388,7 @@ class CharacterCreationWizard(WizardServicePanel):
         for class_id, class_name, class_desc in classes:
             button_rect = pygame.Rect(10, y_offset, 380, button_height)
             button = self._create_button(
-                f"class_{class_id}",
+                f"character_creation_class_{class_id}",
                 f"{class_name} - {class_desc}",
                 button_rect,
                 panel
@@ -449,7 +442,7 @@ class CharacterCreationWizard(WizardServicePanel):
             if line.strip():  # 空行をスキップ
                 label_rect = pygame.Rect(10, y_offset, 380, line_height)
                 label = self._create_label(
-                    f"confirm_label_{i}",
+                    f"character_creation_confirm_label_{i}",
                     line,
                     label_rect,
                     panel
@@ -798,3 +791,81 @@ class CharacterCreationWizard(WizardServicePanel):
             return False
         
         return True
+    
+    def get_debug_info(self) -> Dict[str, Any]:
+        """デバッグ情報を取得
+        
+        Returns:
+            デバッグ情報の辞書
+        """
+        try:
+            # 親クラスのデバッグ情報を取得
+            debug_info = super().get_debug_info()
+        except (TypeError, AttributeError):
+            # super()が失敗した場合（テスト時など）は基本情報を作成
+            debug_info = {
+                "service_id": getattr(self, 'service_id', 'character_creation'),
+                "is_visible": getattr(self, 'is_visible', True),
+                "container_valid": hasattr(self, 'container') and self.container is not None
+            }
+        
+        # CharacterCreationWizard固有の情報を追加
+        debug_info.update({
+            "wizard_type": "character_creation",
+            "wizard_data": self.wizard_data.copy() if hasattr(self, 'wizard_data') else {},
+            "current_step": (self.steps[self.current_step_index].id 
+                           if hasattr(self, 'steps') and self.steps 
+                           and hasattr(self, 'current_step_index') 
+                           and 0 <= self.current_step_index < len(self.steps) 
+                           else None),
+            "ui_elements": {
+                "race_buttons": len(getattr(self, 'race_buttons', {})),
+                "class_buttons": len(getattr(self, 'class_buttons', {})),
+                "stat_labels": len(getattr(self, 'stat_labels', {})),
+                "confirm_labels": len(getattr(self, 'confirm_labels', [])),
+                "name_input_exists": hasattr(self, 'name_input') and self.name_input is not None,
+                "roll_button_exists": hasattr(self, 'roll_button') and self.roll_button is not None,
+                "test_name_button_exists": hasattr(self, 'test_name_button') and self.test_name_button is not None
+            },
+            "validation_status": self._get_validation_status()
+        })
+        
+        return debug_info
+    
+    def _get_validation_status(self) -> Dict[str, bool]:
+        """検証状態を安全に取得"""
+        if not hasattr(self, 'wizard_data'):
+            return {"name": False, "race": False, "stats": False, "class": False}
+        
+        validation_status = {}
+        
+        # 各検証メソッドを安全に呼び出し
+        try:
+            validation_status["name"] = (
+                self._validate_name(self.wizard_data) if "name" in self.wizard_data else False
+            )
+        except Exception:
+            validation_status["name"] = False
+            
+        try:
+            validation_status["race"] = (
+                self._validate_race(self.wizard_data) if "race" in self.wizard_data else False
+            )
+        except Exception:
+            validation_status["race"] = False
+            
+        try:
+            validation_status["stats"] = (
+                self._validate_stats(self.wizard_data) if "stats" in self.wizard_data else False
+            )
+        except Exception:
+            validation_status["stats"] = False
+            
+        try:
+            validation_status["class"] = (
+                self._validate_class(self.wizard_data) if "class" in self.wizard_data else False
+            )
+        except Exception:
+            validation_status["class"] = False
+        
+        return validation_status

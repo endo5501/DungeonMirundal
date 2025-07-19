@@ -723,6 +723,106 @@ class TestCharacterCreationWizardUIElementManager:
         
         # confirm_labelsに追加される
         assert len(wizard.confirm_labels) == 3
+    
+    def test_name_input_content_managed_with_text_entry(self):
+        """管理版の名前入力コンテンツ作成（TextEntryLineサポート）"""
+        from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        
+        wizard = Mock()
+        wizard.wizard_data = {"name": "既存名前"}
+        wizard._create_text_entry = Mock(return_value=Mock())
+        wizard._create_button = Mock(return_value=Mock())
+        
+        panel = Mock()
+        
+        CharacterCreationWizard._create_name_input_content_managed(wizard, panel)
+        
+        # テキスト入力が作成される
+        wizard._create_text_entry.assert_called_once_with(
+            "character_creation_name_input",
+            "",
+            pygame.Rect(10, 60, 300, 40),
+            panel,
+            placeholder_text="キャラクター名を入力"
+        )
+        
+        # ボタンが作成される
+        wizard._create_button.assert_called_once_with(
+            "character_creation_test_name_button",
+            "テスト名前",
+            pygame.Rect(320, 60, 100, 40),
+            panel
+        )
+        
+        # 既存の値が設定される
+        wizard.name_input.set_text.assert_called_with("既存名前")
+        
+        # フォーカスが設定される
+        wizard.name_input.focus.assert_called_once()
+
+
+class TestCharacterCreationWizardDebugInfo:
+    """デバッグ情報のテスト"""
+    
+    def test_get_debug_info_method_exists(self):
+        """get_debug_infoメソッドが存在し、呼び出し可能である"""
+        from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        
+        # メソッドが存在することを確認
+        assert hasattr(CharacterCreationWizard, 'get_debug_info')
+        assert callable(getattr(CharacterCreationWizard, 'get_debug_info'))
+    
+    def test_debug_info_structure(self):
+        """デバッグ情報の構造を確認"""
+        from src.facilities.ui.guild.character_creation_wizard import CharacterCreationWizard
+        
+        # get_debug_infoメソッドが正しい構造のデータを返すことを確認
+        wizard = Mock()
+        wizard.wizard_data = {"name": "テスト", "race": "human"}
+        wizard.steps = [Mock(id="name")]
+        wizard.current_step_index = 0
+        wizard.race_buttons = {"human": Mock()}
+        wizard.class_buttons = {}
+        wizard.stat_labels = {}
+        wizard.confirm_labels = []
+        wizard.name_input = Mock()
+        wizard.roll_button = None
+        wizard.test_name_button = None
+        
+        # バリデーションメソッドをモック
+        wizard._validate_name = Mock(return_value=True)
+        wizard._validate_race = Mock(return_value=True)
+        wizard._validate_stats = Mock(return_value=False)
+        wizard._validate_class = Mock(return_value=False)
+        wizard._get_validation_status = Mock(return_value={
+            "name": True, "race": True, "stats": False, "class": False
+        })
+        
+        debug_info = CharacterCreationWizard.get_debug_info(wizard)
+        
+        # 期待される構造が含まれることを確認
+        assert "wizard_type" in debug_info
+        assert "wizard_data" in debug_info
+        assert "current_step" in debug_info
+        assert "ui_elements" in debug_info
+        assert "validation_status" in debug_info
+        
+        # UI要素情報の構造を確認
+        ui_info = debug_info["ui_elements"]
+        assert "race_buttons" in ui_info
+        assert "class_buttons" in ui_info
+        assert "stat_labels" in ui_info
+        assert "confirm_labels" in ui_info
+        assert "name_input_exists" in ui_info
+        assert "roll_button_exists" in ui_info
+        assert "test_name_button_exists" in ui_info
+        
+        # 検証状態の構造を確認
+        validation = debug_info["validation_status"]
+        assert "name" in validation
+        assert "race" in validation
+        assert "stats" in validation
+        assert "class" in validation
 
 
 class TestCharacterCreationWizardConfirmStep:

@@ -282,6 +282,43 @@ class ServicePanel(ABC, DestructionMixin):
             self.ui_elements.append(selection_list)
             return selection_list
     
+    def _create_text_entry(self, element_id: str, text: str, rect: pygame.Rect,
+                          container: Optional[pygame_gui.core.UIContainer] = None,
+                          placeholder_text: str = "", **kwargs) -> Optional[pygame_gui.elements.UITextEntryLine]:
+        """テキスト入力フィールドを作成（UIElementManager統合）
+        
+        Args:
+            element_id: 要素ID
+            text: 初期テキスト
+            rect: 矩形領域
+            container: コンテナ（省略時はself.container）
+            placeholder_text: プレースホルダーテキスト
+            **kwargs: その他の引数
+            
+        Returns:
+            作成したテキスト入力フィールド
+        """
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            return self.ui_element_manager.create_text_entry(
+                element_id, rect, initial_text=text, container=container, 
+                placeholder_text=placeholder_text, **kwargs
+            )
+        else:
+            # フォールバック（レガシー）
+            if container is None:
+                container = self.container
+                
+            text_entry = pygame_gui.elements.UITextEntryLine(
+                relative_rect=rect,
+                manager=self.ui_manager,
+                container=container,
+                initial_text=text,
+                placeholder_text=placeholder_text,
+                **kwargs
+            )
+            self.ui_elements.append(text_entry)
+            return text_entry
+    
     def _show_message(self, message: str, message_type: str = "info") -> None:
         """メッセージを表示
         
