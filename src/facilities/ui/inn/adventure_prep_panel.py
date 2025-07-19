@@ -31,28 +31,45 @@ class AdventurePrepPanel(ServicePanel):
     
     def _create_ui(self) -> None:
         """UI要素を作成"""
+        self._create_header()
+        self._create_sub_service_buttons()
+        self._create_info_display()
+    
+    def _create_header(self) -> None:
+        """ヘッダーを作成"""
         # タイトル
         title_rect = pygame.Rect(10, 10, self.rect.width - 20, 40)
-        title_label = pygame_gui.elements.UILabel(
-            relative_rect=title_rect,
-            text="冒険準備",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(title_label)
-        
-        # サブサービスボタンを作成
-        self._create_sub_service_buttons()
-        
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            title_label = self.ui_element_manager.create_label(
+                "title_label", "冒険準備", title_rect
+            )
+        else:
+            # フォールバック
+            title_label = pygame_gui.elements.UILabel(
+                relative_rect=title_rect,
+                text="冒険準備",
+                manager=self.ui_manager,
+                container=self.container
+            )
+            self.ui_elements.append(title_label)
+    
+    def _create_info_display(self) -> None:
+        """情報表示エリアを作成"""
         # 情報表示ボックス
         info_rect = pygame.Rect(10, 250, self.rect.width - 20, 100)
-        self.info_box = pygame_gui.elements.UITextBox(
-            html_text=self._get_party_status_text(),
-            relative_rect=info_rect,
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.info_box)
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.info_box = self.ui_element_manager.create_text_box(
+                "info_box", self._get_party_status_text(), info_rect
+            )
+        else:
+            # フォールバック
+            self.info_box = pygame_gui.elements.UITextBox(
+                html_text=self._get_party_status_text(),
+                relative_rect=info_rect,
+                manager=self.ui_manager,
+                container=self.container
+            )
+            self.ui_elements.append(self.info_box)
     
     def _create_sub_service_buttons(self) -> None:
         """サブサービスボタンを作成"""
@@ -90,20 +107,24 @@ class AdventurePrepPanel(ServicePanel):
             button_rect = pygame.Rect(x_position, y_position, button_width, button_height)
             
             # ボタンを作成
-            button = pygame_gui.elements.UIButton(
-                relative_rect=button_rect,
-                text="",
-                manager=self.ui_manager,
-                container=self.container,
-                object_id=f"#sub_service_{service['id']}"
-            )
-            
-            # カスタムテキストを設定（アイコン付き）
             button_text = f"{service['icon']}\n{service['label']}\n\n{service['description']}"
-            button.set_text(button_text)
+            
+            if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+                button = self.ui_element_manager.create_button(
+                    f"sub_service_{service['id']}", button_text, button_rect
+                )
+            else:
+                # フォールバック
+                button = pygame_gui.elements.UIButton(
+                    relative_rect=button_rect,
+                    text=button_text,
+                    manager=self.ui_manager,
+                    container=self.container,
+                    object_id=f"#sub_service_{service['id']}"
+                )
+                self.ui_elements.append(button)
             
             self.sub_service_buttons[service['id']] = button
-            self.ui_elements.append(button)
     
     def _get_party_status_text(self) -> str:
         """パーティステータステキストを取得"""

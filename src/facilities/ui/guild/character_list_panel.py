@@ -46,30 +46,65 @@ class CharacterListPanel(ServicePanel):
         list_width = (self.rect.width - 30) // 2
         list_height = 300
         
+        self._create_header()
+        self._create_filter_controls(filter_width, dropdown_height)
+        self._create_main_content(list_width, list_height)
+        self._create_action_controls()
+        
+        # 初期データを読み込み
+        self._load_character_data()
+    
+    def _create_header(self) -> None:
+        """ヘッダー部分を作成"""
         # タイトルラベル（表示モードに応じて変更される）
         title_text = "クラス変更対象を選択" if self.display_mode == "class_change" else "冒険者一覧"
-        self.title_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(10, -10, 300, 30),
-            text=title_text,
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.title_label)
+        title_rect = pygame.Rect(10, -10, 300, 30)
         
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.title_label = self.ui_element_manager.create_label(
+                "title_label", title_text, title_rect
+            )
+        else:
+            # フォールバック
+            self.title_label = pygame_gui.elements.UILabel(
+                relative_rect=title_rect,
+                text=title_text,
+                manager=self.ui_manager,
+                container=self.container
+            )
+            self.ui_elements.append(self.title_label)
+    
+    def _create_filter_controls(self, filter_width: int, dropdown_height: int) -> None:
+        """フィルタ・ソートコントロールを作成"""
         # フィルタ・ソート機能はクラス変更モードでは削除
-        if self.display_mode != "class_change":
-            # フィルターラベル
+        if self.display_mode == "class_change":
+            return
+        
+        # フィルターラベル
+        filter_label_rect = pygame.Rect(10, 10, 60, dropdown_height)
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            filter_label = self.ui_element_manager.create_label(
+                "filter_label", "表示:", filter_label_rect
+            )
+        else:
+            # フォールバック
             filter_label = pygame_gui.elements.UILabel(
-                relative_rect=pygame.Rect(10, 10, 60, dropdown_height),
+                relative_rect=filter_label_rect,
                 text="表示:",
                 manager=self.ui_manager,
                 container=self.container
             )
             self.ui_elements.append(filter_label)
-            
-            # フィルタードロップダウン
-            filter_rect = pygame.Rect(75, 10, filter_width, dropdown_height)
-            filter_options = ["全員", "パーティ外", "パーティ内"]
+        
+        # フィルタードロップダウン
+        filter_rect = pygame.Rect(75, 10, filter_width, dropdown_height)
+        filter_options = ["全員", "パーティ外", "パーティ内"]
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.filter_dropdown = self.ui_element_manager.create_dropdown(
+                "filter_dropdown", filter_options, "全員", filter_rect
+            )
+        else:
+            # フォールバック
             self.filter_dropdown = pygame_gui.elements.UIDropDownMenu(
                 options_list=filter_options,
                 starting_option="全員",
@@ -78,19 +113,32 @@ class CharacterListPanel(ServicePanel):
                 container=self.container
             )
             self.ui_elements.append(self.filter_dropdown)
-            
-            # ソートラベル
+        
+        # ソートラベル
+        sort_label_rect = pygame.Rect(240, 10, 60, dropdown_height)
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            sort_label = self.ui_element_manager.create_label(
+                "sort_label", "並び順:", sort_label_rect
+            )
+        else:
+            # フォールバック
             sort_label = pygame_gui.elements.UILabel(
-                relative_rect=pygame.Rect(240, 10, 60, dropdown_height),
+                relative_rect=sort_label_rect,
                 text="並び順:",
                 manager=self.ui_manager,
                 container=self.container
             )
             self.ui_elements.append(sort_label)
-            
-            # ソートドロップダウン
-            sort_rect = pygame.Rect(305, 10, filter_width, dropdown_height)
-            sort_options = ["名前順", "レベル順", "職業順"]
+        
+        # ソートドロップダウン
+        sort_rect = pygame.Rect(305, 10, filter_width, dropdown_height)
+        sort_options = ["名前順", "レベル順", "職業順"]
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.sort_dropdown = self.ui_element_manager.create_dropdown(
+                "sort_dropdown", sort_options, "名前順", sort_rect
+            )
+        else:
+            # フォールバック
             self.sort_dropdown = pygame_gui.elements.UIDropDownMenu(
                 options_list=sort_options,
                 starting_option="名前順",
@@ -99,49 +147,71 @@ class CharacterListPanel(ServicePanel):
                 container=self.container
             )
             self.ui_elements.append(self.sort_dropdown)
-        
+    
+    def _create_main_content(self, list_width: int, list_height: int) -> None:
+        """メインコンテンツ（リストと詳細）を作成"""
         # キャラクターリスト（クラス変更モードでは位置を調整）
         list_y = 50 if self.display_mode != "class_change" else 20
         list_rect = pygame.Rect(10, list_y, list_width, list_height)
-        self.character_list = pygame_gui.elements.UISelectionList(
-            relative_rect=list_rect,
-            item_list=[],
-            manager=self.ui_manager,
-            container=self.container,
-            allow_multi_select=False
-        )
-        self.ui_elements.append(self.character_list)
+        
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.character_list = self.ui_element_manager.create_selection_list(
+                "character_list", [], list_rect, allow_multi_select=False
+            )
+        else:
+            # フォールバック
+            self.character_list = pygame_gui.elements.UISelectionList(
+                relative_rect=list_rect,
+                item_list=[],
+                manager=self.ui_manager,
+                container=self.container,
+                allow_multi_select=False
+            )
+            self.ui_elements.append(self.character_list)
         
         # 詳細表示ボックス
         detail_rect = pygame.Rect(
             list_width + 20, list_y,
             self.rect.width - list_width - 30, list_height
         )
-        self.detail_box = pygame_gui.elements.UITextBox(
-            html_text="キャラクター詳細<br>キャラクターを選択してください",
-            relative_rect=detail_rect,
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.detail_box)
-        
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.detail_box = self.ui_element_manager.create_text_box(
+                "detail_box", "キャラクター詳細<br>キャラクターを選択してください", detail_rect
+            )
+        else:
+            # フォールバック
+            self.detail_box = pygame_gui.elements.UITextBox(
+                html_text="キャラクター詳細<br>キャラクターを選択してください",
+                relative_rect=detail_rect,
+                manager=self.ui_manager,
+                container=self.container
+            )
+            self.ui_elements.append(self.detail_box)
+    
+    def _create_action_controls(self) -> None:
+        """アクションボタンを作成"""
         # アクションボタン（モードに応じて表示・非表示）
         if self.display_mode == "class_change":
             button_rect = pygame.Rect(
                 self.rect.width - 140, 360,
                 130, 35
             )
-            self.action_button = self._create_button(
-                "クラス変更",
-                button_rect,
-                container=self.container,
-                object_id="#action_button"
-            )
-            self.action_button.disable()  # 初期状態は無効
+            if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+                self.action_button = self.ui_element_manager.create_button(
+                    "action_button", "クラス変更", button_rect
+                )
+            else:
+                # フォールバック
+                self.action_button = self._create_button(
+                    "クラス変更",
+                    button_rect,
+                    container=self.container,
+                    object_id="#action_button"
+                )
+            
+            if self.action_button:
+                self.action_button.disable()  # 初期状態は無効
         # 一覧モードではクラス変更ボタンは作成しない
-        
-        # 初期データを読み込み
-        self._load_character_data()
     
     def set_mode(self, mode: str) -> None:
         """表示モードを設定
@@ -164,10 +234,26 @@ class CharacterListPanel(ServicePanel):
             
             # フィルタ・ソート機能を削除（既に作成された場合）
             if self.filter_dropdown:
-                self.filter_dropdown.kill()
+                if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+                    # UIElementManagerで管理されている場合はそちらで破棄
+                    try:
+                        self.ui_element_manager.remove_element("filter_dropdown")
+                    except:
+                        pass
+                else:
+                    # フォールバック
+                    self.filter_dropdown.kill()
                 self.filter_dropdown = None
             if self.sort_dropdown:
-                self.sort_dropdown.kill() 
+                if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+                    # UIElementManagerで管理されている場合はそちらで破棄
+                    try:
+                        self.ui_element_manager.remove_element("sort_dropdown")
+                    except:
+                        pass
+                else:
+                    # フォールバック
+                    self.sort_dropdown.kill()
                 self.sort_dropdown = None
         else:
             # 一覧表示モードの場合、クラス変更ボタンは非表示

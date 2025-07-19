@@ -47,110 +47,176 @@ class PartyFormationPanel(ServicePanel):
         list_height = 250
         button_size = 35
         
-        # パーティリストラベル
-        party_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(10, 10, list_width, 30),
-            text="パーティメンバー（最大6人）",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(party_label)
-        
-        # パーティメンバーリスト（パネルとして実装）
-        party_rect = pygame.Rect(10, 45, list_width, list_height)
-        self.party_list_panel = pygame_gui.elements.UIPanel(
-            relative_rect=party_rect,
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.party_list_panel)
-        
-        # パーティメンバーボタンリスト
-        self.party_buttons: List[pygame_gui.elements.UIButton] = []
-        
-        # 中央のボタン群（パーティ⇔利用可能の移動ボタン）
-        # パネル幅を考慮して真ん中に配置
-        transfer_button_x = (self.rect.width - 100) // 2
-        
-        # 追加ボタン（→）
-        add_rect = pygame.Rect(transfer_button_x, 120, 100, button_size)
-        self.add_button = self._create_button(
-            "追加 → (A)",
-            add_rect,
-            container=self.container,
-            object_id="#add_member_button"
-        )
-        
-        # 削除ボタン（←）
-        remove_rect = pygame.Rect(transfer_button_x, 170, 100, button_size)
-        self.remove_button = self._create_button(
-            "← 削除 (R)",
-            remove_rect,
-            container=self.container,
-            object_id="#remove_member_button"
-        )
-        
-        # 利用可能リストラベル
-        available_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(self.rect.width - list_width - 10, 10, list_width, 30),
-            text="登録済み冒険者",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(available_label)
-        
-        # 利用可能キャラクターリスト（パネルとして実装）
-        available_rect = pygame.Rect(
-            self.rect.width - list_width - 10, 45,
-            list_width, list_height
-        )
-        self.available_list_panel = pygame_gui.elements.UIPanel(
-            relative_rect=available_rect,
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.available_list_panel)
-        
-        # 利用可能キャラクターボタンリスト
-        self.available_buttons: List[pygame_gui.elements.UIButton] = []
-        
-        # 並び替えボタン（パーティリストの右側に配置）
-        # パーティリストの右端 + 少し間隔を開ける
-        order_x = 10 + list_width + 10
-        
-        # 上へボタン（↑） - 中央の移動ボタンと同じ高さに配置
-        up_rect = pygame.Rect(order_x, 100, 80, button_size)
-        self.up_button = self._create_button(
-            "↑ 上へ (U)",
-            up_rect,
-            container=self.container,
-            object_id="#move_up_button"
-        )
-        
-        # 下へボタン（↓） - 適切な間隔で配置
-        down_rect = pygame.Rect(order_x, 150, 80, button_size)
-        self.down_button = self._create_button(
-            "↓ 下へ (D)",
-            down_rect,
-            container=self.container,
-            object_id="#move_down_button"
-        )
-        
-        # パーティ情報ボックス
-        info_rect = pygame.Rect(10, 305, self.rect.width - 20, 80)
-        self.party_info_box = pygame_gui.elements.UITextBox(
-            html_text="<b>パーティ情報</b><br>メンバー: 0/6",
-            relative_rect=info_rect,
-            manager=self.ui_manager,
-            container=self.container
-        )
-        self.ui_elements.append(self.party_info_box)
+        self._create_header_labels(list_width)
+        self._create_list_panels(list_width, list_height)
+        self._create_control_buttons(button_size)
+        self._create_info_display()
         
         # 初期データを読み込み
         self._load_party_data()
         
         # ボタンの初期状態を設定
         logger.info(f"[DEBUG] Initial button state: add_button={self.add_button}, remove_button={self.remove_button}")
+    
+    def _create_header_labels(self, list_width: int) -> None:
+        """ヘッダーラベルを作成"""
+        # パーティリストラベル
+        party_label_rect = pygame.Rect(10, 10, list_width, 30)
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            party_label = self.ui_element_manager.create_label(
+                "party_label", "パーティメンバー（最大6人）", party_label_rect
+            )
+        else:
+            # フォールバック
+            party_label = pygame_gui.elements.UILabel(
+                relative_rect=party_label_rect,
+                text="パーティメンバー（最大6人）",
+                manager=self.ui_manager,
+                container=self.container
+            )
+            self.ui_elements.append(party_label)
+        
+        # 利用可能リストラベル
+        available_label_rect = pygame.Rect(self.rect.width - list_width - 10, 10, list_width, 30)
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            available_label = self.ui_element_manager.create_label(
+                "available_label", "登録済み冒険者", available_label_rect
+            )
+        else:
+            # フォールバック
+            available_label = pygame_gui.elements.UILabel(
+                relative_rect=available_label_rect,
+                text="登録済み冒険者",
+                manager=self.ui_manager,
+                container=self.container
+            )
+            self.ui_elements.append(available_label)
+    
+    def _create_list_panels(self, list_width: int, list_height: int) -> None:
+        """リストパネルを作成"""
+        # パーティメンバーリストパネル
+        party_rect = pygame.Rect(10, 45, list_width, list_height)
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.party_list_panel = self.ui_element_manager.create_panel(
+                "party_list_panel", party_rect
+            )
+        else:
+            # フォールバック
+            self.party_list_panel = pygame_gui.elements.UIPanel(
+                relative_rect=party_rect,
+                manager=self.ui_manager,
+                container=self.container
+            )
+            self.ui_elements.append(self.party_list_panel)
+        
+        # 利用可能キャラクターリストパネル
+        available_rect = pygame.Rect(
+            self.rect.width - list_width - 10, 45,
+            list_width, list_height
+        )
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.available_list_panel = self.ui_element_manager.create_panel(
+                "available_list_panel", available_rect
+            )
+        else:
+            # フォールバック
+            self.available_list_panel = pygame_gui.elements.UIPanel(
+                relative_rect=available_rect,
+                manager=self.ui_manager,
+                container=self.container
+            )
+            self.ui_elements.append(self.available_list_panel)
+        
+        # ボタンリストの初期化
+        self.party_buttons: List[pygame_gui.elements.UIButton] = []
+        self.available_buttons: List[pygame_gui.elements.UIButton] = []
+    
+    def _create_control_buttons(self, button_size: int) -> None:
+        """コントロールボタンを作成"""
+        # 中央のボタン群（パーティ⇔利用可能の移動ボタン）
+        transfer_button_x = (self.rect.width - 100) // 2
+        
+        # 追加ボタン（→）
+        add_rect = pygame.Rect(transfer_button_x, 120, 100, button_size)
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.add_button = self.ui_element_manager.create_button(
+                "add_button", "追加 → (A)", add_rect
+            )
+        else:
+            # フォールバック
+            self.add_button = self._create_button(
+                "追加 → (A)",
+                add_rect,
+                container=self.container,
+                object_id="#add_member_button"
+            )
+        
+        # 削除ボタン（←）
+        remove_rect = pygame.Rect(transfer_button_x, 170, 100, button_size)
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.remove_button = self.ui_element_manager.create_button(
+                "remove_button", "← 削除 (R)", remove_rect
+            )
+        else:
+            # フォールバック
+            self.remove_button = self._create_button(
+                "← 削除 (R)",
+                remove_rect,
+                container=self.container,
+                object_id="#remove_member_button"
+            )
+        
+        # 並び替えボタン（パーティリストの右側に配置）
+        list_width = (self.rect.width - 30) // 2 - 40
+        order_x = 10 + list_width + 10
+        
+        # 上へボタン（↑）
+        up_rect = pygame.Rect(order_x, 100, 80, button_size)
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.up_button = self.ui_element_manager.create_button(
+                "up_button", "↑ 上へ (U)", up_rect
+            )
+        else:
+            # フォールバック
+            self.up_button = self._create_button(
+                "↑ 上へ (U)",
+                up_rect,
+                container=self.container,
+                object_id="#move_up_button"
+            )
+        
+        # 下へボタン（↓）
+        down_rect = pygame.Rect(order_x, 150, 80, button_size)
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.down_button = self.ui_element_manager.create_button(
+                "down_button", "↓ 下へ (D)", down_rect
+            )
+        else:
+            # フォールバック
+            self.down_button = self._create_button(
+                "↓ 下へ (D)",
+                down_rect,
+                container=self.container,
+                object_id="#move_down_button"
+            )
+    
+    def _create_info_display(self) -> None:
+        """情報表示エリアを作成"""
+        # パーティ情報ボックス
+        info_rect = pygame.Rect(10, 305, self.rect.width - 20, 80)
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.party_info_box = self.ui_element_manager.create_text_box(
+                "party_info_box", "<b>パーティ情報</b><br>メンバー: 0/6", info_rect
+            )
+        else:
+            # フォールバック
+            self.party_info_box = pygame_gui.elements.UITextBox(
+                html_text="<b>パーティ情報</b><br>メンバー: 0/6",
+                relative_rect=info_rect,
+                manager=self.ui_manager,
+                container=self.container
+            )
+            self.ui_elements.append(self.party_info_box)
     
     def _load_party_data(self) -> None:
         """パーティデータを読み込み"""
@@ -197,13 +263,25 @@ class PartyFormationPanel(ServicePanel):
             button_rect = pygame.Rect(5, 5 + i * (button_height + button_spacing), 
                                     self.party_list_panel.relative_rect.width - 10, button_height)
             
-            button = pygame_gui.elements.UIButton(
-                relative_rect=button_rect,
-                text=text,
-                manager=self.ui_manager,
-                container=self.party_list_panel,
-                object_id=f"#party_member_{i}"
-            )
+            # UIElementManagerで管理されたパネルの場合は特別な処理が必要
+            if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+                # 直接pygame_guiで作成（パネル内の動的ボタン）
+                button = pygame_gui.elements.UIButton(
+                    relative_rect=button_rect,
+                    text=text,
+                    manager=self.ui_manager,
+                    container=self.party_list_panel,
+                    object_id=f"#party_member_{i}"
+                )
+            else:
+                # フォールバック
+                button = pygame_gui.elements.UIButton(
+                    relative_rect=button_rect,
+                    text=text,
+                    manager=self.ui_manager,
+                    container=self.party_list_panel,
+                    object_id=f"#party_member_{i}"
+                )
             
             self.party_buttons.append(button)
             self.ui_elements.append(button)
@@ -226,13 +304,25 @@ class PartyFormationPanel(ServicePanel):
             button_rect = pygame.Rect(5, 5 + i * (button_height + button_spacing), 
                                     self.available_list_panel.relative_rect.width - 10, button_height)
             
-            button = pygame_gui.elements.UIButton(
-                relative_rect=button_rect,
-                text=text,
-                manager=self.ui_manager,
-                container=self.available_list_panel,
-                object_id=f"#available_character_{i}"
-            )
+            # UIElementManagerで管理されたパネルの場合は特別な処理が必要
+            if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+                # 直接pygame_guiで作成（パネル内の動的ボタン）
+                button = pygame_gui.elements.UIButton(
+                    relative_rect=button_rect,
+                    text=text,
+                    manager=self.ui_manager,
+                    container=self.available_list_panel,
+                    object_id=f"#available_character_{i}"
+                )
+            else:
+                # フォールバック
+                button = pygame_gui.elements.UIButton(
+                    relative_rect=button_rect,
+                    text=text,
+                    manager=self.ui_manager,
+                    container=self.available_list_panel,
+                    object_id=f"#available_character_{i}"
+                )
             
             self.available_buttons.append(button)
             self.ui_elements.append(button)

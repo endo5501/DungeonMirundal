@@ -102,6 +102,11 @@ class TestCharacterListPanelBasic:
             panel.filter_dropdown = Mock()
             panel.sort_dropdown = Mock()
             
+            # UIElementManagerのモック
+            panel.ui_element_manager = Mock()
+            panel.ui_element_manager.is_destroyed = False
+            panel.ui_element_manager.remove_element = Mock()
+            
             # Mock the service action to return a successful result
             mock_result = Mock()
             mock_result.is_success.return_value = True
@@ -129,6 +134,11 @@ class TestCharacterListPanelBasic:
             panel.detail_box = Mock()
             panel.filter_dropdown = Mock()
             panel.sort_dropdown = Mock()
+            
+            # UIElementManagerのモック
+            panel.ui_element_manager = Mock()
+            panel.ui_element_manager.is_destroyed = False
+            panel.ui_element_manager.remove_element = Mock()
             
             # Mock the service action to return a successful result
             mock_result = Mock()
