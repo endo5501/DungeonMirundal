@@ -218,21 +218,31 @@ class TestSpellAnalysisPanelDataLoading:
         """魔法更新成功"""
         from src.facilities.ui.magic_guild.spell_analysis_panel import SpellAnalysisPanel
         
-        panel = Mock()
-        panel.service = Mock()
+        panel = Mock(spec=SpellAnalysisPanel)
         panel.selected_character = "char1"
         panel.spell_list = Mock()
+        panel.gold_label = Mock()
+        panel.result_box = Mock()
+        panel.spells_data = []
         
-        # サービス結果のモック
-        result = sample_service_result(
-            success=True,
-            data={"spells": sample_spells, "party_gold": 2000}
-        )
-        panel.service.execute_action.return_value = result
+        # ServiceResultモック（新しいAPI）
+        result = Mock()
+        result.is_success.return_value = True
+        result.data = {
+            "spells": sample_spells,
+            "party_gold": 2000
+        }
+        result.message = ""
         
-        with patch.object(panel, '_refresh_spells') as mock_method:
-            mock_method.__func__ = SpellAnalysisPanel._refresh_spells
-            SpellAnalysisPanel._refresh_spells(panel, "char1")
+        panel._execute_service_action = Mock(return_value=result)
+        
+        # 実際のメソッドを呼び出し
+        SpellAnalysisPanel._refresh_spells(panel, "char1")
+        
+        # サービスが呼ばれたことを確認
+        panel._execute_service_action.assert_called_once_with("analyze_magic", {
+            "character_id": "char1"
+        })
         
         # データが設定される
         assert panel.spells_data == sample_spells
@@ -243,24 +253,35 @@ class TestSpellAnalysisPanelDataLoading:
             "Lv1 ヒール - 50G"
         ]
         panel.spell_list.set_item_list.assert_called_with(expected_items)
+        
+        # 所持金が更新される
+        panel.gold_label.set_text.assert_called_with("所持金: 2000 G")
     
     def test_refresh_spells_no_character(self, sample_service_result):
         """キャラクター未選択での魔法更新"""
         from src.facilities.ui.magic_guild.spell_analysis_panel import SpellAnalysisPanel
         
-        panel = Mock()
+        panel = Mock(spec=SpellAnalysisPanel)
         panel.selected_character = None
         panel.spell_list = Mock()
         panel.spells_data = []
-        panel.service = Mock()
+        panel.result_box = Mock()
         
-        # 失敗結果をモック
-        result = sample_service_result(success=False)
-        panel.service.execute_action.return_value = result
+        # ServiceResultモック（失敗ケース）
+        result = Mock()
+        result.is_success.return_value = False
+        result.data = None
+        result.message = "エラーメッセージ"
         
-        with patch.object(panel, '_refresh_spells') as mock_method:
-            mock_method.__func__ = SpellAnalysisPanel._refresh_spells
-            SpellAnalysisPanel._refresh_spells(panel, "char1")
+        panel._execute_service_action = Mock(return_value=result)
+        
+        # 実際のメソッドを呼び出し
+        SpellAnalysisPanel._refresh_spells(panel, "char1")
+        
+        # サービスが呼ばれたことを確認
+        panel._execute_service_action.assert_called_once_with("analyze_magic", {
+            "character_id": "char1"
+        })
         
         # 空リストが設定される
         panel.spell_list.set_item_list.assert_called_with([])
@@ -274,12 +295,13 @@ class TestSpellAnalysisPanelEventHandling:
         """キャラクター選択イベントの処理"""
         from src.facilities.ui.magic_guild.spell_analysis_panel import SpellAnalysisPanel
         
-        panel = Mock()
+        panel = Mock(spec=SpellAnalysisPanel)
         panel.characters_data = sample_characters
         panel.character_list = Mock()
         panel.selected_character = None
         panel.selected_spell = None
         panel.analyze_button = Mock()
+        panel.cost_label = Mock()
         
         # 選択イベントのモック
         event = Mock()
@@ -291,7 +313,11 @@ class TestSpellAnalysisPanelEventHandling:
         
         with patch.object(panel, '_refresh_spells') as mock_refresh:
             
-            SpellAnalysisPanel.handle_event(panel, event)
+            # handle_selection_list_changedメソッドを直接呼び出し
+            result = SpellAnalysisPanel.handle_selection_list_changed(panel, event)
+            
+            # 処理されたことを確認
+            assert result is True
             
             # 選択されたキャラクターが設定される
             assert panel.selected_character == "char1"
@@ -309,7 +335,7 @@ class TestSpellAnalysisPanelEventHandling:
         """魔法選択イベントの処理"""
         from src.facilities.ui.magic_guild.spell_analysis_panel import SpellAnalysisPanel
         
-        panel = Mock()
+        panel = Mock(spec=SpellAnalysisPanel)
         panel.spells_data = sample_spells
         panel.spell_list = Mock()
         panel.character_list = Mock()
@@ -327,7 +353,11 @@ class TestSpellAnalysisPanelEventHandling:
         panel.analyze_button = Mock()
         panel.result_box = Mock()
         
-        SpellAnalysisPanel.handle_event(panel, event)
+        # handle_selection_list_changedメソッドを直接呼び出し
+        result = SpellAnalysisPanel.handle_selection_list_changed(panel, event)
+        
+        # 処理されたことを確認
+        assert result is True
         
         # 選択された魔法が設定される
         assert panel.selected_spell == "spell2"
@@ -342,7 +372,7 @@ class TestSpellAnalysisPanelEventHandling:
         """分析ボタン押下イベントの処理"""
         from src.facilities.ui.magic_guild.spell_analysis_panel import SpellAnalysisPanel
         
-        panel = Mock()
+        panel = Mock(spec=SpellAnalysisPanel)
         panel.analyze_button = Mock()
         
         # ボタン押下イベントのモック
@@ -351,7 +381,11 @@ class TestSpellAnalysisPanelEventHandling:
         event.ui_element = panel.analyze_button
         
         with patch.object(panel, '_perform_analysis') as mock_analyze:
-            SpellAnalysisPanel.handle_event(panel, event)
+            # handle_button_clickメソッドを直接呼び出し
+            result = SpellAnalysisPanel.handle_button_click(panel, panel.analyze_button)
+            
+            # 処理されたことを確認
+            assert result is True
             
             mock_analyze.assert_called_once()
     
@@ -385,73 +419,70 @@ class TestSpellAnalysisPanelAnalysis:
         """分析実行成功"""
         from src.facilities.ui.magic_guild.spell_analysis_panel import SpellAnalysisPanel
         
-        panel = Mock()
+        panel = Mock(spec=SpellAnalysisPanel)
         panel.selected_character = "char1"
         panel.selected_spell = "spell1"
-        panel.service = Mock()
         panel.result_box = Mock()
+        panel.gold_label = Mock()
         
         # 分析結果のモック（確認→実行の流れ）
-        confirm_result = sample_service_result(success=True)
+        confirm_result = Mock()
+        confirm_result.is_success.return_value = True
         confirm_result.result_type = Mock()
         confirm_result.result_type.name = "CONFIRM"
         
-        execute_result = sample_service_result(
-            success=True,
-            message="ファイアーボールの分析が完了しました。\n詳細な魔法構造が判明しました。",
-            data={"remaining_gold": 1850}
-        )
+        execute_result = Mock()
+        execute_result.is_success.return_value = True
+        execute_result.message = "ファイアーボールの分析が完了しました。\n詳細な魔法構造が判明しました。"
+        execute_result.data = {"remaining_gold": 1850}
         
-        panel.service.execute_action.side_effect = [confirm_result, execute_result]
-        panel.gold_label = Mock()
+        panel._execute_service_action = Mock(side_effect=[confirm_result, execute_result])
         
-        with patch.object(panel, '_refresh_characters') as mock_refresh:
-            SpellAnalysisPanel._perform_analysis(panel)
-            
-            # サービスが呼ばれる（確認後実行）
-            expected_calls = [
-                unittest.mock.call("analyze_magic", {
-                    "character_id": "char1",
-                    "spell_id": "spell1"
-                }),
-                unittest.mock.call("analyze_magic", {
-                    "character_id": "char1",
-                    "spell_id": "spell1",
-                    "confirmed": True
-                })
-            ]
-            panel.service.execute_action.assert_has_calls(expected_calls)
-            
-            # 結果が表示される
-            expected_text = """
+        SpellAnalysisPanel._perform_analysis(panel)
+        
+        # サービスが呼ばれる（確認後実行）
+        expected_calls = [
+            unittest.mock.call("analyze_magic", {
+                "character_id": "char1",
+                "spell_id": "spell1"
+            }),
+            unittest.mock.call("analyze_magic", {
+                "character_id": "char1",
+                "spell_id": "spell1",
+                "confirmed": True
+            })
+        ]
+        panel._execute_service_action.assert_has_calls(expected_calls)
+        
+        # 結果が表示される
+        expected_text = """
                 <b>魔法分析結果</b><br>
                 <br>
                 ファイアーボールの分析が完了しました。<br>詳細な魔法構造が判明しました。<br>
                 <br>
                 <i>残り所持金: 1850 G</i>
                 """
-            assert panel.result_box.html_text == expected_text.strip()
-            panel.result_box.rebuild.assert_called_once()
-            
-            # 所持金が更新される
-            panel.gold_label.set_text.assert_called_with("所持金: 1850 G")
+        assert panel.result_box.html_text == expected_text.strip()
+        panel.result_box.rebuild.assert_called_once()
+        
+        # 所持金が更新される
+        panel.gold_label.set_text.assert_called_with("所持金: 1850 G")
     
     def test_perform_analysis_failure(self, sample_service_result):
         """分析実行失敗"""
         from src.facilities.ui.magic_guild.spell_analysis_panel import SpellAnalysisPanel
         
-        panel = Mock()
+        panel = Mock(spec=SpellAnalysisPanel)
         panel.selected_character = "char1"
         panel.selected_spell = "spell1"
-        panel.service = Mock()
         panel.result_box = Mock()
         
         # 失敗結果のモック
-        result = sample_service_result(
-            success=False,
-            message="所持金が不足しています"
-        )
-        panel.service.execute_action.return_value = result
+        result = Mock()
+        result.is_success.return_value = False
+        result.message = "所持金が不足しています"
+        
+        panel._execute_service_action = Mock(return_value=result)
         
         SpellAnalysisPanel._perform_analysis(panel)
         
@@ -584,25 +615,66 @@ class TestSpellAnalysisPanelActions:
         """パネル破棄"""
         from src.facilities.ui.magic_guild.spell_analysis_panel import SpellAnalysisPanel
         
-        panel = Mock()
-        panel.container = Mock()
-        
-        SpellAnalysisPanel.destroy(panel)
-        
-        panel.container.kill.assert_called_once()
+        # ServicePanelの基本destructor mockを設定
+        with patch('src.facilities.ui.magic_guild.spell_analysis_panel.ServicePanel.destroy') as mock_super_destroy:
+            panel = Mock(spec=SpellAnalysisPanel)
+            panel.title_label = Mock()
+            panel.character_list = Mock()
+            panel.spell_list = Mock()
+            panel.analyze_button = Mock()
+            panel.cost_label = Mock()
+            panel.gold_label = Mock()
+            panel.result_box = Mock()
+            panel.selected_character = "test"
+            panel.selected_spell = "test"
+            panel.characters_data = []
+            panel.spells_data = []
+            
+            # 実際のメソッドを呼び出し
+            SpellAnalysisPanel.destroy(panel)
+            
+            # パネル固有のクリーンアップが実行されたことを確認
+            assert panel.title_label is None
+            assert panel.character_list is None
+            assert panel.spell_list is None
+            assert panel.analyze_button is None
+            assert panel.cost_label is None
+            assert panel.gold_label is None
+            assert panel.result_box is None
+            assert panel.selected_character is None
+            assert panel.selected_spell is None
+            assert panel.characters_data == []
+            assert panel.spells_data == []
+            
+            # ServicePanelのdestroyが呼ばれたことを確認
+            mock_super_destroy.assert_called_once()
     
     def test_show_hide_destroy_no_container(self):
         """コンテナなしでの表示・非表示・破棄"""
         from src.facilities.ui.magic_guild.spell_analysis_panel import SpellAnalysisPanel
         
-        panel = Mock()
+        panel = Mock(spec=SpellAnalysisPanel)
         panel.container = None
+        panel.title_label = None
+        panel.character_list = None
+        panel.spell_list = None
+        panel.analyze_button = None
+        panel.cost_label = None
+        panel.gold_label = None
+        panel.result_box = None
+        panel.selected_character = None
+        panel.selected_spell = None
+        panel.characters_data = []
+        panel.spells_data = []
         
         # エラーが発生しないことを確認
         try:
             SpellAnalysisPanel.show(panel)
             SpellAnalysisPanel.hide(panel)
-            SpellAnalysisPanel.destroy(panel)
+            
+            # destroyはServicePanelをモック
+            with patch('src.facilities.ui.magic_guild.spell_analysis_panel.ServicePanel.destroy'):
+                SpellAnalysisPanel.destroy(panel)
             assert True
         except Exception as e:
             pytest.fail(f"Unexpected exception: {e}")
