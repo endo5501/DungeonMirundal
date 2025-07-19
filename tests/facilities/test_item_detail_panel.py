@@ -72,22 +72,20 @@ class TestItemDetailPanelBasic:
         
         rect, parent, ui_manager = mock_ui_setup
         
-        with patch('pygame_gui.elements.UIPanel'), \
-             patch('pygame_gui.elements.UILabel'), \
-             patch('pygame_gui.elements.UITextBox'):
+        # ServicePanelの初期化をモック
+        with patch('src.facilities.ui.shop.item_detail_panel.ServicePanel.__init__') as mock_super_init:
+            
+            mock_super_init.return_value = None
             
             panel = ItemDetailPanel(rect, parent, ui_manager)
             
-            # 基本属性の確認
-            assert panel.rect == rect
-            assert panel.parent == parent
-            assert panel.ui_manager == ui_manager
+            # ServicePanelの初期化が呼ばれることを確認
+            mock_super_init.assert_called_once_with(rect, parent, None, "item_detail", ui_manager)
             
             # UI要素の初期状態
-            assert panel.container is not None
-            assert panel.name_label is not None
-            assert panel.description_box is not None
-            assert panel.stats_box is not None
+            assert panel.name_label is None  # 初期化前は None
+            assert panel.description_box is None
+            assert panel.stats_box is None
     
     def test_create_ui_elements(self, mock_ui_setup):
         """UI要素が正常に作成される"""
@@ -95,16 +93,21 @@ class TestItemDetailPanelBasic:
         
         rect, parent, ui_manager = mock_ui_setup
         
-        with patch('pygame_gui.elements.UIPanel') as mock_panel, \
-             patch('pygame_gui.elements.UILabel') as mock_label, \
-             patch('pygame_gui.elements.UITextBox') as mock_text_box:
+        # ServicePanel.__init__をモックして、各UI作成メソッドをテスト
+        with patch('src.facilities.ui.shop.item_detail_panel.ServicePanel.__init__') as mock_super_init, \
+             patch.object(ItemDetailPanel, '_create_name_area') as mock_name, \
+             patch.object(ItemDetailPanel, '_create_description_area') as mock_desc, \
+             patch.object(ItemDetailPanel, '_create_stats_area') as mock_stats:
+            
+            mock_super_init.return_value = None
             
             panel = ItemDetailPanel(rect, parent, ui_manager)
+            panel._create_ui()  # 明示的に呼び出し
             
-            # UI要素が作成される
-            mock_panel.assert_called_once()
-            mock_label.assert_called_once()
-            assert mock_text_box.call_count == 2  # description_box, stats_box
+            # 各UI作成メソッドが呼ばれることを確認
+            mock_name.assert_called_once()
+            mock_desc.assert_called_once()
+            mock_stats.assert_called_once()
 
 
 class TestItemDetailPanelDisplay:
@@ -352,25 +355,45 @@ class TestItemDetailPanelVisibility:
         """パネルの破棄"""
         from src.facilities.ui.shop.item_detail_panel import ItemDetailPanel
         
-        panel = Mock()
-        panel.container = Mock()
-        
-        ItemDetailPanel.destroy(panel)
-        
-        panel.container.kill.assert_called_once()
+        # ServicePanelの基本destructor mockを設定
+        with patch('src.facilities.ui.shop.item_detail_panel.ServicePanel.destroy') as mock_super_destroy:
+            panel = Mock(spec=ItemDetailPanel)
+            panel.name_label = Mock()
+            panel.icon_image = Mock()
+            panel.description_box = Mock()
+            panel.stats_box = Mock()
+            
+            # 実際のメソッドを呼び出し
+            ItemDetailPanel.destroy(panel)
+            
+            # パネル固有のクリーンアップが実行されたことを確認
+            assert panel.name_label is None
+            assert panel.icon_image is None
+            assert panel.description_box is None
+            assert panel.stats_box is None
+            
+            # ServicePanelのdestroyが呼ばれたことを確認
+            mock_super_destroy.assert_called_once()
     
     def test_show_hide_destroy_no_container(self):
         """コンテナなしでの表示・非表示・破棄"""
         from src.facilities.ui.shop.item_detail_panel import ItemDetailPanel
         
-        panel = Mock()
+        panel = Mock(spec=ItemDetailPanel)
         panel.container = None
+        panel.name_label = None
+        panel.icon_image = None
+        panel.description_box = None
+        panel.stats_box = None
         
         # エラーが発生しないことを確認
         try:
             ItemDetailPanel.show(panel)
             ItemDetailPanel.hide(panel)
-            ItemDetailPanel.destroy(panel)
+            
+            # destroyはServicePanelをモック
+            with patch('src.facilities.ui.shop.item_detail_panel.ServicePanel.destroy'):
+                ItemDetailPanel.destroy(panel)
             assert True
         except Exception as e:
             pytest.fail(f"Unexpected exception: {e}")

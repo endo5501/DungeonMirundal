@@ -5,11 +5,12 @@ import pygame_gui
 from typing import List, Optional, Callable, Dict, Any
 import logging
 from ..core.facility_service import MenuItem
+from .service_panel import ServicePanel
 
 logger = logging.getLogger(__name__)
 
 
-class NavigationPanel:
+class NavigationPanel(ServicePanel):
     """ナビゲーションパネル
     
     施設内の各サービスへのナビゲーションを提供するタブ形式のパネル。
@@ -27,37 +28,24 @@ class NavigationPanel:
             on_select_callback: 項目選択時のコールバック
             ui_manager: UIマネージャー
         """
-        self.rect = rect
-        self.parent = parent
+        # NavigationPanel固有のプロパティ
         self.menu_items = menu_items
         self.on_select_callback = on_select_callback
-        self.ui_manager = ui_manager
         
-        # UI要素
-        self.container: Optional[pygame_gui.elements.UIPanel] = None
+        # NavigationPanel固有のUI要素とスタイル設定（ServicePanel初期化前に設定）
         self.nav_buttons: Dict[str, pygame_gui.elements.UIButton] = {}
         self.selected_item_id: Optional[str] = None
-        
-        # スタイル設定
         self.button_height = 40
         self.button_spacing = 5
         self.button_padding = 10
         
-        # UI作成
-        self._create_ui()
+        # ServicePanel初期化（navigationという仮のservice_idを使用）
+        super().__init__(rect, parent, None, "navigation", ui_manager)
         
         logger.info("NavigationPanel created")
     
     def _create_ui(self) -> None:
         """UI要素を作成"""
-        # コンテナパネル
-        self.container = pygame_gui.elements.UIPanel(
-            relative_rect=self.rect,
-            manager=self.ui_manager,
-            container=self.parent,
-            element_id="navigation_panel"
-        )
-        
         # ナビゲーションボタンを作成
         self._create_nav_buttons()
     
@@ -91,14 +79,23 @@ class NavigationPanel:
             # ボタンのスタイルを決定
             button_style = self._get_button_style(item)
             
-            button = pygame_gui.elements.UIButton(
-                relative_rect=button_rect,
-                text=item.label,
-                manager=self.ui_manager,
-                container=self.container,
-                object_id=button_style['object_id'],
-                tool_tip_text=item.description
-            )
+            # UIElementManagerを使用してボタンを作成
+            if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+                button = self.ui_element_manager.create_button(
+                    f"nav_button_{item.id}", item.label, button_rect,
+                    object_id=button_style['object_id']
+                )
+            else:
+                # フォールバック
+                button = pygame_gui.elements.UIButton(
+                    relative_rect=button_rect,
+                    text=item.label,
+                    manager=self.ui_manager,
+                    container=self.container,
+                    object_id=button_style['object_id'],
+                    tool_tip_text=item.description
+                )
+                self.ui_elements.append(button)
             
             # 無効化処理
             if not item.enabled:
@@ -177,8 +174,17 @@ class NavigationPanel:
             menu_items: 新しいメニュー項目のリスト
         """
         # 既存のボタンを破棄
-        for button in self.nav_buttons.values():
-            button.kill()
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            # UIElementManagerで管理されているボタンをクリア
+            for item_id in list(self.nav_buttons.keys()):
+                element_id = f"nav_button_{item_id}"
+                if element_id in self.ui_element_manager.elements:
+                    self.ui_element_manager.destroy_element(element_id)
+        else:
+            # フォールバック：手動でボタンを破棄
+            for button in self.nav_buttons.values():
+                button.kill()
+        
         self.nav_buttons.clear()
         
         # 新しいメニュー項目を設定
@@ -191,8 +197,41 @@ class NavigationPanel:
         if self.selected_item_id and self.selected_item_id in self.nav_buttons:
             self.set_selected(self.selected_item_id)
     
-    def handle_button_click(self, event: pygame.event.Event) -> bool:
-        """ボタンクリックイベントを処理
+    def handle_button_click(self, button: pygame_gui.elements.UIButton) -> bool:
+        """ボタンクリックを処理（ServicePanelパターン）
+        
+        Args:
+            button: クリックされたボタン
+            
+        Returns:
+            処理したらTrue
+        """
+        # クリックされたボタンを特定
+        for item_id, nav_button in self.nav_buttons.items():
+            if button == nav_button:
+                logger.info(f"NavigationPanel: Button clicked - {item_id}")
+                # 無効なボタンはクリックできない
+                if not button.is_enabled:
+                    logger.warning(f"NavigationPanel: Button {item_id} is disabled")
+                    return False
+                
+                # コールバックを呼び出し
+                if self.on_select_callback:
+                    logger.info(f"NavigationPanel: Calling callback for {item_id}")
+                    self.on_select_callback(item_id)
+                else:
+                    logger.warning("NavigationPanel: No callback set")
+                
+                # exitボタン以外は選択状態を更新
+                if item_id != "exit":
+                    self.set_selected(item_id)
+                
+                return True
+        
+        return False
+    
+    def handle_event(self, event: pygame.event.Event) -> bool:
+        """イベントを処理（後方互換性のため）
         
         Args:
             event: pygameイベント
@@ -205,24 +244,7 @@ class NavigationPanel:
             # クリックされたボタンを特定
             for item_id, button in self.nav_buttons.items():
                 if event.ui_element == button:
-                    logger.info(f"NavigationPanel: Button clicked - {item_id}")
-                    # 無効なボタンはクリックできない
-                    if not button.is_enabled:
-                        logger.warning(f"NavigationPanel: Button {item_id} is disabled")
-                        return False
-                    
-                    # コールバックを呼び出し
-                    if self.on_select_callback:
-                        logger.info(f"NavigationPanel: Calling callback for {item_id}")
-                        self.on_select_callback(item_id)
-                    else:
-                        logger.warning("NavigationPanel: No callback set")
-                    
-                    # exitボタン以外は選択状態を更新
-                    if item_id != "exit":
-                        self.set_selected(item_id)
-                    
-                    return True
+                    return self.handle_button_click(button)
             logger.warning("NavigationPanel: UI_BUTTON_PRESSED but no matching button found")
         
         return False
@@ -237,13 +259,21 @@ class NavigationPanel:
     
     def destroy(self) -> None:
         """パネルを破棄"""
-        # すべてのボタンを破棄
-        for button in self.nav_buttons.values():
-            button.kill()
+        # NavigationPanel固有のクリーンアップ
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            # UIElementManagerで管理されているボタンをクリア
+            for item_id in list(self.nav_buttons.keys()):
+                element_id = f"nav_button_{item_id}"
+                if element_id in self.ui_element_manager.elements:
+                    self.ui_element_manager.destroy_element(element_id)
+        else:
+            # フォールバック：手動でボタンを破棄
+            for button in self.nav_buttons.values():
+                button.kill()
+        
         self.nav_buttons.clear()
         
-        # コンテナを破棄
-        if self.container:
-            self.container.kill()
+        # ServicePanelの基本破棄処理を呼び出し
+        super().destroy()
         
         logger.info("NavigationPanel destroyed")

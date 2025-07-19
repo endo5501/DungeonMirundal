@@ -223,13 +223,16 @@ class TestNavigationPanel(unittest.TestCase):
             ui_manager=self.mock_ui_manager
         )
         
+        # モックされたボタンをnavigation panelに手動で関連付け
+        panel.nav_buttons["item1"] = mock_button_instances[0]
+        
         # ボタンクリックイベントをシミュレート
         mock_event = Mock()
         mock_event.type = pygame_gui.UI_BUTTON_PRESSED
         mock_event.ui_element = mock_button_instances[0]
         
         # ボタンクリックを処理
-        result = panel.handle_button_click(mock_event)
+        result = panel.handle_event(mock_event)
         
         # コールバックが呼ばれたことを確認
         self.assertTrue(result)

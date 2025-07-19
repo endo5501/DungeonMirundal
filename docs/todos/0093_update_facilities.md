@@ -370,9 +370,48 @@ for issue in memory_issues:
 6. **テスト基盤更新**: 新しいServicePanelベースAPIに対応したテスト修正完了
 7. **全体テスト通過**: 877個のテストがすべて通過、システム全体の安定性確保
 
-### 📈 次期Phase準備
+### 📈 Phase 4実装計画
 
-Phase 4では、CharacterCreationWizardの移行と共通UIパターンの抽出を予定。
+**実施予定期間**: 2025年7月19日〜20日  
+**目標**: 残り4個の未移行パネルをUIElementManagerシステムに統合完了
+
+#### Phase 4対象パネル分析結果
+
+**未移行パネル総数**: 4個 (全体の20%)  
+**移行済みパネル**: 16個 (全体の80%)
+
+#### Phase 4-A: 基盤パネルの移行（最優先）
+**期間**: 1日
+
+1. **NavigationPanel** (248行)
+   - **課題**: ServicePanel継承なし、全施設で使用される重要コンポーネント
+   - **作業**: ServicePanel継承、UIElementManager移行
+   - **推定工数**: 1-2日
+
+2. **ItemDetailPanel** (171行)
+   - **課題**: ServicePanel継承なし、商店等で頻繁使用
+   - **作業**: ServicePanel継承、UIElementManager移行、表示専用UI最適化
+   - **推定工数**: 1日
+
+#### Phase 4-B: 機能パネルの移行（第二優先）
+**期間**: 2-3日
+
+3. **SpellAnalysisPanel** (286行)
+   - **課題**: ServicePanel継承なし、中程度の複雑さ
+   - **作業**: ServicePanel継承、魔法選択・分析ロジックの移行
+   - **推定工数**: 2-3日
+
+4. **CharacterCreationWizard** (600+行)
+   - **課題**: UIElementManager未使用、WizardServicePanel継承済み
+   - **作業**: UIElementManager移行、複雑なウィザードUI統合
+   - **推定工数**: 3-4日
+
+#### Phase 4予想成果
+
+- **UIElementManager統合率**: 100%達成
+- **統一アーキテクチャ**: 全パネルでServicePanelベース統一
+- **保守性向上**: 共通パターン抽出完了
+- **技術的負債**: 施設UI関連の技術的負債完全解消
 
 ## 変更履歴
 

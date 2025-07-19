@@ -4,11 +4,12 @@ import pygame
 import pygame_gui
 from typing import Dict, Any, Optional
 import logging
+from ..service_panel import ServicePanel
 
 logger = logging.getLogger(__name__)
 
 
-class ItemDetailPanel:
+class ItemDetailPanel(ServicePanel):
     """アイテム詳細パネル
     
     アイテムの詳細情報を表示する共通パネル。
@@ -17,52 +18,76 @@ class ItemDetailPanel:
     def __init__(self, rect: pygame.Rect, parent: pygame_gui.elements.UIPanel,
                  ui_manager: pygame_gui.UIManager):
         """初期化"""
-        self.rect = rect
-        self.parent = parent
-        self.ui_manager = ui_manager
-        
-        # UI要素
-        self.container: Optional[pygame_gui.elements.UIPanel] = None
+        # ItemDetailPanel固有のUI要素（ServicePanel初期化前に定義）
         self.name_label: Optional[pygame_gui.elements.UILabel] = None
         self.icon_image: Optional[pygame_gui.elements.UIImage] = None
         self.description_box: Optional[pygame_gui.elements.UITextBox] = None
         self.stats_box: Optional[pygame_gui.elements.UITextBox] = None
         
-        self._create_ui()
+        # ServicePanel初期化（表示専用なのでcontrollerは不要）
+        super().__init__(rect, parent, None, "item_detail", ui_manager)
+        
+        logger.info("ItemDetailPanel initialized")
     
     def _create_ui(self) -> None:
         """UI要素を作成"""
-        self.container = pygame_gui.elements.UIPanel(
-            relative_rect=self.rect,
-            manager=self.ui_manager,
-            container=self.parent
-        )
+        self._create_name_area()
+        self._create_description_area()
+        self._create_stats_area()
+    
+    def _create_name_area(self) -> None:
+        """アイテム名エリアを作成"""
+        name_rect = pygame.Rect(5, 5, self.rect.width - 10, 30)
         
-        # アイテム名
-        self.name_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(5, 5, self.rect.width - 10, 30),
-            text="",
-            manager=self.ui_manager,
-            container=self.container
-        )
-        
-        # 説明文
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.name_label = self.ui_element_manager.create_label(
+                "item_name_label", "", name_rect
+            )
+        else:
+            # フォールバック
+            self.name_label = pygame_gui.elements.UILabel(
+                relative_rect=name_rect,
+                text="",
+                manager=self.ui_manager,
+                container=self.container
+            )
+            self.ui_elements.append(self.name_label)
+    
+    def _create_description_area(self) -> None:
+        """説明文エリアを作成"""
         desc_rect = pygame.Rect(5, 40, self.rect.width - 10, 100)
-        self.description_box = pygame_gui.elements.UITextBox(
-            html_text="",
-            relative_rect=desc_rect,
-            manager=self.ui_manager,
-            container=self.container
-        )
         
-        # ステータス/効果
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.description_box = self.ui_element_manager.create_text_box(
+                "item_description_box", "", desc_rect
+            )
+        else:
+            # フォールバック
+            self.description_box = pygame_gui.elements.UITextBox(
+                html_text="",
+                relative_rect=desc_rect,
+                manager=self.ui_manager,
+                container=self.container
+            )
+            self.ui_elements.append(self.description_box)
+    
+    def _create_stats_area(self) -> None:
+        """ステータス/効果エリアを作成"""
         stats_rect = pygame.Rect(5, 145, self.rect.width - 10, 80)
-        self.stats_box = pygame_gui.elements.UITextBox(
-            html_text="",
-            relative_rect=stats_rect,
-            manager=self.ui_manager,
-            container=self.container
-        )
+        
+        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
+            self.stats_box = self.ui_element_manager.create_text_box(
+                "item_stats_box", "", stats_rect
+            )
+        else:
+            # フォールバック
+            self.stats_box = pygame_gui.elements.UITextBox(
+                html_text="",
+                relative_rect=stats_rect,
+                manager=self.ui_manager,
+                container=self.container
+            )
+            self.ui_elements.append(self.stats_box)
     
     def set_item(self, item_data: Dict[str, Any]) -> None:
         """アイテムデータを設定"""
@@ -168,5 +193,13 @@ class ItemDetailPanel:
     
     def destroy(self) -> None:
         """パネルを破棄"""
-        if self.container:
-            self.container.kill()
+        # ItemDetailPanel固有のクリーンアップ
+        self.name_label = None
+        self.icon_image = None
+        self.description_box = None
+        self.stats_box = None
+        
+        # ServicePanelの基本破棄処理を呼び出し
+        super().destroy()
+        
+        logger.info("ItemDetailPanel destroyed")
