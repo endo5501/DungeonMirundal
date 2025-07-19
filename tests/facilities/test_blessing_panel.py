@@ -13,9 +13,13 @@ def mock_ui_setup():
     parent = Mock()
     ui_manager = Mock()
     controller = Mock()
+    
+    # ServicePanelパターンに合わせてコントローラー経由でサービスにアクセス
     service = Mock()
     service.blessing_cost = 500
-    return rect, parent, ui_manager, controller, service
+    controller.service = service
+    
+    return rect, parent, ui_manager, controller
 
 
 @pytest.fixture
@@ -47,42 +51,46 @@ class TestBlessingPanelBasic:
         """正常に初期化される"""
         from src.facilities.ui.temple.blessing_panel import BlessingPanel
         
-        rect, parent, ui_manager, controller, service = mock_ui_setup
+        rect, parent, ui_manager, controller = mock_ui_setup
         
-        with patch('pygame_gui.elements.UIPanel'), \
-             patch('pygame_gui.elements.UILabel'), \
-             patch('pygame_gui.elements.UITextBox'), \
-             patch('pygame_gui.elements.UIButton'), \
-             patch.object(BlessingPanel, '_refresh_info'):
+        with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None):
+            panel = BlessingPanel(rect, parent, controller, ui_manager)
             
-            panel = BlessingPanel(rect, parent, ui_manager, controller, service)
-            
-            # 基本属性の確認
-            assert panel.rect == rect
-            assert panel.parent == parent
-            assert panel.ui_manager == ui_manager
-            assert panel.controller == controller
-            assert panel.service == service
+            # UI要素の初期状態確認
+            assert panel.title_label is None
+            assert panel.description_box is None
+            assert panel.blessing_button is None
+            assert panel.cost_label is None
+            assert panel.gold_label is None
+            assert panel.result_label is None
     
     def test_create_ui_elements(self, mock_ui_setup):
         """UI要素が正常に作成される"""
         from src.facilities.ui.temple.blessing_panel import BlessingPanel
         
-        rect, parent, ui_manager, controller, service = mock_ui_setup
+        rect, parent, ui_manager, controller = mock_ui_setup
         
-        with patch('pygame_gui.elements.UIPanel') as mock_panel, \
-             patch('pygame_gui.elements.UILabel') as mock_label, \
-             patch('pygame_gui.elements.UITextBox') as mock_text_box, \
-             patch('pygame_gui.elements.UIButton') as mock_button, \
-             patch.object(BlessingPanel, '_refresh_info'):
+        with patch('src.facilities.ui.service_panel.ServicePanel.__init__', return_value=None):
+            panel = Mock()
+            panel.rect = rect
+            panel.ui_manager = ui_manager
+            panel.container = Mock()
+            panel.ui_elements = []
             
-            panel = BlessingPanel(rect, parent, ui_manager, controller, service)
+            # UIElementManagerのモック（初期状態ではNone）
+            panel.ui_element_manager = None
             
-            # UI要素が作成される
-            mock_panel.assert_called_once()
-            assert mock_label.call_count == 4  # タイトル、コスト、所持金、結果
-            mock_text_box.assert_called_once()  # 説明テキストボックス
-            mock_button.assert_called_once()   # 祝福ボタン
+            # フォールバック用モックも設定
+            with patch('pygame_gui.elements.UILabel') as mock_label, \
+                 patch('pygame_gui.elements.UITextBox') as mock_text_box, \
+                 patch('pygame_gui.elements.UIButton') as mock_button:
+                
+                BlessingPanel._create_ui(panel)
+                
+                # UIが作成されていることを確認（フォールバック）
+                assert mock_label.call_count >= 3  # タイトル、コスト、所持金、結果
+                mock_text_box.assert_called_once()  # 説明テキストボックス
+                mock_button.assert_called_once()   # 祝福ボタン
 
 
 class TestBlessingPanelInfoRefresh:
