@@ -29,6 +29,7 @@ from src.utils.constants import GameLocation
 from src.core.loop import MainLoopManager
 from src.core.combat import CombatStateManager
 from src.core.input import InputHandlerCoordinator
+from src.core.scene import SceneTransitionManager
 
 
 class GameManager(EventHandler):
@@ -106,6 +107,9 @@ class GameManager(EventHandler):
         
         # InputHandlerCoordinator初期化
         self._setup_input_handler_coordinator()
+        
+        # SceneTransitionManager初期化
+        self._setup_scene_transition_manager()
         
         logger.info(self.game_config.get_text("app_log.game_manager_initialized"))
     
@@ -195,6 +199,28 @@ class GameManager(EventHandler):
             logger.info("InputHandlerCoordinator初期化完了")
         else:
             logger.error("InputHandlerCoordinator初期化失敗")
+    
+    def _setup_scene_transition_manager(self):
+        """SceneTransitionManagerの初期化"""
+        self.scene_transition_manager = SceneTransitionManager()
+        
+        # 初期化コンテキストを準備
+        context = {
+            'game_config': self.game_config,
+            'current_location': self.current_location,
+            'game_state': self.game_state,
+            'current_party': self.current_party,
+            'overworld_manager': getattr(self, 'overworld_manager', None),
+            'dungeon_manager': getattr(self, 'dungeon_manager', None),
+            'dungeon_renderer': getattr(self, 'dungeon_renderer', None),
+            'encounter_manager': getattr(self, 'encounter_manager', None)
+        }
+        
+        # SceneTransitionManagerを初期化
+        if self.scene_transition_manager.initialize(context):
+            logger.info("SceneTransitionManager初期化完了")
+        else:
+            logger.error("SceneTransitionManager初期化失敗")
     
     def handle_event(self, event: GameEvent) -> bool:
         """EventHandler インターフェースの実装"""
@@ -631,10 +657,28 @@ class GameManager(EventHandler):
         logger.info(self.game_config.get_text("app_log.transition_system_initialized"))
     
     def set_game_state(self, state: str):
-        """ゲーム状態の設定"""
-        old_state = self.game_state
-        self.game_state = state
-        logger.info(self.game_config.get_text("app_log.game_state_changed").format(old_state=old_state, new_state=state))
+        """ゲーム状態の設定 - SceneTransitionManagerに委譲"""
+        if hasattr(self, 'scene_transition_manager'):
+            self.scene_transition_manager.set_game_state(state)
+            # ローカル状態も同期
+            self.game_state = state
+        else:
+            # フォールバック: 従来の処理
+            old_state = self.game_state
+            self.game_state = state
+            logger.info(self.game_config.get_text("app_log.game_state_changed").format(old_state=old_state, new_state=state))
+    
+    def set_current_location(self, location: GameLocation):
+        """現在のロケーション設定 - SceneTransitionManagerに委譲"""
+        if hasattr(self, 'scene_transition_manager'):
+            self.scene_transition_manager.set_current_location(location)
+            # ローカル状態も同期
+            self.current_location = location
+        else:
+            # フォールバック: 従来の処理
+            old_location = self.current_location
+            self.current_location = location
+            logger.info(f"Location changed: {old_location.value} -> {location.value}")
     
     def set_current_party(self, party: Party):
         """現在のパーティを設定 - イベント駆動版"""
@@ -862,119 +906,57 @@ class GameManager(EventHandler):
         return self.current_location == GameLocation.DUNGEON
     
     def transition_to_dungeon(self, dungeon_id: str = "main_dungeon"):
-        """ダンジョンへの遷移 - イベント駆動版"""
-        if not self.current_party:
-            logger.error(self.game_config.get_text("game_manager.party_error_no_party"))
-            raise Exception(self.game_config.get_text("game_manager.party_error_no_party"))
-        
-        if not self.current_party.get_living_characters():
-            logger.error(self.game_config.get_text("game_manager.party_error_no_living"))
-            raise Exception(self.game_config.get_text("game_manager.party_error_no_living"))
-        
-        # イベントでシーン遷移をリクエスト
-        publish_event(
-            EventType.SCENE_TRANSITION_REQUESTED,
-            "game_manager",
-            {
-                "scene_type": "dungeon",
-                "context": {"dungeon_id": dungeon_id}
-            }
-        )
-        
-        return True
-        
-        logger.info(self.game_config.get_text("game_manager.dungeon_transition_start").format(dungeon_id=dungeon_id))
-        
-        try:
-            # ダンジョンが存在しない場合は作成
-            if dungeon_id not in self.dungeon_manager.active_dungeons:
-                # ダンジョン設定に基づいてシードを生成
-                dungeon_seed = self._generate_dungeon_seed(dungeon_id)
-                self.dungeon_manager.create_dungeon(dungeon_id, dungeon_seed)
+        """ダンジョンへの遷移 - SceneTransitionManagerに委譲"""
+        if hasattr(self, 'scene_transition_manager'):
+            # 現在のパーティ状態を更新
+            self.scene_transition_manager.current_party = self.current_party
+            return self.scene_transition_manager.transition_to_dungeon(dungeon_id)
+        else:
+            # フォールバック: イベント駆動版
+            if not self.current_party:
+                logger.error(self.game_config.get_text("game_manager.party_error_no_party"))
+                raise Exception(self.game_config.get_text("game_manager.party_error_no_party"))
             
-            # ダンジョンに入場（地上部は保持したまま試行）
-            success = self.dungeon_manager.enter_dungeon(dungeon_id, self.current_party)
+            if not self.current_party.get_living_characters():
+                logger.error(self.game_config.get_text("game_manager.party_error_no_living"))
+                raise Exception(self.game_config.get_text("game_manager.party_error_no_living"))
             
-            if success:
-                # 成功した場合のみ地上部を退場
-                self.overworld_manager.exit_overworld()
-                
-                self.current_location = GameLocation.DUNGEON
-                self.set_game_state("dungeon_exploration")
-                
-                # エンカウンターマネージャーにダンジョン状態を設定
-                current_dungeon = self.dungeon_manager.current_dungeon
-                if current_dungeon and self.encounter_manager:
-                    self.encounter_manager.set_dungeon(current_dungeon)
-                    logger.info("エンカウンターマネージャーにダンジョン状態を設定しました")
-                
-                # ダンジョンUIマネージャーにダンジョン状態を設定（小地図の初期化）
-                if self.dungeon_renderer and hasattr(self.dungeon_renderer, 'dungeon_ui_manager'):
-                    if self.dungeon_renderer.dungeon_ui_manager:
-                        current_dungeon = self.dungeon_manager.current_dungeon
-                        if current_dungeon:
-                            logger.info(self.game_config.get_text("game_manager.dungeon_ui_set"))
-                            self.dungeon_renderer.dungeon_ui_manager.set_dungeon_state(current_dungeon)
-                
-                # ダンジョンレンダラーで自動復旧試行
-                if self.dungeon_renderer:
-                    current_dungeon = self.dungeon_manager.current_dungeon
-                    if current_dungeon:
-                        try:
-                            logger.info(self.game_config.get_text("game_manager.3d_auto_recovery_attempt"))
-                            
-                            # 自動復旧を試行
-                            if hasattr(self.dungeon_renderer, 'auto_recover'):
-                                recovery_success = self.dungeon_renderer.auto_recover()
-                            else:
-                                # フォールバック: 旧システムとの互換性
-                                recovery_success = self.dungeon_renderer.enabled
-                            
-                            if recovery_success:
-                                logger.info(self.game_config.get_text("game_manager.3d_auto_recovery_success"))
-                                # UI更新も安全に実行
-                                try:
-                                    self.dungeon_renderer.update_ui()
-                                except Exception as ui_error:
-                                    logger.warning(self.game_config.get_text("app_log.ui_update_error").format(error=ui_error))
-                            else:
-                                logger.warning(self.game_config.get_text("game_manager.3d_auto_recovery_failed"))
-                                logger.info(self.game_config.get_text("game_manager.3d_manual_recovery_hint"))
-                                
-                        except Exception as render_error:
-                            logger.error(self.game_config.get_text("game_manager.3d_render_error").format(error=render_error))
-                            logger.info(self.game_config.get_text("game_manager.3d_render_manual_required"))
-                            # エラーが発生してもゲーム継続
-                
-                logger.info(self.game_config.get_text("game_manager.dungeon_transition_complete"))
-                return True
-            else:
-                logger.error(self.game_config.get_text("game_manager.dungeon_transition_failed"))
-                raise Exception(self.game_config.get_text("game_manager.dungeon_manager_enter_failed"))
-                
-        except Exception as e:
-            logger.error(self.game_config.get_text("game_manager.dungeon_transition_error").format(error=e))
-            # 地上部の状態は保持されているため、エラーを再発生させて上位に処理を委ねる
-            raise e
+            # イベントでシーン遷移をリクエスト
+            publish_event(
+                EventType.SCENE_TRANSITION_REQUESTED,
+                "game_manager",
+                {
+                    "scene_type": "dungeon",
+                    "context": {"dungeon_id": dungeon_id}
+                }
+            )
+            
+            return True
     
     def transition_to_overworld(self):
-        """地上部への遷移 - イベント駆動版"""
-        if not self.current_party:
-            logger.error(self.game_config.get_text("game_manager.party_error_no_party"))
-            return False
-        
-        # イベントでシーン遷移をリクエスト
-        from_dungeon = (self.current_location == GameLocation.DUNGEON)
-        publish_event(
-            EventType.SCENE_TRANSITION_REQUESTED,
-            "game_manager",
-            {
-                "scene_type": "overworld",
-                "context": {"from_dungeon": from_dungeon}
-            }
-        )
-        
-        return True
+        """地上部への遷移 - SceneTransitionManagerに委譲"""
+        if hasattr(self, 'scene_transition_manager'):
+            # 現在のパーティ状態を更新
+            self.scene_transition_manager.current_party = self.current_party
+            return self.scene_transition_manager.transition_to_overworld()
+        else:
+            # フォールバック: イベント駆動版
+            if not self.current_party:
+                logger.error(self.game_config.get_text("game_manager.party_error_no_party"))
+                return False
+            
+            # イベントでシーン遷移をリクエスト
+            from_dungeon = (self.current_location == GameLocation.DUNGEON)
+            publish_event(
+                EventType.SCENE_TRANSITION_REQUESTED,
+                "game_manager",
+                {
+                    "scene_type": "overworld",
+                    "context": {"from_dungeon": from_dungeon}
+                }
+            )
+            
+            return True
     
     def _generate_dungeon_seed(self, dungeon_id: str) -> str:
         """ダンジョンIDに基づいてシードを生成"""
