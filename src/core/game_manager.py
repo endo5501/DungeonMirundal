@@ -30,6 +30,7 @@ from src.core.loop import MainLoopManager
 from src.core.combat import CombatStateManager
 from src.core.input import InputHandlerCoordinator
 from src.core.scene import SceneTransitionManager
+from src.core.state import GameStateManager
 
 
 class GameManager(EventHandler):
@@ -110,6 +111,9 @@ class GameManager(EventHandler):
         
         # SceneTransitionManager初期化
         self._setup_scene_transition_manager()
+        
+        # GameStateManager初期化
+        self._setup_game_state_manager()
         
         logger.info(self.game_config.get_text("app_log.game_manager_initialized"))
     
@@ -221,6 +225,26 @@ class GameManager(EventHandler):
             logger.info("SceneTransitionManager初期化完了")
         else:
             logger.error("SceneTransitionManager初期化失敗")
+    
+    def _setup_game_state_manager(self):
+        """GameStateManagerの初期化"""
+        self.game_state_manager = GameStateManager()
+        
+        # 初期化コンテキストを準備
+        context = {
+            'save_manager': self.save_manager,
+            'current_party': self.current_party,
+            'current_location': self.current_location,
+            'overworld_manager': getattr(self, 'overworld_manager', None),
+            'dungeon_manager': getattr(self, 'dungeon_manager', None),
+            'auto_save_enabled': True
+        }
+        
+        # GameStateManagerを初期化
+        if self.game_state_manager.initialize(context):
+            logger.info("GameStateManager初期化完了")
+        else:
+            logger.error("GameStateManager初期化失敗")
     
     def handle_event(self, event: GameEvent) -> bool:
         """EventHandler インターフェースの実装"""
@@ -864,41 +888,48 @@ class GameManager(EventHandler):
             return None
     
     def save_current_game(self, slot_id: int, save_name: str = "") -> bool:
-        """現在のゲーム状態を保存（ギルドキャラクターを含む）"""
-        try:
-            if not self.current_party:
-                logger.error("保存するパーティがありません")
+        """現在のゲーム状態を保存 - GameStateManagerに委譲"""
+        if hasattr(self, 'game_state_manager'):
+            # 現在のパーティ状態を更新
+            self.game_state_manager.current_party = self.current_party
+            self.game_state_manager.current_location = self.current_location
+            return self.game_state_manager.save_current_game(slot_id, save_name)
+        else:
+            # フォールバック: 従来の処理
+            try:
+                if not self.current_party:
+                    logger.error("保存するパーティがありません")
+                    return False
+                
+                # ギルドキャラクターを取得
+                guild_characters = self.get_guild_characters()
+                
+                # ダンジョン情報を取得
+                dungeon_list = self.get_dungeon_list()
+                
+                # ゲーム状態を作成
+                game_state = {
+                    'location': self.current_location.value if hasattr(self.current_location, 'value') else str(self.current_location)
+                }
+                
+                # セーブ実行
+                success = self.save_manager.save_game(
+                    party=self.current_party,
+                    slot_id=slot_id,
+                    save_name=save_name,
+                    game_state=game_state,
+                    guild_characters=guild_characters,
+                    dungeon_list=dungeon_list
+                )
+                
+                if success:
+                    logger.info(f"ゲームを保存しました: スロット{slot_id}, ギルドキャラクター{len(guild_characters)}人, ダンジョン{len(dungeon_list)}個")
+                
+                return success
+                
+            except Exception as e:
+                logger.error(f"ゲーム保存エラー: {e}")
                 return False
-            
-            # ギルドキャラクターを取得
-            guild_characters = self.get_guild_characters()
-            
-            # ダンジョン情報を取得
-            dungeon_list = self.get_dungeon_list()
-            
-            # ゲーム状態を作成
-            game_state = {
-                'location': self.current_location.value if hasattr(self.current_location, 'value') else str(self.current_location)
-            }
-            
-            # セーブ実行
-            success = self.save_manager.save_game(
-                party=self.current_party,
-                slot_id=slot_id,
-                save_name=save_name,
-                game_state=game_state,
-                guild_characters=guild_characters,
-                dungeon_list=dungeon_list
-            )
-            
-            if success:
-                logger.info(f"ゲームを保存しました: スロット{slot_id}, ギルドキャラクター{len(guild_characters)}人, ダンジョン{len(dungeon_list)}個")
-            
-            return success
-            
-        except Exception as e:
-            logger.error(f"ゲーム保存エラー: {e}")
-            return False
     
     @property
     def in_dungeon(self) -> bool:
@@ -982,85 +1013,102 @@ class GameManager(EventHandler):
             return f"{dungeon_id}_default_seed"
     
     def save_game_state(self, slot_id: str) -> bool:
-        """ゲーム状態の保存"""
-        try:
-            # 現在の場所に応じてセーブ
-            if self.current_location == GameLocation.OVERWORLD:
-                success = self.overworld_manager.save_overworld_state(slot_id)
-            elif self.current_location == GameLocation.DUNGEON:
-                success = self.dungeon_manager.save_dungeon(slot_id)
-            else:
-                logger.error(self.game_config.get_text("game_manager.unknown_location").format(location=self.current_location))
+        """ゲーム状態の保存 - GameStateManagerに委譲"""
+        if hasattr(self, 'game_state_manager'):
+            # 現在のパーティ状態を更新
+            self.game_state_manager.current_party = self.current_party
+            self.game_state_manager.current_location = self.current_location
+            return self.game_state_manager.save_game_state(slot_id)
+        else:
+            # フォールバック: 従来の処理
+            try:
+                # 現在の場所に応じてセーブ
+                if self.current_location == GameLocation.OVERWORLD:
+                    success = self.overworld_manager.save_overworld_state(slot_id)
+                elif self.current_location == GameLocation.DUNGEON:
+                    success = self.dungeon_manager.save_dungeon(slot_id)
+                else:
+                    logger.error(self.game_config.get_text("game_manager.unknown_location").format(location=self.current_location))
+                    return False
+                
+                if success:
+                    # 統合状態情報も保存
+                    state_data = {
+                        'current_location': self.current_location,
+                        'game_state': self.game_state,
+                        'party_id': self.current_party.party_id if self.current_party else None
+                    }
+                    
+                    from src.core.save_manager import save_manager
+                    save_manager.save_additional_data(slot_id, 'game_state', state_data)
+                    
+                    logger.info(self.game_config.get_text("game_manager.game_state_save_success").format(location=self.current_location))
+                    return True
+                else:
+                    return False
+                    
+            except Exception as e:
+                logger.error(self.game_config.get_text("game_manager.game_state_save_error").format(error=e))
                 return False
-            
-            if success:
-                # 統合状態情報も保存
-                state_data = {
-                    'current_location': self.current_location,
-                    'game_state': self.game_state,
-                    'party_id': self.current_party.party_id if self.current_party else None
-                }
-                
-                from src.core.save_manager import save_manager
-                save_manager.save_additional_data(slot_id, 'game_state', state_data)
-                
-                logger.info(self.game_config.get_text("game_manager.game_state_save_success").format(location=self.current_location))
-                return True
-            else:
-                return False
-                
-        except Exception as e:
-            logger.error(self.game_config.get_text("game_manager.game_state_save_error").format(error=e))
-            return False
     
     def load_game_state(self, slot_id: str) -> bool:
-        """ゲーム状態の読み込み"""
-        try:
-            from src.core.save_manager import save_manager
-            
-            # 統合状態情報を読み込み
-            state_data = save_manager.load_additional_data(slot_id, 'game_state')
-            if not state_data:
-                logger.error(self.game_config.get_text("game_manager.game_state_data_not_found"))
-                return False
-            
-            location = state_data.get('current_location', GameLocation.OVERWORLD)
-            game_state = state_data.get('game_state', 'overworld_exploration')
-            party_id = state_data.get('party_id')
-            
-            # パーティを読み込み
-            if party_id:
-                party_data = save_manager.load_additional_data(slot_id, 'party')
-                if party_data:
-                    from src.character.party import Party
-                    party = Party.from_dict(party_data)
-                    self.set_current_party(party)
-            
-            # 場所に応じて読み込み
-            if location == GameLocation.OVERWORLD:
-                success = self.overworld_manager.load_overworld_state(slot_id)
-                if success and self.current_party:
-                    self.overworld_manager.enter_overworld(self.current_party)
-            elif location == GameLocation.DUNGEON:
-                success = self.dungeon_manager.load_dungeon(slot_id)
-                if success and self.current_party:
-                    # ダンジョン状態を復元
-                    pass
-            else:
-                logger.error(self.game_config.get_text("game_manager.unknown_location").format(location=location))
-                return False
-            
+        """ゲーム状態の読み込み - GameStateManagerに委譲"""
+        if hasattr(self, 'game_state_manager'):
+            # GameStateManagerでロード実行
+            success = self.game_state_manager.load_game_state(slot_id)
             if success:
-                self.current_location = location
-                self.set_game_state(game_state)
-                logger.info(self.game_config.get_text("game_manager.game_state_load_success").format(location=location))
-                return True
-            else:
-                return False
+                # ローカル状態も同期
+                self.current_party = self.game_state_manager.current_party
+                self.current_location = self.game_state_manager.current_location
+            return success
+        else:
+            # フォールバック: 従来の処理
+            try:
+                from src.core.save_manager import save_manager
                 
-        except Exception as e:
-            logger.error(self.game_config.get_text("game_manager.game_state_load_error").format(error=e))
-            return False
+                # 統合状態情報を読み込み
+                state_data = save_manager.load_additional_data(slot_id, 'game_state')
+                if not state_data:
+                    logger.error(self.game_config.get_text("game_manager.game_state_data_not_found"))
+                    return False
+                
+                location = state_data.get('current_location', GameLocation.OVERWORLD)
+                game_state = state_data.get('game_state', 'overworld_exploration')
+                party_id = state_data.get('party_id')
+                
+                # パーティを読み込み
+                if party_id:
+                    party_data = save_manager.load_additional_data(slot_id, 'party')
+                    if party_data:
+                        from src.character.party import Party
+                        party = Party.from_dict(party_data)
+                        self.set_current_party(party)
+                
+                # 場所に応じて読み込み
+                if location == GameLocation.OVERWORLD:
+                    success = self.overworld_manager.load_overworld_state(slot_id)
+                    if success and self.current_party:
+                        self.overworld_manager.enter_overworld(self.current_party)
+                elif location == GameLocation.DUNGEON:
+                    success = self.dungeon_manager.load_dungeon(slot_id)
+                    if success and self.current_party:
+                        # ダンジョン状態を復元
+                        pass
+                else:
+                    logger.error(self.game_config.get_text("game_manager.unknown_location").format(location=location))
+                    return False
+                
+                if success:
+                    self.current_location = location
+                    self.set_game_state(game_state)
+                    logger.info(self.game_config.get_text("game_manager.game_state_load_success").format(location=location))
+                    return True
+                else:
+                    return False
+                    
+            except Exception as e:
+                logger.error(self.game_config.get_text("game_manager.game_state_load_error").format(error=e))
+                return False
     
     def get_text(self, key: str) -> str:
         """テキストの取得"""
@@ -1257,41 +1305,53 @@ class GameManager(EventHandler):
         self.scene_manager.transition_to(SceneType.STARTUP)
     
     def _try_auto_load(self):
-        """自動セーブデータロードを試行"""
-        try:
-            # 利用可能なセーブスロットを取得（最新順にソート済み）
-            save_slots = self.save_manager.get_save_slots()
-            
-            if not save_slots:
-                logger.info(config_manager.get_text("game_manager.no_save_data"))
-                return False
-            
-            # 最新のセーブデータを取得（リストの最初の要素）
-            latest_save = save_slots[0]
-            slot_id = latest_save.slot_id
-            
-            logger.info(f"{config_manager.get_text('game_manager.auto_load')}: スロット{slot_id} ({latest_save.party_name})")
-            
-            # セーブデータをロード
-            save_data = self.save_manager.load_game(slot_id)
-            
-            if save_data:
-                # パーティ情報を復元
-                self.set_current_party(save_data.party)
-                logger.info(self.game_config.get_text("game_manager.party_restored").format(name=self.current_party.name))
+        """自動セーブデータロードを試行 - GameStateManagerに委譲"""
+        if hasattr(self, 'game_state_manager'):
+            # GameStateManagerで自動ロード実行
+            success = self.game_state_manager.try_auto_load()
+            if success:
+                # ローカル状態も同期
+                self.current_party = self.game_state_manager.current_party
+                self.current_location = self.game_state_manager.current_location
+            else:
+                logger.info(self.game_config.get_text("game_manager.new_game_start"))
+            return success
+        else:
+            # フォールバック: 従来の処理
+            try:
+                # 利用可能なセーブスロットを取得（最新順にソート済み）
+                save_slots = self.save_manager.get_save_slots()
                 
-                # ゲーム状態を復元
-                if save_data.game_state and 'location' in save_data.game_state:
-                    self.current_location = save_data.game_state['location']
-                    logger.info(self.game_config.get_text("game_manager.location_restored").format(location=self.current_location))
-            
-            logger.info(self.game_config.get_text("game_manager.auto_load_success"))
-            return True
-            
-        except Exception as e:
-            logger.error(self.game_config.get_text("game_manager.auto_load_failed").format(error=e))
-            logger.info(self.game_config.get_text("game_manager.new_game_start"))
-            return False
+                if not save_slots:
+                    logger.info(config_manager.get_text("game_manager.no_save_data"))
+                    return False
+                
+                # 最新のセーブデータを取得（リストの最初の要素）
+                latest_save = save_slots[0]
+                slot_id = latest_save.slot_id
+                
+                logger.info(f"{config_manager.get_text('game_manager.auto_load')}: スロット{slot_id} ({latest_save.party_name})")
+                
+                # セーブデータをロード
+                save_data = self.save_manager.load_game(slot_id)
+                
+                if save_data:
+                    # パーティ情報を復元
+                    self.set_current_party(save_data.party)
+                    logger.info(self.game_config.get_text("game_manager.party_restored").format(name=self.current_party.name))
+                    
+                    # ゲーム状態を復元
+                    if save_data.game_state and 'location' in save_data.game_state:
+                        self.current_location = save_data.game_state['location']
+                        logger.info(self.game_config.get_text("game_manager.location_restored").format(location=self.current_location))
+                
+                logger.info(self.game_config.get_text("game_manager.auto_load_success"))
+                return True
+                
+            except Exception as e:
+                logger.error(self.game_config.get_text("game_manager.auto_load_failed").format(error=e))
+                logger.info(self.game_config.get_text("game_manager.new_game_start"))
+                return False
     
     def _create_test_character(self, name: str, is_fallback: bool = False):
         """テスト用キャラクター作成"""
