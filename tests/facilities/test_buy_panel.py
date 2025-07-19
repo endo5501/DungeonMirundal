@@ -153,11 +153,13 @@ class TestBuyPanelUICreation:
         panel.container = Mock()
         panel.ui_elements = []
         
-        with patch('pygame_gui.elements.UILabel') as mock_label:
-            BuyPanel._create_header(panel)
-            
-            # タイトルと所持金ラベルが作成される
-            assert mock_label.call_count == 2
+        # UIElementManagerを通したラベル作成をmock
+        panel._create_label = Mock(return_value=Mock())
+        
+        BuyPanel._create_header(panel)
+        
+        # _create_labelメソッドが2回呼ばれる（タイトルと所持金ラベル）
+        assert panel._create_label.call_count == 2
     
     def test_create_category_buttons(self):
         """カテゴリボタンの作成"""
@@ -189,16 +191,16 @@ class TestBuyPanelUICreation:
         panel.container = Mock()
         panel.ui_elements = []
         
-        panel.ui_elements = []
+        # UIElementManagerメソッドをmock
+        panel._create_label = Mock(return_value=Mock())
+        panel._create_selection_list = Mock(return_value=Mock())
         
-        with patch('pygame_gui.elements.UILabel') as mock_label, \
-             patch('pygame_gui.elements.UISelectionList') as mock_list:
-            BuyPanel._create_item_list(panel)
-            
-            # ラベルとアイテムリストが作成される
-            mock_label.assert_called_once()
-            mock_list.assert_called_once()
-            assert hasattr(panel, 'item_list')
+        BuyPanel._create_item_list(panel)
+        
+        # ラベルとアイテムリストが作成される
+        panel._create_label.assert_called_once()
+        panel._create_selection_list.assert_called_once()
+        assert hasattr(panel, 'item_list')
     
     def test_create_purchase_controls(self):
         """購入コントロールの作成"""
@@ -209,18 +211,22 @@ class TestBuyPanelUICreation:
         panel.container = Mock()
         panel.ui_elements = []
         
-        panel.ui_elements = []
+        # UIElementManagerメソッドをmock
+        panel._create_label = Mock(return_value=Mock())
         panel._create_button = Mock(return_value=Mock())
+        panel.ui_element_manager = Mock()
+        panel.ui_element_manager.create_text_entry = Mock(return_value=Mock())
+        panel.ui_element_manager.create_dropdown = Mock(return_value=Mock())
+        panel._get_buyer_options = Mock(return_value=["パーティ共有"])
         
-        with patch('pygame_gui.elements.UILabel') as mock_label, \
-             patch('pygame_gui.elements.UITextEntryLine') as mock_entry:
-            
-            BuyPanel._create_purchase_controls(panel)
-            
-            # 購入者ラベル、数量ラベル、合計ラベル、入力フィールド、購入ボタンが作成される
-            assert mock_label.call_count == 3  # buyer_label, quantity_label, total_label
-            mock_entry.assert_called_once()
-            panel._create_button.assert_called_once()
+        BuyPanel._create_purchase_controls(panel)
+        
+        # 購入者ラベル、数量ラベル、合計ラベルが作成される
+        assert panel._create_label.call_count == 3  # buyer_label, quantity_label, total_label
+        # 数量入力フィールドが作成される
+        panel.ui_element_manager.create_text_entry.assert_called_once()
+        # 購入ボタンが作成される
+        panel._create_button.assert_called_once()
 
 
 class TestBuyPanelDataLoading:

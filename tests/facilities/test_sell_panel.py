@@ -152,11 +152,13 @@ class TestSellPanelUICreation:
         panel.ui_elements = []
         panel.sell_rate = 0.5  # 売却レートを追加
         
-        with patch('pygame_gui.elements.UILabel') as mock_label:
-            SellPanel._create_header(panel)
-            
-            # タイトル、所持金、売却レートの3つのラベルが作成される
-            assert mock_label.call_count == 3
+        # UIElementManagerメソッドをmock
+        panel._create_label = Mock(return_value=Mock())
+        
+        SellPanel._create_header(panel)
+        
+        # タイトル、所持金、売却レートの3つのラベルが作成される
+        assert panel._create_label.call_count == 3
     
     def test_create_lists(self):
         """リストの作成"""
@@ -167,16 +169,17 @@ class TestSellPanelUICreation:
         panel.container = Mock()
         panel.ui_elements = []
         
-        with patch('pygame_gui.elements.UILabel') as mock_label, \
-             patch('pygame_gui.elements.UISelectionList') as mock_list:
-            
-            SellPanel._create_lists(panel)
-            
-            # オーナーとアイテムのラベル
-            assert mock_label.call_count == 2
-            
-            # オーナーとアイテムのリスト
-            assert mock_list.call_count == 2
+        # UIElementManagerメソッドをmock
+        panel._create_label = Mock(return_value=Mock())
+        panel._create_selection_list = Mock(return_value=Mock())
+        
+        SellPanel._create_lists(panel)
+        
+        # オーナーとアイテムのラベル
+        assert panel._create_label.call_count == 2
+        
+        # オーナーとアイテムのリスト
+        assert panel._create_selection_list.call_count == 2
     
     def test_create_sell_controls(self):
         """売却コントロールの作成"""
@@ -191,19 +194,22 @@ class TestSellPanelUICreation:
         mock_button_instance = Mock()
         panel._create_button = Mock(return_value=mock_button_instance)
         
-        with patch('pygame_gui.elements.UILabel') as mock_label, \
-             patch('pygame_gui.elements.UITextEntryLine') as mock_entry:
-            
-            SellPanel._create_sell_controls(panel)
-            
-            # 数量ラベル、売却金額ラベルが作成される
-            assert mock_label.call_count == 2
-            # 数量入力フィールドが作成される
-            mock_entry.assert_called_once()
-            # 売却ボタンが作成される（_create_buttonで）
-            panel._create_button.assert_called_once()
-            # ボタンが無効化される
-            mock_button_instance.disable.assert_called_once()
+        # UIElementManagerメソッドをmock
+        panel._create_label = Mock(return_value=Mock())
+        panel.ui_element_manager = Mock()
+        panel.ui_element_manager.is_destroyed = False
+        panel.ui_element_manager.create_text_entry = Mock(return_value=Mock())
+        
+        SellPanel._create_sell_controls(panel)
+        
+        # 数量ラベル、売却金額ラベルが作成される
+        assert panel._create_label.call_count == 2
+        # 数量入力フィールドが作成される（UIElementManager経由）
+        panel.ui_element_manager.create_text_entry.assert_called_once()
+        # 売却ボタンが作成される（_create_buttonで）
+        panel._create_button.assert_called_once()
+        # ボタンが無効化される
+        mock_button_instance.disable.assert_called_once()
 
 
 class TestSellPanelDataLoading:
