@@ -1,7 +1,6 @@
 """Game state management module."""
 
-import logging
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, List
 from datetime import datetime
 
 from src.core.interfaces import ManagedComponent
@@ -67,6 +66,7 @@ class GameStateManager(ManagedComponent):
     
     def handle_game_event(self, event: Any) -> bool:
         """ゲームイベントの処理（現在は使用しない）"""
+        # eventパラメータは将来の拡張用
         return False
     
     def save_current_game(self, slot_id: int, save_name: str = "") -> bool:
@@ -168,7 +168,7 @@ class GameStateManager(ManagedComponent):
                 return False
             
             # パーティの復元
-            party = save_data.get('party')
+            party = save_data.party
             if not party:
                 logger.error("パーティデータが見つかりません")
                 return False
@@ -177,7 +177,7 @@ class GameStateManager(ManagedComponent):
             self.current_party = party
             
             # ゲーム状態の復元
-            game_state = save_data.get('game_state', {})
+            game_state = save_data.game_state if save_data.game_state else {}
             location_str = game_state.get('location', 'overworld')
             
             # ロケーションの復元
@@ -194,12 +194,12 @@ class GameStateManager(ManagedComponent):
                 self.current_location = GameLocation.OVERWORLD
             
             # ギルドキャラクターの復元
-            guild_characters = save_data.get('guild_characters', [])
+            guild_characters = save_data.guild_characters if save_data.guild_characters else []
             if guild_characters:
                 self._restore_guild_characters(guild_characters)
             
             # ダンジョンリストの復元
-            dungeon_list = save_data.get('dungeon_list', [])
+            dungeon_list = save_data.dungeon_list if save_data.dungeon_list else []
             if dungeon_list:
                 self._restore_dungeon_list(dungeon_list)
             
@@ -212,7 +212,7 @@ class GameStateManager(ManagedComponent):
                 {
                     'slot_id': slot_id_int,
                     'party_name': party.name if party else 'Unknown',
-                    'location': self.current_location.value,
+                    'location': self.current_location.value if hasattr(self.current_location, 'value') else str(self.current_location),
                     'timestamp': self._get_timestamp()
                 }
             )

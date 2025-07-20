@@ -175,6 +175,64 @@ class EventAwareComponent(GameComponent):
 - **Phase 1完了目標**: リファクタリング開始から2週間以内
 - **全体完了目標**: 6週間以内
 
+## 🐛 リファクタリング後の問題と修正
+
+### 2025年7月20日 - セーブデータ自動ロード機能の問題
+
+**問題の概要**:
+GameManagerリファクタリング後、ゲーム起動時のセーブデータ自動ロードが失敗していた。
+
+**根本原因**:
+1. `GameStateManager.load_game_state()`で`GameSave`オブジェクトに対して辞書の`.get()`メソッドを使用
+2. `EventType`列挙型に`GAME_SAVED`と`GAME_LOADED`イベントが未定義
+3. `current_location.value`での安全でない属性アクセス
+
+**発生したエラー**:
+```
+ERROR - ゲーム状態復元エラー: 'GameSave' object has no attribute 'get'
+ERROR - ゲーム状態復元エラー: type object 'EventType' has no attribute 'GAME_LOADED'
+ERROR - ゲーム状態復元エラー: 'str' object has no attribute 'value'
+```
+
+**実施した修正**:
+
+1. **src/core/state/game_state_manager.py**:
+   ```python
+   # 修正前（辞書アクセス）
+   party = save_data.get('party')
+   guild_characters = save_data.get('guild_characters', [])
+   
+   # 修正後（オブジェクト属性アクセス）
+   party = save_data.party
+   guild_characters = save_data.guild_characters if save_data.guild_characters else []
+   ```
+
+2. **src/core/event_bus.py**:
+   ```python
+   # EventType列挙型に追加
+   GAME_SAVED = "game_saved"
+   GAME_LOADED = "game_loaded"
+   ```
+
+3. **安全な属性アクセス**:
+   ```python
+   # 修正前
+   'location': self.current_location.value
+   
+   # 修正後
+   'location': self.current_location.value if hasattr(self.current_location, 'value') else str(self.current_location)
+   ```
+
+**教訓**:
+- `GameSave`データクラスの変更に伴い、アクセス方法を辞書形式から属性アクセスに統一する必要があった
+- 新しいイベントタイプを使用する際は、`EventType`列挙型への追加が必須
+- 列挙型オブジェクトと文字列の混在に対する安全な処理が重要
+
+**テスト結果**:
+- ゲーム起動時のエラー解消
+- セーブデータ自動ロード機能の復旧
+- パーティ情報の正常な取得を確認
+
 ---
 **作成者**: Claude Code  
-**最終更新**: 2025年7月19日
+**最終更新**: 2025年7月20日

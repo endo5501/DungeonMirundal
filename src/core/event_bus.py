@@ -25,6 +25,8 @@ class EventType(Enum):
     SCENE_TRANSITION_REQUESTED = "scene_transition_requested"
     SCENE_TRANSITION_COMPLETED = "scene_transition_completed"
     GAME_STATE_CHANGED = "game_state_changed"
+    GAME_SAVED = "game_saved"
+    GAME_LOADED = "game_loaded"
     
     # ダンジョン関連
     DUNGEON_ENTERED = "dungeon_entered"
