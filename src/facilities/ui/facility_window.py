@@ -623,9 +623,15 @@ class FacilityWindow(Window):
                 return True
         
         # NavigationPanelのボタンクリック処理
-        if self.navigation_panel and hasattr(self.navigation_panel, 'handle_button_click'):
-            if self.navigation_panel.handle_button_click(event):
-                return True
+        if self.navigation_panel and event.type == pygame_gui.UI_BUTTON_PRESSED:
+            if hasattr(self.navigation_panel, 'handle_button_click'):
+                # NavigationPanelのボタンかどうかチェック
+                for nav_button in self.navigation_panel.nav_buttons.values():
+                    if event.ui_element == nav_button:
+                        logger.info(f"[DEBUG] NavigationPanel button clicked: {nav_button.item_id}")
+                        if self.navigation_panel.handle_button_click(nav_button):
+                            return True
+                        break
         
         # シンプルナビゲーションのボタンクリック処理（フォールバック）
         if hasattr(self, 'nav_buttons') and event.type == pygame_gui.UI_BUTTON_PRESSED:

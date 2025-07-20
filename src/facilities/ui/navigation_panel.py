@@ -131,6 +131,23 @@ class NavigationPanel(ServicePanel):
         else:
             return {'object_id': '#nav_button'}
     
+    def _get_button_style_for_item(self, item_id: str) -> Dict[str, str]:
+        """アイテムIDからボタンのスタイルを取得
+        
+        Args:
+            item_id: アイテムID
+            
+        Returns:
+            スタイル辞書
+        """
+        # メニュー項目を検索
+        for item in self.menu_items:
+            if item.id == item_id:
+                return self._get_button_style(item)
+        
+        # 見つからない場合はデフォルトを返す
+        return {'object_id': '#nav_button'}
+    
     def set_selected(self, item_id: str) -> None:
         """選択状態を設定
         
@@ -155,17 +172,36 @@ class NavigationPanel(ServicePanel):
         """
         button = self.nav_buttons.get(item_id)
         if button:
-            # 選択状態の視覚的表現（pygame_guiのテーマで制御）
+            # カスタム属性として選択状態を保存
+            button.selected = selected
+            
+            # pygame_guiでの視覚的な選択状態の変更
             if selected:
-                button.selected = True
-                # 選択時のスタイルクラスを追加
-                if hasattr(button, 'add_class'):
-                    button.add_class('selected')
+                # 選択時の視覚的表現
+                logger.info(f"NavigationPanel: Setting button {item_id} as selected")
+                
+                # object_idを変更して選択状態を表現
+                selected_object_id = f"#nav_button_selected"
+                if hasattr(button, 'change_object_id'):
+                    button.change_object_id(selected_object_id)
+                else:
+                    # フォールバック: テキストの背景色や表示を変更
+                    original_text = button.text
+                    if not original_text.startswith("■ "):
+                        button.set_text(f"■ {original_text}")
             else:
-                button.selected = False
-                # 選択時のスタイルクラスを削除
-                if hasattr(button, 'remove_class'):
-                    button.remove_class('selected')
+                # 非選択時の視覚的表現
+                logger.info(f"NavigationPanel: Setting button {item_id} as unselected")
+                
+                # 通常のobject_idに戻す
+                normal_object_id = self._get_button_style_for_item(item_id)['object_id']
+                if hasattr(button, 'change_object_id'):
+                    button.change_object_id(normal_object_id)
+                else:
+                    # フォールバック: テキストから選択記号を削除
+                    current_text = button.text
+                    if current_text.startswith("■ "):
+                        button.set_text(current_text[2:])
     
     def update_menu_items(self, menu_items: List[MenuItem]) -> None:
         """メニュー項目を更新
