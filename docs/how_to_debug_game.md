@@ -89,6 +89,18 @@ uv run python src/debug/game_debug_client.py adventure_list
 
 # GameManagerデバッグ情報確認（セーブ・ロード問題の診断）
 uv run python src/debug/game_debug_client.py debug_gm
+
+# 施設UIデバッグ情報確認
+uv run python src/debug/game_debug_client.py facility_ui
+
+# UIスナップショット作成
+uv run python src/debug/game_debug_client.py ui_snapshot
+
+# サーバ状態確認
+uv run python src/debug/game_debug_client.py server_status
+
+# カスタムデバッグログ追加
+uv run python src/debug/game_debug_client.py add_log --level INFO --message "デバッグテスト"
 ```
 
 ### 3. 便利関数
@@ -152,6 +164,10 @@ test_all_visible_buttons()
 | エンドポイント | 機能 | レスポンス時間 | 例 |
 |---------------|------|------------|-----|
 | `GET /debug/game_manager` | GameManagerアクセス診断 | ~1ms | `curl "http://localhost:8765/debug/game_manager"` |
+| `GET /debug/facility-ui` | 施設UI詳細デバッグ情報 | ~1ms | `curl "http://localhost:8765/debug/facility-ui"` |
+| `GET /debug/ui-snapshot` | UI状態スナップショット作成 | ~2ms | `curl "http://localhost:8765/debug/ui-snapshot"` |
+| `POST /debug/log` | カスタムデバッグログ追加 | ~1ms | `curl -X POST "http://localhost:8765/debug/log?level=INFO&message=test"` |
+| `GET /status` | デバッグサーバ状態取得 | ~1ms | `curl "http://localhost:8765/status"` |
 
 **パーティ・キャラクター情報で提供される情報:**
 
@@ -166,6 +182,29 @@ test_all_visible_buttons()
 - パーティオブジェクトへのアクセス状況
 - セーブ・ロード後の参照整合性診断
 - 複数の取得方法（キャッシュ、main.py、sys.modules）の成功/失敗状況
+
+**施設UI専用デバッグ情報:**
+
+- FacilityWindow、ServicePanel、NavigationPanelの詳細構造分析
+- UIメモリリークの検出
+- パネル破棄の完全性診断
+
+**UIスナップショット機能:**
+
+- 現在のUI状態の詳細キャプチャ
+- UI要素の階層構造とプロパティ
+- 状態比較用のベースライン作成
+
+**カスタムデバッグログ機能:**
+
+- 任意のログレベル（DEBUG、INFO、WARNING、ERROR）でのログ追加
+- コンテキスト情報付きのログエントリ作成
+
+**サーバ状態監視:**
+
+- デバッグAPIサーバの動作状況
+- エンドポイント応答時間統計
+- メモリ使用量とリクエスト処理状況
 
 ## 注意: ボタンナビゲーション機能は制限あり
 
@@ -773,7 +812,7 @@ if hierarchy:
 
 ### ✅ 完全利用可能な機能
 
-1. **高速APIエンドポイント**: 全12個のエンドポイントが1-15msで応答
+1. **高速APIエンドポイント**: 全17個のエンドポイントが1-15msで応答
    - スクリーンショット取得
    - キー・マウス入力送信
    - ゲーム状態監視
@@ -783,6 +822,10 @@ if hierarchy:
    - **新機能**: キャラクター詳細取得
    - **新機能**: 冒険者ギルドリスト取得
    - **新機能**: GameManagerデバッグ情報取得
+   - **最新**: 施設UI専用デバッグ情報
+   - **最新**: UIスナップショット作成
+   - **最新**: カスタムデバッグログ追加
+   - **最新**: サーバ状態監視
 
 2. **UI監視機能**:
    - WindowManagerからのリアルタイムウィンドウ情報

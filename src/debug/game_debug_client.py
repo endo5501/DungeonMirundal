@@ -15,7 +15,6 @@ import argparse
 from typing import Optional, Dict, Any, Tuple
 from PIL import Image
 from io import BytesIO
-from pathlib import Path
 import logging
 
 logger = logging.getLogger(__name__)
@@ -430,6 +429,85 @@ class GameDebugClient:
             logger.error(f"Error getting game manager debug info: {e}")
             return None
     
+    def get_facility_ui_debug_info(self) -> Optional[Dict[str, Any]]:
+        """
+        施設UI専用のデバッグ情報を取得
+        
+        Returns:
+            施設UIデバッグ情報の辞書、失敗時はNone
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/debug/facility-ui",
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error getting facility UI debug info: {e}")
+            return None
+    
+    def create_ui_snapshot(self) -> Optional[Dict[str, Any]]:
+        """
+        現在のUI状態のスナップショットを作成
+        
+        Returns:
+            UIスナップショット情報の辞書、失敗時はNone
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/debug/ui-snapshot",
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error creating UI snapshot: {e}")
+            return None
+    
+    def get_server_status(self) -> Optional[Dict[str, Any]]:
+        """
+        デバッグサーバの状態を取得
+        
+        Returns:
+            サーバ状態情報の辞書、失敗時はNone
+        """
+        try:
+            response = requests.get(
+                f"{self.base_url}/status",
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error getting server status: {e}")
+            return None
+    
+    def add_debug_log(self, level: str, message: str, context: Optional[Dict[str, Any]] = None) -> bool:
+        """
+        カスタムデバッグログエントリを追加
+        
+        Args:
+            level: ログレベル（DEBUG, INFO, WARNING, ERROR）
+            message: ログメッセージ
+            context: 追加のコンテキスト情報
+            
+        Returns:
+            成功したかどうか
+        """
+        try:
+            response = requests.post(
+                f"{self.base_url}/debug/log",
+                params={"level": level, "message": message},
+                json=context or {},
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json().get("ok", False)
+        except Exception as e:
+            logger.error(f"Error adding debug log: {e}")
+            return False
+    
     def display_party_info(self, party_info: Optional[Dict[str, Any]] = None) -> None:
         """
         パーティ情報を見やすく表示
@@ -583,7 +661,7 @@ class GameDebugClient:
 def main():
     """コマンドライン実行"""
     parser = argparse.ArgumentParser(description="Game Debug API Client")
-    parser.add_argument("command", choices=["screenshot", "key", "mouse", "escape", "enter", "space", "analyze", "buttons", "click", "party", "party_character", "adventure_list", "debug_gm"],
+    parser.add_argument("command", choices=["screenshot", "key", "mouse", "escape", "enter", "space", "analyze", "buttons", "click", "party", "party_character", "adventure_list", "debug_gm", "facility_ui", "ui_snapshot", "server_status", "add_log"],
                       help="実行するコマンド")
     parser.add_argument("--save", "-s", help="スクリーンショット保存先")
     parser.add_argument("--code", "-c", type=int, help="キーコード")
@@ -593,6 +671,8 @@ def main():
     parser.add_argument("--wait", "-w", type=float, default=0, help="実行前の待機時間")
     parser.add_argument("--number", "-n", type=int, help="ボタン番号（1-9）")
     parser.add_argument("--text", "-t", help="ボタンテキスト")
+    parser.add_argument("--level", default="INFO", help="ログレベル（add_logコマンド用）")
+    parser.add_argument("--message", "-m", help="ログメッセージ（add_logコマンド用）")
     parser.add_argument("character_index", nargs="?", type=int, help="キャラクターインデックス（party_characterコマンド用）")
     
     args = parser.parse_args()
@@ -720,6 +800,42 @@ def main():
                     print(f"⚠️ get_all_characters()エラー: {party_details['characters_method_error']}")
         else:
             print("GameManagerデバッグ情報の取得に失敗しました")
+    
+    elif args.command == "facility_ui":
+        facility_info = client.get_facility_ui_debug_info()
+        if facility_info:
+            print("=== 施設UI デバッグ情報 ===")
+            print(json.dumps(facility_info, indent=2, ensure_ascii=False))
+        else:
+            print("施設UIデバッグ情報の取得に失敗しました")
+    
+    elif args.command == "ui_snapshot":
+        snapshot_info = client.create_ui_snapshot()
+        if snapshot_info:
+            print("=== UI スナップショット ===")
+            print(json.dumps(snapshot_info, indent=2, ensure_ascii=False))
+        else:
+            print("UIスナップショットの作成に失敗しました")
+    
+    elif args.command == "server_status":
+        status_info = client.get_server_status()
+        if status_info:
+            print("=== サーバ状態 ===")
+            print(json.dumps(status_info, indent=2, ensure_ascii=False))
+        else:
+            print("サーバ状態の取得に失敗しました")
+    
+    elif args.command == "add_log":
+        if args.message is None:
+            logger.error("--message is required for add_log command")
+            sys.exit(1)
+        
+        success = client.add_debug_log(args.level, args.message)
+        if success:
+            print(f"✅ ログエントリを追加しました: [{args.level}] {args.message}")
+        else:
+            print("❌ ログエントリの追加に失敗しました")
+            sys.exit(1)
 
 
 if __name__ == "__main__":
