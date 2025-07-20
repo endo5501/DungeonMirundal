@@ -512,14 +512,22 @@ class TestFacilityWindowEventHandling:
         window = FacilityWindow("test_window", controller=mock_controller)
         window.ui_manager = Mock()
         window.navigation_panel = Mock()
+        
+        # NavigationPanelのボタンを設定
+        nav_button = Mock()
+        nav_button.item_id = "test_service"
+        window.navigation_panel.nav_buttons = {"test_service": nav_button}
         window.navigation_panel.handle_button_click.return_value = True
         
+        # UI_BUTTON_PRESSEDイベントを作成
         event = Mock()
+        event.type = pygame_gui.UI_BUTTON_PRESSED
+        event.ui_element = nav_button
         
         result = window.handle_event(event)
         
         assert result is True
-        window.navigation_panel.handle_button_click.assert_called_with(event)
+        window.navigation_panel.handle_button_click.assert_called_with(nav_button)
     
     def test_handle_event_simple_navigation_button(self, mock_controller):
         """シンプルナビゲーションボタンのクリック処理"""
