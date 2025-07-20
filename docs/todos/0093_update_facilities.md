@@ -31,7 +31,7 @@
 - 破棄検証機能
 
 **主要メソッド**:
-- `create_label()`, `create_button()`, `create_selection_list()` など
+- `create_label()`, `create_button()`, `create_selection_list()`, `create_panel()` など
 - `destroy_all()` - 例外安全な完全破棄
 - `add_to_group()`, `destroy_group()` - グループ管理
 - `get_debug_info()` - デバッグ情報取得
@@ -202,6 +202,19 @@ def destroy(self) -> None:
 3. 既存パネルの移行
 4. コード重複の削減
 
+## 重要な注意事項 ⚠️
+
+### UIElementManagerメソッド拡張に関する注意
+
+**create_panelメソッドの重要性**:
+- PartyFormationPanelなど複雑なレイアウトを持つパネルでは`create_panel`メソッドが必須
+- リファクタリング時にUIElementManagerの機能が不足している場合は、まず機能を拡張してから移行を実施
+- `create_panel`は他の`create_*`メソッドと同様のパターンで実装（要素ID管理、コンテナ指定、フォールバック対応）
+
+**デバッグアプローチ**:
+- UIElementManager移行後に表示不具合が発生した場合は、不足メソッドの追加を最優先で検討
+- 既存のUIElementManager依存関係を削除する方向ではなく、UIElementManagerを拡張する方向で解決
+
 ## 技術的詳細
 
 ### UIElementManager の設計思想
@@ -337,6 +350,10 @@ for issue in memory_issues:
 - ✅ **PartyFormationPanel**: 9個のUI要素をUIElementManagerで管理（動的リスト・操作ボタン群）
 - ✅ **AdventurePrepPanel**: 5個のUI要素をUIElementManagerで管理（ナビゲーション型パネル）
 
+**PartyFormationPanel特記事項**: 
+- UIElementManager移行中に`create_panel`メソッドが不足していたため、2025年7月20日に追加実装
+- 移行完了後、パーティ編成画面の表示不具合を完全解決
+
 **CharacterCreationWizard**: 複雑なウィザード構造により次期Phase対象とした
 
 #### Phase 2達成項目
@@ -430,6 +447,7 @@ for issue in memory_issues:
 - 2025-07-19: ResurrectPanel移行完了
 - 2025-07-19: PrayerShopPanel移行完了、Phase 3完了
 - 2025-07-19: Temple系パネルテスト修正完了、全テストスイート通過確認
+- 2025-07-20: PartyFormationPanel不具合修正 - UIElementManagerに`create_panel`メソッド追加実装
 
 ---
 

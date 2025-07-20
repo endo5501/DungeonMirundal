@@ -244,6 +244,37 @@ class UIElementManager:
         logger.debug(f"Created dropdown: {element_id}")
         return dropdown
     
+    def create_panel(self, element_id: str, rect: pygame.Rect,
+                    container: Optional[pygame_gui.core.UIContainer] = None,
+                    **kwargs) -> pygame_gui.elements.UIPanel:
+        """パネルを作成
+        
+        Args:
+            element_id: 要素ID（一意である必要がある）
+            rect: 矩形領域
+            container: コンテナ（省略時はself.container）
+            **kwargs: その他の引数
+            
+        Returns:
+            作成したパネル
+        """
+        if element_id in self.elements:
+            raise ValueError(f"Element ID '{element_id}' already exists")
+        
+        if container is None:
+            container = self.container
+            
+        panel = pygame_gui.elements.UIPanel(
+            relative_rect=rect,
+            manager=self.ui_manager,
+            container=container,
+            **kwargs
+        )
+        
+        self.elements[element_id] = panel
+        logger.debug(f"Created panel: {element_id}")
+        return panel
+    
     def get_element(self, element_id: str) -> Optional[pygame_gui.core.UIElement]:
         """要素を取得
         
