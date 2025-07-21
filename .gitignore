@@ -23,3 +23,4 @@ tests/test_transition_system.py
 *.png
 game_debug.log
 game_debug.pid
+current-ticket.md
