@@ -135,12 +135,28 @@ class BuyPanel(ServicePanel):
     
     def _create_category_buttons(self) -> None:
         """カテゴリボタンを作成"""
-        categories = [
-            ("weapons", "武器", "⚔️"),
-            ("armor", "防具", "🛡️"),
-            ("items", "アイテム", "🧪"),
-            ("special", "特殊", "✨")
-        ]
+        # 魔術書店用のカテゴリか判定
+        is_spellbook_shop = False
+        if hasattr(self, '_controller') and self._controller:
+            service = getattr(self._controller, 'service', None)
+            if service and hasattr(service, 'service_id'):
+                is_spellbook_shop = service.service_id == 'magic_guild'
+        
+        if is_spellbook_shop:
+            categories = [
+                ("offensive", "攻撃魔法", "🔥"),
+                ("defensive", "防御魔法", "🛡️"),
+                ("healing", "回復魔法", "💚"),
+                ("utility", "補助魔法", "✨"),
+                ("special", "特殊魔法", "🌟")
+            ]
+        else:
+            categories = [
+                ("weapons", "武器", "⚔️"),
+                ("armor", "防具", "🛡️"),
+                ("items", "アイテム", "🧪"),
+                ("special", "特殊", "✨")
+            ]
         
         button_width = 120
         button_height = 40
@@ -282,7 +298,16 @@ class BuyPanel(ServicePanel):
             self._update_gold_display(party_gold)
             
             # 最初のカテゴリを選択
-            self._select_category("weapons")
+            is_spellbook_shop = False
+            if hasattr(self, '_controller') and self._controller:
+                service = getattr(self._controller, 'service', None)
+                if service and hasattr(service, 'service_id'):
+                    is_spellbook_shop = service.service_id == 'magic_guild'
+            
+            if is_spellbook_shop:
+                self._select_category("offensive")
+            else:
+                self._select_category("weapons")
     
     def _select_category(self, category: str) -> None:
         """カテゴリを選択"""
