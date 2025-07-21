@@ -11,7 +11,7 @@ repository: "origin"
 
 # Automatically push changes to remote repository during close command
 # Set to false if you want to manually control when to push
-auto_push: true
+auto_push: false
 
 # Automatically delete remote feature branch after closing ticket
 # Set to false if you want to keep remote branches for history
