@@ -448,12 +448,12 @@ class TempleService(FacilityService, ActionExecutorMixin):
             elif service_id == "resurrect":
                 # 蘇生は専用パネルを使用
                 from src.facilities.ui.temple.resurrect_panel import ResurrectPanel
+                logger.info(f"[DEBUG] Creating ResurrectPanel with rect={rect}, parent={parent}, controller={self._controller}, ui_manager={ui_manager}")
                 return ResurrectPanel(
                     rect=rect,
                     parent=parent,
-                    ui_manager=ui_manager,
                     controller=self._controller,
-                    service=self
+                    ui_manager=ui_manager
                 )
             elif service_id == "blessing":
                 # 祝福は専用パネルを使用
@@ -461,9 +461,8 @@ class TempleService(FacilityService, ActionExecutorMixin):
                 return BlessingPanel(
                     rect=rect,
                     parent=parent,
-                    ui_manager=ui_manager,
                     controller=self._controller,
-                    service=self
+                    ui_manager=ui_manager
                 )
             else:
                 logger.warning(f"[DEBUG] Unknown service_id for panel creation: {service_id}")

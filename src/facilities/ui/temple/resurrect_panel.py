@@ -65,21 +65,14 @@ class ResurrectPanel(ServicePanel):
     
     def _create_member_list(self) -> None:
         """メンバーリストを作成"""
-        # メンバーリスト
+        # メンバーリスト（party_formation_window.pyと同じ形式）
         list_rect = pygame.Rect(10, 50, 400, 180)
-        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
-            self.members_list = self.ui_element_manager.create_selection_list(
-                "members_list", [], list_rect
-            )
-        else:
-            # フォールバック
-            self.members_list = pygame_gui.elements.UISelectionList(
-                relative_rect=list_rect,
-                item_list=[],
-                manager=self.ui_manager,
-                container=self.container
-            )
-            self.ui_elements.append(self.members_list)
+        self.members_list = pygame_gui.elements.UISelectionList(
+            relative_rect=list_rect,
+            item_list=[],  # 初期は空リスト
+            manager=self.ui_manager,
+            container=self.container
+        )
     
     def _create_action_controls(self) -> None:
         """アクションコントロールを作成"""
@@ -196,33 +189,39 @@ class ResurrectPanel(ServicePanel):
             self.members_list.set_item_list([])
             self.result_label.set_text(result.message if result.message else "蘇生が必要なメンバーはいません")
     
-    def handle_selection_list_changed(self, event: pygame.event.Event) -> bool:
-        """リスト選択変更を処理"""
-        if event.ui_element == self.members_list:
-            # メンバーが選択された
-            selection_index = self.members_list.get_single_selection()
-            if selection_index is not None and selection_index < len(self.members_data):
-                selected_member = self.members_data[selection_index]
-                self.selected_member = selected_member["id"]
-                
-                # コスト表示を更新
-                self.cost_label.set_text(f"費用: {selected_member['cost']} G")
-                
-                # 生命力表示を更新
-                self.vitality_label.set_text(f"生命力: {selected_member['vitality']}")
-                
-                # 蘇生ボタンを有効化（生命力が0以下でない場合）
-                if selected_member['vitality'] > 0:
-                    self.resurrect_button.enable()
-                else:
-                    self.resurrect_button.disable()
-                    self.result_label.set_text("生命力が尽きているため蘇生できません")
-                
-                # 結果をクリア（生命力チェック以外）
-                if selected_member['vitality'] > 0:
-                    self.result_label.set_text("")
-            return True
+    def handle_list_selection(self, event: pygame.event.Event) -> bool:
+        """リスト選択を処理（party_formation_window.pyと同じ形式）"""
+        if hasattr(event, 'ui_element') and event.ui_element == self.members_list:
+            selected_text = getattr(event, 'text', None)
+            if selected_text:
+                # テキストからメンバーを特定
+                for i, member in enumerate(self.members_data):
+                    member_text = f"{member['name']} (Lv.{member['level']}) - {'死亡' if member['status'] == 'dead' else '灰'} - 生命力:{member['vitality']} - {member['cost']} G"
+                    if member_text == selected_text:
+                        self.selected_member = member["id"]
+                        
+                        # コスト表示を更新
+                        self.cost_label.set_text(f"費用: {member['cost']} G")
+                        
+                        # 生命力表示を更新
+                        self.vitality_label.set_text(f"生命力: {member['vitality']}")
+                        
+                        # 蘇生ボタンを有効化（生命力が0以下でない場合）
+                        if member['vitality'] > 0:
+                            self.resurrect_button.enable()
+                        else:
+                            self.resurrect_button.disable()
+                            self.result_label.set_text("生命力が尽きているため蘇生できません")
+                        
+                        # 結果をクリア（生命力チェック以外）
+                        if member['vitality'] > 0:
+                            self.result_label.set_text("")
+                        return True
         return False
+    
+    def handle_selection_list_changed(self, event: pygame.event.Event) -> bool:
+        """リスト選択変更を処理（後方互換性のため残す）"""
+        return self.handle_list_selection(event)
     
     def handle_button_click(self, button: pygame_gui.elements.UIButton) -> bool:
         """ボタンクリックを処理"""

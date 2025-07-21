@@ -221,13 +221,22 @@ class TestResurrectPanelActions:
             
             # メンバーデータを設定
             panel.members_data = [
-                {"id": "char1", "cost": 5000, "vitality": 8}
+                {
+                    "id": "char1", 
+                    "name": "テストキャラクター",
+                    "level": 5,
+                    "status": "dead",
+                    "cost": 5000, 
+                    "vitality": 8
+                }
             ]
             
-            # 選択イベントをモック
+            # 選択イベントをモック（新しい実装に対応）
             event = Mock()
             event.ui_element = panel.members_list
-            panel.members_list.get_single_selection.return_value = 0
+            event.text = "テストキャラクター (Lv.5) - 死亡 - 生命力:8 - 5000 G"
+            hasattr_mock = Mock(return_value=True)
+            getattr_mock = Mock(return_value=event.text)
             
             result = panel.handle_selection_list_changed(event)
             
