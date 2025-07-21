@@ -4,7 +4,7 @@ tags: ["bug", "dungeon", "transition", "blackscreen", "critical"]
 description: "ダンジョン遷移時に画面が真っ暗になり操作不能になる問題の修正"
 created_at: "2025-07-21T06:44:56Z"
 started_at: 2025-07-21T16:04:58Z # Do not modify manually
-closed_at: null   # Do not modify manually
+closed_at: 2025-07-21T23:16:56Z # Do not modify manually
 ---
 
 # Ticket Overview
