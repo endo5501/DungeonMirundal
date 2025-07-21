@@ -36,6 +36,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 @docs/how_to_plan_refactoring_by_similarity.md
 
+### Gemini CLI との連携ガイド
+
+課題に行き詰まった時、外部AIであるGeminiと相談して、問題の解決方法を検討しましょう
+
+@docs/how_to_talk_with_gemini.md
+
 ## プロジェクト構成
 
 ### アーキテクチャ概要
@@ -80,61 +86,3 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - [Pygame Documentation](https://www.pygame.org/docs/)
 
-## Gemini CLI 連携ガイド
-
-### 目的
-
-ユーザーが **「Geminiと相談しながら進めて」** (または同義語)と指示した場合、または非常に困難なタスクに出会った際、Claude は以降のタスクを **Gemini CLI** と協調しながら進める。
-Gemini から得た回答はそのまま提示し、Claude 自身の解説・統合も付け加えることで、両エージェントの知見を融合する。
-
----
-
-### トリガー
-
-- 正規表現: `/Gemini.*相談しながら/`
-- 例:
-- 「Geminiと相談しながら進めて」
-- 「この件、Geminiと話しつつやりましょう」
-
----
-
-### 基本フロー
-
-1. **PROMPT 準備**
-Claude はユーザーの要件を簡潔にまとめる（長すぎる場合は要点を抽出）
-
-2. **Gemini CLI 呼び出し**
-**推奨方法**: `-p`オプションを使用
-
-```bash
-gemini -p "相談内容をここに記述"
-```
-
-**避けるべき方法**: 
-
-- HERE-DOC構文（EOFエラーの原因）
-- 長すぎる引数（引数エラーの原因）
-
-### 実用例
-
-**成功パターン**:
-```bash
-gemini -p "Pythonプロジェクトのproject_structure.mdを更新したい。現在の構造：config/（設定）、src/（ソース）、tests/（テスト）。Pygame使用、TDD開発。更新案を提案してください。"
-```
-
-**避けるべきパターン**:
-```bash
-# ❌ HERE-DOC（EOFエラー）
-gemini <<EOF
-長いテキスト...
-EOF
-
-# ❌ 長すぎる直接引数（引数エラー）
-gemini "非常に長いテキストが続く..."
-```
-
-### トラブルシューティング
-
-- **EOFエラー**: HERE-DOC構文を避け、`-p`オプションを使用
-- **引数エラー**: テキストを要約して短縮、または複数回に分割
-- **Unknown argument**: テキストが引数として認識されない場合は`-p`で明示的にプロンプト指定
