@@ -702,7 +702,10 @@ class GameManager(EventHandler):
             # フォールバック: 従来の処理
             old_location = self.current_location
             self.current_location = location
-            logger.info(f"Location changed: {old_location.value} -> {location.value}")
+            # Enum と文字列の両方に対応
+            old_location_str = old_location.value if hasattr(old_location, 'value') else str(old_location)
+            new_location_str = location.value if hasattr(location, 'value') else str(location)
+            logger.info(f"Location changed: {old_location_str} -> {new_location_str}")
     
     def set_current_party(self, party: Party):
         """現在のパーティを設定 - イベント駆動版"""
