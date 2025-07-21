@@ -1116,7 +1116,7 @@ DEFAULT_TICKETS_DIR="tickets"
 DEFAULT_BRANCH="main"
 DEFAULT_BRANCH_PREFIX="feature/"
 DEFAULT_REPOSITORY="origin"
-DEFAULT_AUTO_PUSH="true"
+DEFAULT_AUTO_PUSH="false"
 DEFAULT_DELETE_REMOTE_ON_CLOSE="true"
 DEFAULT_NEW_SUCCESS_MESSAGE=""
 DEFAULT_START_SUCCESS_MESSAGE="Please review the ticket content in \`current-ticket.md\` and make any necessary adjustments before beginning work."
@@ -1184,7 +1184,7 @@ Each ticket is a single Markdown file with YAML frontmatter metadata.
 - \`$SCRIPT_COMMAND start <ticket-name>\` - Start working on ticket (creates or switches to feature branch)
 - \`$SCRIPT_COMMAND restore\` - Restore current-ticket.md symlink from branch name
 - \`$SCRIPT_COMMAND check\` - Check current directory and ticket/branch synchronization status
-- \`$SCRIPT_COMMAND close [--no-push] [--force|-f] [--no-delete-remote]\` - Complete current ticket (squash merge to default branch)
+- \`$SCRIPT_COMMAND close [--no-push] [--force|-f] [--no-delete-remote]\` - Complete current ticket (merge --no-ff to default branch)
 - \`$SCRIPT_COMMAND selfupdate\` - Update ticket.sh to the latest version from GitHub
 - \`$SCRIPT_COMMAND version\` - Display version information
 - \`$SCRIPT_COMMAND prompt\` - Display prompt instructions for AI coding assistants
@@ -1217,7 +1217,7 @@ Each ticket is a single Markdown file with YAML frontmatter metadata.
 
 ## Push Control
 
-- Set \`auto_push: false\` in config to disable automatic pushing for close command
+- Set \`auto_push: true\` in config to enable automatic pushing for close command (default: false)
 - Use \`--no-push\` flag with close command to skip pushing
 - Feature branches are always created locally (no auto-push on start)
 - Git commands and outputs are displayed for transparency
@@ -1296,7 +1296,7 @@ default_branch: "$default_branch_value"
 branch_prefix: "$DEFAULT_BRANCH_PREFIX"
 repository: "$DEFAULT_REPOSITORY"
 
-# Automatically push changes to remote repository during close command
+# Automatically push changes to remote repository during close command (default: false)
 # Set to false if you want to manually control when to push
 auto_push: $DEFAULT_AUTO_PUSH
 
@@ -2302,23 +2302,17 @@ EOF
         return 1
     }
     
-    # Create commit message
-    local commit_msg="[${ticket_name}] ${description}"
-    if [[ -z "$description" ]]; then
-        commit_msg="[${ticket_name}] Ticket completed"
-    fi
-    commit_msg="${commit_msg}\n\n${ticket_content}"
     
-    # Squash merge
-    run_git_command "git merge --squash $current_branch" || {
-        echo "Error: Failed to squash merge feature branch" >&2
+    # No-fast-forward merge
+    run_git_command "git merge --no-ff $current_branch" || {
+        echo "Error: Failed to merge feature branch" >&2
         echo "You are now on '$default_branch' branch" >&2
         echo "Feature branch '$current_branch' still exists with your changes" >&2
         echo "Please resolve merge conflicts manually or run 'git merge --abort'" >&2
         return 1
     }
     
-    # Move ticket to done folder before committing
+    # Move ticket to done folder after successful merge
     local tickets_dir=$(yaml_get "tickets_dir" || echo "$DEFAULT_TICKETS_DIR")
     local done_dir="${tickets_dir}/done"
     
@@ -2335,16 +2329,12 @@ EOF
         run_git_command "git mv \"$ticket_file\" \"$new_ticket_path\"" || {
             echo "Warning: Failed to move ticket to done folder" >&2
         }
+        
+        # Commit the ticket file move
+        run_git_command "git commit -m \"Move completed ticket to done folder\"" || {
+            echo "Warning: Failed to commit ticket file move" >&2
+        }
     fi
-    
-    # Commit with ticket content and done folder move together
-    echo -e "$commit_msg" | run_git_command "git commit -F -" || {
-        echo "Error: Failed to commit final merge" >&2
-        echo "Squash merge is staged but not committed" >&2
-        echo "You can commit manually with: git commit" >&2
-        echo "Or abort with: git reset --hard HEAD" >&2
-        return 1
-    }
     
     # Push to remote if auto_push
     if [[ "$auto_push" == "true" ]] && [[ "$no_push" == "false" ]]; then
