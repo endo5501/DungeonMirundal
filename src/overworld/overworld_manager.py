@@ -171,14 +171,20 @@ class OverworldManager:
         logger.info(f"パーティが地上部に入りました: {party.name}")
         return True
     
-    def exit_overworld(self) -> bool:
-        """地上部から出る"""
+    def exit_overworld(self, force_cleanup: bool = True) -> bool:
+        """地上部から出る
+        
+        Args:
+            force_cleanup: UI要素のクリーンアップを強制実行するか（デフォルト: True）
+                          ダンジョン遷移失敗時などは False にしてUI要素を保持する
+        """
         if not self.is_active:
             logger.warning("地上部はアクティブではありません")
             return False
         
-        # UI要素のクリーンアップ
-        self._cleanup_ui()
+        # UI要素のクリーンアップ（force_cleanupがTrueの場合のみ）
+        if force_cleanup:
+            self._cleanup_ui()
         
         # 現在の施設から出る（新システム）
         self.facility_registry.exit_current_facility()
@@ -1348,7 +1354,7 @@ class OverworldManager:
             # 現在のゲーム状態を構築
             game_state = {
                 'location': 'overworld',
-                'current_location': self.current_location.value if hasattr(self, 'current_location') else 'town_center',
+                'current_location': self.current_location.value if hasattr(self, 'current_location') and hasattr(self.current_location, 'value') else str(getattr(self, 'current_location', 'town_center')),
                 'timestamp': str(datetime.now()),
                 'party_name': self.current_party.name
             }
@@ -1376,7 +1382,7 @@ class OverworldManager:
         """セーブ実行"""
         game_state = {
             'location': 'overworld',
-            'current_location': self.current_location.value
+            'current_location': self.current_location.value if hasattr(self.current_location, 'value') else str(self.current_location)
         }
         
         success = save_manager.save_game(
@@ -1531,6 +1537,20 @@ class OverworldManager:
             except Exception as e:
                 # ダンジョン遷移に失敗した場合、エラーメッセージを表示してメニューを復元
                 logger.error(f"ダンジョン遷移に失敗しました: {e}")
+                
+                # UI要素が非表示になっている可能性があるため、再表示する
+                if self.window_manager:
+                    # OverworldMainWindowが存在する場合は、UI要素を再表示
+                    overworld_window = None
+                    for window in self.window_manager.window_stack._windows:
+                        if hasattr(window, 'window_id') and window.window_id == 'overworld_main':
+                            overworld_window = window
+                            break
+                    
+                    if overworld_window and hasattr(overworld_window, 'show_ui_elements'):
+                        logger.info("ダンジョン遷移失敗後のUI要素復元")
+                        overworld_window.show_ui_elements()
+                
                 self._show_dungeon_entrance_error(str(e))
                 self._show_main_menu()
     
