@@ -92,6 +92,7 @@ class PartyNamePanel(ServicePanel):
             40
         )
         self.change_button = self._create_button(
+            "change_button",
             "変更",
             change_button_rect,
             container=self.container,
@@ -106,6 +107,7 @@ class PartyNamePanel(ServicePanel):
             40
         )
         self.cancel_button = self._create_button(
+            "cancel_button",
             "キャンセル",
             cancel_button_rect,
             container=self.container,
