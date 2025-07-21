@@ -13,6 +13,9 @@ except ImportError:
 from src.character.party import Party
 from src.character.character import Character
 
+# アイテムシステムのインポート
+from src.items.item import item_manager, Item, ItemInstance
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,6 +30,10 @@ class MagicGuildService(FacilityService):
         super().__init__("magic_guild")
         # GameManagerはシングルトンではないため、必要時に別途設定
         self.game = None
+        self.item_manager = item_manager
+        
+        # インベントリマネージャーの参照（lazy loading）
+        self._inventory_manager = None
         
         # コントローラーへの参照（後で設定される）
         self._controller = None
@@ -35,6 +42,14 @@ class MagicGuildService(FacilityService):
         self.analyze_cost_per_level = 50  # 魔法分析のレベル毎料金
         
         logger.info("MagicGuildService initialized")
+    
+    @property
+    def inventory_manager(self):
+        """インベントリマネージャーを遅延読み込み"""
+        if self._inventory_manager is None:
+            from src.inventory.inventory import inventory_manager
+            self._inventory_manager = inventory_manager
+        return self._inventory_manager
     
     def set_controller(self, controller):
         """コントローラーを設定"""
@@ -78,6 +93,8 @@ class MagicGuildService(FacilityService):
         """アクション実行可能かチェック"""
         if action_id == "spellbook_shop":
             return True
+        elif action_id == "buy":  # 購入アクションのサポートを追加
+            return True
         elif action_id == "analyze_magic":
             return self._has_analyzable_spells()
         elif action_id == "exit":
@@ -92,6 +109,8 @@ class MagicGuildService(FacilityService):
         try:
             if action_id == "spellbook_shop":
                 return self._handle_spellbook_shop(params)
+            elif action_id == "buy":  # 購入アクションの処理を追加
+                return self._handle_buy(params)
             elif action_id == "analyze_magic":
                 return self._handle_analyze_magic(params)
             elif action_id == "exit":
@@ -350,5 +369,271 @@ class MagicGuildService(FacilityService):
                 "categories": ["offensive", "defensive", "healing", "utility", "special"],
                 "level_requirements": True,
                 "panel_type": "spellbook_shop"
+            }
+        )
+    
+    def _handle_buy(self, params: Dict[str, Any]) -> ServiceResult:
+        """魔術書購入処理（BuyPanelから呼ばれる）"""
+        logger.info(f"MagicGuildService._handle_buy called with params: {params}")
+        
+        item_id = params.get("item_id")
+        
+        # アイテムIDが指定されていない場合は在庫一覧を返す
+        if not item_id:
+            # カテゴリが指定されている場合は、そのカテゴリの魔術書を返す
+            category = params.get("category")
+            
+            # 魔術書の在庫を生成
+            spellbook_inventory = self._generate_spellbook_inventory()
+            
+            # カテゴリでフィルタリング
+            if category:
+                filtered_items = {k: v for k, v in spellbook_inventory.items() 
+                                if v.get("category") == category}
+            else:
+                filtered_items = spellbook_inventory
+            
+            return ServiceResult(
+                success=True,
+                message="魔術書在庫",
+                data={
+                    "items": filtered_items,
+                    "categories": [
+                        {"id": "offensive", "name": "攻撃魔法", "icon": "🔥"},
+                        {"id": "defensive", "name": "防御魔法", "icon": "🛡️"},
+                        {"id": "healing", "name": "回復魔法", "icon": "💚"},
+                        {"id": "utility", "name": "補助魔法", "icon": "✨"},
+                        {"id": "special", "name": "特殊魔法", "icon": "🌟"}
+                    ],
+                    "selected_category": category,
+                    "party_gold": self.party.gold if self.party else 0
+                }
+            )
+        
+        # アイテムIDが指定されている場合は購入処理
+        confirmed = params.get("confirmed", False)
+        
+        if not confirmed:
+            # 購入確認
+            return self._confirm_spellbook_purchase(item_id, params.get("quantity", 1), params.get("buyer_id", "party"))
+        else:
+            # 実際の購入実行
+            return self._execute_spellbook_purchase(item_id, params.get("quantity", 1), params.get("buyer_id", "party"))
+    
+    def _generate_spellbook_inventory(self) -> Dict[str, Dict[str, Any]]:
+        """魔術書の在庫を生成"""
+        spellbooks = {}
+        
+        # カテゴリマッピング
+        category_mapping = {
+            "offensive": ["fire", "ice", "lightning"],
+            "defensive": ["shield", "protection", "barrier"],
+            "healing": ["heal", "cure", "restore"],
+            "utility": ["light", "detect", "teleport", "utility"],
+            "special": ["special", "mystical", "ancient"]
+        }
+        
+        # アイテムマネージャーから全アイテムを取得
+        for item_id, item in self.item_manager.items.items():
+            # 魔術書タイプのアイテムのみを処理
+            if item.item_type.value == "spellbook":
+                # カテゴリを決定
+                category = "special"  # デフォルト
+                for cat, keywords in category_mapping.items():
+                    if any(keyword in item_id.lower() for keyword in keywords):
+                        category = cat
+                        break
+                
+                # 在庫数を決定（アイテムの希少度に基づく）
+                if item.rarity.value in ["epic", "legendary"]:
+                    stock = 1
+                elif item.rarity.value == "rare":
+                    stock = 2
+                else:
+                    stock = 3
+                
+                # レベル要求を価格から推定（実際のデータがない場合）
+                required_level = 1
+                if item.price >= 5000:
+                    required_level = 6
+                elif item.price >= 2000:
+                    required_level = 4
+                elif item.price >= 1000:
+                    required_level = 2
+                
+                spellbooks[item_id] = {
+                    "item_id": item_id,
+                    "name": item.get_name(),
+                    "category": category,
+                    "price": item.price,
+                    "stock": stock,
+                    "description": item.get_description(),
+                    "required_level": required_level,
+                    "item_object": item
+                }
+        
+        return spellbooks
+    
+    def _check_purchase_restrictions(self, character: Character, item: Dict[str, Any]) -> ServiceResult:
+        """購入制限をチェック（職業、レベル）"""
+        # レベル制限チェック
+        required_level = item.get("required_level", 1)
+        if character.level < required_level:
+            return ServiceResult(
+                success=False,
+                message=f"{character.name}のレベルが不足しています（必要: Lv{required_level}、現在: Lv{character.level}）",
+                result_type=ResultType.WARNING
+            )
+        
+        # 職業制限チェック
+        item_object = item.get("item_object")
+        if item_object and hasattr(item_object, 'required_class'):
+            required_classes = getattr(item_object, 'required_class', [])
+            if required_classes and character.character_class not in required_classes:
+                class_names = {"mage": "魔術師", "bishop": "僧正", "priest": "僧侶", "lord": "君主"}
+                required_class_names = [class_names.get(cls, cls) for cls in required_classes]
+                return ServiceResult(
+                    success=False,
+                    message=f"{character.name}の職業では購入できません（必要職業: {', '.join(required_class_names)}）",
+                    result_type=ResultType.WARNING
+                )
+        else:
+            # アイテムオブジェクトが取得できない場合のフォールバック
+            if character.character_class not in ["mage", "bishop"]:
+                return ServiceResult(
+                    success=False,
+                    message=f"{character.name}の職業では購入できません（魔術師系職業のみ購入可能）",
+                    result_type=ResultType.WARNING
+                )
+        
+        # すべてのチェックをパス
+        return ServiceResult(success=True, message="購入可能")
+    
+    def _confirm_spellbook_purchase(self, item_id: str, quantity: int, buyer_id: str) -> ServiceResult:
+        """魔術書購入の確認"""
+        spellbooks = self._generate_spellbook_inventory()
+        
+        if item_id not in spellbooks:
+            return ServiceResult(False, "その魔術書は取り扱っていません")
+        
+        item = spellbooks[item_id]
+        total_cost = item["price"] * quantity
+        
+        # 在庫チェック
+        if quantity > item["stock"]:
+            return ServiceResult(
+                success=False,
+                message=f"在庫が不足しています（在庫: {item['stock']}冊）",
+                result_type=ResultType.WARNING
+            )
+        
+        # 所持金チェック
+        if self.party and self.party.gold < total_cost:
+            return ServiceResult(
+                success=False,
+                message=f"所持金が不足しています（必要: {total_cost} G）",
+                result_type=ResultType.WARNING
+            )
+        
+        # 購入者名を取得と制限チェック
+        buyer_name = "パーティ共有"
+        if buyer_id != "party" and self.party:
+            for member in self.party.members:
+                if member.character_id == buyer_id:
+                    buyer_name = member.name
+                    # 個人購入の場合は職業・レベル制限をチェック
+                    restriction_result = self._check_purchase_restrictions(member, item)
+                    if not restriction_result.is_success():
+                        return restriction_result
+                    break
+        
+        return ServiceResult(
+            success=True,
+            message=f"{item['name']}を{quantity}冊購入して{buyer_name}に渡しますか？（{total_cost} G）",
+            result_type=ResultType.CONFIRM,
+            data={
+                "item_id": item_id,
+                "quantity": quantity,
+                "total_cost": total_cost,
+                "buyer_id": buyer_id,
+                "action": "buy"
+            }
+        )
+    
+    def _execute_spellbook_purchase(self, item_id: str, quantity: int, buyer_id: str) -> ServiceResult:
+        """魔術書購入を実行"""
+        logger.info(f"Executing spellbook purchase: {item_id} x{quantity} for {buyer_id}")
+        
+        if not self.party:
+            return ServiceResult(False, "パーティが存在しません")
+        
+        spellbooks = self._generate_spellbook_inventory()
+        
+        if item_id not in spellbooks:
+            return ServiceResult(False, "その魔術書は取り扱っていません")
+        
+        item = spellbooks[item_id]
+        total_cost = item["price"] * quantity
+        
+        # 最終チェック
+        if quantity > item["stock"]:
+            return ServiceResult(False, "在庫が不足しています")
+        
+        if self.party.gold < total_cost:
+            return ServiceResult(False, "所持金が不足しています")
+        
+        # 購入処理
+        self.party.gold -= total_cost
+        
+        # アイテムインスタンスを作成
+        item_instance = self.item_manager.create_item_instance(item_id, quantity)
+        if not item_instance:
+            # 作成に失敗した場合は返金
+            self.party.gold += total_cost
+            return ServiceResult(False, "魔術書の作成に失敗しました")
+        
+        logger.debug(f"MagicGuildService: Created spellbook instance: {item_instance.item_id} x{item_instance.quantity}")
+        
+        # 購入者のインベントリに追加
+        if buyer_id == "party":
+            logger.debug("MagicGuildService: Adding to party inventory")
+            # パーティインベントリに追加
+            party_inventory = self.inventory_manager.get_party_inventory()
+            if not party_inventory:
+                # パーティインベントリがない場合は作成
+                logger.debug(f"MagicGuildService: Creating party inventory for party_id={self.party.party_id}")
+                party_inventory = self.inventory_manager.create_party_inventory(self.party.party_id)
+            
+            if not party_inventory.add_item(item_instance):
+                # インベントリに追加できない場合は返金
+                self.party.gold += total_cost
+                return ServiceResult(False, "パーティインベントリが満杯のため購入できません")
+            logger.debug("MagicGuildService: Successfully added to party inventory")
+        else:
+            logger.debug(f"MagicGuildService: Adding to character inventory, buyer_id={buyer_id}")
+            # キャラクターインベントリに追加
+            char_inventory = self.inventory_manager.get_character_inventory(buyer_id)
+            if not char_inventory:
+                # キャラクターインベントリがない場合は作成
+                logger.debug(f"MagicGuildService: Creating character inventory for buyer_id={buyer_id}")
+                char_inventory = self.inventory_manager.create_character_inventory(buyer_id)
+            else:
+                logger.debug(f"MagicGuildService: Found existing character inventory for buyer_id={buyer_id}")
+            
+            if not char_inventory.add_item(item_instance):
+                # インベントリに追加できない場合は返金
+                self.party.gold += total_cost
+                return ServiceResult(False, "キャラクターインベントリが満杯のため購入できません")
+            logger.debug(f"MagicGuildService: Successfully added to character inventory, buyer_id={buyer_id}")
+        
+        return ServiceResult(
+            success=True,
+            message=f"{item['name']}を{quantity}冊購入しました（{total_cost} G）",
+            result_type=ResultType.SUCCESS,
+            data={
+                "item_id": item_id,
+                "quantity": quantity,
+                "remaining_gold": self.party.gold,
+                "updated_items": self._generate_spellbook_inventory()  # 更新された在庫を返す
             }
         )

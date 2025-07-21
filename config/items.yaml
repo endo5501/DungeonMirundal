@@ -257,6 +257,127 @@ spellbooks:
     weight: 1
     required_class: ["priest", "bishop", "lord"]
 
+  # 魔術師ギルド用の魔術書を追加
+  spellbook_fire_1:
+    names:
+      ja: "火の魔術書・初級"
+      en: "Fire Spellbook (Basic)"
+    descriptions:
+      ja: "基本的な火炎呪文を習得できる魔術書"
+      en: "A spellbook for learning basic fire spells"
+    type: "spellbook"
+    spell_type: "magic"
+    spell_ids: ["fire_bolt", "small_flame"]
+    price: 500
+    weight: 1
+    required_class: ["mage", "bishop"]
+    required_level: 1
+    
+  spellbook_fire_2:
+    names:
+      ja: "火の魔術書・中級"
+      en: "Fire Spellbook (Intermediate)"
+    descriptions:
+      ja: "強力な火炎呪文を習得できる魔術書"
+      en: "A spellbook for learning powerful fire spells"
+    type: "spellbook"
+    spell_type: "magic"
+    spell_ids: ["fireball", "flame_strike"]
+    price: 2000
+    weight: 1
+    required_class: ["mage", "bishop"]
+    required_level: 4
+
+  spellbook_ice_1:
+    names:
+      ja: "氷の魔術書・初級"
+      en: "Ice Spellbook (Basic)"
+    descriptions:
+      ja: "基本的な氷結呪文を習得できる魔術書"
+      en: "A spellbook for learning basic ice spells"
+    type: "spellbook"
+    spell_type: "magic"
+    spell_ids: ["ice_shard", "frost_bolt"]
+    price: 500
+    weight: 1
+    required_class: ["mage", "bishop"]
+    required_level: 1
+
+  spellbook_heal_1:
+    names:
+      ja: "治癒の魔術書・初級"
+      en: "Healing Spellbook (Basic)"
+    descriptions:
+      ja: "基本的な回復呪文を習得できる魔術書"
+      en: "A spellbook for learning basic healing spells"
+    type: "spellbook"
+    spell_type: "magic"
+    spell_ids: ["light_heal", "cure_poison"]
+    price: 500
+    weight: 1
+    required_class: ["mage", "bishop"]
+    required_level: 1
+
+  spellbook_heal_2:
+    names:
+      ja: "治癒の魔術書・中級"
+      en: "Healing Spellbook (Intermediate)"
+    descriptions:
+      ja: "強力な回復呪文を習得できる魔術書"
+      en: "A spellbook for learning powerful healing spells"
+    type: "spellbook"
+    spell_type: "magic"
+    spell_ids: ["heal", "group_heal"]
+    price: 2000
+    weight: 1
+    required_class: ["mage", "bishop"]
+    required_level: 4
+
+  spellbook_shield_1:
+    names:
+      ja: "防護の魔術書・初級"
+      en: "Protection Spellbook (Basic)"
+    descriptions:
+      ja: "基本的な防御呪文を習得できる魔術書"
+      en: "A spellbook for learning basic protection spells"
+    type: "spellbook"
+    spell_type: "magic"
+    spell_ids: ["shield", "protection"]
+    price: 500
+    weight: 1
+    required_class: ["mage", "bishop"]
+    required_level: 1
+
+  spellbook_utility_1:
+    names:
+      ja: "探索の魔術書"
+      en: "Exploration Spellbook"
+    descriptions:
+      ja: "冒険に役立つ補助呪文を習得できる魔術書"
+      en: "A spellbook for learning utility spells useful for adventure"
+    type: "spellbook"
+    spell_type: "magic"
+    spell_ids: ["light", "detect_trap"]
+    price: 500
+    weight: 1
+    required_class: ["mage", "bishop"]
+    required_level: 1
+
+  spellbook_special_1:
+    names:
+      ja: "神秘の魔術書"
+      en: "Mystical Spellbook"
+    descriptions:
+      ja: "特殊な呪文を習得できる希少な魔術書"
+      en: "A rare spellbook for learning special spells"
+    type: "spellbook"
+    spell_type: "magic"
+    spell_ids: ["teleport", "time_stop"]
+    price: 5000
+    weight: 1
+    required_class: ["mage", "bishop"]
+    required_level: 6
+
 # 特殊アイテム
 special:
   lockpick:
