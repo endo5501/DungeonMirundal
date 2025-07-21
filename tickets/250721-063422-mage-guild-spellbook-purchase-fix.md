@@ -4,7 +4,7 @@ tags: ["bug", "mage-guild", "shop", "spellbook", "critical"]
 description: "魔術師ギルドの魔術書店で魔術書が購入できない問題の修正"
 created_at: "2025-07-21T06:34:22Z"
 started_at: 2025-07-21T10:08:16Z # Do not modify manually
-closed_at: null   # Do not modify manually
+closed_at: 2025-07-21T12:29:52Z # Do not modify manually
 ---
 
 # Ticket Overview
