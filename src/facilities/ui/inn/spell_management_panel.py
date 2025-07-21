@@ -32,6 +32,7 @@ class SpellManagementPanel(ServicePanel):
         # 戻るボタン
         back_rect = pygame.Rect(10, 10, 80, 35)
         self.back_button = self._create_button(
+            "back_button",
             "← 戻る",
             back_rect,
             container=self.container,

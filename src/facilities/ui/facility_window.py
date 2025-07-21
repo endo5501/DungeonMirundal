@@ -306,6 +306,8 @@ class FacilityWindow(Window):
     
     def _create_generic_service_panel(self, rect: pygame.Rect, service_id: str, menu_item) -> pygame_gui.elements.UIPanel:
         """汎用サービスパネルを作成"""
+        from src.facilities.ui.ui_element_manager import UIElementManager
+        
         panel = pygame_gui.elements.UIPanel(
             relative_rect=rect,
             manager=self.ui_manager,
@@ -313,30 +315,33 @@ class FacilityWindow(Window):
             element_id=f"{service_id}_panel"
         )
         
+        # UIElementManagerを使用してUI要素を管理
+        ui_element_manager = UIElementManager(self.ui_manager, panel)
+        
         # サービス名を表示
-        pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(10, 10, rect.width - 20, 40),
-            text=menu_item.label,
-            manager=self.ui_manager,
-            container=panel
+        ui_element_manager.create_label(
+            f"{service_id}_title",
+            menu_item.label,
+            pygame.Rect(10, 10, rect.width - 20, 40)
         )
         
         # サービス説明を表示
         if hasattr(menu_item, 'description') and menu_item.description:
-            pygame_gui.elements.UILabel(
-                relative_rect=pygame.Rect(10, 60, rect.width - 20, 60),
-                text=menu_item.description,
-                manager=self.ui_manager,
-                container=panel
+            ui_element_manager.create_label(
+                f"{service_id}_description",
+                menu_item.description,
+                pygame.Rect(10, 60, rect.width - 20, 60)
             )
         
         # 実装予定メッセージ
-        pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(10, 140, rect.width - 20, 30),
-            text="このサービスは現在実装中です。",
-            manager=self.ui_manager,
-            container=panel
+        ui_element_manager.create_label(
+            f"{service_id}_not_implemented",
+            "このサービスは現在実装中です。",
+            pygame.Rect(10, 140, rect.width - 20, 30)
         )
+        
+        # パネルにUIElementManagerを追加
+        panel.ui_element_manager = ui_element_manager
         
         # パネルにカスタム属性を追加（show/hideメソッド用）
         panel.is_visible = True
@@ -353,28 +358,69 @@ class FacilityWindow(Window):
             original_hide()
             panel.is_visible = False
             
+        # destroy()メソッドを追加してUIElementManagerによる完全な破棄を可能にする
+        def destroy_panel():
+            logger.info(f"Generic panel destroy: Starting destruction for {service_id}")
+            try:
+                # UIElementManagerによる完全破棄
+                if hasattr(panel, 'ui_element_manager'):
+                    panel.ui_element_manager.destroy_all()
+                    logger.debug(f"Generic panel: UIElementManager destroyed for {service_id}")
+                
+                # パネル自体を破棄
+                panel.kill()
+                logger.info(f"Generic panel destroy: Completed destruction for {service_id}")
+            except Exception as e:
+                logger.error(f"Generic panel destroy: Error destroying {service_id}: {e}")
+        
         panel.show = show_panel
         panel.hide = hide_panel
+        panel.destroy = destroy_panel
         
-        logger.info(f"Generic service panel created: {service_id}")
+        logger.info(f"Generic service panel created with UIElementManager: {service_id}")
         return panel
     
     def _create_fallback_panel(self, rect: pygame.Rect, service_id: str) -> pygame_gui.elements.UIPanel:
         """フォールバック用のシンプルなパネルを作成"""
+        from src.facilities.ui.ui_element_manager import UIElementManager
+        
         panel = pygame_gui.elements.UIPanel(
             relative_rect=rect,
             manager=self.ui_manager,
             container=self.main_panel
         )
         
+        # UIElementManagerを使用してUI要素を管理
+        ui_element_manager = UIElementManager(self.ui_manager, panel)
+        
         # サービス名を表示
-        pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect(10, 10, rect.width - 20, 30),
-            text=f"Service: {service_id}",
-            manager=self.ui_manager,
-            container=panel
+        ui_element_manager.create_label(
+            f"fallback_{service_id}_title",
+            f"Service: {service_id}",
+            pygame.Rect(10, 10, rect.width - 20, 30)
         )
         
+        # パネルにUIElementManagerを追加
+        panel.ui_element_manager = ui_element_manager
+        
+        # destroy()メソッドを追加してUIElementManagerによる完全な破棄を可能にする
+        def destroy_panel():
+            logger.info(f"Fallback panel destroy: Starting destruction for {service_id}")
+            try:
+                # UIElementManagerによる完全破棄
+                if hasattr(panel, 'ui_element_manager'):
+                    panel.ui_element_manager.destroy_all()
+                    logger.debug(f"Fallback panel: UIElementManager destroyed for {service_id}")
+                
+                # パネル自体を破棄
+                panel.kill()
+                logger.info(f"Fallback panel destroy: Completed destruction for {service_id}")
+            except Exception as e:
+                logger.error(f"Fallback panel destroy: Error destroying {service_id}: {e}")
+        
+        panel.destroy = destroy_panel
+        
+        logger.info(f"Fallback service panel created with UIElementManager: {service_id}")
         return panel
     
     def _get_facility_title(self) -> str:
