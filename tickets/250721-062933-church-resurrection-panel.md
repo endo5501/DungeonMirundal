@@ -4,7 +4,7 @@ tags: ["feature", "ui", "church", "resurrection", "critical"]
 description: "教会のキャラクター蘇生パネルの実装"
 created_at: "2025-07-21T06:29:33Z"
 started_at: 2025-07-21T07:03:19Z # Do not modify manually
-closed_at: null   # Do not modify manually
+closed_at: 2025-07-21T09:27:29Z # Do not modify manually
 ---
 
 # Ticket Overview
