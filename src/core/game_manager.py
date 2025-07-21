@@ -767,7 +767,7 @@ class GameManager(EventHandler):
             return []
     
     def add_dungeon_to_list(self, dungeon_info: Dict[str, Any]):
-        """ダンジョン情報をセーブデータに追加"""
+        """ダンジョン情報をセーブデータに追加し、自動保存する"""
         try:
             if not self.save_manager.current_save:
                 logger.warning("セーブデータが存在しません。新しいセーブデータを作成します")
@@ -782,6 +782,19 @@ class GameManager(EventHandler):
             
             current_dungeons.append(dungeon_info)
             logger.info(f"ダンジョンを追加しました: {dungeon_info.get('hash_value', 'Unknown')}")
+            
+            # 重要: ダンジョン追加後、即座にセーブデータを保存
+            if self.current_party:
+                slot_id = self.save_manager.current_save.save_slot.slot_id
+                save_success = self.save_current_game(slot_id, self.save_manager.current_save.save_slot.name)
+                if save_success:
+                    logger.info(f"ダンジョン追加後の自動保存が完了しました (スロット{slot_id})")
+                else:
+                    logger.error("ダンジョン追加後の自動保存に失敗しました")
+                    return False
+            else:
+                logger.warning("現在のパーティが存在しないため、自動保存をスキップしました")
+            
             return True
             
         except Exception as e:
@@ -789,7 +802,7 @@ class GameManager(EventHandler):
             return False
     
     def remove_dungeon_from_list(self, hash_value: str):
-        """ダンジョン情報をセーブデータから削除"""
+        """ダンジョン情報をセーブデータから削除し、自動保存する"""
         try:
             if not self.save_manager.current_save:
                 logger.warning("セーブデータが存在しません")
@@ -801,6 +814,19 @@ class GameManager(EventHandler):
                 if dungeon.get('hash_value') == hash_value:
                     removed_dungeon = dungeons.pop(i)
                     logger.info(f"ダンジョン {removed_dungeon.get('hash_value')} を削除しました")
+                    
+                    # 重要: ダンジョン削除後、即座にセーブデータを保存
+                    if self.current_party:
+                        slot_id = self.save_manager.current_save.save_slot.slot_id
+                        save_success = self.save_current_game(slot_id, self.save_manager.current_save.save_slot.name)
+                        if save_success:
+                            logger.info(f"ダンジョン削除後の自動保存が完了しました (スロット{slot_id})")
+                        else:
+                            logger.error("ダンジョン削除後の自動保存に失敗しました")
+                            return False
+                    else:
+                        logger.warning("現在のパーティが存在しないため、自動保存をスキップしました")
+                    
                     return True
             
             logger.warning(f"ダンジョン {hash_value} が見つかりません")

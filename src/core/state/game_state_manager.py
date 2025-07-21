@@ -273,10 +273,11 @@ class GameStateManager(ManagedComponent):
     def _get_guild_characters(self) -> List[Any]:
         """ギルドキャラクターの取得"""
         try:
-            if self.overworld_manager and hasattr(self.overworld_manager, 'get_guild_characters'):
-                return self.overworld_manager.get_guild_characters()
+            # SaveManagerのcurrent_saveからギルドキャラクターを取得
+            if self.save_manager and self.save_manager.current_save:
+                return self.save_manager.current_save.guild_characters
             else:
-                logger.warning("OverworldManager not available for guild characters")
+                logger.warning("SaveManager or current_save not available for guild characters")
                 return []
         except Exception as e:
             logger.error(f"ギルドキャラクター取得エラー: {e}")
@@ -285,10 +286,11 @@ class GameStateManager(ManagedComponent):
     def _get_dungeon_list(self) -> List[Dict[str, Any]]:
         """ダンジョンリストの取得"""
         try:
-            if self.dungeon_manager and hasattr(self.dungeon_manager, 'get_dungeon_list'):
-                return self.dungeon_manager.get_dungeon_list()
+            # GameManagerからダンジョンリストを取得（SaveManagerのcurrent_saveから）
+            if self.save_manager and self.save_manager.current_save:
+                return self.save_manager.current_save.dungeon_list
             else:
-                logger.warning("DungeonManager not available for dungeon list")
+                logger.warning("SaveManager or current_save not available for dungeon list")
                 return []
         except Exception as e:
             logger.error(f"ダンジョンリスト取得エラー: {e}")
