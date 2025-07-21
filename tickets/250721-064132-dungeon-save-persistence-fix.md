@@ -4,7 +4,7 @@ tags: ["bug", "dungeon", "save", "persistence", "critical"]
 description: "ダンジョン新規作成後のセーブ時にダンジョンが消える不具合の修正"
 created_at: "2025-07-21T06:41:32Z"
 started_at: 2025-07-21T13:51:30Z # Do not modify manually
-closed_at: null   # Do not modify manually
+closed_at: 2025-07-21T16:00:29Z # Do not modify manually
 ---
 
 # Ticket Overview
