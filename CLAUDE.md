@@ -88,7 +88,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Ticket Management Instructions
 
-Use `./ticket.sh` for ticket management.
+Use `./scripts/ticket.sh` for ticket management.
 
 ## Working with current-ticket.md
 
@@ -104,13 +104,13 @@ Use `./ticket.sh` for ticket management.
 
 ## Create New Ticket
 
-1. Create ticket: `./ticket.sh new feature-name`
+1. Create ticket: `./scripts/ticket.sh new feature-name`
 2. Edit ticket content and description in the generated file
 
 ## Start Working on Ticket
 
-1. Check available tickets: `./ticket.sh` list or browse tickets directory
-2. Start work: `./ticket.sh start 241225-143502-feature-name`
+1. Check available tickets: `./scripts/ticket.sh` list or browse tickets directory
+2. Start work: `./scripts/ticket.sh start 241225-143502-feature-name`
 3. Develop on feature branch (`current-ticket.md` shows active ticket)
 
 ## Closing Tickets
@@ -119,4 +119,4 @@ Use `./ticket.sh` for ticket management.
    - Review `current-ticket.md` content and description
    - Check all tasks in checklist are completed (mark with `[x]`)
    - Get user approval before proceeding
-2. Complete: `./ticket.sh close`
+2. Complete: `./scripts/ticket.sh close`
