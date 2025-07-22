@@ -95,6 +95,9 @@ class Character:
     inventory: List[str] = field(default_factory=list)  # アイテムID（廃止予定）
     equipped_items: Dict[str, str] = field(default_factory=dict)  # スロット -> アイテムID（廃止予定）
     
+    # 習得魔法
+    known_spells: List[str] = field(default_factory=list)  # 習得済み魔法ID
+    
     # 旧フラグ（互換性のため残す）
     _inventory_initialized: bool = field(default=False, init=False)
     _equipment_initialized: bool = field(default=False, init=False)
@@ -258,6 +261,8 @@ class Character:
         # 魔法書マネージャーが実装されていない場合、直接作成
         if not hasattr(self, '_spellbook'):
             self._spellbook = SpellBook(self.character_id)
+            # SpellBookの習得魔法リストをCharacterの知識魔法と同期
+            self._sync_spellbook_with_known_spells()
         return self._spellbook
     
     @classmethod
@@ -336,6 +341,9 @@ class Character:
             base_stats=final_stats,
             derived_stats=derived_stats
         )
+        
+        # 初期魔法の習得
+        character._learn_initial_spells(class_config)
         
         logger.info(f"キャラクターを作成しました: {name} ({race} {character_class})")
         return character
@@ -615,6 +623,7 @@ class Character:
                 'status': self.status.value,
                 'inventory': self.inventory.copy(),
                 'equipped_items': self.equipped_items.copy(),
+                'known_spells': self.known_spells.copy(),
                 'created_at': self.created_at.isoformat()
             }
         except Exception as e:
@@ -635,6 +644,7 @@ class Character:
             status=CharacterStatus(data.get('status', 'good')),
             inventory=data.get('inventory', []),
             equipped_items=data.get('equipped_items', {}),
+            known_spells=data.get('known_spells', []),
             created_at=datetime.fromisoformat(data.get('created_at', datetime.now().isoformat()))
         )
         return character
@@ -655,6 +665,147 @@ class Character:
         """個人インベントリを取得（新インベントリシステム）"""
         return self.get_inventory()
     
+    # === 魔法管理メソッド ===
+    
+    def learn_spell(self, spell_id: str) -> bool:
+        """魔法を習得
+        
+        Args:
+            spell_id: 習得する魔法のID
+            
+        Returns:
+            bool: 習得に成功した場合True
+        """
+        # 既に習得している場合は失敗
+        if spell_id in self.known_spells:
+            logger.debug(f"{self.name}は既に{spell_id}を習得済み")
+            return False
+        
+        # 職業制限チェック
+        if not self._can_learn_spell(spell_id):
+            logger.debug(f"{self.name}は職業制限により{spell_id}を習得できません")
+            return False
+        
+        # 習得
+        self.known_spells.append(spell_id)
+        logger.info(f"{self.name}が{spell_id}を習得しました")
+        return True
+    
+    def forget_spell(self, spell_id: str) -> bool:
+        """魔法を忘却
+        
+        Args:
+            spell_id: 忘却する魔法のID
+            
+        Returns:
+            bool: 忘却に成功した場合True
+        """
+        if spell_id not in self.known_spells:
+            logger.debug(f"{self.name}は{spell_id}を習得していません")
+            return False
+        
+        self.known_spells.remove(spell_id)
+        logger.info(f"{self.name}が{spell_id}を忘却しました")
+        return True
+    
+    def has_spell(self, spell_id: str) -> bool:
+        """魔法を習得しているか確認
+        
+        Args:
+            spell_id: 確認する魔法のID
+            
+        Returns:
+            bool: 習得している場合True
+        """
+        return spell_id in self.known_spells
+    
+    def get_known_spells(self) -> List[str]:
+        """習得している魔法のリストを取得
+        
+        Returns:
+            List[str]: 習得魔法IDのリスト
+        """
+        return self.known_spells.copy()
+    
+    def _can_learn_spell(self, spell_id: str) -> bool:
+        """職業制限による魔法習得可能性をチェック
+        
+        Args:
+            spell_id: 確認する魔法のID
+            
+        Returns:
+            bool: 習得可能な場合True
+        """
+        try:
+            # 魔法設定を読み込み
+            spell_config = config_manager.load_config("spells")
+            
+            # 魔法データを検索
+            spell_data = None
+            for category in spell_config.values():
+                if isinstance(category, dict) and spell_id in category:
+                    spell_data = category[spell_id]
+                    break
+            
+            if not spell_data:
+                logger.warning(f"魔法データが見つかりません: {spell_id}")
+                return False
+            
+            spell_school = spell_data.get('school', 'both')
+            
+            # 職業別制限
+            if self.character_class == "mage":
+                return spell_school in ["mage", "both"]
+            elif self.character_class == "priest":
+                return spell_school in ["priest", "both"]
+            elif self.character_class in ["bishop", "lord"]:
+                return spell_school in ["mage", "priest", "both"]
+            else:
+                # その他の職業は汎用魔法のみ
+                return spell_school == "both"
+                
+        except Exception as e:
+            logger.error(f"魔法習得可能性チェックでエラー: {e}")
+            return False
+    
+    def _learn_initial_spells(self, class_config: Dict):
+        """職業の初期魔法を習得
+        
+        Args:
+            class_config: 職業設定
+        """
+        initial_spells = class_config.get('initial_spells', [])
+        learned_count = 0
+        
+        for spell_id in initial_spells:
+            # 制限チェックを行わず直接習得（初期魔法は特別）
+            if spell_id not in self.known_spells:
+                self.known_spells.append(spell_id)
+                learned_count += 1
+                logger.debug(f"{self.name}が初期魔法{spell_id}を習得")
+        
+        if learned_count > 0:
+            logger.info(f"{self.name}が{learned_count}個の初期魔法を習得しました")
+    
+    def _sync_spellbook_with_known_spells(self):
+        """SpellBookの習得魔法リストをCharacterのknown_spellsと同期"""
+        if hasattr(self, '_spellbook'):
+            # CharacterからSpellBookへ同期
+            for spell_id in self.known_spells:
+                if spell_id not in self._spellbook.learned_spells:
+                    self._spellbook.learn_spell(spell_id)
+            
+            # SpellBookからCharacterへ逆同期（整合性チェック）
+            spells_to_remove = []
+            for spell_id in self._spellbook.learned_spells:
+                if spell_id not in self.known_spells:
+                    spells_to_remove.append(spell_id)
+            
+            for spell_id in spells_to_remove:
+                self._spellbook.forget_spell(spell_id)
+                
+            logger.debug(f"{self.name}の魔法書とknown_spellsを同期完了")
+    
     def cleanup(self):
         """リソースのクリーンアップ"""
         try:
@@ -665,6 +816,10 @@ class Character:
             # 装備品をクリア
             if hasattr(self, 'equipped_items'):
                 self.equipped_items.clear()
+                
+            # 習得魔法をクリア
+            if hasattr(self, 'known_spells'):
+                self.known_spells.clear()
             
             # モック装備品をクリア
             if hasattr(self, '_mock_equipment'):
