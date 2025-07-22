@@ -122,7 +122,7 @@ class DungeonInputHandler:
             pygame.K_RIGHT: DungeonInputAction.TURN_RIGHT,
             pygame.K_q: DungeonInputAction.STRAFE_LEFT,
             pygame.K_e: DungeonInputAction.STRAFE_RIGHT,
-            pygame.K_ESCAPE: DungeonInputAction.SHOW_MENU,
+            pygame.K_p: DungeonInputAction.SHOW_MENU,
             pygame.K_SPACE: DungeonInputAction.INTERACT,
             pygame.K_LSHIFT: DungeonInputAction.RUN,
             pygame.K_LCTRL: DungeonInputAction.SNEAK

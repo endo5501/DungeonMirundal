@@ -247,7 +247,7 @@ class DungeonMenuWindow(Window):
         help_texts = [
             "↑↓: 選択",
             "Enter/Space: 決定",
-            "ESC: 閉じる"
+            "ESC: 閉じる, P: メニュー表示"
         ]
         
         for i, help_text in enumerate(help_texts):
@@ -291,9 +291,23 @@ class DungeonMenuWindow(Window):
             
             if action == "close":
                 self.close_menu()
+            elif action == "return_overworld":
+                # 地上に戻る処理
+                self.close_menu()
+                if "return_overworld" in self.callbacks:
+                    self.callbacks["return_overworld"]()
+                else:
+                    logger.info("地上に戻る機能は未実装")
             elif action in self.callbacks:
                 self.close_menu()
                 self.callbacks[action]()
+            elif action == "camp":
+                # キャンプ機能 - 基本的な休憩と状態確認
+                self._show_camp_menu()
+            elif action in ["inventory", "equipment", "magic", "status", "status_effects"]:
+                # 基本サブメニュー - 未実装の場合は通知
+                logger.info(f"{action}メニューは現在未実装です（将来的に実装予定）")
+                # メニューは閉じずに表示継続
             else:
                 logger.warning(f"未実装のメニューアクション: {action}")
                 # 基本的なアクションは閉じるだけ
@@ -371,7 +385,7 @@ class DungeonMenuWindow(Window):
         help_texts = [
             "↑↓: 選択",
             "Enter/Space: 決定",
-            "ESC: 閉じる"
+            "ESC: 閉じる, P: メニュー表示"
         ]
         
         for i, help_text in enumerate(help_texts):
@@ -465,6 +479,34 @@ class DungeonMenuWindow(Window):
         except Exception as e:
             logger.warning(f"位置情報取得エラー: {e}")
             return "位置情報エラー"
+
+    def _show_camp_menu(self) -> None:
+        """キャンプメニューを表示"""
+        if not self.current_party:
+            logger.warning("パーティが設定されていないため、キャンプできません")
+            return
+        
+        try:
+            # 基本的な休憩処理
+            logger.info("ダンジョン内でキャンプを開始...")
+            
+            # パーティメンバーの状態確認
+            party_status = []
+            for character in self.current_party.get_all_characters():
+                hp_ratio = character.current_hp / max(character.max_hp, 1)
+                mp_ratio = character.current_mp / max(character.max_mp, 1)
+                status = "良好" if hp_ratio > 0.7 and mp_ratio > 0.7 else "要注意"
+                party_status.append(f"{character.name}: {status} (HP:{character.current_hp}/{character.max_hp}, MP:{character.current_mp}/{character.max_mp})")
+            
+            logger.info("キャンプ中のパーティ状態:")
+            for status in party_status:
+                logger.info(f"  {status}")
+            
+            # 簡易的な休憩効果（現在は状態確認のみ）
+            logger.info("キャンプ完了。（実際の回復処理は未実装）")
+            
+        except Exception as e:
+            logger.error(f"キャンプ処理エラー: {e}")
 
     def get_party_status_summary(self) -> str:
         """パーティステータス概要を取得"""
