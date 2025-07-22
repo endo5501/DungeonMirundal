@@ -1,7 +1,7 @@
 {
     "defaults": {
         "font": {
-            "name": "jp_font",
+            "name": "fira_code",
             "size": "14"
         },
         "colours": {
