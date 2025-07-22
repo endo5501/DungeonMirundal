@@ -1650,8 +1650,22 @@ def _is_facility_ui_element(element):
 # サーバー起動関数
 def _run_server():
     """サーバーを起動"""
-    logger.debug(f"Starting debug server on {DEFAULT_HOST}:{DEFAULT_PORT}")
-    uvicorn.run(app, host=DEFAULT_HOST, port=DEFAULT_PORT, log_level="warning")
+    import os
+    # テスト環境ではサーバーを起動しない
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        logger.debug("Test environment detected, skipping debug server startup")
+        return
+        
+    try:
+        logger.debug(f"Debug server starting on {DEFAULT_HOST}:{DEFAULT_PORT}")
+        # テスト環境での警告を抑制
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            uvicorn.run(app, host=DEFAULT_HOST, port=DEFAULT_PORT, log_level="error")
+    except Exception as e:
+        logger.error(f"Debug server failed to start on port {DEFAULT_PORT}: {e}")
+        logger.error("Please ensure no other process is using port 8765")
 
 def start(screen: pygame.Surface, game_manager=None, port: int = DEFAULT_PORT):
     """

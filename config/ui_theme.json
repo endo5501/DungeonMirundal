@@ -1,7 +1,7 @@
 {
     "defaults": {
         "font": {
-            "name": "default",
+            "name": "jp_font",
             "size": "14"
         },
         "colours": {

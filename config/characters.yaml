@@ -98,6 +98,7 @@ classes:
       intelligence: 11
     weapon_types: ["staff", "dagger"]
     armor_types: ["light"]
+    initial_spells: ["fire"]  # 魔術師の初期魔法
     spell_schools: ["fire", "ice", "lightning"]
     description_key: "class.mage_desc"
     
@@ -115,6 +116,7 @@ classes:
       faith: 11
     weapon_types: ["mace", "staff"]
     armor_types: ["light", "medium"]
+    initial_spells: ["heal"]  # 僧侶の初期魔法
     spell_schools: ["healing", "blessing", "protection"]
     description_key: "class.priest_desc"
     
