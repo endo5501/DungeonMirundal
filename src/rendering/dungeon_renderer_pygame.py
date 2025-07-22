@@ -120,9 +120,15 @@ class DungeonRendererPygame:
             
         self.current_party = party
         
-        # ダンジョンUIマネージャーにもパーティを設定
+        # ダンジョンUIマネージャーにもパーティを設定（確実に実行）
         if self.dungeon_ui_manager:
-            self.dungeon_ui_manager.set_party(party)
+            try:
+                self.dungeon_ui_manager.set_party(party)
+                logger.debug("DungeonRendererからDungeonUIManagerにパーティを設定しました")
+            except Exception as e:
+                logger.error(f"DungeonUIManagerへのパーティ設定でエラー: {e}")
+        else:
+            logger.debug("DungeonUIManagerが設定されていないため、パーティ設定をスキップします")
         
         if party is not None:
             logger.info(f"パーティ{party.name}を設定しました")
@@ -137,9 +143,13 @@ class DungeonRendererPygame:
             
         self.dungeon_ui_manager = dungeon_ui_manager
         
-        # 現在のパーティが設定されている場合は設定
+        # 現在のパーティが設定されている場合は確実に設定
         if self.current_party and dungeon_ui_manager:
-            dungeon_ui_manager.set_party(self.current_party)
+            try:
+                dungeon_ui_manager.set_party(self.current_party)
+                logger.debug(f"ダンジョンUIマネージャー設定時にパーティ{self.current_party.name}を再設定しました")
+            except Exception as e:
+                logger.error(f"ダンジョンUIマネージャー設定時のパーティ設定でエラー: {e}")
         
         logger.info("ダンジョンUIマネージャーを設定しました")
     

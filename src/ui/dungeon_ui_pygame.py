@@ -133,13 +133,33 @@ class DungeonUIManagerPygame:
         """パーティを設定"""
         # 循環参照防止：既に同じパーティが設定されている場合はスキップ
         if self.current_party is party:
+            logger.debug("同じパーティが既に設定されているためスキップします")
             return
             
         self.current_party = party
         
-        # キャラクターステータスバーにパーティを設定
+        # キャラクターステータスバーにパーティを設定（確実に実行）
         if self.character_status_bar:
-            self.character_status_bar.set_party(party)
+            try:
+                self.character_status_bar.set_party(party)
+                logger.debug("CharacterStatusBarにパーティを設定しました")
+                
+                # パーティが設定された後、強制的に表示を更新
+                if hasattr(self.character_status_bar, 'update_character_display'):
+                    self.character_status_bar.update_character_display()
+                    logger.debug("CharacterStatusBarの表示を強制更新しました")
+            except Exception as e:
+                logger.error(f"CharacterStatusBarへのパーティ設定でエラー: {e}")
+        else:
+            logger.warning("CharacterStatusBarが初期化されていません")
+            # ステータスバーが未初期化の場合、再初期化を試行
+            try:
+                self._initialize_character_status_bar()
+                if self.character_status_bar:
+                    self.character_status_bar.set_party(party)
+                    logger.info("CharacterStatusBarを再初期化してパーティを設定しました")
+            except Exception as e:
+                logger.error(f"CharacterStatusBar再初期化でエラー: {e}")
         
         # BattleUIWindowにもパーティを設定
         if self.battle_ui_window:
@@ -178,18 +198,32 @@ class DungeonUIManagerPygame:
     def _initialize_character_status_bar(self):
         """キャラクターステータスバーを初期化"""
         try:
+            # 既存のステータスバーをクリーンアップ
+            if self.character_status_bar:
+                logger.debug("既存のcharacter_status_barをクリーンアップします")
+                self.character_status_bar = None
+            
             # キャラクターステータスバーを作成
             self.character_status_bar = create_character_status_bar(self.screen_width, self.screen_height)
             
-            # 安定した描画のため強制的に表示状態にする
             if self.character_status_bar:
+                # 安定した描画のため強制的に表示状態にする
                 self.character_status_bar.show()
-            
-            # 現在のパーティが設定されている場合は設定
-            if self.current_party:
-                self.character_status_bar.set_party(self.current_party)
-            
-            logger.info(config_manager.get_text("dungeon_ui.character_status_bar_init"))
+                logger.debug("CharacterStatusBarを表示状態に設定しました")
+                
+                # 現在のパーティが設定されている場合は設定
+                if self.current_party:
+                    self.character_status_bar.set_party(self.current_party)
+                    logger.debug(f"CharacterStatusBar初期化時にパーティ{self.current_party.name}を設定しました")
+                    
+                    # パーティ設定後に表示を強制更新
+                    if hasattr(self.character_status_bar, 'update_character_display'):
+                        self.character_status_bar.update_character_display()
+                        logger.debug("CharacterStatusBar初期化時に表示を強制更新しました")
+                
+                logger.info(config_manager.get_text("dungeon_ui.character_status_bar_init"))
+            else:
+                logger.error("CharacterStatusBarの作成に失敗しました")
             
         except Exception as e:
             logger.error(config_manager.get_text("dungeon_ui.character_status_bar_error").format(error=e))
@@ -481,10 +515,31 @@ class DungeonUIManagerPygame:
         # キャラクターステータスバーを最後に描画（最前面層）
         if self.character_status_bar:
             try:
+                # パーティが設定されているかの最終チェック
+                if self.current_party and self.character_status_bar.party != self.current_party:
+                    logger.debug("描画前の最終チェックでパーティが異なることを検出、再設定します")
+                    self.character_status_bar.set_party(self.current_party)
+                    if hasattr(self.character_status_bar, 'update_character_display'):
+                        self.character_status_bar.update_character_display()
+                
                 # ステータスバー自体のフォントを使用（安定性向上）
                 self.character_status_bar.render(self.screen, None)
+                
             except Exception as e:
                 logger.warning(f"ダンジョン用キャラクターステータスバー描画エラー: {e}")
+                # エラーが発生した場合、ステータスバーの再初期化を試行
+                try:
+                    logger.info("ステータスバー描画エラー後に再初期化を実行します")
+                    self._initialize_character_status_bar()
+                except Exception as reinit_error:
+                    logger.error(f"ステータスバー再初期化エラー: {reinit_error}")
+        else:
+            logger.debug("character_status_barが存在しません - 初期化を試行")
+            # character_status_barが存在しない場合、初期化を試行
+            try:
+                self._initialize_character_status_bar()
+            except Exception as e:
+                logger.error(f"character_status_bar初期化エラー: {e}")
     
     def update(self):
         """UI更新"""
