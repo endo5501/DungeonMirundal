@@ -383,6 +383,9 @@ class UIManager:
                 self.default_font = pygame.font.Font(None, 24)
             if not self.title_font:
                 self.title_font = pygame.font.Font(None, 32)
+            
+            # pygame_guiフォント統合を実行
+            font_manager.initialize_pygame_gui_fonts(self.pygame_gui_manager)
                 
         except Exception as e:
             logger.warning(f"フォント初期化に失敗: {e}")

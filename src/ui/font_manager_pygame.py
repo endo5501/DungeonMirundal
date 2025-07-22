@@ -247,7 +247,46 @@ class FontManager:
             ui_manager.add_font_paths("jp_font", font_path)
             logger.debug(f"FontManager: pygame_guiフォント登録成功: jp_font -> {font_path}")
             
-            # 必要なサイズでプリロード
+            # システムフォント（fira_code）も登録してdefaultの代替とする
+            try:
+                # pygameのデフォルトフォントパスを確認
+                import pygame
+                default_font_path = pygame.font.get_default_font()
+                
+                # デフォルトフォントが存在しない場合は日本語フォントを代替使用
+                if not os.path.exists(default_font_path):
+                    logger.debug(f"FontManager: デフォルトフォント見つからず: {default_font_path}, 日本語フォントで代替")
+                    default_font_path = font_path  # 日本語フォントを使用
+                    logger.debug(f"FontManager: fira_code代替パス: {default_font_path}")
+                
+                ui_manager.add_font_paths("fira_code", default_font_path)
+                logger.debug(f"FontManager: システムフォント登録成功: fira_code -> {default_font_path}")
+                
+                # 登録が成功した場合、プリロードも実行
+                ui_manager.preload_fonts([
+                    {"name": "fira_code", "style": "regular", "point_size": 14},
+                    {"name": "fira_code", "style": "regular", "point_size": 16},
+                    {"name": "fira_code", "style": "regular", "point_size": 18},
+                ])
+                logger.debug("FontManager: fira_codeプリロード成功")
+                
+            except Exception as e:
+                logger.debug(f"FontManager: システムフォント登録失敗: {e}")
+                # 最終フォールバック：日本語フォントをfira_codeとしても登録
+                try:
+                    ui_manager.add_font_paths("fira_code", font_path)
+                    logger.debug(f"FontManager: 最終フォールバック成功: fira_code -> {font_path}")
+                    # プリロードも実行
+                    ui_manager.preload_fonts([
+                        {"name": "fira_code", "style": "regular", "point_size": 14},
+                        {"name": "fira_code", "style": "regular", "point_size": 16},
+                        {"name": "fira_code", "style": "regular", "point_size": 18},
+                    ])
+                    logger.debug("FontManager: 最終フォールバックプリロード成功")
+                except Exception as fallback_e:
+                    logger.debug(f"FontManager: 最終フォールバック失敗: {fallback_e}")
+            
+            # 必要なサイズでプリロード（日本語フォント）
             ui_manager.preload_fonts([
                 {"name": "jp_font", "style": "regular", "point_size": 14},
                 {"name": "jp_font", "style": "regular", "point_size": 16},
@@ -255,6 +294,7 @@ class FontManager:
                 {"name": "jp_font", "style": "regular", "point_size": 20},
                 {"name": "jp_font", "style": "regular", "point_size": 24}
             ])
+            
             logger.debug("FontManager: pygame_guiフォントプリロード完了")
             
             # テーマ設定で階層を考慮した設定
