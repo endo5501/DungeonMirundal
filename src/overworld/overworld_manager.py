@@ -1697,6 +1697,39 @@ class OverworldManager:
             logger.critical(f"緊急地上部リセットでエラー: {e}")
             # 最終的にアプリケーションの終了も検討する必要がある
     
+    def restore_ui_state(self):
+        """UI状態の復旧処理（ダンジョン遷移失敗時用）"""
+        logger.info("地上部UI状態の復旧を実行します")
+        
+        try:
+            # 現在のパーティを保持
+            current_party = self.current_party
+            
+            # 地上部をアクティブ状態にする
+            if not self.is_active:
+                self.is_active = True
+                logger.debug("地上部をアクティブ状態に設定しました")
+            
+            # メインメニューの再表示
+            try:
+                self._show_main_menu_window()
+                logger.info("メインメニューを再表示しました")
+            except Exception as menu_error:
+                logger.warning(f"メインメニュー再表示でエラー、緊急リセット実行: {menu_error}")
+                self._emergency_overworld_reset()
+                return
+            
+            # パーティ情報の再設定（必要に応じて）
+            if current_party and self.current_party is not current_party:
+                self.current_party = current_party
+                logger.debug("パーティ情報を再設定しました")
+            
+            logger.info("地上部UI状態の復旧が完了しました")
+            
+        except Exception as e:
+            logger.error(f"UI状態復旧でエラー、緊急リセットにフォールバック: {e}")
+            self._emergency_overworld_reset()
+    
     # 新施設システムでは施設退場時の処理はFacilityRegistryが管理
     # レガシーのon_facility_exit()コールバックは削除
     
