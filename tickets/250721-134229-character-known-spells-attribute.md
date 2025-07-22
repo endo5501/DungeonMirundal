@@ -4,7 +4,7 @@ tags: ["feature", "character", "magic", "core"]
 description: "Characterクラスにknown_spells属性を追加し、習得魔法管理機能を実装"
 created_at: "2025-07-21T13:42:29Z"
 started_at: 2025-07-22T13:38:42Z # Do not modify manually
-closed_at: null   # Do not modify manually
+closed_at: 2025-07-22T15:30:13Z # Do not modify manually
 ---
 
 # Ticket Overview
