@@ -225,18 +225,25 @@ class DungeonScene(GameScene):
         return False
     
     def _enter_dungeon(self, dungeon_id: str) -> bool:
-        """ダンジョン入場処理"""
+        """ダンジョン入場処理（エラーハンドリング強化版）"""
         game_manager = self.scene_manager.game_manager
         
         if not game_manager.current_party:
             logger.error("パーティが存在しません")
+            self._handle_dungeon_entry_failure("パーティが存在しません")
             return False
         
         try:
             # ダンジョン作成・入場
             if dungeon_id not in self.dungeon_manager.active_dungeons:
-                dungeon_seed = game_manager._generate_dungeon_seed(dungeon_id)
-                self.dungeon_manager.create_dungeon(dungeon_id, dungeon_seed)
+                try:
+                    dungeon_seed = game_manager._generate_dungeon_seed(dungeon_id)
+                    self.dungeon_manager.create_dungeon(dungeon_id, dungeon_seed)
+                    logger.info(f"ダンジョンを新規作成しました: {dungeon_id}")
+                except Exception as e:
+                    logger.error(f"ダンジョン作成エラー: {e}")
+                    self._handle_dungeon_entry_failure(f"ダンジョン作成失敗: {e}")
+                    return False
             
             success = self.dungeon_manager.enter_dungeon(dungeon_id, game_manager.current_party)
             
@@ -271,12 +278,51 @@ class DungeonScene(GameScene):
                         logger.warning("3D描画自動復旧失敗")
                 
                 return True
-            
-            return False
+            else:
+                # ダンジョン入場が失敗した場合
+                logger.error(f"ダンジョン入場が失敗しました: {dungeon_id}")
+                self._handle_dungeon_entry_failure("ダンジョン入場処理失敗")
+                return False
             
         except Exception as e:
             logger.error(f"ダンジョン入場エラー: {e}")
+            self._handle_dungeon_entry_failure(f"予期しないエラー: {e}")
             return False
+    
+    def _handle_dungeon_entry_failure(self, error_message: str):
+        """ダンジョン入場失敗時の復旧処理"""
+        logger.warning(f"ダンジョン入場失敗 - 復旧処理を実行: {error_message}")
+        
+        try:
+            # 地上部シーンに復帰させる
+            game_manager = self.scene_manager.game_manager
+            
+            # 地上部UIの復旧
+            if hasattr(game_manager, 'overworld_manager') and game_manager.overworld_manager:
+                logger.info("地上部UIの復旧を試行します")
+                # 地上部に強制復帰
+                overworld_manager = game_manager.overworld_manager
+                if hasattr(overworld_manager, 'restore_ui_state'):
+                    overworld_manager.restore_ui_state()
+                else:
+                    # フォールバック: 地上部に再入場
+                    if game_manager.current_party:
+                        overworld_manager.enter_overworld(game_manager.current_party, from_dungeon=False)
+                
+                logger.info("地上部UI復旧処理が完了しました")
+            
+            # ゲーム状態を地上部に戻す
+            if hasattr(game_manager, 'set_location'):
+                game_manager.set_location("overworld")
+            
+            # シーン遷移をoverworld に戻す
+            self.scene_manager.transition_to(SceneType.OVERWORLD)
+            
+            logger.info("ダンジョン入場失敗からの復旧が完了しました")
+            
+        except Exception as recovery_error:
+            logger.error(f"復旧処理でもエラーが発生: {recovery_error}")
+            logger.critical("ゲーム状態が不整合になる可能性があります")
 
 
 class CombatScene(GameScene):
