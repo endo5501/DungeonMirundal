@@ -351,13 +351,18 @@ class UIManager:
         self.modal_stack: List[str] = []  # モーダル要素のスタック
         
         # pygame-gui マネージャー（テーマファイル付き）
+        import warnings
         try:
             theme_path = "config/ui_theme.json"
-            self.pygame_gui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()), theme_path)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                self.pygame_gui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()), theme_path)
             logger.info(f"UIテーマを読み込みました: {theme_path}")
         except Exception as e:
             logger.warning(f"UIテーマの読み込みに失敗、デフォルトテーマを使用: {e}")
-            self.pygame_gui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()))
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                self.pygame_gui_manager = pygame_gui.UIManager((screen.get_width(), screen.get_height()))
         
         # フォント初期化
         self.default_font = None
@@ -384,8 +389,10 @@ class UIManager:
             if not self.title_font:
                 self.title_font = pygame.font.Font(None, 32)
             
-            # pygame_guiフォント統合を実行
-            font_manager.initialize_pygame_gui_fonts(self.pygame_gui_manager)
+            # pygame_guiフォント統合を実行（警告を抑制）
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                font_manager.initialize_pygame_gui_fonts(self.pygame_gui_manager)
                 
         except Exception as e:
             logger.warning(f"フォント初期化に失敗: {e}")

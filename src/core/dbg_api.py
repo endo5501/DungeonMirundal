@@ -1650,6 +1650,12 @@ def _is_facility_ui_element(element):
 # サーバー起動関数
 def _run_server():
     """サーバーを起動"""
+    import os
+    # テスト環境ではサーバーを起動しない
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        logger.debug("Test environment detected, skipping debug server startup")
+        return
+        
     try:
         logger.debug(f"Debug server starting on {DEFAULT_HOST}:{DEFAULT_PORT}")
         # テスト環境での警告を抑制
