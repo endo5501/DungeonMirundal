@@ -3,7 +3,7 @@ priority: 1
 tags: ["bug", "dungeon", "transition", "blackscreen", "critical", "regression"]
 description: "ダンジョン入り口からダンジョン遷移時に画面が真っ暗になりUIが消失する問題の修正（回帰バグ）"
 created_at: "2025-07-23T15:17:07Z"
-started_at: null  # Do not modify manually
+started_at: 2025-07-23T15:22:44Z # Do not modify manually
 closed_at: null   # Do not modify manually
 ---
 

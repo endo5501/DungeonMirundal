@@ -196,7 +196,17 @@ class SceneTransitionManager(ManagedComponent):
                 # ダンジョンがactive_dungeonsに読み込まれていない場合は読み込み
                 if hasattr(self.dungeon_manager, 'load_dungeon') and dungeon_seed not in getattr(self.dungeon_manager, 'active_dungeons', {}):
                     logger.info(f"ダンジョン {dungeon_seed} を active_dungeons に読み込み中...")
-                    self.dungeon_manager.load_dungeon(dungeon_seed)
+                    loaded_dungeon = self.dungeon_manager.load_dungeon(dungeon_seed)
+                    
+                    # ロードに失敗した場合は新規作成（フォールバック処理）
+                    if loaded_dungeon is None:
+                        logger.info(f"ダンジョンファイルが見つからないため新規作成します: {dungeon_seed}")
+                        try:
+                            self.dungeon_manager.create_dungeon(dungeon_seed, dungeon_seed)
+                            logger.info(f"ダンジョン新規作成成功: {dungeon_seed}")
+                        except Exception as create_error:
+                            logger.error(f"ダンジョン新規作成に失敗: {create_error}")
+                            return False
                 
                 if self.dungeon_manager.enter_dungeon(dungeon_seed, self.current_party):
                     # 地上部マネージャーの終了処理
@@ -231,6 +241,8 @@ class SceneTransitionManager(ManagedComponent):
                     if self.game_config:
                         error_msg = self.game_config.get_text("game_manager.dungeon_transition_failed")
                         logger.error(error_msg)
+                    # 遷移失敗時の復旧処理
+                    self._handle_dungeon_transition_failure("ダンジョン入場処理失敗")
                     return False
             else:
                 logger.error("DungeonManager not available or missing enter_dungeon method")
@@ -242,6 +254,8 @@ class SceneTransitionManager(ManagedComponent):
                 logger.error(error_msg.format(error=e))
             else:
                 logger.error(f"Dungeon transition error: {e}")
+            # 例外発生時の復旧処理
+            self._handle_dungeon_transition_failure(f"予期しないエラー: {e}")
             return False
     
     def transition_to_overworld(self) -> bool:
@@ -468,3 +482,33 @@ class SceneTransitionManager(ManagedComponent):
         """現在のタイムスタンプ取得"""
         import datetime
         return datetime.datetime.now().isoformat()
+    
+    def _handle_dungeon_transition_failure(self, error_message: str) -> None:
+        """ダンジョン遷移失敗時の復旧処理"""
+        logger.warning(f"ダンジョン遷移失敗 - 復旧処理を実行: {error_message}")
+        
+        try:
+            # 地上部UIの復旧
+            if hasattr(self, 'overworld_manager') and self.overworld_manager:
+                logger.info("地上部UIの復旧を試行します")
+                # 地上部に強制復帰
+                if hasattr(self.overworld_manager, 'restore_ui_state'):
+                    self.overworld_manager.restore_ui_state()
+                elif hasattr(self.overworld_manager, 'enter_overworld') and self.current_party:
+                    # フォールバック: 地上部に再入場
+                    self.overworld_manager.enter_overworld(self.current_party, from_dungeon=False)
+                
+                logger.info("地上部UI復旧処理が完了しました")
+            
+            # ゲーム状態を地上部に戻す
+            self.set_current_location(GameLocation.OVERWORLD)
+            self.set_game_state("overworld_main")
+            
+            # SceneManagerで地上部シーンに切り替え
+            self._transition_scene_manager_to_overworld()
+            
+            logger.info("ダンジョン遷移失敗からの復旧が完了しました")
+            
+        except Exception as recovery_error:
+            logger.error(f"復旧処理でもエラーが発生: {recovery_error}")
+            logger.critical("ゲーム状態が不整合になる可能性があります")
