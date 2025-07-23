@@ -178,6 +178,13 @@ class DungeonManager:
         self.active_dungeons[dungeon_id] = dungeon_state
         logger.info(f"ダンジョン{dungeon_id}を作成しました")
         
+        # 作成直後にファイル保存（データ永続化のため）
+        try:
+            self.save_dungeon(dungeon_id)
+            logger.info(f"ダンジョン{dungeon_id}のファイル保存が完了しました")
+        except Exception as save_error:
+            logger.warning(f"ダンジョン{dungeon_id}のファイル保存に失敗しましたが、メモリ上では利用可能です: {save_error}")
+        
         return dungeon_state
     
     def enter_dungeon(self, dungeon_id: str, party: Party) -> bool:
@@ -440,7 +447,13 @@ class DungeonManager:
         
         if not os.path.exists(save_path):
             logger.warning(f"ダンジョンファイルが見つかりません: {save_path}")
-            return None
+            # 自動復旧: 新規作成を試行
+            logger.info(f"ダンジョン{dungeon_id}の自動復旧を試行します")
+            try:
+                return self.create_dungeon(dungeon_id, dungeon_id)
+            except Exception as recovery_error:
+                logger.error(f"ダンジョン自動復旧に失敗: {recovery_error}")
+                return None
         
         try:
             with open(save_path, 'r', encoding='utf-8') as f:

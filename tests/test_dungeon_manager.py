@@ -326,10 +326,17 @@ class TestDungeonManager:
         assert save_success == False
     
     def test_load_nonexistent_dungeon(self):
-        """存在しないダンジョンファイルの読み込みテスト"""
+        """存在しないダンジョンファイルの読み込みテスト（自動復旧機能）"""
         loaded_state = self.manager.load_dungeon("nonexistent")
         
-        assert loaded_state is None
+        # 自動復旧機能により、ダンジョンが新規作成される
+        assert loaded_state is not None
+        assert loaded_state.dungeon_id == "nonexistent"
+        assert loaded_state.seed == "nonexistent"
+        assert loaded_state.status == DungeonStatus.ACTIVE
+        
+        # active_dungeonsにも登録される
+        assert "nonexistent" in self.manager.active_dungeons
 
 
 class TestDungeonManagerMovement:
