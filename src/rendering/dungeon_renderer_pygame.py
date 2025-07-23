@@ -464,6 +464,10 @@ class DungeonRendererPygame:
         except Exception as e:
             logger.error(f"ダンジョンメニュー表示エラー: {e}")
     
+    def _show_menu(self) -> None:
+        """ダンジョン内メニューを表示（InputHandlerCoordinator用エイリアス）"""
+        self._show_dungeon_menu()
+    
     def handle_menu_event(self, event: pygame.event.Event) -> bool:
         """メニューのイベント処理"""
         if dungeon_menu_manager.is_menu_open():

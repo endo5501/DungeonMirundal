@@ -127,7 +127,7 @@ class InputManager:
             
             # システム
             "f1": InputAction.DEBUG_TOGGLE.value,
-            "p": InputAction.PAUSE.value,
+            "p": InputAction.MENU.value,
             "h": InputAction.HELP.value,
         }
         
@@ -203,19 +203,19 @@ class InputManager:
         # Pygameキーコードを文字列に変換
         key_name = pygame.key.name(key)
         
-        # デバッグ: WASDキーのみログ出力
-        if key_name in ['w', 'a', 's', 'd']:
-            logger.info(f"[DEBUG] InputManager: key={key_name}, pressed={pressed}, enabled={self.keyboard_enabled}")
+        # デバッグ: WASDキーとPキーのみログ出力
+        if key_name in ['w', 'a', 's', 'd', 'p']:
+            logger.debug(f"InputManager: key={key_name}, pressed={pressed}, enabled={self.keyboard_enabled}")
         
         # バインディングをチェック
         if key_name in self.keyboard_bindings:
             action = self.keyboard_bindings[key_name]
-            if key_name in ['w', 'a', 's', 'd']:
-                logger.info(f"[DEBUG] InputManager: バインド検出 {key_name} -> {action}")
+            if key_name in ['w', 'a', 's', 'd', 'p']:
+                logger.debug(f"InputManager: バインド検出 {key_name} -> {action}")
             self._handle_action(action, pressed, InputType.KEYBOARD)
         else:
-            if key_name in ['w', 'a', 's', 'd']:
-                logger.info(f"[DEBUG] InputManager: バインドなし {key_name}, available={list(self.keyboard_bindings.keys())[:10]}")
+            if key_name in ['w', 'a', 's', 'd', 'p']:
+                logger.debug(f"InputManager: バインドなし {key_name}, available={list(self.keyboard_bindings.keys())[:10]}")
     
     def _handle_joystick_button(self, button: int, pressed: bool):
         """ジョイスティックボタンの処理"""
@@ -272,12 +272,20 @@ class InputManager:
     
     def _handle_action(self, action: str, pressed: bool, input_type: InputType):
         """アクション処理"""
+        # MENUアクション専用ログ
+        if action == "menu":
+            logger.debug(f"InputManager._handle_action: MENU action={action}, pressed={pressed}, callback_exists={action in self.action_callbacks}")
+            logger.debug(f"InputManager._handle_action: 登録済みアクション: {list(self.action_callbacks.keys())}")
+        
         if action in self.action_callbacks:
             callback = self.action_callbacks[action]
             try:
                 callback(action, pressed, input_type)
             except Exception as e:
                 logger.error(f"アクションコールバックエラー {action}: {e}")
+        else:
+            if action == "menu":
+                logger.error(f"InputManager._handle_action: MENU アクションのコールバックが見つかりません!")
     
     def update(self):
         """フレーム毎の更新処理"""

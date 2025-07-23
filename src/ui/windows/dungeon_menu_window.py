@@ -280,6 +280,17 @@ class DungeonMenuWindow(Window):
                 return True
             elif event.key == pygame.K_ESCAPE:
                 self.close_menu()
+                # ウィンドウをWindowManagerから削除してダンジョンに戻る
+                if hasattr(self, 'window_manager') and self.window_manager:
+                    self.window_manager.hide_window(self, remove_from_stack=True)
+                
+                # DungeonMenuManagerにも通知してcurrent_windowをクリア
+                try:
+                    from src.ui.windows.dungeon_menu_manager import dungeon_menu_manager
+                    dungeon_menu_manager.close_dungeon_menu()
+                except Exception as e:
+                    logger.warning(f"DungeonMenuManagerクローズ通知エラー: {e}")
+                
                 return True
         
         return False

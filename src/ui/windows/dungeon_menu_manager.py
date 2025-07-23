@@ -41,12 +41,21 @@ class DungeonMenuManager:
             # 新しいウィンドウを作成
             self.current_window = DungeonMenuWindow("dungeon_menu_main")
             
+            # WindowManagerへの参照を設定
+            self.current_window.window_manager = self.window_manager
+            
+            # WindowManagerのレジストリに手動で登録
+            self.window_manager.window_registry[self.current_window.window_id] = self.current_window
+            
             # 既存のコールバックを設定
             for action, callback in self.callbacks.items():
                 self.current_window.set_callback(action, callback)
             
-            # ウィンドウを表示
-            self.current_window.show()
+            # WindowManagerに追加してスタック管理し、同時に表示
+            self.window_manager.show_window(self.current_window, push_to_stack=True)
+            
+            # メインメニューを表示
+            self.current_window.show_main_menu()
             
             logger.info("ダンジョンメニューウィンドウを作成")
             return self.current_window
@@ -142,6 +151,10 @@ class DungeonMenuManager:
         """ダンジョンメニューを閉じる"""
         if self.current_window:
             try:
+                # WindowManagerからウィンドウを削除
+                if hasattr(self.current_window, 'window_manager') and self.current_window.window_manager:
+                    self.current_window.window_manager.hide_window(self.current_window, remove_from_stack=True)
+                
                 self.current_window.hide()
                 self.current_window.destroy()
                 self.current_window = None
