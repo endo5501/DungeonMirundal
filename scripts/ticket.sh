@@ -2243,6 +2243,41 @@ EOF
         return 1
     fi
     
+    # Check for uncompleted checkboxes unless --force is used
+    if [[ "$force" == "false" ]]; then
+        # Get ticket body (content after frontmatter)
+        local ticket_body=$(extract_markdown_body "$ticket_file")
+        
+        # Count unchecked checkboxes
+        local unchecked_count=$(echo "$ticket_body" | grep -c '^\s*- \[ \]' || true)
+        
+        if [[ $unchecked_count -gt 0 ]]; then
+            cat >&2 << EOF
+Error: Task completion check required
+There are $unchecked_count unchecked task(s) in the ticket.
+Please review all tasks and confirm their completion status:
+
+EOF
+            # Show first 10 unchecked tasks
+            echo "$ticket_body" | grep '^\s*- \[ \]' | head -10 >&2
+            
+            if [[ $unchecked_count -gt 10 ]]; then
+                echo "... and $((unchecked_count - 10)) more unchecked tasks" >&2
+            fi
+            
+            cat >&2 << EOF
+
+Please verify task completion:
+1. Review each task above to confirm it is actually completed
+2. Edit current-ticket.md and change [ ] to [x] for completed tasks
+3. If tasks are truly incomplete, complete them before closing
+4. Or use --force flag to close without task verification:
+   $SCRIPT_COMMAND close --force
+EOF
+            return 1
+        fi
+    fi
+    
     # Store original ticket state for rollback
     local original_ticket_content=$(cat "$ticket_file")
     local original_branch=$(get_current_branch)
