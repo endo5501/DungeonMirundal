@@ -40,6 +40,7 @@ class SceneTransitionManager(ManagedComponent):
         self.dungeon_manager = None
         self.dungeon_renderer = None
         self.encounter_manager = None
+        self.game_manager_ref = None  # GameManagerへの参照
         
         # 遷移履歴とコールバック
         self._transition_history = []
@@ -63,6 +64,7 @@ class SceneTransitionManager(ManagedComponent):
             self.dungeon_manager = context.get('dungeon_manager')
             self.dungeon_renderer = context.get('dungeon_renderer')
             self.encounter_manager = context.get('encounter_manager')
+            self.game_manager_ref = context.get('game_manager_ref')  # GameManagerへの参照
             
             # ダンジョン設定を読み込み
             self._load_dungeon_configs()
@@ -152,6 +154,14 @@ class SceneTransitionManager(ManagedComponent):
                     callback(old_location, location)
                 except Exception as e:
                     logger.error(f"Location change callback error for {location}: {e}")
+        
+        # InputHandlerCoordinatorにも位置変更を通知
+        if self.game_manager_ref and hasattr(self.game_manager_ref, 'input_handler_coordinator'):
+            self.game_manager_ref.input_handler_coordinator.update_location(location)
+        
+        # GameManagerのcurrent_locationも同期
+        if self.game_manager_ref and hasattr(self.game_manager_ref, 'current_location'):
+            self.game_manager_ref.current_location = location
         
         # イベント発行（Enumと文字列の両方に対応）
         old_location_value = getattr(old_location, 'value', str(old_location))

@@ -3,8 +3,8 @@ priority: 1
 tags: ["feature", "ui", "dungeon", "critical", "gameplay"]
 description: "ダンジョン内メニューシステムの実装"
 created_at: "2025-07-22T13:24:56Z"
-started_at: null  # Do not modify manually
-closed_at: null   # Do not modify manually
+started_at: 2025-07-22T16:51:38Z # Do not modify manually
+closed_at: 2025-07-23T14:43:56Z # Do not modify manually
 ---
 
 # Ticket Overview

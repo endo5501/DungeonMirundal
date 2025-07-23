@@ -13,7 +13,8 @@ import pygame
 from src.dungeon.dungeon_manager import DungeonManager, DungeonState, PlayerPosition
 from src.dungeon.dungeon_generator import DungeonLevel
 from src.character.party import Party
-from src.rendering.dungeon_input_handler import DungeonInputHandler, DungeonInputAction
+from src.rendering.dungeon_input_handler import DungeonInputHandler, DungeonInputAction, MovementResult
+from src.ui.windows.dungeon_menu_manager import dungeon_menu_manager
 from src.utils.logger import logger
 from src.rendering.renderer_config import RendererConfig
 from src.rendering.camera import Camera
@@ -90,9 +91,18 @@ class DungeonRendererPygame:
     
     def handle_key_input(self, key: int) -> bool:
         """キー入力を直接処理"""
+        # メニューが開いている場合は移動入力を無効化
+        if dungeon_menu_manager.is_menu_open():
+            return False
+        
         result = self.input_handler.handle_key_input(key)
         if result:
             logger.debug(f"キー入力処理: {result.message}")
+            
+            # SHOW_MENUアクションの場合はメニューを表示
+            if result.effects and result.effects.get("action_type") == "menu":
+                self._show_dungeon_menu()
+            
             return result.success
         return False
     
@@ -101,6 +111,10 @@ class DungeonRendererPygame:
         result = self.input_handler.handle_action(action)
         if result.success:
             logger.debug(f"アクション処理成功: {result.message}")
+            
+            # SHOW_MENUアクションの場合はメニューを表示
+            if action == DungeonInputAction.SHOW_MENU or (result.effects and result.effects.get("action_type") == "menu"):
+                self._show_dungeon_menu()
         else:
             logger.warning(f"アクション処理失敗: {result.message}")
         return result.success
@@ -427,6 +441,47 @@ class DungeonRendererPygame:
         self.dungeon_manager.turn_player(right)
         self.render_dungeon(self.dungeon_manager.current_dungeon)
         return True
+    
+    def _show_dungeon_menu(self) -> None:
+        """ダンジョン内メニューを表示"""
+        try:
+            # ダンジョンメニューを作成
+            menu_window = dungeon_menu_manager.create_dungeon_menu(self.screen)
+            
+            # パーティを設定
+            if self.current_party:
+                dungeon_menu_manager.set_party(self.current_party)
+            
+            # ダンジョン状態を設定
+            if self.dungeon_manager and self.dungeon_manager.current_dungeon:
+                dungeon_menu_manager.set_dungeon_state(self.dungeon_manager.current_dungeon)
+            
+            # メニューを表示
+            dungeon_menu_manager.show_main_menu()
+            
+            logger.info("ダンジョン内メニューを表示しました")
+            
+        except Exception as e:
+            logger.error(f"ダンジョンメニュー表示エラー: {e}")
+    
+    def _show_menu(self) -> None:
+        """ダンジョン内メニューを表示（InputHandlerCoordinator用エイリアス）"""
+        self._show_dungeon_menu()
+    
+    def handle_menu_event(self, event: pygame.event.Event) -> bool:
+        """メニューのイベント処理"""
+        if dungeon_menu_manager.is_menu_open():
+            return dungeon_menu_manager.handle_input(event)
+        return False
+    
+    def render_menu(self) -> None:
+        """メニューの描画"""
+        if dungeon_menu_manager.is_menu_open():
+            dungeon_menu_manager.render()
+    
+    def is_menu_open(self) -> bool:
+        """メニューが開いているかチェック"""
+        return dungeon_menu_manager.is_menu_open()
     
     def cleanup(self):
         """リソースのクリーンアップ"""

@@ -146,7 +146,11 @@ class MainLoopManager(ManagedComponent):
             
             # デバッグログ（WASDキー専用）
             if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                logger.info(f"[DEBUG] MainLoopManager: WASD key detected key={pygame.key.name(event.key)}")
+                logger.debug(f"MainLoopManager: key detected key={pygame.key.name(event.key)}")
+            
+            # デバッグログ（Pキー専用）
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+                logger.debug(f"MainLoopManager: P key detected")
             
             # 登録されたイベントハンドラーで処理
             handled = False
@@ -166,7 +170,11 @@ class MainLoopManager(ManagedComponent):
                 scene_handled = self.scene_manager.handle_event(event)
                 
                 if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                    logger.info(f"[DEBUG] MainLoopManager: scene_handled={scene_handled}")
+                    logger.debug(f"MainLoopManager: scene_handled={scene_handled}")
+                
+                # Pキー専用ログ
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+                    logger.debug(f"MainLoopManager: P key scene_handled={scene_handled}")
                 
                 if scene_handled:
                     continue
@@ -175,13 +183,21 @@ class MainLoopManager(ManagedComponent):
             ui_handled = self._handle_ui_events(event)
             
             if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                logger.info(f"[DEBUG] MainLoopManager: ui_handled={ui_handled}")
+                logger.debug(f"MainLoopManager: ui_handled={ui_handled}")
+            
+            # Pキー専用ログ
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+                logger.debug(f"MainLoopManager: P key ui_handled={ui_handled}")
             
             # UIで処理されなかった場合のみ入力マネージャーに送信
             if not ui_handled and self.input_manager:
                 self.input_manager.handle_event(event)
                 if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                    logger.info(f"[DEBUG] MainLoopManager: sent to InputManager")
+                    logger.debug(f"MainLoopManager: sent to InputManager")
+                
+                # Pキー専用ログ
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+                    logger.debug(f"MainLoopManager: P key sent to InputManager")
     
     def _handle_ui_events(self, event: pygame.event.Event) -> bool:
         """統合UIイベント処理
@@ -190,11 +206,14 @@ class MainLoopManager(ManagedComponent):
         """
         ui_handled = False
         
-        # ダンジョン内での移動キー（WASD）はUIで処理せず、InputManagerに委譲
+        # ダンジョン内での移動キー（WASD）とメニューキー（P）はUIで処理せず、InputManagerに委譲
         if (event.type == pygame.KEYDOWN and 
-            event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]):
+            event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_p]):
             # ダンジョン内かどうかの判定が必要だが、ここでは簡略化
-            logger.info(f"[DEBUG] MainLoopManager._handle_ui_events: ダンジョン内移動キーのため、UIスキップしてInputManagerに委譲")
+            if event.key == pygame.K_p:
+                logger.debug(f"MainLoopManager._handle_ui_events: ダンジョン内メニューキー（P）のため、UIスキップしてInputManagerに委譲")
+            else:
+                logger.debug(f"MainLoopManager._handle_ui_events: ダンジョン内移動キーのため、UIスキップしてInputManagerに委譲")
             return False
         
         # WindowManagerでイベント処理
@@ -209,13 +228,13 @@ class MainLoopManager(ManagedComponent):
             
             # デバッグ: WASDキーの処理をログ出力
             if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                logger.info(f"[DEBUG] MainLoopManager._handle_ui_events: WindowManager処理結果={ui_handled}")
+                logger.debug(f"MainLoopManager._handle_ui_events: WindowManager処理結果={ui_handled}")
             
             # WindowManagerで処理されなかった場合のみ、既存UIマネージャーで処理
             if not ui_handled and self.ui_manager:
                 ui_handled = self.ui_manager.handle_event(event)
                 if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                    logger.info(f"[DEBUG] MainLoopManager._handle_ui_events: ui_manager処理結果={ui_handled}")
+                    logger.debug(f"MainLoopManager._handle_ui_events: ui_manager処理結果={ui_handled}")
                     
         except Exception as e:
             logger.error(f"UI event handling error: {e}")

@@ -94,7 +94,9 @@ class InputHandlerCoordinator(ManagedComponent):
     
     def update_location(self, location: GameLocation) -> None:
         """現在位置の更新"""
+        old_location = self.current_location
         self.current_location = location
+        logger.debug(f"InputHandlerCoordinator.update_location: {old_location} -> {location}")
     
     def register_action_handler(self, action: str, handler: Callable) -> None:
         """アクション専用ハンドラーの登録"""
@@ -184,18 +186,25 @@ class InputHandlerCoordinator(ManagedComponent):
     
     def _on_menu_action(self, action: str, pressed: bool, input_type: InputType):
         """メニューアクションの処理"""
+        location_str = getattr(self.current_location, 'value', str(self.current_location))
+        logger.debug(f"InputHandlerCoordinator._on_menu_action: 呼び出し開始 pressed={pressed}, location={location_str}")
+        
         if pressed:
             logger.info(self._get_log_message("menu_action", input_type))
             
             # ダンジョン内ではメニュー表示
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
+                logger.debug(f"InputHandlerCoordinator._on_menu_action: ダンジョンメニュー表示実行")
                 self.dungeon_renderer._show_menu()
+                logger.debug(f"InputHandlerCoordinator._on_menu_action: ダンジョンメニュー表示完了")
             # 地上部では設定画面をオーバーワールドマネージャーに委譲
             elif self.current_location == GameLocation.OVERWORLD and self.overworld_manager:
+                logger.debug(f"InputHandlerCoordinator._on_menu_action: 地上部のため処理スキップ")
                 # オーバーワールドマネージャーが独自にESCキーを処理するため、
                 # ここでは何もしない（重複処理を避ける）
                 pass
             else:
+                logger.debug(f"InputHandlerCoordinator._on_menu_action: フォールバック処理 location={location_str}")
                 if self._toggle_pause_callback:
                     self._toggle_pause_callback()
     

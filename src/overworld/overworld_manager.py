@@ -249,7 +249,27 @@ class OverworldManager:
     
     def _on_menu_key(self, action: str, pressed: bool, input_type: Any):
         """メニューキー（ESC）の処理"""
-        if not pressed or not self.is_active:
+        if not pressed:
+            return
+        
+        logger.debug(f"OverworldManager._on_menu_key: 呼び出し開始 action={action}, pressed={pressed}")
+        
+        # ダンジョン内の場合は処理をGameManagerに委譲
+        if hasattr(self, 'game_manager') and self.game_manager:
+            current_state = getattr(self.game_manager, 'game_state', None)
+            if current_state == 'dungeon_exploration':
+                logger.debug("OverworldManager._on_menu_key: ダンジョン内のため、GameManagerに委譲")
+                # GameManagerの_on_menu_actionを直接呼び出し
+                if hasattr(self.game_manager, '_on_menu_action'):
+                    return self.game_manager._on_menu_action(action, pressed, input_type)
+                return
+            else:
+                logger.debug(f"OverworldManager._on_menu_key: 地上部のため継続 state={current_state}")
+        else:
+            logger.debug("OverworldManager._on_menu_key: game_managerが存在しません")
+        
+        # 地上部で非アクティブの場合は処理しない
+        if not self.is_active:
             return
         
         # 現在設定画面が表示されている場合は閉じる

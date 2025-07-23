@@ -217,7 +217,8 @@ class GameManager(EventHandler):
             'overworld_manager': getattr(self, 'overworld_manager', None),
             'dungeon_manager': getattr(self, 'dungeon_manager', None),
             'dungeon_renderer': getattr(self, 'dungeon_renderer', None),
-            'encounter_manager': getattr(self, 'encounter_manager', None)
+            'encounter_manager': getattr(self, 'encounter_manager', None),
+            'game_manager_ref': self  # GameManagerへの参照を追加
         }
         
         # SceneTransitionManagerを初期化
@@ -423,8 +424,12 @@ class GameManager(EventHandler):
     
     def _on_menu_action(self, action: str, pressed: bool, input_type):
         """メニューアクションの処理 - InputHandlerCoordinatorに委譲"""
+        logger.debug(f"GameManager._on_menu_action: 呼び出し開始 action={action}, pressed={pressed}, input_type={input_type}")
+        
         if hasattr(self, 'input_handler_coordinator'):
-            return self.input_handler_coordinator.handle_input_action('menu', pressed, input_type.value if hasattr(input_type, 'value') else str(input_type))
+            result = self.input_handler_coordinator.handle_input_action('menu', pressed, input_type.value if hasattr(input_type, 'value') else str(input_type))
+            logger.debug(f"GameManager._on_menu_action: InputHandlerCoordinator実行完了 result={result}")
+            return result
         else:
             logger.error("InputHandlerCoordinator not initialized")
     
@@ -706,6 +711,11 @@ class GameManager(EventHandler):
             old_location_str = old_location.value if hasattr(old_location, 'value') else str(old_location)
             new_location_str = location.value if hasattr(location, 'value') else str(location)
             logger.info(f"Location changed: {old_location_str} -> {new_location_str}")
+        
+        # 重要: InputHandlerCoordinatorにも現在位置を更新
+        if hasattr(self, 'input_handler_coordinator'):
+            logger.debug(f"GameManager.set_current_location: InputHandlerCoordinatorの位置を更新 {location}")
+            self.input_handler_coordinator.update_location(location)
     
     def set_current_party(self, party: Party):
         """現在のパーティを設定 - イベント駆動版"""
@@ -1228,7 +1238,7 @@ class GameManager(EventHandler):
             event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d] and 
             self.current_location == GameLocation.DUNGEON):
             if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                logger.info(f"[DEBUG] GameManager._handle_ui_events: ダンジョン内移動キーのため、UIスキップしてInputManagerに委譲")
+                logger.debug(f"GameManager._handle_ui_events: ダンジョン内移動キーのため、UIスキップしてInputManagerに委譲")
             return False
         
         # WindowManagerでイベント処理
@@ -1242,13 +1252,13 @@ class GameManager(EventHandler):
         
         # デバッグ: WASDキーの処理をログ出力
         if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-            logger.info(f"[DEBUG] GameManager._handle_ui_events: WindowManager処理結果={ui_handled}")
+            logger.debug(f"GameManager._handle_ui_events: WindowManager処理結果={ui_handled}")
         
         # WindowManagerで処理されなかった場合のみ、既存UIマネージャーで処理
         if not ui_handled and hasattr(self, 'ui_manager') and self.ui_manager:
             ui_handled = self.ui_manager.handle_event(event)
             if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                logger.info(f"[DEBUG] GameManager._handle_ui_events: ui_manager処理結果={ui_handled}")
+                logger.debug(f"GameManager._handle_ui_events: ui_manager処理結果={ui_handled}")
         
         return ui_handled
     
