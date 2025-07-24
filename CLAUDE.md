@@ -19,6 +19,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### ゲームデバッグ
 
+デバッグ用にゲームを起動する場合は、`./scripts/start_game_for_debug.sh`と実行しましょう。 `./scripts/start_game_for_debug.sh &`などのように実行すると、ユーザの操作が必要になり作業が遅延します
+
 @docs/how_to_debug_game.md
 
 ### フォントシステム（日本語対応）
