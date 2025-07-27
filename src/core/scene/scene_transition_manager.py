@@ -1,7 +1,7 @@
 """Scene transition management module."""
 
 import logging
-from typing import Any, Dict, Optional, Callable
+from typing import Any, Dict, Optional, Callable, Literal
 from enum import Enum
 
 from src.core.interfaces import ManagedComponent
@@ -137,7 +137,7 @@ class SceneTransitionManager(ManagedComponent):
             }
         )
     
-    def set_current_location(self, location: GameLocation) -> None:
+    def set_current_location(self, location: Literal['overworld', 'dungeon']) -> None:
         """現在のロケーション設定"""
         old_location = self.current_location
         self.current_location = location
@@ -214,7 +214,7 @@ class SceneTransitionManager(ManagedComponent):
                         self.overworld_manager.exit_overworld()
                     
                     # ゲーム状態とロケーションを更新
-                    self.set_current_location(GameLocation.DUNGEON)
+                    self.set_current_location("dungeon")
                     self.set_game_state("dungeon_exploration")
                     
                     # エンカウンターマネージャーにダンジョン状態を設定
@@ -287,7 +287,7 @@ class SceneTransitionManager(ManagedComponent):
                     self.dungeon_manager.exit_dungeon()
             
             # ゲーム状態とロケーションを更新
-            self.set_current_location(GameLocation.OVERWORLD)
+            self.set_current_location("overworld")
             self.set_game_state("overworld_main")
             
             # オーバーワールドマネージャーの初期化
@@ -501,7 +501,7 @@ class SceneTransitionManager(ManagedComponent):
                 logger.info("地上部UI復旧処理が完了しました")
             
             # ゲーム状態を地上部に戻す
-            self.set_current_location(GameLocation.OVERWORLD)
+            self.set_current_location("overworld")
             self.set_game_state("overworld_main")
             
             # SceneManagerで地上部シーンに切り替え

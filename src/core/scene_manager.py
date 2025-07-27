@@ -29,7 +29,7 @@ class GameScene(ABC):
         self.active = False
     
     @abstractmethod
-    def enter(self, context: Dict[str, Any] = None) -> bool:
+    def enter(self, context: Optional[Dict[str, Any]] = None) -> bool:
         """シーンに入る際の処理"""
         pass
     
@@ -60,7 +60,7 @@ class StartupScene(GameScene):
     def __init__(self, scene_manager: 'SceneManager'):
         super().__init__(SceneType.STARTUP, scene_manager)
     
-    def enter(self, context: Dict[str, Any] = None) -> bool:
+    def enter(self, context: Optional[Dict[str, Any]] = None) -> bool:
         logger.info("スタートアップシーンに入りました")
         self.active = True
         return True
@@ -97,7 +97,7 @@ class OverworldScene(GameScene):
         super().__init__(SceneType.OVERWORLD, scene_manager)
         self.overworld_manager = None
     
-    def enter(self, context: Dict[str, Any] = None) -> bool:
+    def enter(self, context: Optional[Dict[str, Any]] = None) -> bool:
         logger.info("地上部シーンに入りました")
         self.active = True
         
@@ -141,7 +141,7 @@ class DungeonScene(GameScene):
         self.dungeon_manager = None
         self.dungeon_renderer = None
     
-    def enter(self, context: Dict[str, Any] = None) -> bool:
+    def enter(self, context: Optional[Dict[str, Any]] = None) -> bool:
         logger.info("ダンジョンシーンに入りました")
         self.active = True
         
@@ -320,7 +320,7 @@ class CombatScene(GameScene):
         super().__init__(SceneType.COMBAT, scene_manager)
         self.combat_manager = None
     
-    def enter(self, context: Dict[str, Any] = None) -> bool:
+    def enter(self, context: Optional[Dict[str, Any]] = None) -> bool:
         logger.info("戦闘シーンに入りました")
         self.active = True
         

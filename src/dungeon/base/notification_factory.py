@@ -116,7 +116,7 @@ class NotificationFactory:
         return self.create_notification(message, NotificationType.INFO)
     
     def create_party_status_notification(self, alert_type: str, character_name: str, 
-                                       details: Dict[str, Any] = None) -> Notification:
+                                       details: Optional[Dict[str, Any]] = None) -> Notification:
         """パーティステータス通知作成"""
         details = details or {}
         

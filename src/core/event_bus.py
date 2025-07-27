@@ -61,7 +61,7 @@ class GameEvent:
     """ゲームイベントのデータクラス"""
     event_type: EventType
     source: str  # イベント発生源の識別子
-    data: Dict[str, Any] = None
+    data: Optional[Dict[str, Any]] = None
     timestamp: float = None
     
     def __post_init__(self):
@@ -155,7 +155,7 @@ class EventBus:
         if not self._processing:
             self._process_events()
     
-    def publish_immediate(self, event_type: EventType, source: str, data: Dict[str, Any] = None):
+    def publish_immediate(self, event_type: EventType, source: str, data: Optional[Dict[str, Any]] = None):
         """イベントを即座に発行"""
         event = GameEvent(event_type, source, data)
         self.publish(event)
@@ -227,7 +227,7 @@ class FunctionEventHandler(EventHandler):
     クラスを作成せずに関数でイベント処理を行いたい場合に使用。
     """
     
-    def __init__(self, handler_func: Callable[[GameEvent], bool], event_types: List[EventType] = None):
+    def __init__(self, handler_func: Callable[[GameEvent], bool], event_types: Optional[List[EventType]] = None):
         self.handler_func = handler_func
         self.event_types = event_types or []
     
@@ -245,7 +245,7 @@ def get_event_bus() -> EventBus:
     return EventBus()
 
 
-def publish_event(event_type: EventType, source: str, data: Dict[str, Any] = None):
+def publish_event(event_type: EventType, source: str, data: Optional[Dict[str, Any]] = None):
     """イベントを発行する便利関数"""
     event_bus = get_event_bus()
     event_bus.publish_immediate(event_type, source, data)

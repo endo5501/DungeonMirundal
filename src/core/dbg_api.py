@@ -897,7 +897,7 @@ def clear_history():
 @app.post("/debug/log", 
           summary="Add debug log entry",
           description="Adds a custom debug log entry with context")
-def add_debug_log(level: str, message: str, context: Dict[str, Any] = None):
+def add_debug_log(level: str, message: str, context: Optional[Dict[str, Any]] = None):
     """カスタムデバッグログエントリを追加"""
     try:
         if enhanced_logger:
