@@ -10,6 +10,11 @@ from src.dungeon.dungeon_manager import DungeonState
 from src.dungeon.dungeon_generator import DungeonAttribute, DungeonLevel
 from src.character.party import Party
 from src.utils.logger import logger
+from .encounter_types import (
+    EncounterType, EncounterResult, MonsterRank,
+    MonsterGroup, EncounterEvent
+)
+from .encounter_strategy import EncounterStrategyFactory, DeepDungeonModifier
 
 # エンカウンター定数
 MAX_DUNGEON_LEVEL = 20
@@ -35,57 +40,7 @@ MIN_NEGOTIATION_CHANCE = 0.01
 MAX_NEGOTIATION_CHANCE = 0.8
 
 
-class EncounterType(Enum):
-    """エンカウンタータイプ"""
-    NORMAL = "normal"                   # 通常エンカウンター
-    AMBUSH = "ambush"                   # 奇襲
-    TREASURE_GUARDIAN = "treasure_guardian"  # 宝箱の守護者
-    BOSS = "boss"                       # ボス
-    SPECIAL_EVENT = "special_event"     # 特殊イベント
-    TRAP_MONSTER = "trap_monster"       # トラップモンスター
-
-
-class EncounterResult(Enum):
-    """エンカウンター結果"""
-    COMBAT_START = "combat_start"       # 戦闘開始
-    AVOIDED = "avoided"                 # 回避成功
-    NEGOTIATED = "negotiated"          # 交渉成功
-    SPECIAL_EVENT = "special_event"     # 特殊イベント
-    FLED = "fled"                      # 逃走成功
-
-
-class MonsterRank(Enum):
-    """モンスターランク"""
-    WEAK = "weak"           # 弱い
-    NORMAL = "normal"       # 通常
-    STRONG = "strong"       # 強い
-    ELITE = "elite"         # エリート
-    BOSS = "boss"           # ボス
-
-
-@dataclass
-class MonsterGroup:
-    """モンスターグループ"""
-    monster_ids: List[str]
-    formation: str = "standard"        # 隊形
-    total_level: int = 0               # 総レベル
-    rank: MonsterRank = MonsterRank.NORMAL
-    special_abilities: List[str] = field(default_factory=list)
-    treasure_modifier: float = 1.0     # 宝物倍率
-    experience_modifier: float = 1.0   # 経験値倍率
-
-
-@dataclass 
-class EncounterEvent:
-    """エンカウンターイベント"""
-    encounter_type: EncounterType
-    monster_group: Optional[MonsterGroup]
-    location: Tuple[int, int, int]     # (x, y, level)
-    dungeon_attribute: DungeonAttribute
-    can_flee: bool = True
-    can_negotiate: bool = False
-    special_conditions: Dict[str, Any] = field(default_factory=dict)
-    description: str = ""
+# 型定義は encounter_types.py に移動
 
 
 class EncounterManager:
@@ -296,28 +251,9 @@ class EncounterManager:
     
     def _generate_special_abilities(self, encounter_type: EncounterType, 
                                    attribute: DungeonAttribute, rng: random.Random) -> List[str]:
-        """特殊能力生成"""
-        abilities = []
-        
-        # 属性ベースの能力
-        attribute_abilities = {
-            DungeonAttribute.FIRE: ["fire_breath", "burning_aura"],
-            DungeonAttribute.ICE: ["ice_blast", "freezing_touch"],
-            DungeonAttribute.LIGHTNING: ["lightning_bolt", "shock_aura"],
-            DungeonAttribute.DARK: ["shadow_step", "darkness"],
-            DungeonAttribute.LIGHT: ["holy_light", "blessing"]
-        }
-        
-        if attribute in attribute_abilities and rng.random() < ATTRIBUTE_ABILITY_CHANCE:
-            abilities.append(rng.choice(attribute_abilities[attribute]))
-        
-        # エンカウンタータイプベースの能力
-        if encounter_type == EncounterType.AMBUSH and rng.random() < AMBUSH_ABILITY_CHANCE:
-            abilities.append("surprise_attack")
-        elif encounter_type == EncounterType.TREASURE_GUARDIAN and rng.random() < TREASURE_GUARDIAN_ABILITY_CHANCE:
-            abilities.append("treasure_bond")
-        
-        return abilities
+        """特殊能力生成（ストラテジーパターンでリファクタリング）"""
+        strategy = EncounterStrategyFactory.get_strategy(encounter_type)
+        return strategy.generate_special_abilities(attribute, rng)
     
     def _determine_formation(self, group_size: int, encounter_type: EncounterType) -> str:
         """隊形決定"""
@@ -365,28 +301,13 @@ class EncounterManager:
         return base_treasure, base_exp
     
     def _apply_special_conditions(self, encounter: EncounterEvent, level: int):
-        """特殊条件適用"""
+        """特殊条件適用（ストラテジーパターンでリファクタリング）"""
+        # エンカウンタータイプ固有の条件適用
+        strategy = EncounterStrategyFactory.get_strategy(encounter.encounter_type)
+        strategy.apply_special_conditions(encounter, level)
         
-        # 奇襲の場合
-        if encounter.encounter_type == EncounterType.AMBUSH:
-            encounter.can_flee = False  # 最初のターンは逃走不可
-            encounter.special_conditions["surprise_round"] = True
-        
-        # ボスの場合
-        elif encounter.encounter_type == EncounterType.BOSS:
-            encounter.can_flee = False
-            encounter.special_conditions["boss_battle"] = True
-        
-        # 宝箱守護者の場合
-        elif encounter.encounter_type == EncounterType.TREASURE_GUARDIAN:
-            encounter.can_negotiate = True
-            encounter.special_conditions["guarding_treasure"] = True
-        
-        # 深い階層での特殊条件
-        if level > DEEP_DUNGEON_THRESHOLD:
-            encounter.special_conditions["deep_dungeon"] = True
-            if random.random() < ENHANCED_MONSTER_CHANCE:
-                encounter.special_conditions["enhanced_monsters"] = True
+        # 深い階層での追加条件適用
+        DeepDungeonModifier.apply_deep_dungeon_conditions(encounter, level)
     
     def _generate_encounter_description(self, encounter: EncounterEvent) -> str:
         """エンカウンター説明文生成"""
