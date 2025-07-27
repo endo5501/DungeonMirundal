@@ -35,7 +35,7 @@ class ActionResult:
     message: str
     damage_dealt: int = 0
     damage_taken: int = 0
-    effects: List[str] = None
+    effects: Optional[List[str]] = None
     
     def __post_init__(self):
         if self.effects is None:
@@ -257,13 +257,16 @@ class CastSpellStrategy(CombatStrategy):
         target = context.target
         
         # MP消費
-        mp_cost = self._get_spell_mp_cost(spell_id)
-        derived_stats = getattr(attacker, 'derived_stats', None)
-        if derived_stats and hasattr(derived_stats, 'current_mp'):
-            derived_stats.current_mp = max(0, derived_stats.current_mp - mp_cost)
-        
-        # 魔法効果を適用
-        result = self._apply_spell_effect(spell_id, attacker, target, context)
+        if spell_id:
+            mp_cost = self._get_spell_mp_cost(spell_id)
+            derived_stats = getattr(attacker, 'derived_stats', None)
+            if derived_stats and hasattr(derived_stats, 'current_mp'):
+                derived_stats.current_mp = max(0, derived_stats.current_mp - mp_cost)
+            
+            # 魔法効果を適用
+            result = self._apply_spell_effect(spell_id, attacker, target, context)
+        else:
+            result = ActionResult(success=False, message="魔法IDが指定されていません")
         
         return result
     
@@ -376,7 +379,9 @@ class UseItemStrategy(CombatStrategy):
             return False
         
         # アイテムを所持しているかチェック
-        if hasattr(attacker, 'items') and attacker.items:
+        if hasattr(attacker, 'inventory') and attacker.inventory:
+            return attacker.inventory.has_item(item_id, 1)
+        elif hasattr(attacker, 'items') and attacker.items:
             return attacker.items.has_item(item_id, 1)
         
         return False
@@ -451,7 +456,8 @@ class UseItemStrategy(CombatStrategy):
             )
         
         from src.character.components.status_effects_component import StatusEffectType
-        if target.status_effects.has_status_effect(StatusEffectType.POISONED):
+        if (target.status_effects and 
+            target.status_effects.has_status_effect(StatusEffectType.POISONED)):
             target.status_effects.remove_status_effect(StatusEffectType.POISONED)
             return ActionResult(
                 success=True,
@@ -488,7 +494,9 @@ class FleeStrategy(CombatStrategy):
     def can_execute(self, context: CombatContext) -> bool:
         """逃走可能かチェック"""
         # 麻痺状態では逃走できない
-        if hasattr(context.attacker, 'status_effects') and context.attacker.status_effects:
+        if (hasattr(context.attacker, 'status_effects') and 
+            context.attacker.status_effects and
+            hasattr(context.attacker.status_effects, 'has_status_effect')):
             from src.character.components.status_effects_component import StatusEffectType
             if context.attacker.status_effects.has_status_effect(StatusEffectType.PARALYZED):
                 return False
@@ -548,7 +556,9 @@ class NegotiateStrategy(CombatStrategy):
     def can_execute(self, context: CombatContext) -> bool:
         """交渉可能かチェック"""
         # 混乱状態では交渉できない
-        if hasattr(context.attacker, 'status_effects') and context.attacker.status_effects:
+        if (hasattr(context.attacker, 'status_effects') and 
+            context.attacker.status_effects and
+            hasattr(context.attacker.status_effects, 'has_status_effect')):
             from src.character.components.status_effects_component import StatusEffectType
             if context.attacker.status_effects.has_status_effect(StatusEffectType.CONFUSED):
                 return False

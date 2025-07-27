@@ -760,7 +760,10 @@ class InventoryWindow(Window):
                 if 0 <= index < len(characters):
                     char_inventory = characters[index].get_inventory()
                     self.current_character = characters[index]
-                    self.show_inventory_contents(char_inventory, f"{characters[index].name}のアイテム", "character")
+                    if char_inventory:
+                        self.show_inventory_contents(char_inventory, f"{characters[index].name}のアイテム", "character")
+                    else:
+                        logger.warning(f"キャラクター {characters[index].name} のインベントリが見つかりません")
                 return True
             elif element_id == 'inventory_management_button':
                 self.current_mode = InventoryViewMode.INVENTORY_MANAGEMENT
@@ -776,8 +779,11 @@ class InventoryWindow(Window):
         elif self.current_mode == InventoryViewMode.INVENTORY_CONTENTS:
             if element_id.startswith('item_button_'):
                 slot_index = int(element_id.split('_')[-1])
-                slot = self.current_inventory.slots[slot_index]
-                if not slot.is_empty():
+                if self.current_inventory and self.current_inventory.slots:
+                    slot = self.current_inventory.slots[slot_index]
+                else:
+                    return True
+                if not slot.is_empty() and slot.item_instance:
                     self.show_item_actions(slot_index, slot.item_instance)
                 return True
             elif element_id == 'sort_button':
@@ -793,24 +799,35 @@ class InventoryWindow(Window):
         # アイテムアクションでのボタン処理
         elif self.current_mode == InventoryViewMode.ITEM_ACTIONS:
             if element_id == 'detail_button':
-                slot = self.current_inventory.slots[self.selected_slot]
-                item = item_manager.get_item(slot.item_instance.item_id)
-                self.show_item_details(slot.item_instance, item)
+                if (self.current_inventory and self.current_inventory.slots and 
+                    self.selected_slot is not None):
+                    slot = self.current_inventory.slots[self.selected_slot]
+                    if slot.item_instance:
+                        item = item_manager.get_item(slot.item_instance.item_id)
+                        self.show_item_details(slot.item_instance, item)
                 return True
             elif element_id == 'use_button':
-                slot = self.current_inventory.slots[self.selected_slot]
-                self.use_item(slot.item_instance, self.selected_slot)
+                if (self.current_inventory and self.current_inventory.slots and 
+                    self.selected_slot is not None):
+                    slot = self.current_inventory.slots[self.selected_slot]
+                    if slot.item_instance:
+                        self.use_item(slot.item_instance, self.selected_slot)
                 return True
             elif element_id == 'transfer_button':
-                self.transfer_source = (self.current_inventory, self.selected_slot)
-                self.show_message("移動先のスロットを選択してください")
+                if self.current_inventory and self.selected_slot is not None:
+                    self.transfer_source = (self.current_inventory, self.selected_slot)
+                    self.show_message("移動先のスロットを選択してください")
                 return True
             elif element_id == 'drop_button':
-                slot = self.current_inventory.slots[self.selected_slot]
-                self.drop_item(slot.item_instance, self.selected_slot)
+                if (self.current_inventory and self.current_inventory.slots and 
+                    self.selected_slot is not None):
+                    slot = self.current_inventory.slots[self.selected_slot]
+                    if slot.item_instance:
+                        self.drop_item(slot.item_instance, self.selected_slot)
                 return True
             elif element_id == 'back_button':
-                self.show_inventory_contents(self.current_inventory, "", self.inventory_type)
+                if self.current_inventory:
+                    self.show_inventory_contents(self.current_inventory, "", self.inventory_type)
                 return True
         
         return False

@@ -5,14 +5,18 @@ Fowlerの「Replace State Code with State」パターンを適用。
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional, Union, Tuple
+from typing import Dict, List, Any, Optional, Union, Tuple, TYPE_CHECKING
 from enum import Enum
+import random
 
 from src.character.character import Character
 from src.character.party import Party
 from src.monsters.monster import Monster
 from src.combat.combat_strategies import CombatContext, ActionResult, CombatStrategyFactory
 from src.utils.logger import logger
+
+if TYPE_CHECKING:
+    from src.combat.combat_manager import CombatManager
 
 
 class CombatPhase(Enum):
@@ -69,15 +73,18 @@ class PreparationState(CombatState):
         """準備段階に入る"""
         logger.info("戦闘準備段階に入りました")
         
-        # 戦闘統計の初期化
-        self.combat_manager.initialize_combat_stats()
+        # 戦闘統計の初期化（メソッドが存在しない場合はスキップ）
+        if hasattr(self.combat_manager, 'initialize_combat_stats'):
+            self.combat_manager.initialize_combat_stats()
         
         # パーティとモンスターの状態確認
         if not self._validate_combatants():
             return False
         
         # 戦闘開始ログ
-        party_names = [char.name for char in self.combat_manager.party.get_living_characters()]
+        party_names = []
+        if self.combat_manager.party:
+            party_names = [char.name for char in self.combat_manager.party.get_living_characters()]
         monster_names = [monster.name for monster in self.combat_manager.monsters]
         
         logger.info(f"戦闘開始: {', '.join(party_names)} vs {', '.join(monster_names)}")
@@ -95,12 +102,16 @@ class PreparationState(CombatState):
     
     def _validate_combatants(self) -> bool:
         """戦闘参加者の妥当性を確認"""
+        if not self.combat_manager.party:
+            logger.error("パーティが存在しません")
+            return False
+            
         living_characters = self.combat_manager.party.get_living_characters()
         if not living_characters:
             logger.error("生存しているパーティメンバーがいません")
             return False
         
-        alive_monsters = [m for m in self.combat_manager.monsters if m.is_alive()]
+        alive_monsters = [m for m in self.combat_manager.monsters if m.is_alive]
         if not alive_monsters:
             logger.error("生存しているモンスターがいません")
             return False
@@ -142,14 +153,15 @@ class TurnOrderState(CombatState):
         all_actors = []
         
         # パーティメンバーを追加
-        for char in self.combat_manager.party.get_living_characters():
-            agility = getattr(char.base_stats, 'agility', 10) if hasattr(char, 'base_stats') else 10
-            initiative = agility + random.randint(1, 10)
-            all_actors.append((char, initiative))
+        if self.combat_manager.party:
+            for char in self.combat_manager.party.get_living_characters():
+                agility = getattr(char.base_stats, 'agility', 10) if hasattr(char, 'base_stats') else 10
+                initiative = agility + random.randint(1, 10)
+                all_actors.append((char, initiative))
         
         # モンスターを追加
         for monster in self.combat_manager.monsters:
-            if monster.is_alive():
+            if monster.is_alive:
                 agility = getattr(monster, 'agility', 10)
                 initiative = agility + random.randint(1, 10)
                 all_actors.append((monster, initiative))
@@ -297,7 +309,7 @@ class MonsterTurnState(CombatState):
         attack_strategy = CombatStrategyFactory.get_strategy('attack')
         if attack_strategy:
             return attack_strategy.execute(context)
-        return None
+        return ActionResult(success=False, message="攻撃戦略が見つかりません")
     
     def _determine_next_state(self) -> Optional['CombatState']:
         """次の状態を決定"""

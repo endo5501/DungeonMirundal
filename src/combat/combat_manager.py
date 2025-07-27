@@ -348,8 +348,10 @@ class CombatManager:
             return f"{self._get_actor_name(actor)}のアイテム使用に失敗しました"
         
         # アイテム使用
+        # targetの型をCharacterにキャスト（MonsterにはItemを使用できない）
+        character_target = target if isinstance(target, Character) else None
         result, message, results = item_usage_manager.use_item(
-            item_instance, actor, target, self.party
+            item_instance, actor, character_target, self.party
         )
         
         # 統計更新
@@ -596,8 +598,10 @@ class CombatManager:
         # キャラクターの状態効果処理
         if self.party:
             for character in self.party.get_living_characters():
-                if hasattr(character, 'process_turn_effects'):
-                    character.process_turn_effects()
+                # 状態効果コンポーネントを通じて処理
+                if character.status_effects and hasattr(character.status_effects, 'process_turn_effects'):
+                    character.status_effects.process_turn_effects()
+                # process_turn_effectsメソッドは存在しないので削除
         
         # モンスターの状態効果処理
         for monster in self.monsters:
@@ -636,7 +640,7 @@ class CombatManager:
         return {
             'state': self.combat_state.value,
             'turn_number': self.turn_number,
-            'current_actor': self._get_actor_name(self.get_current_actor()) if self.get_current_actor() else None,
+            'current_actor': self._get_actor_name(self.get_current_actor()) if self.get_current_actor() is not None else None,
             'is_player_turn': self.is_player_turn(),
             'party_members': len(self.party.get_living_characters()) if self.party else 0,
             'monsters_alive': len([m for m in self.monsters if m.is_alive]),
@@ -646,20 +650,22 @@ class CombatManager:
     
     def get_valid_targets(self, actor: Union[Character, Monster], action: CombatAction) -> List[Union[Character, Monster]]:
         """有効な対象一覧取得"""
-        targets = []
+        targets: List[Union[Character, Monster]] = []
         
         if action in [CombatAction.ATTACK, CombatAction.CAST_SPELL]:
             if isinstance(actor, Character):
                 # キャラクターはモンスターを攻撃
-                targets = [m for m in self.monsters if m.is_alive]
+                targets.extend(m for m in self.monsters if m.is_alive)
             else:
                 # モンスターはキャラクターを攻撃
-                targets = list(self.party.get_living_characters()) if self.party else []
+                if self.party:
+                    targets.extend(self.party.get_living_characters())
         
         elif action in [CombatAction.USE_ITEM]:
             if isinstance(actor, Character):
                 # アイテムは味方に使用可能
-                targets = list(self.party.get_living_characters()) if self.party else []
+                if self.party:
+                    targets.extend(self.party.get_living_characters())
         
         return targets
     

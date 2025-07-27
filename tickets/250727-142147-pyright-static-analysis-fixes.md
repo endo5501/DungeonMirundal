@@ -54,24 +54,25 @@ pyrightによる静的解析で**1509個のエラー**が検出されており�
 ## Tasks
 
 ### Phase 1: 基盤型定義の修正
-- [ ] CharacterComponentクラスの型階層を整理
-- [ ] EquipmentComponent, InventoryComponent, StatusEffectsComponentの型定義修正
-- [ ] Optional型とNone値の適切な処理を実装
-- [ ] メソッド重複宣言の解消
+- [x] CharacterComponentクラスの型階層を整理
+- [x] EquipmentComponent, InventoryComponent, StatusEffectsComponentの型定義修正
+- [x] Optional型とNone値の適切な処理を実装
+- [x] メソッド重複宣言の解消
 
 ### Phase 2: Core Component修正
-- [ ] character.pyの型エラー修正
-- [ ] class_change.pyの型エラー修正
-- [ ] base_component.pyの型エラー修正
-- [ ] equipment_component.pyの型エラー修正
+- [x] character.pyの型エラー修正
+- [x] class_change.pyの型エラー修正
+- [x] base_component.pyの型エラー修正
+- [x] equipment_component.pyの型エラー修正
 
 ### Phase 3: UI Layer修正
-- [ ] inventory_window.pyの型エラー修正
-- [ ] その他UIウィンドウの型エラー修正
-- [ ] 引数型チェックの追加
+- [x] inventory_window.pyの型エラー修正（主要なOptional型エラーを修正）
+- [x] その他UIウィンドウの型エラー修正
+- [x] 引数型チェックの追加
 
 ### Phase 4: 残りエラー修正
-- [ ] 残りすべてのエラーを段階的に修正
+- [x] combat_states.pyとcombat_manager.pyの主要エラー修正完了
+- [ ] 残り1106個のエラーを段階的に修正（元1509個から403個減少）
 - [ ] 型注釈の追加・改善
 - [ ] Genericsの適切な使用
 
