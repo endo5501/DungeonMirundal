@@ -92,9 +92,11 @@ class AttackStrategy(CombatStrategy):
         # 命中判定
         hit_chance = self._calculate_hit_chance(attacker, target)
         if random.random() > hit_chance:
+            attacker_name = getattr(attacker, 'name', '???')
+            target_name = getattr(target, 'name', '???')
             return ActionResult(
                 success=True,
-                message=f"{attacker.name}の攻撃は{target.name}に外れた"
+                message=f"{attacker_name}の攻撃は{target_name}に外れた"
             )
         
         # ダメージ計算
@@ -104,11 +106,14 @@ class AttackStrategy(CombatStrategy):
         
         # クリティカルヒット判定
         is_critical = random.random() < 0.05
+        attacker_name = getattr(attacker, 'name', '???')
+        target_name = getattr(target, 'name', '???')
+        
         if is_critical:
             damage = int(damage * 1.5)
-            message = f"{attacker.name}のクリティカルヒット！{target.name}に{damage}ダメージ"
+            message = f"{attacker_name}のクリティカルヒット！{target_name}に{damage}ダメージ"
         else:
-            message = f"{attacker.name}の攻撃！{target.name}に{damage}ダメージ"
+            message = f"{attacker_name}の攻撃！{target_name}に{damage}ダメージ"
         
         # ダメージ適用
         self._apply_damage(target, damage)

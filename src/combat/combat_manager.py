@@ -173,8 +173,9 @@ class CombatManager:
         self.turn_order = []
         
         # 生存中のキャラクターを追加
-        for character in self.party.get_living_characters():
-            self.turn_order.append(character)
+        if self.party:
+            for character in self.party.get_living_characters():
+                self.turn_order.append(character)
         
         # 生存中のモンスターを追加
         for monster in self.monsters:
@@ -395,7 +396,8 @@ class CombatManager:
             if actor.can_use_ability(ability_id):
                 actor.use_ability(ability_id)
                 ability = actor.get_ability(ability_id)
-                return f"{self._get_actor_name(actor)}は{ability.name}を使用した！"
+                ability_name = ability.name if ability else ability_id
+                return f"{self._get_actor_name(actor)}は{ability_name}を使用した！"
             else:
                 return f"{self._get_actor_name(actor)}は{ability_id}を使用できません"
         
@@ -523,6 +525,8 @@ class CombatManager:
     def _calculate_flee_chance(self) -> float:
         """逃走成功率計算"""
         # パーティの平均敏捷性
+        if not self.party:
+            return 0.0
         living_chars = self.party.get_living_characters()
         if not living_chars:
             return 0.0
@@ -543,6 +547,8 @@ class CombatManager:
     def _calculate_negotiate_chance(self) -> float:
         """交渉成功率計算"""
         # パーティの最高知力
+        if not self.party:
+            return 0.0
         living_chars = self.party.get_living_characters()
         if not living_chars:
             return 0.0
@@ -570,8 +576,9 @@ class CombatManager:
         self.turn_order = []
         
         # 生存中のキャラクター
-        for character in self.party.get_living_characters():
-            self.turn_order.append(character)
+        if self.party:
+            for character in self.party.get_living_characters():
+                self.turn_order.append(character)
         
         # 生存中のモンスター
         for monster in self.monsters:
@@ -587,9 +594,10 @@ class CombatManager:
     def _process_turn_effects(self):
         """ターン効果処理"""
         # キャラクターの状態効果処理
-        for character in self.party.get_living_characters():
-            if hasattr(character, 'process_turn_effects'):
-                character.process_turn_effects()
+        if self.party:
+            for character in self.party.get_living_characters():
+                if hasattr(character, 'process_turn_effects'):
+                    character.process_turn_effects()
         
         # モンスターの状態効果処理
         for monster in self.monsters:
@@ -603,6 +611,9 @@ class CombatManager:
             return CombatResult.FLED if self.combat_state == CombatState.FLED else CombatResult.NEGOTIATED
         
         # 全キャラクター死亡チェック
+        if not self.party:
+            self.combat_state = CombatState.DEFEAT
+            return CombatResult.DEFEAT
         living_characters = self.party.get_living_characters()
         if not living_characters:
             self.combat_state = CombatState.DEFEAT
@@ -643,12 +654,12 @@ class CombatManager:
                 targets = [m for m in self.monsters if m.is_alive]
             else:
                 # モンスターはキャラクターを攻撃
-                targets = self.party.get_living_characters()
+                targets = self.party.get_living_characters() if self.party else []
         
         elif action in [CombatAction.USE_ITEM]:
             if isinstance(actor, Character):
                 # アイテムは味方に使用可能
-                targets = self.party.get_living_characters()
+                targets = self.party.get_living_characters() if self.party else []
         
         return targets
     

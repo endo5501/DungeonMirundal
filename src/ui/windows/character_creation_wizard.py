@@ -391,7 +391,7 @@ class CharacterCreationWizard(Window):
 
     def create_confirmation_step(self) -> None:
         """確認ステップのUI要素を作成"""
-        if not self.content_panel:
+        if not self.content_panel or not self.rect:
             return
         
         # タイトル

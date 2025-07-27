@@ -269,6 +269,8 @@ class BattleUIWindow(Window):
     
     def _create_battle_log_panel(self) -> None:
         """戦闘ログパネルを作成"""
+        if not self.rect:
+            return
         log_rect = pygame.Rect(
             self.layout.action_menu_width + self.layout.panel_padding * 2,
             self.rect.height - self.layout.battle_log_height - self.layout.panel_padding,
@@ -410,6 +412,8 @@ class BattleUIWindow(Window):
         
         # 魔法メニューパネルを作成
         if not self.magic_menu_panel:
+            if not self.rect:
+                return False
             magic_rect = pygame.Rect(
                 self.layout.action_menu_width + self.layout.panel_padding * 2,
                 self.rect.height - self.layout.action_menu_height - self.layout.panel_padding,
@@ -458,6 +462,8 @@ class BattleUIWindow(Window):
         
         # アイテムメニューパネルを作成
         if not self.item_menu_panel:
+            if not self.rect:
+                return False
             item_rect = pygame.Rect(
                 self.layout.action_menu_width + self.layout.panel_padding * 2,
                 self.rect.height - self.layout.action_menu_height - self.layout.panel_padding,

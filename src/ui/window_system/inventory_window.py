@@ -154,6 +154,8 @@ class InventoryWindow(Window):
     
     def _create_stats_panel(self) -> None:
         """統計パネルを作成"""
+        if not self.rect:
+            return
         stats_rect = pygame.Rect(
             self.layout.grid_padding,
             self.layout.grid_padding,
@@ -235,6 +237,8 @@ class InventoryWindow(Window):
     
     def _create_item_grid(self) -> None:
         """アイテムグリッドを作成"""
+        if not self.rect:
+            return
         grid_rect = pygame.Rect(
             self.layout.grid_padding,
             self.layout.grid_padding + self.layout.stats_panel_height + self.layout.grid_padding,
@@ -296,6 +300,8 @@ class InventoryWindow(Window):
     
     def _create_detail_panel(self) -> None:
         """詳細パネルを作成"""
+        if not self.rect:
+            return
         detail_rect = pygame.Rect(
             self.rect.width - self.layout.detail_panel_width - self.layout.grid_padding,
             self.layout.grid_padding,

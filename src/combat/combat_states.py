@@ -295,7 +295,9 @@ class MonsterTurnState(CombatState):
         )
         
         attack_strategy = CombatStrategyFactory.get_strategy('attack')
-        return attack_strategy.execute(context)
+        if attack_strategy:
+            return attack_strategy.execute(context)
+        return None
     
     def _determine_next_state(self) -> Optional['CombatState']:
         """次の状態を決定"""

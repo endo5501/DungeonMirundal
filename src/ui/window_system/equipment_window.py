@@ -135,6 +135,8 @@ class EquipmentWindow(Window):
     
     def _create_equipment_panel(self) -> None:
         """装備パネルを作成"""
+        if not self.rect:
+            return
         equipment_rect = pygame.Rect(
             self.layout.panel_padding,
             self.layout.panel_padding,
@@ -242,6 +244,8 @@ class EquipmentWindow(Window):
     
     def _create_stats_panel(self) -> None:
         """統計パネルを作成"""
+        if not self.rect:
+            return
         stats_rect = pygame.Rect(
             self.layout.panel_padding,
             self.rect.height - self.layout.stats_panel_height - self.layout.panel_padding,
@@ -267,6 +271,8 @@ class EquipmentWindow(Window):
     
     def _create_detail_panel(self) -> None:
         """詳細パネルを作成"""
+        if not self.rect:
+            return
         detail_rect = pygame.Rect(
             self.rect.width - self.layout.detail_panel_width - self.layout.panel_padding,
             self.layout.panel_padding,

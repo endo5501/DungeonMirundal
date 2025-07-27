@@ -169,6 +169,8 @@ class SettingsWindow(Window):
     
     def _create_tabs(self) -> None:
         """タブを作成"""
+        if not self.rect:
+            return
         tab_width = (self.rect.width - 80) // len(self.settings_config['categories'])
         
         for i, category_config in enumerate(self.settings_config['categories']):

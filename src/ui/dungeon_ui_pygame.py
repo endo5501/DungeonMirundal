@@ -477,6 +477,9 @@ class DungeonUIManagerPygame:
             return
         
         # 半透明背景を描画
+        if not self.screen:
+            return
+        
         overlay = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 128))
         self.screen.blit(overlay, (0, 0))
@@ -489,7 +492,8 @@ class DungeonUIManagerPygame:
         # タイトルを描画（英語版で確実に表示）
         title_surface = self.font_large.render("Dungeon Menu", True, self.colors['white'])
         title_rect = title_surface.get_rect(centerx=self.menu_x + self.menu_width // 2, y=self.menu_y + 20)
-        self.screen.blit(title_surface, title_rect)
+        if self.screen:
+            self.screen.blit(title_surface, title_rect)
         
         # メニュー項目を描画
         item_height = 35
@@ -506,7 +510,8 @@ class DungeonUIManagerPygame:
             # テキストを描画
             text_color = self.colors['white'] if i == self.selected_menu_index else self.colors['light_gray']
             text_surface = self.font_medium.render(item["text"], True, text_color)
-            self.screen.blit(text_surface, (self.menu_x + 20, y))
+            if self.screen:
+                self.screen.blit(text_surface, (self.menu_x + 20, y))
         
         # 操作説明を描画（英語版で確実に表示）
         help_y = self.menu_y + self.menu_height - 60
@@ -518,7 +523,8 @@ class DungeonUIManagerPygame:
         
         for i, help_text in enumerate(help_texts):
             help_surface = self.font_small.render(help_text, True, self.colors['gray'])
-            self.screen.blit(help_surface, (self.menu_x + 20, help_y + i * 20))
+            if self.screen:
+                self.screen.blit(help_surface, (self.menu_x + 20, help_y + i * 20))
     
     def render_overlay(self):
         """オーバーレイUI（ステータスバー等）を描画"""
