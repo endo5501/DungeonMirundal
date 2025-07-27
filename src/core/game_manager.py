@@ -474,8 +474,10 @@ class GameManager(EventHandler):
                     else:
                         # フォールバック: 旧システムとの互換性
                         logger.info(self.game_config.get_text("app_log.legacy_compatibility_mode"))
-                        if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
-                            self.dungeon_renderer.ui_manager._open_inventory()
+                        if hasattr(self.dungeon_renderer, 'ui_manager'):
+                            ui_manager = getattr(self.dungeon_renderer, 'ui_manager', None)
+                            if ui_manager:
+                                ui_manager._open_inventory()
                             
                 except Exception as e:
                     logger.error(self.game_config.get_text("app_log.3d_recovery_error").format(error=e))
@@ -535,16 +537,20 @@ class GameManager(EventHandler):
         if pressed:
             logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.inventory_action"), input_type=input_type.value))
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
-                if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
-                    self.dungeon_renderer.ui_manager._open_inventory()
+                if hasattr(self.dungeon_renderer, 'ui_manager'):
+                    ui_manager = getattr(self.dungeon_renderer, 'ui_manager', None)
+                    if ui_manager:
+                        ui_manager._open_inventory()
     
     def _on_magic_action(self, action: str, pressed: bool, input_type):
         """魔法アクションの処理"""
         if pressed:
             logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.magic_action"), input_type=input_type.value))
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
-                if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
-                    self.dungeon_renderer.ui_manager._open_magic()
+                if hasattr(self.dungeon_renderer, 'ui_manager'):
+                    ui_manager = getattr(self.dungeon_renderer, 'ui_manager', None)
+                    if ui_manager:
+                        ui_manager._open_magic()
     
     def _on_equipment_action(self, action: str, pressed: bool, input_type):
         """装備アクションの処理"""
@@ -708,8 +714,8 @@ class GameManager(EventHandler):
             old_location = self.current_location
             self.current_location = location
             # Enum と文字列の両方に対応
-            old_location_str = old_location.value if hasattr(old_location, 'value') else str(old_location)
-            new_location_str = location.value if hasattr(location, 'value') else str(location)
+            old_location_str = getattr(old_location, 'value', str(old_location))
+            new_location_str = getattr(location, 'value', str(location))
             logger.info(f"Location changed: {old_location_str} -> {new_location_str}")
         
         # 重要: InputHandlerCoordinatorにも現在位置を更新

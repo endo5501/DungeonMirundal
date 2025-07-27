@@ -353,8 +353,11 @@ class DialogWindow(Window):
         
         # pygame-guiの要素を削除
         if self.ui_manager:
-            for element in list(self.ui_manager.get_root_container().elements):
-                element.kill()
+            root_container = self.ui_manager.get_root_container()
+            if hasattr(root_container, 'elements'):
+                elements = getattr(root_container, 'elements', [])
+                for element in list(elements):
+                    element.kill()
             self.ui_manager = None
         
         logger.debug(f"DialogWindow UI要素をクリーンアップ: {self.window_id}")
