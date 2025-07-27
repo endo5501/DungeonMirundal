@@ -8,6 +8,7 @@ import random
 from src.character.party import Party
 from src.items.item import Item, ItemType, ItemRarity
 from src.utils.logger import logger
+from .base.skill_check import treasure_skill_checker
 
 
 class TreasureType(Enum):
@@ -245,27 +246,13 @@ class TreasureSystem:
     
     def _attempt_lock_picking(self, lock_difficulty: int, opener_character = None) -> bool:
         """鍵開け試行"""
-        base_success = max(0.1, 1.0 - (lock_difficulty / 100.0))
+        if not opener_character:
+            base_success = max(0.1, 1.0 - (lock_difficulty / 100.0))
+            return random.random() < min(0.95, max(0.05, base_success))
         
-        if opener_character:
-            # キャラクターの能力による補正
-            if hasattr(opener_character, 'character_class'):
-                if opener_character.character_class == 'thief':
-                    base_success += 0.4
-                elif opener_character.character_class == 'ninja':
-                    base_success += 0.2
-            
-            # 敏捷性による補正
-            if hasattr(opener_character, 'base_stats'):
-                agility_bonus = (opener_character.base_stats.agility - 10) * 0.02
-                base_success += agility_bonus
-            
-            # レベルによる補正
-            if hasattr(opener_character, 'experience'):
-                level_bonus = opener_character.experience.level * 0.01
-                base_success += level_bonus
-        
-        return random.random() < min(0.95, max(0.05, base_success))
+        # 難易度を正規化（0-100を倍率に変換）
+        difficulty_multiplier = 1.0 + (lock_difficulty / 100.0)
+        return treasure_skill_checker.can_perform_skill(opener_character, "lock_picking", difficulty_multiplier)
     
     def _trigger_treasure_trap(self, party: Party, dungeon_level: int) -> str:
         """宝箱のトラップ発動"""

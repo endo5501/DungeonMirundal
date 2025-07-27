@@ -12,6 +12,9 @@ from .dungeon_generator import (
 
 from .dungeon_manager import (
     DungeonManager,
+    DungeonState,
+    PlayerPosition,
+    DungeonStatus,
     dungeon_manager
 )
 
@@ -24,5 +27,8 @@ __all__ = [
     "DungeonAttribute",
     "dungeon_generator",
     "DungeonManager",
+    "DungeonState",
+    "PlayerPosition", 
+    "DungeonStatus",
     "dungeon_manager"
 ]

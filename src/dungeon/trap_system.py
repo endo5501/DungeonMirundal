@@ -8,6 +8,7 @@ import random
 from src.character.character import Character
 from src.character.party import Party
 from src.utils.logger import logger
+from .base.skill_check import trap_skill_checker
 
 
 class TrapType(Enum):
@@ -307,51 +308,11 @@ class TrapSystem:
     
     def can_detect_trap(self, character: Character, trap_type: TrapType) -> bool:
         """キャラクターがトラップを発見できるかチェック"""
-        base_detection = 0.1  # 基本発見率
-        
-        # 盗賊系のクラスは発見率が高い
-        if hasattr(character, 'character_class'):
-            if character.character_class in ['thief', 'ninja']:
-                base_detection += 0.4
-            elif character.character_class in ['ranger', 'monk']:
-                base_detection += 0.2
-        
-        # 知力による補正
-        if hasattr(character, 'base_stats'):
-            intelligence_bonus = (character.base_stats.intelligence - 10) * 0.02
-            base_detection += intelligence_bonus
-        
-        # レベルによる補正
-        if hasattr(character, 'experience'):
-            level_bonus = character.experience.level * 0.01
-            base_detection += level_bonus
-        
-        return random.random() < min(0.9, max(0.05, base_detection))
+        return trap_skill_checker.can_perform_skill(character, "detect", 1.0)
     
     def can_disarm_trap(self, character: Character, trap_type: TrapType) -> bool:
         """キャラクターがトラップを解除できるかチェック"""
-        base_disarm = 0.05  # 基本解除率
-        
-        # 盗賊系のクラスは解除率が高い
-        if hasattr(character, 'character_class'):
-            if character.character_class == 'thief':
-                base_disarm += 0.5
-            elif character.character_class == 'ninja':
-                base_disarm += 0.3
-            elif character.character_class == 'ranger':
-                base_disarm += 0.1
-        
-        # 敏捷性による補正
-        if hasattr(character, 'base_stats'):
-            agility_bonus = (character.base_stats.agility - 10) * 0.02
-            base_disarm += agility_bonus
-        
-        # レベルによる補正
-        if hasattr(character, 'experience'):
-            level_bonus = character.experience.level * 0.02
-            base_disarm += level_bonus
-        
-        return random.random() < min(0.8, max(0.01, base_disarm))
+        return trap_skill_checker.can_perform_skill(character, "disarm", 1.0)
 
 
 # グローバルインスタンス
