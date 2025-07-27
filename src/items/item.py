@@ -159,6 +159,11 @@ class Item:
         """魔法書かどうか"""
         return self.item_type == ItemType.SPELLBOOK
     
+    @property
+    def is_usable(self) -> bool:
+        """使用可能アイテムかどうか"""
+        return self.is_consumable() or self.usable_in_combat
+    
     def get_attack_power(self) -> int:
         """攻撃力を取得（武器の場合）"""
         return self.item_data.get('attack_power', 0)

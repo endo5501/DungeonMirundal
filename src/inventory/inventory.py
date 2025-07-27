@@ -316,6 +316,38 @@ class Inventory:
             
         return total_value
     
+    def get_max_weight(self) -> float:
+        """最大重量を取得（現在は無制限）"""
+        return float('inf')  # 無制限
+    
+    def get_max_items(self) -> int:
+        """最大アイテム数を取得"""
+        return self.max_slots
+    
+    def transfer_item(self, slot_index: int, target_inventory: 'Inventory', quantity: int = None) -> bool:
+        """アイテムを他のインベントリに転送"""
+        if slot_index < 0 or slot_index >= len(self.slots):
+            return False
+        
+        slot = self.slots[slot_index]
+        if slot.is_empty():
+            return False
+        
+        # アイテムを削除（数量指定）
+        item_to_transfer = slot.remove_item(quantity)
+        if not item_to_transfer:
+            return False
+        
+        # 転送先に追加
+        if target_inventory.add_item(item_to_transfer):
+            logger.debug(f"アイテム転送成功: {item_to_transfer.item_id} x{item_to_transfer.quantity}")
+            return True
+        else:
+            # 転送失敗時は元に戻す
+            slot.add_item(item_to_transfer)
+            logger.warning(f"アイテム転送失敗（転送先満杯）: {item_to_transfer.item_id}")
+            return False
+    
     def _calculate_slot_value(self, slot: InventorySlot) -> int:
         """スロットの価値を計算"""
         if slot.is_empty():

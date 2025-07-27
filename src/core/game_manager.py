@@ -643,7 +643,11 @@ class GameManager(EventHandler):
         """遷移システムの初期化"""
         # UIマネージャーの初期化
         from src.ui.base_ui_pygame import initialize_ui_manager
-        self.ui_manager = initialize_ui_manager(self.screen)
+        if self.screen is not None:
+            self.ui_manager = initialize_ui_manager(self.screen)
+        else:
+            logger.error("Screen not initialized before UI manager setup")
+            self.ui_manager = None
         
         # WindowManagerの初期化（screenとclockを渡す）
         from src.ui.window_system.window_manager import WindowManager
@@ -718,7 +722,12 @@ class GameManager(EventHandler):
         """現在のロケーション設定 - SceneTransitionManagerに委譲"""
         if hasattr(self, 'scene_transition_manager'):
             # GameLocationからLiteral型に変換
-            location_str = location.value if hasattr(location, 'value') else str(location)
+            if location == GameLocation.OVERWORLD:
+                location_str = "overworld"
+            elif location == GameLocation.DUNGEON:
+                location_str = "dungeon"
+            else:
+                location_str = location.value if hasattr(location, 'value') else str(location)
             self.scene_transition_manager.set_current_location(location_str)
             # ローカル状態も同期
             self.current_location = location
@@ -1264,7 +1273,7 @@ class GameManager(EventHandler):
         from src.ui.window_system import WindowManager
         window_manager = WindowManager.get_instance()
         
-        if not window_manager.screen:
+        if not window_manager.screen and self.screen is not None:
             window_manager.initialize_pygame(self.screen, self.clock)
         
         ui_handled = window_manager.handle_global_events([event])
