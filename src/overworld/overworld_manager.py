@@ -13,6 +13,7 @@ from src.facilities.core.facility_registry import facility_registry
 # 新システムではOverworldMainWindowで情報表示を統合処理
 from src.ui.window_system import WindowManager
 from src.ui.window_system.window import WindowState
+from src.ui.ui_update_manager import UIUpdateManager, get_ui_update_manager
 try:
     from src.ui.window_system.dungeon_selection_window import DungeonSelectionWindow
 except ImportError:
@@ -99,6 +100,10 @@ class OverworldManager:
         # WindowManager統合
         self.window_manager = WindowManager.get_instance()
         self.main_window = None
+        
+        # UIUpdateManager統合
+        self.ui_update_manager = get_ui_update_manager()
+        self.ui_update_manager.set_window_manager(self.window_manager)
         
         logger.debug("OverworldManagerを初期化しました")
     
@@ -1512,7 +1517,27 @@ class OverworldManager:
             return False
     
     def _update_ui_after_party_change(self):
-        """パーティ変更後のUI更新処理"""
+        """パーティ変更後のUI更新処理（UIUpdateManager使用）"""
+        try:
+            if not self.current_party:
+                logger.warning("パーティ情報がありません")
+                return
+            
+            # UIUpdateManagerを使用してパーティ情報を一括更新
+            success = self.ui_update_manager.update_party_across_ui(self.current_party)
+            
+            if success:
+                logger.info(f"UIUpdateManager: パーティ更新成功 - {self.current_party.name} ({len(self.current_party.characters)}人)")
+            else:
+                logger.warning("UIUpdateManager: パーティ更新で一部失敗がありました")
+                
+        except Exception as e:
+            logger.error(f"UIUpdateManager使用時のエラー: {e}")
+            # フォールバック：従来の直接更新方式
+            self._legacy_update_ui_after_party_change()
+    
+    def _legacy_update_ui_after_party_change(self):
+        """パーティ変更後のUI更新処理（レガシー版・フォールバック用）"""
         try:
             # WindowManagerから現在のウィンドウを取得
             if not self.window_manager:
@@ -1524,14 +1549,14 @@ class OverworldManager:
             # OverworldMainWindowの場合、CharacterStatusBarを更新
             if hasattr(current_window, 'character_status_bar') and current_window.character_status_bar:
                 current_window.character_status_bar.set_party(self.current_party)
-                logger.info(f"CharacterStatusBarを更新: {self.current_party.name} ({len(self.current_party.characters)}人)")
+                logger.info(f"レガシー更新: CharacterStatusBarを更新: {self.current_party.name} ({len(self.current_party.characters)}人)")
                 
             # パーティステータス更新も実行
             if hasattr(current_window, 'update_party_status'):
                 current_window.update_party_status()
                 
         except Exception as e:
-            logger.error(f"UI更新エラー: {e}")
+            logger.error(f"レガシーUI更新エラー: {e}")
     
     def _back_to_settings_menu(self, from_party_status=False, from_save_menu=False, from_load_menu=False):
         """設定メニューに戻る"""

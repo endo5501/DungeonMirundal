@@ -9,6 +9,7 @@ from src.character.party import Party
 from src.character.character import Character, CharacterStatus
 from src.utils.logger import logger
 from src.ui.font_manager_pygame import font_manager
+from src.ui.ui_update_manager import UIUpdateable
 
 
 class CharacterSlot:
@@ -194,7 +195,7 @@ class CharacterSlot:
         pygame.draw.rect(screen, self.border_color, bg_rect, 1)
 
 
-class CharacterStatusBar(UIElement):
+class CharacterStatusBar(UIElement, UIUpdateable):
     """キャラクターステータスバーUI（画面下部）"""
     
     def __init__(self, x: int = 0, y: int = 668, width: int = 1024, height: int = 100):
@@ -256,6 +257,10 @@ class CharacterStatusBar(UIElement):
         for i, character in enumerate(characters):
             if i < len(self.slots):
                 self.slots[i].set_character(character)
+    
+    def update_display(self) -> None:
+        """UIUpdateableインターフェース実装：表示を更新する"""
+        self.update_character_display()
     
     def render(self, screen: pygame.Surface, font: Optional[pygame.font.Font] = None):
         """ステータスバーを描画"""
