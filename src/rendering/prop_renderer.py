@@ -41,11 +41,16 @@ class PropRenderer:
                 screen_x = prop_info['screen_x']
                 distance = prop_info['distance']
                 
+                # プレイヤーが現在位置にいるかどうかをチェック
+                is_player_on_cell = (x == player_pos.x and y == player_pos.y)
+                
                 # プロップを描画
                 if cell.cell_type == CellType.STAIRS_UP:
-                    self._draw_stairs(screen_x, distance, True)
+                    self._draw_stairs(screen_x, distance, True, is_player_on_cell)
                 elif cell.cell_type == CellType.STAIRS_DOWN:
-                    self._draw_stairs(screen_x, distance, False)
+                    self._draw_stairs(screen_x, distance, False, is_player_on_cell)
+                elif cell.cell_type == CellType.EXIT:
+                    self._draw_exit(screen_x, distance, is_player_on_cell)
                 
                 if cell.has_treasure:
                     self._draw_treasure(screen_x, distance)
@@ -77,16 +82,32 @@ class PropRenderer:
             'distance': distance
         }
     
-    def _draw_stairs(self, screen_x: int, distance: float, is_up: bool):
+    def _draw_stairs(self, screen_x: int, distance: float, is_up: bool, is_player_on: bool = False):
         """階段を描画"""
         if distance > 10.0:  # view_distance
             return
         
         size = self._calculate_prop_size(distance, self.prop_config.stairs_base_size)
-        color = self.color_config.stairs_up if is_up else self.color_config.stairs_down
+        base_color = self.color_config.stairs_up if is_up else self.color_config.stairs_down
+        
+        # プレイヤーが階段の上にいる場合、色を強調
+        if is_player_on:
+            # 点滅効果のための時間ベース計算
+            import time
+            flash_intensity = int(abs(math.sin(time.time() * 5)) * 100) + 155  # 155-255の範囲で点滅
+            highlight_color = (min(255, base_color[0] + flash_intensity // 2),
+                             min(255, base_color[1] + flash_intensity // 2), 
+                             min(255, base_color[2] + flash_intensity // 2))
+            color = highlight_color
+        else:
+            color = base_color
         
         stairs_rect = self._create_centered_rect(screen_x, size)
         pygame.draw.rect(self.screen, color, stairs_rect)
+        
+        # プレイヤーが上にいる場合、枠線を追加
+        if is_player_on:
+            pygame.draw.rect(self.screen, (255, 255, 255), stairs_rect, 3)
         
         self._draw_stairs_arrow(screen_x, stairs_rect, size, is_up)
     
@@ -100,6 +121,57 @@ class PropRenderer:
         treasure_rect = self._create_centered_rect(screen_x, size)
         pygame.draw.rect(self.screen, self.color_config.treasure, treasure_rect)
         pygame.draw.rect(self.screen, self.color_config.treasure_detail, treasure_rect, 1)
+    
+    def _draw_exit(self, screen_x: int, distance: float, is_player_on: bool = False):
+        """地上への出口を描画"""
+        if distance > 10.0:  # view_distance
+            return
+        
+        size = self._calculate_prop_size(distance, self.prop_config.stairs_base_size)
+        
+        # プレイヤーが出口の上にいる場合、光の強度を増す
+        if is_player_on:
+            import time
+            flash_intensity = int(abs(math.sin(time.time() * 4)) * 50) + 50  # より強い光
+            base_brightness = 255
+            bright_yellow = (255, 255, min(255, 200 + flash_intensity))
+            bright_gold = (255, min(255, 215 + flash_intensity), 0)
+            bright_white = (255, 255, 255)
+        else:
+            bright_yellow = (255, 255, 200)
+            bright_gold = (255, 215, 0)
+            bright_white = (255, 255, 255)
+        
+        # 出口の外枠を描画（明るい色で目立たせる）
+        exit_rect = self._create_centered_rect(screen_x, size)
+        pygame.draw.rect(self.screen, bright_yellow, exit_rect)  # 明るい黄色
+        
+        # プレイヤーが上にいる場合、外枠を太くする
+        border_width = 4 if is_player_on else 2
+        pygame.draw.rect(self.screen, bright_gold, exit_rect, border_width)  # ゴールドの枠
+        
+        # 出口の光を表現（内側に光のグラデーション効果）
+        inner_rect = exit_rect.inflate(-size//4, -size//4)
+        pygame.draw.rect(self.screen, bright_white, inner_rect)
+        
+        # 太陽のシンボルを描画（出口を示す）
+        center_x = exit_rect.centerx
+        center_y = exit_rect.centery
+        radius = size // 6
+        pygame.draw.circle(self.screen, bright_gold, (center_x, center_y), radius)
+        
+        # 光線を描画（プレイヤーが上にいる場合はより多くの光線）
+        angle_step = 30 if is_player_on else 45
+        line_width = 3 if is_player_on else 2
+        for angle in range(0, 360, angle_step):
+            rad = angle * math.pi / 180
+            start_x = center_x + radius * math.cos(rad)
+            start_y = center_y + radius * math.sin(rad)
+            end_x = center_x + (radius * 2) * math.cos(rad)
+            end_y = center_y + (radius * 2) * math.sin(rad)
+            pygame.draw.line(self.screen, bright_gold, 
+                           (int(start_x), int(start_y)), 
+                           (int(end_x), int(end_y)), line_width)
     
     def _calculate_prop_size(self, distance: float, base_size: int) -> int:
         """距離に基づいてプロップのサイズを計算"""

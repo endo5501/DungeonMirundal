@@ -54,6 +54,9 @@ class DungeonUIManagerPygame:
         self.current_menu_type = None
         self.current_party = None
         
+        # DungeonRendererへの参照（階段使用処理のため）
+        self.dungeon_renderer = None
+        
         # キャラクターステータスバー
         self.character_status_bar: Optional[CharacterStatusBar] = None
         self._initialize_character_status_bar()
@@ -175,6 +178,10 @@ class DungeonUIManagerPygame:
         """コールバックを設定"""
         self.callbacks[action] = callback
         logger.debug(config_manager.get_text("dungeon_ui.callback_set").format(action=action))
+    
+    def set_dungeon_renderer(self, dungeon_renderer):
+        """DungeonRendererを設定（階段使用処理のため）"""
+        self.dungeon_renderer = dungeon_renderer
     
     def set_dungeon_state(self, dungeon_state):
         """ダンジョン状態を設定"""
@@ -392,31 +399,45 @@ class DungeonUIManagerPygame:
     
     def handle_input(self, event) -> bool:
         """入力処理（WindowSystem版）"""
-        # デバッグ: WASDキーの処理をログ出力
-        if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-            logger.debug(f"[DEBUG] DungeonUIManager: WASD キー検出 key={pygame.key.name(event.key)}, menu_open={self.is_menu_open}")
+        # pygame_guiのダイアログイベントをチェック（階段確認ダイアログなど）
+        import pygame_gui
+        
+        if hasattr(self, 'dungeon_renderer') and self.dungeon_renderer and hasattr(self.dungeon_renderer, 'current_stairs_dialog'):
+            if self.dungeon_renderer.current_stairs_dialog:
+                if event.type == pygame_gui.UI_CONFIRMATION_DIALOG_CONFIRMED:
+                    if hasattr(event, 'ui_element') and event.ui_element == self.dungeon_renderer.current_stairs_dialog.window:
+                        # ダイアログのon_confirmコールバックを呼び出す
+                        if self.dungeon_renderer.current_stairs_dialog.on_confirm:
+                            self.dungeon_renderer.current_stairs_dialog.on_confirm()
+                        return True
+                elif event.type == pygame_gui.UI_WINDOW_CLOSE:
+                    if hasattr(event, 'ui_element') and event.ui_element == self.dungeon_renderer.current_stairs_dialog.window:
+                        # ダイアログのon_cancelコールバックを呼び出す
+                        if self.dungeon_renderer.current_stairs_dialog.on_cancel:
+                            self.dungeon_renderer.current_stairs_dialog.on_cancel()
+                        return True
         
         # BattleUIWindowが存在する場合、そちらに委譲
         if self.battle_ui_window:
             try:
-                result = self.battle_ui_window.handle_event(event)
-                if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                    logger.debug(f"[DEBUG] BattleUIWindow処理結果: {result}")
-                return result
+                return self.battle_ui_window.handle_event(event)
             except Exception as e:
                 logger.error(f"BattleUIWindow入力処理エラー: {e}")
         
         # 小地図のイベント処理（メニューが開いていなくても処理）
         if self.small_map_ui:
             small_map_result = self.small_map_ui.handle_event(event)
-            if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                logger.debug(f"[DEBUG] SmallMapUI処理結果: {small_map_result}")
             if small_map_result:
                 return True
         
+        # メニューが開いていない場合でも、Eキー（階段使用）は処理する必要がある
         if not self.is_menu_open:
-            if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
-                logger.debug(f"[DEBUG] DungeonUIManager: メニュー未開封のためFalseを返します")
+            # Eキーの階段使用処理
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
+                # DungeonRendererのhandle_key_inputメソッドを呼び出し
+                if hasattr(self, 'dungeon_renderer') and self.dungeon_renderer:
+                    return self.dungeon_renderer.handle_key_input(event.key)
+            
             return False
         
         if event.type == pygame.KEYDOWN:

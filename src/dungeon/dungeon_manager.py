@@ -240,6 +240,47 @@ class DungeonManager:
         
         return success
     
+    def use_stairs(self) -> Tuple[bool, str, Optional[str]]:
+        """階段または出口を使用
+        
+        Returns:
+            Tuple[bool, str, Optional[str]]: (成功フラグ, メッセージ, 階段タイプ)
+        """
+        if not self.current_dungeon or not self.current_dungeon.player_position:
+            return False, "ダンジョンに入っていません", None
+        
+        pos = self.current_dungeon.player_position
+        current_level = self.current_dungeon.levels.get(pos.level)
+        
+        if not current_level:
+            return False, "現在のレベルが見つかりません", None
+        
+        # 現在位置のセルを取得
+        current_cell = current_level.get_cell(pos.x, pos.y)
+        if not current_cell:
+            return False, "現在位置が無効です", None
+        
+        # セルタイプに応じて処理
+        if current_cell.cell_type == CellType.STAIRS_UP:
+            # 上階段使用
+            success, message = self.change_level(pos.level - 1)
+            return success, message, "up"
+            
+        elif current_cell.cell_type == CellType.STAIRS_DOWN:
+            # 下階段使用
+            success, message = self.change_level(pos.level + 1)
+            return success, message, "down"
+            
+        elif current_cell.cell_type == CellType.EXIT:
+            # 地上への出口使用
+            success = self.return_to_overworld()
+            if success:
+                return True, "地上へ戻ります", "exit"
+            else:
+                return False, "地上へ戻れませんでした", "exit"
+        else:
+            return False, "ここには階段がありません", None
+    
     def move_player(self, direction: Direction) -> Tuple[bool, str]:
         """プレイヤーを移動"""
         if not self.current_dungeon or not self.current_dungeon.player_position:
@@ -501,6 +542,7 @@ class DungeonManager:
     def check_party_status(self, party) -> Dict[str, Any]:
         """パーティ状態をチェック"""
         if not party:
+            logger.warning("check_party_status: パーティが設定されていません")
             return {"can_continue": False, "reason": "パーティが設定されていません"}
         
         living_members = party.get_living_characters()

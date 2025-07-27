@@ -292,7 +292,7 @@ class SceneTransitionManager(ManagedComponent):
             
             # オーバーワールドマネージャーの初期化
             if self.overworld_manager and hasattr(self.overworld_manager, 'enter_overworld'):
-                self.overworld_manager.enter_overworld()
+                self.overworld_manager.enter_overworld(self.current_party, from_dungeon=from_dungeon)
             
             # SceneManagerで地上部シーンに切り替え
             self._transition_scene_manager_to_overworld()

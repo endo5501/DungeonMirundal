@@ -27,6 +27,7 @@ class DungeonInputAction(Enum):
     INTERACT = "interact"
     RUN = "run"
     SNEAK = "sneak"
+    USE_STAIRS = "use_stairs"  # 階段使用
 
 
 class MovementResult:
@@ -63,7 +64,8 @@ class DungeonInputHandler:
             DungeonInputAction.SHOW_MENU: self._handle_show_menu,
             DungeonInputAction.INTERACT: self._handle_interact,
             DungeonInputAction.RUN: self._handle_run,
-            DungeonInputAction.SNEAK: self._handle_sneak
+            DungeonInputAction.SNEAK: self._handle_sneak,
+            DungeonInputAction.USE_STAIRS: self._handle_use_stairs
         }
         
         # 移動状態フラグ
@@ -121,12 +123,17 @@ class DungeonInputHandler:
             pygame.K_d: DungeonInputAction.TURN_RIGHT,
             pygame.K_RIGHT: DungeonInputAction.TURN_RIGHT,
             pygame.K_q: DungeonInputAction.STRAFE_LEFT,
-            pygame.K_e: DungeonInputAction.STRAFE_RIGHT,
             pygame.K_p: DungeonInputAction.SHOW_MENU,
             pygame.K_SPACE: DungeonInputAction.INTERACT,
             pygame.K_LSHIFT: DungeonInputAction.RUN,
             pygame.K_LCTRL: DungeonInputAction.SNEAK
         }
+        
+        # Eキーをチェック（STRAFE_RIGHTがEキーに割り当てられていたため、一時的に除外）
+        # Eキーを階段使用に再割り当て
+        if key == pygame.K_e:
+            # 現在位置のセルタイプを確認して、階段がある場合のみUSE_STAIRSを返す
+            return DungeonInputAction.USE_STAIRS
         
         return key_mapping.get(key)
     
@@ -140,7 +147,7 @@ class DungeonInputHandler:
         current_pos = self.dungeon_manager.current_dungeon.player_position
         facing_direction = current_pos.facing
         
-        success = self.dungeon_manager.move_player(facing_direction)
+        success, move_message = self.dungeon_manager.move_player(facing_direction)
         
         if success:
             message = "前進しました"
@@ -167,7 +174,7 @@ class DungeonInputHandler:
         facing_direction = current_pos.facing
         backward_direction = DirectionHelper.get_opposite_direction(facing_direction)
         
-        success = self.dungeon_manager.move_player(backward_direction)
+        success, move_message = self.dungeon_manager.move_player(backward_direction)
         
         if success:
             return MovementResult(True, "後退しました", {
@@ -188,7 +195,7 @@ class DungeonInputHandler:
         facing_direction = current_pos.facing
         left_direction = DirectionHelper.get_left_direction(facing_direction)
         
-        success = self.dungeon_manager.move_player(left_direction)
+        success, move_message = self.dungeon_manager.move_player(left_direction)
         
         if success:
             return MovementResult(True, "左に移動しました", {
@@ -208,7 +215,7 @@ class DungeonInputHandler:
         facing_direction = current_pos.facing
         right_direction = DirectionHelper.get_right_direction(facing_direction)
         
-        success = self.dungeon_manager.move_player(right_direction)
+        success, move_message = self.dungeon_manager.move_player(right_direction)
         
         if success:
             return MovementResult(True, "右に移動しました", {
@@ -258,7 +265,7 @@ class DungeonInputHandler:
         facing_direction = current_pos.facing
         left_direction = DirectionHelper.get_left_direction(facing_direction)
         
-        success = self.dungeon_manager.move_player(left_direction)
+        success, move_message = self.dungeon_manager.move_player(left_direction)
         
         if success:
             return MovementResult(True, "左にストライフしました", {
@@ -278,7 +285,7 @@ class DungeonInputHandler:
         facing_direction = current_pos.facing
         right_direction = DirectionHelper.get_right_direction(facing_direction)
         
-        success = self.dungeon_manager.move_player(right_direction)
+        success, move_message = self.dungeon_manager.move_player(right_direction)
         
         if success:
             return MovementResult(True, "右にストライフしました", {
@@ -329,11 +336,59 @@ class DungeonInputHandler:
             "sneaking": self.is_sneaking
         })
     
+    def _handle_use_stairs(self) -> MovementResult:
+        """階段使用処理"""
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
+            return MovementResult(False, "ダンジョンが設定されていません")
+        
+        # 現在位置のセルを取得
+        current_pos = self.dungeon_manager.current_dungeon.player_position
+        if not current_pos:
+            return MovementResult(False, "プレイヤーの位置が不明です")
+        
+        # 現在のレベルを取得
+        current_level = self.dungeon_manager.current_dungeon.levels.get(current_pos.level)
+        if not current_level:
+            return MovementResult(False, "現在のレベルが見つかりません")
+        
+        # レベルからセルを取得
+        cell = current_level.get_cell(current_pos.x, current_pos.y)
+        
+        if not cell:
+            return MovementResult(False, "現在位置が無効です")
+        
+        # セルタイプに応じて処理
+        from src.dungeon.dungeon_generator import CellType
+        
+        if cell.cell_type == CellType.STAIRS_UP:
+            return MovementResult(True, "上り階段を使用", {
+                "action_type": "use_stairs",
+                "stairs_type": "up",
+                "needs_confirmation": True
+            })
+        elif cell.cell_type == CellType.STAIRS_DOWN:
+            return MovementResult(True, "下り階段を使用", {
+                "action_type": "use_stairs",
+                "stairs_type": "down",
+                "needs_confirmation": True
+            })
+        elif cell.cell_type == CellType.EXIT:
+            return MovementResult(True, "地上への出口を使用", {
+                "action_type": "use_stairs",
+                "stairs_type": "exit",
+                "needs_confirmation": True
+            })
+        else:
+            return MovementResult(False, "ここには階段や出口がありません")
+    
     # === ヘルパーメソッド ===
     
     def _can_move(self) -> bool:
         """移動可能かチェック"""
-        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
+        if not self.dungeon_manager:
+            return False
+            
+        if not self.dungeon_manager.current_dungeon:
             return False
         
         # TODO: パーティの状態、状態異常などをチェック

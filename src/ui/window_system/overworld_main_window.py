@@ -609,10 +609,14 @@ class OverworldMainWindow(Window):
         
         logger.info(f"OverworldMainWindow UI要素を非表示: {self.window_id}")
     
-    def show_ui_elements(self) -> None:
-        """UI要素を表示する"""
-        # ダンジョン内の場合は地上UIを表示しない
-        if self._is_in_dungeon():
+    def show_ui_elements(self, force: bool = False) -> None:
+        """UI要素を表示する
+        
+        Args:
+            force: True の場合、ダンジョン内チェックをスキップして強制表示
+        """
+        # ダンジョン内の場合は地上UIを表示しない（forceフラグがFalseの場合のみ）
+        if not force and self._is_in_dungeon():
             logger.info(f"OverworldMainWindow: ダンジョン内のため、UI要素表示をスキップ: {self.window_id}")
             return
         

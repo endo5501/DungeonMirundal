@@ -22,7 +22,8 @@ if [ -f "$PID_FILE" ]; then
     OLD_PID=$(cat "$PID_FILE")
     if kill -0 "$OLD_PID" 2>/dev/null; then
         echo -e "${YELLOW}Game is already running (PID: $OLD_PID)${NC}"
-        echo -e "${GREEN}Debug API ready at http://localhost:$API_PORT${NC}"
+        echo -e "${YELLOW}If you check game, you need kill this process and restart this.${NC}"
+#       echo -e "${GREEN}Debug API ready at http://localhost:$API_PORT${NC}"
         exit 0
     else
         rm -f "$PID_FILE"

@@ -3,8 +3,8 @@ priority: 1
 tags: ["feature", "dungeon", "critical", "gameplay", "navigation"]
 description: "ダンジョン階段システムと地上への出口実装"
 created_at: "2025-07-22T13:27:12Z"
-started_at: null  # Do not modify manually
-closed_at: null   # Do not modify manually
+started_at: 2025-07-24T14:39:16Z # Do not modify manually
+closed_at: 2025-07-27T04:58:46Z # Do not modify manually
 ---
 
 # Ticket Overview
@@ -32,20 +32,20 @@ closed_at: null   # Do not modify manually
 
 ## Tasks
 
-- [ ] 階段オブジェクトの定義（上り階段、下り階段、出口）
-- [ ] ダンジョンマップへの階段配置ロジック実装
-- [ ] 階段の3D表示実装（視覚的に認識可能にする）
-- [ ] プレイヤーが階段に到達した際の判定処理
-- [ ] 階段使用時の確認ダイアログ実装
-- [ ] 階層移動処理の実装（上下階層への遷移）
-- [ ] 地上への出口処理の実装（OverworldManagerへの遷移）
-- [ ] 階層移動時のセーブポイント処理
-- [ ] 階層移動エフェクト・演出の実装
-- [ ] 階段位置のミニマップ表示対応
-- [ ] 階段に関するイベント通知実装
-- [ ] テストダンジョンでの動作確認（1階→地上、1階→2階、2階→1階）
-- [ ] Run tests before closing and pass all tests (No exceptions)
-- [ ] Get developer approval before closing
+- [x] 階段オブジェクトの定義（上り階段、下り階段、出口）
+- [x] ダンジョンマップへの階段配置ロジック実装
+- [x] 階段の3D表示実装（視覚的に認識可能にする）-> 250727-045018-dungeon-stairs-3d-visual-enhancement
+- [x] プレイヤーが階段に到達した際の判定処理
+- [x] 階段使用時の確認ダイアログ実装
+- [x] 階層移動処理の実装（上下階層への遷移）
+- [x] 地上への出口処理の実装（OverworldManagerへの遷移）
+- [x] 階層移動時のセーブポイント処理(不要)
+- [x] 階層移動エフェクト・演出の実装(不要)
+- [x] 階段位置のミニマップ表示対応 -> 250727-045257-dungeon-stairs-minimap-display
+- [x] 階段に関するイベント通知実装
+- [x] テストダンジョンでの動作確認（1階→地上、1階→2階、2階→1階）
+- [x] Run tests before closing and pass all tests (No exceptions)
+- [x] Get developer approval before closing
 
 ## Notes
 

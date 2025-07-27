@@ -1702,9 +1702,18 @@ class GameManager(EventHandler):
     
     def check_party_status_in_dungeon(self):
         """ダンジョン内でのパーティ状態監視"""
-        if (self.current_location != GameLocation.DUNGEON or 
-            not self.dungeon_manager or 
-            not self.current_party):
+        # 詳細デバッグ情報を記録
+        location_ok = self.current_location == GameLocation.DUNGEON
+        dungeon_manager_ok = self.dungeon_manager is not None
+        party_ok = self.current_party is not None
+        
+        if not location_ok:
+            return  # 通常時は大量ログを避ける
+            
+        if not dungeon_manager_ok:
+            return
+            
+        if not party_ok:
             return
         
         try:

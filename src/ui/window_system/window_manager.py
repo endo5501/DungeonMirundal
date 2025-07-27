@@ -603,10 +603,10 @@ class WindowManager:
             logger.debug(f"最上位ウィンドウを描画: {top_window.window_id}")
         else:
             # ウィンドウがない場合は背景をクリア
-            surface.fill((0, 0, 0))
-            logger.debug("ウィンドウなし: 背景をクリア")
+            # ダンジョンシーンなどではウィンドウがないため、背景クリアをスキップ
+            pass
         
-        # UIManagerの描画（最上位ウィンドウのUI要素）
+        # UIManagerの描画（pygame_guiダイアログなどを必ず描画）
         if self.ui_manager:
             self.ui_manager.draw_ui(surface)
         else:

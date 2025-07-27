@@ -299,16 +299,29 @@ class OverworldManager:
             # メニュー設定を作成
             menu_config = self._create_main_menu_config()
             
-            # OverworldMainWindowを作成（WindowManager経由で登録）
-            self.main_window = self.window_manager.create_window(
-                OverworldMainWindow, 'overworld_main', config=menu_config
-            )
-            
-            # メッセージハンドラーを設定
-            self.main_window.message_handler = self.handle_main_menu_message
-            
-            # ウィンドウを表示
-            self.window_manager.show_window(self.main_window, push_to_stack=True)
+            # 既存のOverworldMainWindowがあるかチェック
+            existing_window = self.window_manager.get_window('overworld_main')
+            if existing_window:
+                logger.info("既存のOverworldMainWindowを再利用します")
+                self.main_window = existing_window
+                # メッセージハンドラーを設定
+                self.main_window.message_handler = self.handle_main_menu_message
+                # UI要素を表示状態に戻す（ダンジョンから戻った場合は強制表示）
+                if hasattr(self.main_window, 'show_ui_elements'):
+                    self.main_window.show_ui_elements(force=True)
+                # ウィンドウを表示
+                self.window_manager.show_window(self.main_window, push_to_stack=True)
+            else:
+                # OverworldMainWindowを作成（WindowManager経由で登録）
+                self.main_window = self.window_manager.create_window(
+                    OverworldMainWindow, 'overworld_main', config=menu_config
+                )
+                
+                # メッセージハンドラーを設定
+                self.main_window.message_handler = self.handle_main_menu_message
+                
+                # ウィンドウを表示
+                self.window_manager.show_window(self.main_window, push_to_stack=True)
             
             logger.info("WindowManagerでメインメニューを表示しました")
             
