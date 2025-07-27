@@ -638,7 +638,8 @@ class GameManager(EventHandler):
         # WindowManagerの初期化（screenとclockを渡す）
         from src.ui.window_system.window_manager import WindowManager
         window_manager = WindowManager.get_instance()
-        window_manager.initialize_pygame(self.screen, self.clock)
+        if self.screen and self.clock:
+            window_manager.initialize_pygame(self.screen, self.clock)
         logger.debug("WindowManagerをPygameで初期化しました")
         
         # 地上部マネージャーの初期化
@@ -706,7 +707,9 @@ class GameManager(EventHandler):
     def set_current_location(self, location: GameLocation):
         """現在のロケーション設定 - SceneTransitionManagerに委譲"""
         if hasattr(self, 'scene_transition_manager'):
-            self.scene_transition_manager.set_current_location(location)
+            # GameLocationからLiteral型に変換
+            location_str = location.value if hasattr(location, 'value') else str(location)
+            self.scene_transition_manager.set_current_location(location_str)
             # ローカル状態も同期
             self.current_location = location
         else:
@@ -762,7 +765,7 @@ class GameManager(EventHandler):
         else:
             logger.info("パーティをクリアしました")
     
-    def get_current_party(self) -> Party:
+    def get_current_party(self) -> Optional[Party]:
         """現在のパーティを取得"""
         return self.current_party
     
@@ -1285,7 +1288,8 @@ class GameManager(EventHandler):
                             if hasattr(self.ui_manager, 'default_font'):
                                 font = self.ui_manager.default_font
                             
-                            element.render(self.screen, font)
+                            if self.screen:
+                                element.render(self.screen, font)
                             
                         except Exception as e:
                             logger.warning(f"永続要素の描画でエラーが発生: {type(element).__name__}: {e}")
@@ -1867,7 +1871,11 @@ class GameManager(EventHandler):
         
         try:
             encounter_id = self.current_boss_encounter["encounter_id"]
-            result = self.dungeon_manager.complete_boss_encounter(encounter_id, victory, self.current_party)
+            if self.current_party:
+                result = self.dungeon_manager.complete_boss_encounter(encounter_id, victory, self.current_party)
+            else:
+                logger.error("ボス戦完了処理でパーティが見つかりません")
+                return
             
             logger.info(f"ボス戦完了: {result.get('message', '')}")
             

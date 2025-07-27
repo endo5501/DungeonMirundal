@@ -654,12 +654,12 @@ class CombatManager:
                 targets = [m for m in self.monsters if m.is_alive]
             else:
                 # モンスターはキャラクターを攻撃
-                targets = self.party.get_living_characters() if self.party else []
+                targets = list(self.party.get_living_characters()) if self.party else []
         
         elif action in [CombatAction.USE_ITEM]:
             if isinstance(actor, Character):
                 # アイテムは味方に使用可能
-                targets = self.party.get_living_characters() if self.party else []
+                targets = list(self.party.get_living_characters()) if self.party else []
         
         return targets
     

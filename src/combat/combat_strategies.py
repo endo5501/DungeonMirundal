@@ -393,7 +393,10 @@ class UseItemStrategy(CombatStrategy):
             attacker.items.remove_item(item_id, 1)
         
         # アイテム効果を適用
-        result = self._apply_item_effect(item_id, attacker, target)
+        if item_id:
+            result = self._apply_item_effect(item_id, attacker, target)
+        else:
+            result = {"damage": 0, "success": False, "message": "アイテムが見つかりません"}
         
         return result
     

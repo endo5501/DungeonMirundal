@@ -380,7 +380,7 @@ class SceneManager:
         self.scenes[SceneType.DUNGEON] = DungeonScene(self)
         self.scenes[SceneType.COMBAT] = CombatScene(self)
     
-    def transition_to(self, scene_type: SceneType, context: Dict[str, Any] = None) -> bool:
+    def transition_to(self, scene_type: SceneType, context: Optional[Dict[str, Any]] = None) -> bool:
         """シーン遷移"""
         if scene_type not in self.scenes:
             logger.error(f"未知のシーンタイプ: {scene_type}")
