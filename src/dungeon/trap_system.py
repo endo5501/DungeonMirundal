@@ -308,11 +308,11 @@ class TrapSystem:
     
     def can_detect_trap(self, character: Character, trap_type: TrapType) -> bool:
         """キャラクターがトラップを発見できるかチェック"""
-        return trap_skill_checker.can_perform_skill(character, "detect", 1.0)
+        return trap_skill_checker.can_detect_trap(character, trap_type)
     
     def can_disarm_trap(self, character: Character, trap_type: TrapType) -> bool:
         """キャラクターがトラップを解除できるかチェック"""
-        return trap_skill_checker.can_perform_skill(character, "disarm", 1.0)
+        return trap_skill_checker.can_disarm_trap(character, trap_type)
 
 
 # グローバルインスタンス

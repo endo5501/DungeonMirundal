@@ -252,7 +252,7 @@ class TreasureSystem:
         
         # 難易度を正規化（0-100を倍率に変換）
         difficulty_multiplier = 1.0 + (lock_difficulty / 100.0)
-        return treasure_skill_checker.can_perform_skill(opener_character, "lock_picking", difficulty_multiplier)
+        return treasure_skill_checker.can_pick_lock(opener_character, difficulty_multiplier)
     
     def _trigger_treasure_trap(self, party: Party, dungeon_level: int) -> str:
         """宝箱のトラップ発動"""

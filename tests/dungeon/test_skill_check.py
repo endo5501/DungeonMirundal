@@ -21,9 +21,9 @@ class TestSkillCheckBase:
         
         checker = TrapSkillChecker()
         
-        # disarmスキルのテスト
+        # trap_disarmスキルのテスト
         with patch('random.random', return_value=0.3):  # 30%で固定
-            result = checker.can_perform_skill(character, "disarm", 1.0)
+            result = checker.can_perform_skill(character, "trap_disarm", 1.0)
             # thief(0.5) + agility bonus(0.1) + level bonus(0.05) + base(0.1) = 0.75
             # 0.3 < 0.75 なので成功するはず
             assert result is True
@@ -42,12 +42,12 @@ class TestSkillCheckBase:
         # 高難易度でのテスト
         with patch('random.random', return_value=0.3):
             # 難易度2.0で成功率が半分になる
-            result = checker.can_perform_skill(character, "disarm", 2.0)
+            result = checker.can_perform_skill(character, "trap_disarm", 2.0)
             # 0.75 / 2.0 = 0.375, 0.3 < 0.375 なので成功
             assert result is True
             
             # より高い難易度
-            result = checker.can_perform_skill(character, "disarm", 3.0)
+            result = checker.can_perform_skill(character, "trap_disarm", 3.0)
             # 0.75 / 3.0 = 0.25, 0.3 > 0.25 なので失敗
             assert result is False
 
@@ -55,34 +55,34 @@ class TestSkillCheckBase:
 class TestTrapSkillChecker:
     """TrapSkillCheckerのテスト"""
     
-    def test_class_bonus_for_detection(self):
-        """探知スキルのクラスボーナステスト"""
+    def test_class_bonus_from_config_detection(self):
+        """探知スキルの設定ファイルボーナステスト"""
         checker = TrapSkillChecker()
         
         # Thiefのボーナス
-        assert checker._get_class_bonus("thief", "detect") == 0.4
+        assert checker._get_class_bonus_from_config("thief", "trap_detection") == 0.4
         
         # Ninjaのボーナス
-        assert checker._get_class_bonus("ninja", "detect") == 0.3
+        assert checker._get_class_bonus_from_config("ninja", "trap_detection") == 0.3
         
         # 不明なクラス
-        assert checker._get_class_bonus("unknown", "detect") == 0.0
+        assert checker._get_class_bonus_from_config("unknown", "trap_detection") == 0.0
     
-    def test_class_bonus_for_disarm(self):
-        """解除スキルのクラスボーナステスト"""
+    def test_class_bonus_from_config_disarm(self):
+        """解除スキルの設定ファイルボーナステスト"""
         checker = TrapSkillChecker()
         
         # Thiefのボーナス
-        assert checker._get_class_bonus("thief", "disarm") == 0.5
+        assert checker._get_class_bonus_from_config("thief", "trap_disarm") == 0.5
         
         # Ninjaのボーナス
-        assert checker._get_class_bonus("ninja", "disarm") == 0.3
+        assert checker._get_class_bonus_from_config("ninja", "trap_disarm") == 0.3
         
         # Rangerのボーナス
-        assert checker._get_class_bonus("ranger", "disarm") == 0.1
+        assert checker._get_class_bonus_from_config("ranger", "trap_disarm") == 0.1
     
-    def test_stat_bonus(self):
-        """ステータスボーナステスト"""
+    def test_stat_bonus_from_config(self):
+        """ステータスボーナス設定ファイルテスト"""
         checker = TrapSkillChecker()
         
         stats = Mock()
@@ -90,37 +90,37 @@ class TestTrapSkillChecker:
         stats.agility = 14
         
         # 探知は知力ベース
-        assert checker._get_stat_bonus(stats, "detect") == 0.12  # (16-10) * 0.02
+        assert checker._get_stat_bonus_from_config(stats, "trap_detection") == 0.12  # (16-10) * 0.02
         
         # 解除は敏捷ベース
-        assert checker._get_stat_bonus(stats, "disarm") == 0.08  # (14-10) * 0.02
+        assert checker._get_stat_bonus_from_config(stats, "trap_disarm") == 0.08  # (14-10) * 0.02
 
 
 class TestTreasureSkillChecker:
     """TreasureSkillCheckerのテスト"""
     
-    def test_lock_picking_class_bonus(self):
-        """鍵開けクラスボーナステスト"""
+    def test_lock_picking_class_bonus_from_config(self):
+        """鍵開け設定ファイルクラスボーナステスト"""
         checker = TreasureSkillChecker()
         
         # Thiefのボーナス
-        assert checker._get_class_bonus("thief", "lock_picking") == 0.4
+        assert checker._get_class_bonus_from_config("thief", "lockpick") == 0.4
         
         # Ninjaのボーナス
-        assert checker._get_class_bonus("ninja", "lock_picking") == 0.2
+        assert checker._get_class_bonus_from_config("ninja", "lockpick") == 0.2
         
         # 不明なクラス
-        assert checker._get_class_bonus("warrior", "lock_picking") == 0.0
+        assert checker._get_class_bonus_from_config("warrior", "lockpick") == 0.0
     
-    def test_lock_picking_stat_bonus(self):
-        """鍵開けステータスボーナステスト"""
+    def test_lock_picking_stat_bonus_from_config(self):
+        """鍵開け設定ファイルステータスボーナステスト"""
         checker = TreasureSkillChecker()
         
         stats = Mock()
         stats.agility = 18
         
         # 鍵開けは敏捷ベース
-        assert checker._get_stat_bonus(stats, "lock_picking") == 0.16  # (18-10) * 0.02
+        assert checker._get_stat_bonus_from_config(stats, "lockpick") == 0.16  # (18-10) * 0.02
 
 
 class TestIntegration:
@@ -141,7 +141,7 @@ class TestIntegration:
         # 成功率が高いはず
         success_count = 0
         for _ in range(100):
-            if trap_skill_checker.can_perform_skill(thief, "detect", 1.0):
+            if trap_skill_checker.can_perform_skill(thief, "trap_detection", 1.0):
                 success_count += 1
         
         # 高い成功率を期待（理論値約72%）
@@ -163,7 +163,7 @@ class TestIntegration:
         # 成功率が低いはず
         success_count = 0
         for _ in range(100):
-            if treasure_skill_checker.can_perform_skill(warrior, "lock_picking", 1.0):
+            if treasure_skill_checker.can_perform_skill(warrior, "lockpick", 1.0):
                 success_count += 1
         
         # 低い成功率を期待（理論値約11%）

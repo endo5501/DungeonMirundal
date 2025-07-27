@@ -227,6 +227,31 @@ level_progression:
     9: 3600
     10: 4500
   
+# スキルボーナス設定
+skill_bonuses:
+  # トラップ関連スキル
+  trap_detection:
+    thief: 0.4
+    ninja: 0.3
+    ranger: 0.2
+    monk: 0.1
+  
+  trap_disarm:
+    thief: 0.5
+    ninja: 0.3
+    ranger: 0.1
+  
+  # 宝箱関連スキル
+  lockpick:
+    thief: 0.4
+    ninja: 0.2
+  
+  # スキルに対応するステータス
+  skill_stats:
+    trap_detection: intelligence
+    trap_disarm: agility
+    lockpick: agility
+
 # キャラクター作成設定
 character_creation:
   stat_roll_method: "4d6_drop_lowest"  # 3d6, 4d6_drop_lowest, point_buy
