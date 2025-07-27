@@ -3,6 +3,7 @@ priority: 2
 tags: ["bug", "save-system", "load-system", "data-integrity"]
 description: "セーブスロット2以降への保存が正常に反映されない問題"
 created_at: "2025-07-22T16:08:20Z"
+started_at: ""
 ---
 
 # セーブ/ロードスロットシステム問題
