@@ -494,11 +494,11 @@ class ShopService(FacilityService, ActionExecutorMixin):
         if not confirm_result.success:
             return confirm_result
         
-        sell_data = confirm_result.data
-        slot_index = sell_data["slot_index"]
-        owner_type = sell_data["owner_type"]
+        sell_data = confirm_result.data or {}
+        slot_index = sell_data.get("slot_index")
+        owner_type = sell_data.get("owner_type")
         owner_id = sell_data.get("owner_id")
-        total_price = sell_data["total_price"]
+        total_price = sell_data.get("total_price", 0)
         
         # インベントリからアイテムを削除
         if owner_type == "party":

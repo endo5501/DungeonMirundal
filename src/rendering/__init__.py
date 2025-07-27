@@ -11,7 +11,7 @@ def _import_renderer():
         return DungeonRenderer
     except ImportError:
         try:
-            from .dungeon_renderer import DungeonRenderer
+            from .dungeon_renderer_pygame_backup import DungeonRenderer
             return DungeonRenderer
         except ImportError:
             return None

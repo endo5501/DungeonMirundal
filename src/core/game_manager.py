@@ -267,14 +267,14 @@ class GameManager(EventHandler):
     
     def _handle_scene_transition_request(self, event: GameEvent) -> bool:
         """シーン遷移リクエストの処理"""
-        scene_type_str = event.data.get('scene_type')
-        context = event.data.get('context', {})
+        scene_type_str = event.data.get('scene_type') if event.data else None
+        context = event.data.get('context', {}) if event.data else {}
         
-        if scene_type_str == 'overworld':
+        if scene_type_str == 'overworld' and self.scene_manager:
             return self.scene_manager.transition_to_overworld(context.get('from_dungeon', False))
-        elif scene_type_str == 'dungeon':
+        elif scene_type_str == 'dungeon' and self.scene_manager:
             return self.scene_manager.transition_to_dungeon(context.get('dungeon_id', 'main_dungeon'))
-        elif scene_type_str == 'combat':
+        elif scene_type_str == 'combat' and self.scene_manager:
             return self.scene_manager.transition_to_combat(context.get('monsters', []))
         
         return False
@@ -1665,7 +1665,7 @@ class GameManager(EventHandler):
             
             # 地上部マネージャーを表示
             if self.overworld_manager:
-                self.overworld_manager.enter_overworld()
+                self.overworld_manager.enter_overworld(self.current_party)
             
         except Exception as e:
             logger.error(f"強制帰還処理エラー: {e}")
