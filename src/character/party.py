@@ -8,6 +8,7 @@ import uuid
 from src.character.character import Character, CharacterStatus
 from src.utils.constants import MAX_PARTY_SIZE, FRONT_ROW_SIZE, BACK_ROW_SIZE
 from src.utils.logger import logger
+from src.core.event_bus import EventType, publish_event
 
 
 class PartyPosition(Enum):
@@ -161,6 +162,14 @@ class Party:
         if position is not None:
             self.formation.add_character(character.character_id, position)
             logger.info(f"キャラクター {character.name} をパーティに追加しました")
+            
+            # パーティメンバー追加イベントを発行
+            publish_event(EventType.PARTY_MEMBER_ADDED, f"Party.{self.party_id}", {
+                'party': self,
+                'character': character,
+                'position': position.value
+            })
+            
             return True
         else:
             # 位置が見つからない場合はキャラクターも削除
@@ -179,6 +188,14 @@ class Party:
         self.formation.remove_character(character_id)
         
         logger.info(f"キャラクター {character.name} をパーティから削除しました")
+        
+        # パーティメンバー削除イベントを発行
+        publish_event(EventType.PARTY_MEMBER_REMOVED, f"Party.{self.party_id}", {
+            'party': self,
+            'character': character,
+            'character_id': character_id
+        })
+        
         return True
     
     def initialize_party_inventory(self):

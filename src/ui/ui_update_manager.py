@@ -10,6 +10,7 @@ from typing import Optional, Any, Dict, List, Callable
 from abc import ABC, abstractmethod
 
 from src.character.party import Party
+from src.core.event_bus import EventBus, EventHandler, EventType, GameEvent
 
 logger = logging.getLogger(__name__)
 
@@ -28,12 +29,13 @@ class UIUpdateable(ABC):
         pass
 
 
-class UIUpdateManager:
-    """UI更新処理の統一管理クラス
+class UIUpdateManager(EventHandler):
+    """UI更新処理の統一管理クラス（EventBus統合版）
     
     このクラスは以下の責務を持ちます：
     - WindowManager経由の安全なUI更新
     - パーティ変更時の一括UI更新
+    - EventBus経由でのイベント駆動UI更新
     - エラーハンドリングとログの統一
     - 更新対象コンポーネントの管理
     """
@@ -49,6 +51,101 @@ class UIUpdateManager:
         self._update_callbacks: List[Callable] = []
         self._auto_discovery_enabled = True
         
+        # EventBus統合
+        self.event_bus = EventBus()
+        self._setup_event_subscriptions()
+    
+    def _setup_event_subscriptions(self) -> None:
+        """EventBus購読の設定"""
+        # パーティ関連イベントを購読
+        party_events = [
+            EventType.PARTY_CREATED,
+            EventType.PARTY_MEMBER_ADDED,
+            EventType.PARTY_MEMBER_REMOVED,
+            EventType.PARTY_GOLD_CHANGED
+        ]
+        
+        for event_type in party_events:
+            self.event_bus.subscribe(event_type, self)
+        
+        # キャラクター関連イベントも購読
+        character_events = [
+            EventType.CHARACTER_HP_CHANGED,
+            EventType.CHARACTER_STATUS_CHANGED,
+            EventType.CHARACTER_LEVEL_UP
+        ]
+        
+        for event_type in character_events:
+            self.event_bus.subscribe(event_type, self)
+        
+        logger.debug("UIUpdateManager: EventBus購読を設定しました")
+    
+    def handle_event(self, event: GameEvent) -> bool:
+        """EventBusからのイベント処理（EventHandlerインターフェース実装）"""
+        try:
+            if event.event_type in [EventType.PARTY_CREATED, EventType.PARTY_MEMBER_ADDED, 
+                                   EventType.PARTY_MEMBER_REMOVED, EventType.PARTY_GOLD_CHANGED]:
+                # パーティ関連イベントの場合、関連UIを更新
+                party = event.data.get('party') if event.data else None
+                if party:
+                    self.update_party_across_ui(party)
+                    logger.debug(f"UIUpdateManager: パーティイベント処理完了 - {event.event_type.value}")
+                else:
+                    # パーティ情報なしの場合は強制リフレッシュ
+                    self.force_ui_refresh()
+                    logger.debug(f"UIUpdateManager: UI強制リフレッシュ - {event.event_type.value}")
+                
+            elif event.event_type in [EventType.CHARACTER_HP_CHANGED, EventType.CHARACTER_STATUS_CHANGED, 
+                                     EventType.CHARACTER_LEVEL_UP]:
+                # キャラクター関連イベントの場合、キャラクター表示を更新
+                self._update_character_displays(event)
+                logger.debug(f"UIUpdateManager: キャラクターイベント処理完了 - {event.event_type.value}")
+            
+            return False  # 他のハンドラーにも処理を委ねる
+            
+        except Exception as e:
+            logger.error(f"UIUpdateManager: イベント処理エラー - {event.event_type.value}: {e}")
+            return False
+    
+    def get_handled_event_types(self) -> List[EventType]:
+        """処理するイベントタイプのリスト"""
+        return [
+            EventType.PARTY_CREATED,
+            EventType.PARTY_MEMBER_ADDED,
+            EventType.PARTY_MEMBER_REMOVED,
+            EventType.PARTY_GOLD_CHANGED,
+            EventType.CHARACTER_HP_CHANGED,
+            EventType.CHARACTER_STATUS_CHANGED,
+            EventType.CHARACTER_LEVEL_UP
+        ]
+    
+    def _update_character_displays(self, event: GameEvent) -> None:
+        """キャラクター関連イベントでの表示更新"""
+        character = event.data.get('character') if event.data else None
+        if not character:
+            return
+        
+        # 登録されたコンポーネントのうち、キャラクター更新をサポートするものを更新
+        for name, component in self._registered_components.items():
+            try:
+                if hasattr(component, 'update_character'):
+                    component.update_character(character)
+                elif hasattr(component, 'refresh_character'):
+                    component.refresh_character(character)
+                elif hasattr(component, 'mark_dirty'):
+                    component.mark_dirty()
+            except Exception as e:
+                logger.error(f"UIUpdateManager: {name} のキャラクター更新エラー: {e}")
+        
+        # WindowManager経由でも更新
+        if self.window_manager:
+            try:
+                current_window = self.window_manager.get_active_window()
+                if current_window and hasattr(current_window, 'update_character_display'):
+                    current_window.update_character_display(character)
+            except Exception as e:
+                logger.error(f"UIUpdateManager: ウィンドウキャラクター更新エラー: {e}")
+
     def set_window_manager(self, window_manager) -> None:
         """WindowManagerを設定する
         
