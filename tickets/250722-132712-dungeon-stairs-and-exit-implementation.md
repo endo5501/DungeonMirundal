@@ -4,7 +4,7 @@ tags: ["feature", "dungeon", "critical", "gameplay", "navigation"]
 description: "ダンジョン階段システムと地上への出口実装"
 created_at: "2025-07-22T13:27:12Z"
 started_at: 2025-07-24T14:39:16Z # Do not modify manually
-closed_at: null   # Do not modify manually
+closed_at: 2025-07-27T04:58:46Z # Do not modify manually
 ---
 
 # Ticket Overview
