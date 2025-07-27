@@ -637,10 +637,11 @@ class CombatManager:
     
     def get_combat_status(self) -> Dict[str, Any]:
         """戦闘状況取得"""
+        current_actor = self.get_current_actor()
         return {
             'state': self.combat_state.value,
             'turn_number': self.turn_number,
-            'current_actor': self._get_actor_name(self.get_current_actor()) if self.get_current_actor() is not None else None,
+            'current_actor': self._get_actor_name(current_actor) if current_actor is not None else None,
             'is_player_turn': self.is_player_turn(),
             'party_members': len(self.party.get_living_characters()) if self.party else 0,
             'monsters_alive': len([m for m in self.monsters if m.is_alive]),
