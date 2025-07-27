@@ -2151,10 +2151,7 @@ cmd_close() {
         if ! check_clean_working_dir; then
             cat >&2 << EOF
 
-To ignore uncommitted changes and force close, use:
-  $SCRIPT_COMMAND close --force (or -f)
-
-Or handle the changes:
+Handle the changes:
   1. Commit your changes: git add . && git commit -m "message"
   2. Stash changes: git stash
 
@@ -2271,8 +2268,6 @@ Please verify task completion:
 1. Review each task above to confirm it is actually completed
 2. Edit current-ticket.md and change [ ] to [x] for completed tasks
 3. If tasks are truly incomplete, complete them before closing
-4. Or use --force flag to close without task verification:
-   $SCRIPT_COMMAND close --force
 EOF
             return 1
         fi
