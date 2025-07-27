@@ -147,6 +147,8 @@ class CharacterCreationWizard(Window):
     
     def _create_step_title(self) -> None:
         """ステップタイトルを作成"""
+        if not self.rect:
+            return
         title_rect = pygame.Rect(20, 20, self.rect.width - 40, 40)
         self.step_title = pygame_gui.elements.UILabel(
             relative_rect=title_rect,
@@ -157,6 +159,8 @@ class CharacterCreationWizard(Window):
     
     def _create_content_container(self) -> None:
         """コンテンツコンテナを作成"""
+        if not self.rect:
+            return
         content_rect = pygame.Rect(20, 80, self.rect.width - 40, 350)
         self.content_container = pygame_gui.elements.UIPanel(
             relative_rect=content_rect,
@@ -166,6 +170,8 @@ class CharacterCreationWizard(Window):
     
     def _create_button_container(self) -> None:
         """ボタンコンテナを作成"""
+        if not self.rect:
+            return
         button_rect = pygame.Rect(20, 450, self.rect.width - 40, 40)
         self.button_container = pygame_gui.elements.UIPanel(
             relative_rect=button_rect,

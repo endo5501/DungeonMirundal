@@ -161,7 +161,7 @@ class DungeonRendererPygame:
             help_text = "WASD: Move, Space: Menu, ESC: Return"
             help_surface = font.render(help_text, True, (200, 200, 200))
             if hasattr(self, 'screen_height'):
-                self.screen.blit(help_surface, (10, self.screen_height - 30))
+                self.screen.blit(help_surface, (10, self.screen.get_height() - 30))
             else:
                 self.screen.blit(help_surface, (10, self.screen.get_height() - 30))
         
@@ -225,6 +225,8 @@ class DungeonRendererPygame:
     
     def _render_walls_raycast(self, level: DungeonLevel, player_pos: PlayerPosition):
         """レイキャスティングによる壁面描画"""
+        if not self.screen:
+            return
         # レイキャスティングの準備
         ray_count = self.config.raycast.calculate_ray_count(self.screen.get_width())
         ray_start = self.camera.get_ray_start_position(player_pos)
@@ -338,7 +340,7 @@ class DungeonRendererPygame:
     def _render_ui(self, dungeon_state: DungeonState):
         """UI要素を描画"""
         pos = dungeon_state.player_position
-        if not pos:
+        if not pos or not self.screen:
             return
         
         # コンパス表示
@@ -349,7 +351,7 @@ class DungeonRendererPygame:
             Direction.WEST: 'W'
         }
         compass_surface = self.font_large.render(compass_text[pos.facing], True, self.colors['white'])
-        self.screen.blit(compass_surface, (self.screen_width - 60, 20))
+        self.screen.blit(compass_surface, (self.screen.get_width() - 60, 20))
         
         # 位置情報表示（英語版で確実に表示）
         position_text = f"Pos: ({pos.x}, {pos.y}) Lv: {pos.level}"
@@ -365,10 +367,10 @@ class DungeonRendererPygame:
         help_text = "WASD: Move / QE: Turn / ESC: Menu"
         try:
             help_surface = self.font_small.render(help_text, True, self.colors['gray'])
-            self.screen.blit(help_surface, (10, self.screen_height - 30))
+            self.screen.blit(help_surface, (10, self.screen.get_height() - 30))
         except:
             help_surface = self.font_small.render(help_text, True, self.colors['gray'])
-            self.screen.blit(help_surface, (10, self.screen_height - 30))
+            self.screen.blit(help_surface, (10, self.screen.get_height() - 30))
         
         # キャラクターステータスバーを描画
         if self.dungeon_ui_manager:
@@ -495,7 +497,7 @@ class DungeonRendererPygame:
             "view_mode": self.view_mode.value,
             "fov": self.fov,
             "view_distance": self.view_distance,
-            "screen_size": (self.screen_width, self.screen_height),
+            "screen_size": (self.screen.get_width(), self.screen.get_height()),
             "camera_position": (self.camera_x, self.camera_y),
             "camera_angle_degrees": math.degrees(self.camera_angle),
             "dungeon_manager_set": self.dungeon_manager is not None,
@@ -526,7 +528,7 @@ class DungeonRendererPygame:
     
     def _calculate_ray_count(self) -> int:
         """レイキャスティングのレイ数を計算"""
-        return self.screen_width // RAY_RESOLUTION_DIVISOR
+        return self.screen.get_width() // RAY_RESOLUTION_DIVISOR
     
     def _calculate_ray_angle(self, ray_index: int, ray_count: int) -> float:
         """レイの角度を計算"""
@@ -545,11 +547,11 @@ class DungeonRendererPygame:
     def _calculate_wall_height(self, distance: float) -> int:
         """距離に基づいて壁の高さを計算"""
         wall_height = int(self.wall_height * self.wall_distance_scale / max(distance, MIN_DISTANCE))
-        return min(wall_height, self.screen_height)
+        return min(wall_height, self.screen.get_height())
     
     def _calculate_wall_position(self, wall_height: int) -> int:
         """壁の描画位置（上端）を計算"""
-        return (self.screen_height - wall_height) // 2
+        return (self.screen.get_height() - wall_height) // 2
     
     def _calculate_wall_color(self, distance: float) -> tuple:
         """距離に基づいて壁の色を計算"""
@@ -594,8 +596,8 @@ class DungeonRendererPygame:
         if abs(relative_angle) > fov_rad / 2:
             return {'visible': False}
         
-        screen_x = int(self.screen_width / 2 + 
-                      (relative_angle / (fov_rad / 2)) * (self.screen_width / 2))
+        screen_x = int(self.screen.get_width() / 2 + 
+                      (relative_angle / (fov_rad / 2)) * (self.screen.get_width() / 2))
         
         return {
             'visible': True,
@@ -611,7 +613,7 @@ class DungeonRendererPygame:
         """中央揃えの矩形を作成"""
         return pygame.Rect(
             screen_x - size // 2, 
-            self.screen_height // 2 - size // 2, 
+            self.screen.get_height() // 2 - size // 2, 
             size, 
             size
         )
