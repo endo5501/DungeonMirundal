@@ -6,7 +6,8 @@ InventoryWindow クラス
 
 import pygame
 import pygame_gui
-from typing import Dict, List, Any, Optional, Tuple
+from pygame_gui.core.interfaces import IContainerLikeInterface
+from typing import Dict, List, Any, Optional, Tuple, cast
 
 from .window import Window
 from .inventory_types import (
@@ -163,7 +164,7 @@ class InventoryWindow(Window):
         self.stats_panel = pygame_gui.elements.UIPanel(
             relative_rect=stats_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
         
         self._update_stats_display()
@@ -244,7 +245,7 @@ class InventoryWindow(Window):
         self.item_grid = pygame_gui.elements.UIPanel(
             relative_rect=grid_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
         
         self._create_slot_buttons()
@@ -274,7 +275,7 @@ class InventoryWindow(Window):
                 relative_rect=slot_rect,
                 text=button_text,
                 manager=self.ui_manager,
-                container=self.item_grid
+                container=cast('IContainerLikeInterface', self.item_grid) if self.item_grid else None
             )
             
             self.slot_buttons.append(slot_button)
@@ -305,7 +306,7 @@ class InventoryWindow(Window):
         self.detail_panel = pygame_gui.elements.UIPanel(
             relative_rect=detail_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
     
     def _create_action_buttons(self) -> None:

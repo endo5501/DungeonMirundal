@@ -229,7 +229,7 @@ class CharacterListPanel(ServicePanel):
                 self.action_button.show()
             
             # タイトルも変更
-            if hasattr(self, 'title_label'):
+            if hasattr(self, 'title_label') and self.title_label:
                 self.title_label.set_text("クラス変更対象を選択")
             
             # フィルタ・ソート機能を削除（既に作成された場合）
@@ -377,8 +377,9 @@ class CharacterListPanel(ServicePanel):
         char = self.selected_character
         
         # クラス変更は常に可能（レベル制限撤廃）
-        self.action_button.enable()
-        self.action_button.set_text("クラス変更")
+        if self.action_button:
+            self.action_button.enable()
+            self.action_button.set_text("クラス変更")
     
     def _handle_filter_change(self, selected_option: str) -> None:
         """フィルター変更を処理"""

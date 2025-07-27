@@ -120,6 +120,7 @@ class NavigationManager:
         if validation_result:
             return validation_result
         
+        # すでに_validate_movement_preconditionsでチェック済み
         dungeon_state = self.dungeon_manager.current_dungeon
         old_pos = dungeon_state.player_position
         old_position = (old_pos.x, old_pos.y, old_pos.level)
@@ -281,7 +282,7 @@ class NavigationManager:
         
         if success:
             # 回転イベントを履歴に追加
-            if self.dungeon_manager.current_dungeon and self.dungeon_manager.current_dungeon.player_position:
+            if self.dungeon_manager and self.dungeon_manager.current_dungeon and self.dungeon_manager.current_dungeon.player_position:
                 pos = self.dungeon_manager.current_dungeon.player_position
                 position = (pos.x, pos.y, pos.level)
                 
@@ -458,6 +459,7 @@ class NavigationManager:
         if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
             return None
         
+        # すでに上でcurrent_dungeonの存在チェック済み
         dungeon_state = self.dungeon_manager.current_dungeon
         current_level = dungeon_state.levels.get(dungeon_state.player_position.level)
         

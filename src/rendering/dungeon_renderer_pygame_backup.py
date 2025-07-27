@@ -5,7 +5,7 @@ from enum import Enum
 import pygame
 
 from src.dungeon.dungeon_manager import DungeonManager, DungeonState, PlayerPosition
-from src.dungeon.dungeon_generator import DungeonLevel
+from src.dungeon.dungeon_generator import DungeonLevel, Direction
 from src.character.party import Party
 from src.utils.logger import logger
 from src.rendering.renderer_config import RendererConfig

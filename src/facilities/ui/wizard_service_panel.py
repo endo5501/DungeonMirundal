@@ -347,7 +347,7 @@ class WizardServicePanel(ServicePanel):
         self.ui_elements.append(self.name_input)
         
         # 既存の値を設定
-        if "name" in self.wizard_data:
+        if "name" in self.wizard_data and self.name_input:
             self.name_input.set_text(self.wizard_data["name"])
     
     def _update_step_indicator(self) -> None:

@@ -188,7 +188,8 @@ class NavigationPanel(ServicePanel):
                     # フォールバック: テキストの背景色や表示を変更
                     original_text = button.text
                     if not original_text.startswith("■ "):
-                        button.set_text(f"■ {original_text}")
+                        if button:
+                            button.set_text(f"■ {original_text}")
             else:
                 # 非選択時の視覚的表現
                 logger.info(f"NavigationPanel: Setting button {item_id} as unselected")
@@ -201,7 +202,8 @@ class NavigationPanel(ServicePanel):
                     # フォールバック: テキストから選択記号を削除
                     current_text = button.text
                     if current_text.startswith("■ "):
-                        button.set_text(current_text[2:])
+                        if button:
+                            button.set_text(current_text[2:])
     
     def update_menu_items(self, menu_items: List[MenuItem]) -> None:
         """メニュー項目を更新

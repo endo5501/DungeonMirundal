@@ -7,7 +7,8 @@ PartyFormationWindow クラス
 import pygame
 import pygame_gui
 import time
-from typing import Dict, List, Any, Optional
+from pygame_gui.core.interfaces import IContainerLikeInterface
+from typing import Dict, List, Any, Optional, cast
 
 from .window import Window
 from .party_formation_types import (
@@ -150,7 +151,7 @@ class PartyFormationWindow(Window):
         self.formation_panel = pygame_gui.elements.UIPanel(
             relative_rect=formation_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
         
         # タイトル
@@ -168,7 +169,7 @@ class PartyFormationWindow(Window):
         self.available_panel = pygame_gui.elements.UIPanel(
             relative_rect=available_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
         
         # タイトル
@@ -177,7 +178,7 @@ class PartyFormationWindow(Window):
             relative_rect=title_rect,
             text="利用可能キャラクター",
             manager=self.ui_manager,
-            container=self.available_panel
+            container=cast('IContainerLikeInterface', self.available_panel) if self.available_panel else None
         )
     
     def _create_detail_panel(self) -> None:
@@ -187,7 +188,7 @@ class PartyFormationWindow(Window):
             self.detail_panel = pygame_gui.elements.UIPanel(
                 relative_rect=detail_rect,
                 manager=self.ui_manager,
-                container=self.main_container
+                container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
             )
             
             # タイトル
@@ -205,7 +206,7 @@ class PartyFormationWindow(Window):
         self.button_panel = pygame_gui.elements.UIPanel(
             relative_rect=button_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
     
     def _create_position_slots(self) -> None:
@@ -232,7 +233,7 @@ class PartyFormationWindow(Window):
                 relative_rect=slot_rect,
                 text=self._get_position_display_name(position),
                 manager=self.ui_manager,
-                container=self.formation_panel
+                container=cast('IContainerLikeInterface', self.formation_panel) if self.formation_panel else None
             )
             
             # CharacterSlotオブジェクトを作成
@@ -254,7 +255,7 @@ class PartyFormationWindow(Window):
                 relative_rect=list_rect,
                 item_list=character_names,
                 manager=self.ui_manager,
-                container=self.available_panel
+                container=cast('IContainerLikeInterface', self.available_panel) if self.available_panel else None
             )
     
     def _create_action_buttons(self) -> None:
@@ -269,7 +270,7 @@ class PartyFormationWindow(Window):
             relative_rect=cancel_rect,
             text='キャンセル',
             manager=self.ui_manager,
-            container=self.button_panel
+            container=cast('IContainerLikeInterface', self.button_panel) if self.button_panel else None
         )
         
         # 適用ボタン（右端）
@@ -279,7 +280,7 @@ class PartyFormationWindow(Window):
             relative_rect=apply_rect,
             text='適用',
             manager=self.ui_manager,
-            container=self.button_panel
+            container=cast('IContainerLikeInterface', self.button_panel) if self.button_panel else None
         )
         
         # リセットボタン（中央）
@@ -289,7 +290,7 @@ class PartyFormationWindow(Window):
             relative_rect=reset_rect,
             text='リセット',
             manager=self.ui_manager,
-            container=self.button_panel
+            container=cast('IContainerLikeInterface', self.button_panel) if self.button_panel else None
         )
     
     def _load_current_formation(self) -> None:

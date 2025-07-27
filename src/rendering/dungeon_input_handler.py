@@ -144,6 +144,7 @@ class DungeonInputHandler:
         if not self._can_move():
             return MovementResult(False, "移動できません")
         
+        # _can_move()/_can_turn()でNoneチェック済み
         current_pos = self.dungeon_manager.current_dungeon.player_position
         facing_direction = current_pos.facing
         
@@ -170,6 +171,7 @@ class DungeonInputHandler:
         if not self._can_move():
             return MovementResult(False, "移動できません")
         
+        # _can_move()/_can_turn()でNoneチェック済み
         current_pos = self.dungeon_manager.current_dungeon.player_position
         facing_direction = current_pos.facing
         backward_direction = DirectionHelper.get_opposite_direction(facing_direction)
@@ -191,6 +193,7 @@ class DungeonInputHandler:
         if not self._can_move():
             return MovementResult(False, "移動できません")
         
+        # _can_move()/_can_turn()でNoneチェック済み
         current_pos = self.dungeon_manager.current_dungeon.player_position
         facing_direction = current_pos.facing
         left_direction = DirectionHelper.get_left_direction(facing_direction)
@@ -211,6 +214,7 @@ class DungeonInputHandler:
         if not self._can_move():
             return MovementResult(False, "移動できません")
         
+        # _can_move()/_can_turn()でNoneチェック済み
         current_pos = self.dungeon_manager.current_dungeon.player_position
         facing_direction = current_pos.facing
         right_direction = DirectionHelper.get_right_direction(facing_direction)
@@ -261,6 +265,7 @@ class DungeonInputHandler:
         if not self._can_move():
             return MovementResult(False, "移動できません")
         
+        # _can_move()/_can_turn()でNoneチェック済み
         current_pos = self.dungeon_manager.current_dungeon.player_position
         facing_direction = current_pos.facing
         left_direction = DirectionHelper.get_left_direction(facing_direction)
@@ -281,6 +286,7 @@ class DungeonInputHandler:
         if not self._can_move():
             return MovementResult(False, "移動できません")
         
+        # _can_move()/_can_turn()でNoneチェック済み
         current_pos = self.dungeon_manager.current_dungeon.player_position
         facing_direction = current_pos.facing
         right_direction = DirectionHelper.get_right_direction(facing_direction)
@@ -346,7 +352,7 @@ class DungeonInputHandler:
         if not current_pos:
             return MovementResult(False, "プレイヤーの位置が不明です")
         
-        # 現在のレベルを取得
+        # 現在のレベルを取得（上でcurrent_dungeonのチェック済み）
         current_level = self.dungeon_manager.current_dungeon.levels.get(current_pos.level)
         if not current_level:
             return MovementResult(False, "現在のレベルが見つかりません")
@@ -385,10 +391,7 @@ class DungeonInputHandler:
     
     def _can_move(self) -> bool:
         """移動可能かチェック"""
-        if not self.dungeon_manager:
-            return False
-            
-        if not self.dungeon_manager.current_dungeon:
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
             return False
         
         # TODO: パーティの状態、状態異常などをチェック

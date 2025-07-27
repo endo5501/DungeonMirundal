@@ -7,7 +7,8 @@ SettingsWindow クラス
 import pygame
 import pygame_gui
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from pygame_gui.core.interfaces import IContainerLikeInterface
+from typing import Dict, List, Any, Optional, cast
 
 from .window import Window
 from .settings_types import (
@@ -181,7 +182,7 @@ class SettingsWindow(Window):
                 relative_rect=tab_rect,
                 text=tab_label,
                 manager=self.ui_manager,
-                container=self.tab_container
+                container=cast('IContainerLikeInterface', self.tab_container) if self.tab_container else None
             )
             
             # SettingsTabオブジェクトを作成
@@ -224,7 +225,7 @@ class SettingsWindow(Window):
             relative_rect=label_rect,
             text=label_text,
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
         )
         
         # 入力要素を作成
@@ -261,7 +262,7 @@ class SettingsWindow(Window):
                 start_value=config.get('default', 0.5),
                 value_range=(config.get('min', 0.0), config.get('max', 1.0)),
                 manager=self.ui_manager,
-                container=self.content_container
+                container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
             )
         elif field_type == SettingsFieldType.DROPDOWN:
             options = config.get('options', [])
@@ -270,27 +271,27 @@ class SettingsWindow(Window):
                 options_list=options,
                 starting_option=options[0] if options else '',
                 manager=self.ui_manager,
-                container=self.content_container
+                container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
             )
         elif field_type == SettingsFieldType.CHECKBOX:
             return pygame_gui.elements.UIButton(
                 relative_rect=rect,
                 text='☐ ' + config.get('label', ''),
                 manager=self.ui_manager,
-                container=self.content_container
+                container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
             )
         elif field_type == SettingsFieldType.TEXT_INPUT:
             return pygame_gui.elements.UITextEntryLine(
                 relative_rect=rect,
                 manager=self.ui_manager,
-                container=self.content_container
+                container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
             )
         elif field_type == SettingsFieldType.BUTTON:
             return pygame_gui.elements.UIButton(
                 relative_rect=rect,
                 text=config.get('name', config.get('label', 'Button')),
                 manager=self.ui_manager,
-                container=self.content_container
+                container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
             )
         else:
             raise ValueError(f"Unsupported field type: {field_type}")
@@ -395,7 +396,7 @@ class SettingsWindow(Window):
         """タブ表示を更新"""
         for i, tab in enumerate(self.tabs):
             # タブボタンの表示を更新
-            if hasattr(tab.ui_element, 'set_text'):
+            if tab.ui_element and hasattr(tab.ui_element, 'set_text'):
                 prefix = "* " if tab.is_active else ""
                 tab.ui_element.set_text(prefix + tab.label)
             

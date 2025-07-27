@@ -427,6 +427,8 @@ class DungeonRendererPygame:
     
     def _handle_move_forward(self) -> bool:
         """前進処理"""
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon or not self.dungeon_manager.current_dungeon.player_position:
+            return False
         facing = self.dungeon_manager.current_dungeon.player_position.facing
         success, _ = self.dungeon_manager.move_player(facing)
         if success:
@@ -435,6 +437,8 @@ class DungeonRendererPygame:
     
     def _handle_move_backward(self) -> bool:
         """後退処理"""
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon or not self.dungeon_manager.current_dungeon.player_position:
+            return False
         facing = self.dungeon_manager.current_dungeon.player_position.facing
         opposite = DirectionHelper.get_opposite_direction(facing)
         success, _ = self.dungeon_manager.move_player(opposite)
@@ -444,6 +448,8 @@ class DungeonRendererPygame:
     
     def _handle_turn_left(self) -> bool:
         """左回転処理"""
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon or not self.dungeon_manager.current_dungeon.player_position:
+            return False
         facing = self.dungeon_manager.current_dungeon.player_position.facing
         left = DirectionHelper.get_left_direction(facing)
         self.dungeon_manager.turn_player(left)
@@ -452,6 +458,8 @@ class DungeonRendererPygame:
     
     def _handle_turn_right(self) -> bool:
         """右回転処理"""
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon or not self.dungeon_manager.current_dungeon.player_position:
+            return False
         facing = self.dungeon_manager.current_dungeon.player_position.facing
         right = DirectionHelper.get_right_direction(facing)
         self.dungeon_manager.turn_player(right)

@@ -114,7 +114,7 @@ class CombatStateManager(ManagedComponent):
             logger.error("エンカウンター発生に必要な条件が満たされていません")
             return False
         
-        if not self.dungeon_manager.current_dungeon:
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
             logger.error("ダンジョンが設定されていません")
             return False
         

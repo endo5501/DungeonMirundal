@@ -124,7 +124,7 @@ class CharacterCreationWizard(WizardServicePanel):
         self.ui_elements.append(self.name_input)
         
         # 既存の値を設定
-        if "name" in self.wizard_data:
+        if "name" in self.wizard_data and self.name_input:
             self.name_input.set_text(self.wizard_data["name"])
         
         # フォーカスを明示的に設定
@@ -548,7 +548,7 @@ class CharacterCreationWizard(WizardServicePanel):
         test_name = "TestCharacter"
         logger.info(f"[DEBUG] Setting test name: {test_name}")
         
-        if hasattr(self, 'name_input'):
+        if hasattr(self, 'name_input') and self.name_input:
             self.name_input.set_text(test_name)
             logger.info(f"[DEBUG] name_input.set_text() called with: {test_name}")
             logger.info(f"[DEBUG] name_input.get_text() after set: '{self.name_input.get_text()}'")
@@ -608,7 +608,7 @@ class CharacterCreationWizard(WizardServicePanel):
     def _display_stats(self, stats: Dict[str, int]) -> None:
         """能力値を表示"""
         for stat, value in stats.items():
-            if stat in self.stat_labels:
+            if stat in self.stat_labels and self.stat_labels[stat]:
                 self.stat_labels[stat].set_text(str(value))
         
         # ボタンのテキストを変更
@@ -678,7 +678,7 @@ class CharacterCreationWizard(WizardServicePanel):
             default_name = "TestCharacter"
             logger.info(f"[DEBUG] Setting default name: {default_name}")
             self.wizard_data["name"] = default_name
-            if hasattr(self, 'name_input'):
+            if hasattr(self, 'name_input') and self.name_input:
                 self.name_input.set_text(default_name)
             return True
         

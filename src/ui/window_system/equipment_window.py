@@ -6,7 +6,8 @@ EquipmentWindow クラス
 
 import pygame
 import pygame_gui
-from typing import Dict, List, Any, Optional, Tuple
+from pygame_gui.core.interfaces import IContainerLikeInterface
+from typing import Dict, List, Any, Optional, Tuple, cast
 
 from .window import Window
 from .equipment_types import (
@@ -144,7 +145,7 @@ class EquipmentWindow(Window):
         self.equipment_panel = pygame_gui.elements.UIPanel(
             relative_rect=equipment_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
         
         self._create_slot_buttons()
@@ -251,7 +252,7 @@ class EquipmentWindow(Window):
         self.stats_panel = pygame_gui.elements.UIPanel(
             relative_rect=stats_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
         
         self._update_character_stats()
@@ -276,7 +277,7 @@ class EquipmentWindow(Window):
         self.detail_panel = pygame_gui.elements.UIPanel(
             relative_rect=detail_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
     
     def select_equipment_slot(self, slot_type: str) -> bool:

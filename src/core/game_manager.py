@@ -1292,10 +1292,10 @@ class GameManager(EventHandler):
         if self.current_location == GameLocation.OVERWORLD and self.overworld_manager:
             # 地上部の描画
             self.overworld_manager.render(self.screen)
-        elif self.current_location == GameLocation.DUNGEON and self.dungeon_renderer and self.dungeon_manager:
+        elif self.current_location == GameLocation.DUNGEON and self.dungeon_renderer and self.dungeon_manager and self.dungeon_manager.current_dungeon:
             # ダンジョンの描画
             current_dungeon = self.dungeon_manager.current_dungeon
-            if current_dungeon and current_dungeon.player_position:
+            if current_dungeon.player_position:
                 # 現在のレベルを取得
                 current_level = current_dungeon.levels.get(current_dungeon.player_position.level)
                 if current_level:

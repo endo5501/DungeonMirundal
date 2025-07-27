@@ -159,22 +159,30 @@ class BlessingPanel(ServicePanel):
         """情報を更新"""
         if self.controller and self.controller.service.party:
             party_gold = self.controller.service.party.gold
-            self.gold_label.set_text(f"所持金: {party_gold} G")
+            if self.gold_label:
+                self.gold_label.set_text(f"所持金: {party_gold} G")
             
             # 祝福費用
             blessing_cost = getattr(self.controller.service, 'blessing_cost', 500)
-            self.cost_label.set_text(f"費用: {blessing_cost} G")
+            if self.cost_label:
+                self.cost_label.set_text(f"費用: {blessing_cost} G")
             
             # ボタンの有効/無効
             if party_gold >= blessing_cost:
-                self.blessing_button.enable()
+                if self.blessing_button:
+                    self.blessing_button.enable()
             else:
-                self.blessing_button.disable()
-                self.result_label.set_text("祝福の費用が不足しています")
+                if self.blessing_button:
+                    self.blessing_button.disable()
+                if self.result_label:
+                    self.result_label.set_text("祝福の費用が不足しています")
         else:
-            self.gold_label.set_text("所持金: 0 G")
-            self.blessing_button.disable()
-            self.result_label.set_text("パーティが存在しません")
+            if self.gold_label:
+                self.gold_label.set_text("所持金: 0 G")
+            if self.blessing_button:
+                self.blessing_button.disable()
+            if self.result_label:
+                self.result_label.set_text("パーティが存在しません")
     
     def handle_button_click(self, button: pygame_gui.elements.UIButton) -> bool:
         """ボタンクリックを処理"""
@@ -195,16 +203,19 @@ class BlessingPanel(ServicePanel):
             })
             
             # 結果を表示
-            self.result_label.set_text(result.message)
+            if self.result_label:
+                self.result_label.set_text(result.message)
             
             if result.success:
                 # 成功時は情報を更新
                 self._refresh_info()
         else:
             # エラーメッセージを表示
-            self.result_label.set_text(result.message)
+            if self.result_label:
+                self.result_label.set_text(result.message)
     
     def refresh(self) -> None:
         """パネルをリフレッシュ"""
         self._refresh_info()
-        self.result_label.set_text("")
+        if self.result_label:
+            self.result_label.set_text("")

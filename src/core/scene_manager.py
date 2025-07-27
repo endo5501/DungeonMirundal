@@ -175,9 +175,9 @@ class DungeonScene(GameScene):
             game_manager.check_party_status_in_dungeon()
     
     def render(self, screen: pygame.Surface):
-        if self.dungeon_renderer and self.dungeon_manager:
+        if self.dungeon_renderer and self.dungeon_manager and self.dungeon_manager.current_dungeon:
             current_dungeon = self.dungeon_manager.current_dungeon
-            if current_dungeon and current_dungeon.player_position:
+            if current_dungeon.player_position:
                 current_level = current_dungeon.levels.get(current_dungeon.player_position.level)
                 if current_level:
                     self.dungeon_renderer.render_dungeon_view(
@@ -237,25 +237,25 @@ class DungeonScene(GameScene):
             
             if success:
                 # エンカウンターマネージャーにダンジョン状態を設定
-                current_dungeon = self.dungeon_manager.current_dungeon
-                if current_dungeon and game_manager.encounter_manager:
+                if self.dungeon_manager and self.dungeon_manager.current_dungeon and game_manager.encounter_manager:
+                    current_dungeon = self.dungeon_manager.current_dungeon
                     game_manager.encounter_manager.set_dungeon(current_dungeon)
                 
                 # ダンジョンUIマネージャーにダンジョン状態とパーティ情報を設定
-                if self.dungeon_renderer and hasattr(self.dungeon_renderer, 'dungeon_ui_manager'):
-                    if self.dungeon_renderer.dungeon_ui_manager and current_dungeon:
-                        try:
-                            # ダンジョン状態を設定
-                            self.dungeon_renderer.dungeon_ui_manager.set_dungeon_state(current_dungeon)
-                            logger.debug("ダンジョンUIマネージャーにダンジョン状態を設定しました")
-                            
-                            # パーティ情報も明示的に再設定（ダンジョン遷移時の確実な引き継ぎ）
-                            if game_manager.current_party:
-                                self.dungeon_renderer.dungeon_ui_manager.set_party(game_manager.current_party)
-                                logger.debug("ダンジョンUIマネージャーにパーティを再設定しました")
+                    if self.dungeon_renderer and hasattr(self.dungeon_renderer, 'dungeon_ui_manager'):
+                        if self.dungeon_renderer.dungeon_ui_manager:
+                            try:
+                                # ダンジョン状態を設定
+                                self.dungeon_renderer.dungeon_ui_manager.set_dungeon_state(current_dungeon)
+                                logger.debug("ダンジョンUIマネージャーにダンジョン状態を設定しました")
                                 
-                        except Exception as e:
-                            logger.error(f"ダンジョンUIマネージャーへの状態・パーティ設定でエラー: {e}")
+                                # パーティ情報も明示的に再設定（ダンジョン遷移時の確実な引き継ぎ）
+                                if game_manager.current_party:
+                                    self.dungeon_renderer.dungeon_ui_manager.set_party(game_manager.current_party)
+                                    logger.debug("ダンジョンUIマネージャーにパーティを再設定しました")
+                                    
+                            except Exception as e:
+                                logger.error(f"ダンジョンUIマネージャーへの状態・パーティ設定でエラー: {e}")
                 
                 # 3D描画自動復旧
                 if self.dungeon_renderer and hasattr(self.dungeon_renderer, 'auto_recover'):

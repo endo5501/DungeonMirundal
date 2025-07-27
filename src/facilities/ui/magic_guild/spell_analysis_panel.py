@@ -250,7 +250,8 @@ class SpellAnalysisPanel(ServicePanel):
             self.spell_list.set_item_list(spell_items)
             
             # 所持金を更新
-            self.gold_label.set_text(f"所持金: {party_gold} G")
+            if self.gold_label:
+                self.gold_label.set_text(f"所持金: {party_gold} G")
             
             # 結果をクリア
             self.result_box.html_text = ""
@@ -309,7 +310,8 @@ class SpellAnalysisPanel(ServicePanel):
             
             if result.is_success():
                 # 成功時は金額を更新
-                self.gold_label.set_text(f"所持金: {result.data.get('remaining_gold', 0)} G")
+                if self.gold_label:
+                    self.gold_label.set_text(f"所持金: {result.data.get('remaining_gold', 0)} G")
         else:
             # エラーメッセージを表示
             self.result_box.html_text = f"<font color='#FF0000'>{result.message}</font>"

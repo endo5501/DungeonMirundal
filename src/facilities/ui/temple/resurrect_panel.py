@@ -180,14 +180,16 @@ class ResurrectPanel(ServicePanel):
             self.members_list.set_item_list(member_items)
             
             # 所持金を更新
-            self.gold_label.set_text(f"所持金: {party_gold} G")
+            if self.gold_label:
+                self.gold_label.set_text(f"所持金: {party_gold} G")
             
             # 結果メッセージを更新
-            if result.message:
+            if result.message and self.result_label:
                 self.result_label.set_text(result.message)
         else:
             self.members_list.set_item_list([])
-            self.result_label.set_text(result.message if result.message else "蘇生が必要なメンバーはいません")
+            if self.result_label:
+                self.result_label.set_text(result.message if result.message else "蘇生が必要なメンバーはいません")
     
     def handle_list_selection(self, event: pygame.event.Event) -> bool:
         """リスト選択を処理（party_formation_window.pyと同じ形式）"""
@@ -201,20 +203,25 @@ class ResurrectPanel(ServicePanel):
                         self.selected_member = member["id"]
                         
                         # コスト表示を更新
-                        self.cost_label.set_text(f"費用: {member['cost']} G")
+                        if self.cost_label:
+                            self.cost_label.set_text(f"費用: {member['cost']} G")
                         
                         # 生命力表示を更新
-                        self.vitality_label.set_text(f"生命力: {member['vitality']}")
+                        if self.vitality_label:
+                            self.vitality_label.set_text(f"生命力: {member['vitality']}")
                         
                         # 蘇生ボタンを有効化（生命力が0以下でない場合）
                         if member['vitality'] > 0:
-                            self.resurrect_button.enable()
+                            if self.resurrect_button:
+                                self.resurrect_button.enable()
                         else:
-                            self.resurrect_button.disable()
-                            self.result_label.set_text("生命力が尽きているため蘇生できません")
+                            if self.resurrect_button:
+                                self.resurrect_button.disable()
+                            if self.result_label:
+                                self.result_label.set_text("生命力が尽きているため蘇生できません")
                         
                         # 結果をクリア（生命力チェック以外）
-                        if member['vitality'] > 0:
+                        if member['vitality'] > 0 and self.result_label:
                             self.result_label.set_text("")
                         return True
         return False
@@ -248,24 +255,33 @@ class ResurrectPanel(ServicePanel):
             })
             
             # 結果を表示
-            self.result_label.set_text(result.message)
+            if self.result_label:
+                self.result_label.set_text(result.message)
             
             if result.success:
                 # 成功時はリストを更新
                 self._refresh_members()
                 self.selected_member = None
-                self.resurrect_button.disable()
-                self.cost_label.set_text("費用: -")
-                self.vitality_label.set_text("生命力: -")
+                if self.resurrect_button:
+                    self.resurrect_button.disable()
+                if self.cost_label:
+                    self.cost_label.set_text("費用: -")
+                if self.vitality_label:
+                    self.vitality_label.set_text("生命力: -")
         else:
             # エラーメッセージを表示
-            self.result_label.set_text(result.message)
+            if self.result_label:
+                self.result_label.set_text(result.message)
     
     def refresh(self) -> None:
         """パネルをリフレッシュ"""
         self._refresh_members()
         self.selected_member = None
-        self.resurrect_button.disable()
-        self.cost_label.set_text("費用: -")
-        self.vitality_label.set_text("生命力: -")
-        self.result_label.set_text("")
+        if self.resurrect_button:
+            self.resurrect_button.disable()
+        if self.cost_label:
+            self.cost_label.set_text("費用: -")
+        if self.vitality_label:
+            self.vitality_label.set_text("生命力: -")
+        if self.result_label:
+            self.result_label.set_text("")

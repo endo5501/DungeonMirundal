@@ -155,12 +155,14 @@ class PrayerShopPanel(ServicePanel):
             self.party_gold = result.data.get("party_gold", 0)
             
             # 所持金表示を更新
-            self.gold_label.set_text(f"所持金: {self.party_gold} G")
+            if self.gold_label:
+                self.gold_label.set_text(f"所持金: {self.party_gold} G")
             
             # 祈祷書ボタンを作成
             self._create_spell_buttons()
         else:
-            self.spell_desc_label.set_text(result.message if result.message else "祈祷書データの読み込みに失敗しました")
+            if self.spell_desc_label:
+                self.spell_desc_label.set_text(result.message if result.message else "祈祷書データの読み込みに失敗しました")
     
     def _create_spell_buttons(self) -> None:
         """祈祷書ボタンを作成"""
@@ -210,13 +212,16 @@ class PrayerShopPanel(ServicePanel):
                 
                 # 詳細情報を表示
                 desc_text = f"{spell['name']}\n{spell['description']}\n費用: {spell['cost']} G"
-                self.spell_desc_label.set_text(desc_text)
+                if self.spell_desc_label:
+                    self.spell_desc_label.set_text(desc_text)
                 
                 # 購入ボタンの有効/無効を切り替え
                 if self.party_gold >= spell['cost']:
-                    self.purchase_button.enable()
+                    if self.purchase_button:
+                        self.purchase_button.enable()
                 else:
-                    self.purchase_button.disable()
+                    if self.purchase_button:
+                        self.purchase_button.disable()
                 break
     
     def _perform_purchase(self) -> None:
@@ -230,17 +235,21 @@ class PrayerShopPanel(ServicePanel):
         })
         
         # 結果を表示
-        self.spell_desc_label.set_text(result.message)
+        if self.spell_desc_label:
+            self.spell_desc_label.set_text(result.message)
         
         if result.success:
             # 成功時はデータを再読み込み
             self._load_prayer_data()
             self.selected_spell = None
-            self.purchase_button.disable()
+            if self.purchase_button:
+                self.purchase_button.disable()
     
     def refresh(self) -> None:
         """パネルをリフレッシュ"""
         self._load_prayer_data()
         self.selected_spell = None
-        self.purchase_button.disable()
-        self.spell_desc_label.set_text("祈祷書を選択してください")
+        if self.purchase_button:
+            self.purchase_button.disable()
+        if self.spell_desc_label:
+            self.spell_desc_label.set_text("祈祷書を選択してください")
