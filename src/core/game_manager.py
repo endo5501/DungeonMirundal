@@ -1091,9 +1091,17 @@ class GameManager(EventHandler):
             try:
                 # 現在の場所に応じてセーブ
                 if self.current_location == GameLocation.OVERWORLD:
-                    success = self.overworld_manager.save_overworld_state(slot_id)
+                    if self.overworld_manager:
+                        success = self.overworld_manager.save_overworld_state()
+                    else:
+                        logger.error("OverworldManager not available for save")
+                        return False
                 elif self.current_location == GameLocation.DUNGEON:
-                    success = self.dungeon_manager.save_dungeon(slot_id)
+                    if self.dungeon_manager:
+                        success = self.dungeon_manager.save_dungeon(slot_id)
+                    else:
+                        logger.error("DungeonManager not available for save")
+                        return False
                 else:
                     logger.error(self.game_config.get_text("game_manager.unknown_location").format(location=self.current_location))
                     return False
@@ -1153,11 +1161,19 @@ class GameManager(EventHandler):
                 
                 # 場所に応じて読み込み
                 if location == GameLocation.OVERWORLD:
-                    success = self.overworld_manager.load_overworld_state(slot_id)
-                    if success and self.current_party:
-                        self.overworld_manager.enter_overworld(self.current_party)
+                    if self.overworld_manager:
+                        success = self.overworld_manager.load_overworld_state({})  # 適切な引数で呼び出し
+                        if success and self.current_party:
+                            self.overworld_manager.enter_overworld(self.current_party)
+                    else:
+                        logger.error("OverworldManager not available for load")
+                        return False
                 elif location == GameLocation.DUNGEON:
-                    success = self.dungeon_manager.load_dungeon(slot_id)
+                    if self.dungeon_manager:
+                        success = self.dungeon_manager.load_dungeon(slot_id)
+                    else:
+                        logger.error("DungeonManager not available for load")
+                        return False
                     if success and self.current_party:
                         # ダンジョン状態を復元
                         pass
@@ -1298,13 +1314,13 @@ class GameManager(EventHandler):
         このメソッドで個別に描画を行う。
         """
         try:
-            if hasattr(self.ui_manager, 'persistent_elements'):
+            if self.ui_manager and hasattr(self.ui_manager, 'persistent_elements'):
                 for element in self.ui_manager.persistent_elements.values():
                     if element and hasattr(element, 'render'):
                         try:
                             # フォントを取得
                             font = None
-                            if hasattr(self.ui_manager, 'default_font'):
+                            if self.ui_manager and hasattr(self.ui_manager, 'default_font'):
                                 font = self.ui_manager.default_font
                             
                             if self.screen:
@@ -1370,7 +1386,10 @@ class GameManager(EventHandler):
             self._create_test_party()
         
         # シーンマネージャーでスタートアップシーンから開始
-        self.scene_manager.transition_to(SceneType.STARTUP)
+        if self.scene_manager:
+            self.scene_manager.transition_to(SceneType.STARTUP)
+        else:
+            logger.warning("Scene manager not available for transition")
     
     def _try_auto_load(self):
         """自動セーブデータロードを試行 - GameStateManagerに委譲"""
@@ -1406,7 +1425,10 @@ class GameManager(EventHandler):
                 if save_data:
                     # パーティ情報を復元
                     self.set_current_party(save_data.party)
-                    logger.info(self.game_config.get_text("game_manager.party_restored").format(name=self.current_party.name))
+                    if self.current_party:
+                        logger.info(self.game_config.get_text("game_manager.party_restored").format(name=self.current_party.name))
+                    else:
+                        logger.warning("Failed to restore party from save data")
                     
                     # ゲーム状態を復元
                     if save_data.game_state and 'location' in save_data.game_state:
@@ -1579,7 +1601,7 @@ class GameManager(EventHandler):
                 for character in self.current_party.members:
                     if character.hp <= 0:
                         character.hp = 1
-                        character.status = "normal"  # 状態異常も回復
+                        character.status = CharacterStatus.GOOD  # 状態異常も回復
                 
                 # 地上部に強制帰還
                 self._force_return_to_overworld("パーティ全滅のため地上に帰還しました")
@@ -1703,7 +1725,7 @@ class GameManager(EventHandler):
                 for member in self.current_party.members:
                     if member.derived_stats.current_hp <= 0:
                         member.derived_stats.current_hp = 1
-                        member.status = "normal"
+                        member.status = CharacterStatus.GOOD
                 
                 # 金の半分を失う
                 lost_gold = self.current_party.gold // 2

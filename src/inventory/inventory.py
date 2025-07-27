@@ -324,6 +324,10 @@ class Inventory:
         """最大アイテム数を取得"""
         return self.max_slots
     
+    def get_item_count(self) -> int:
+        """現在のアイテム数を取得"""
+        return self.get_used_slot_count()
+    
     def transfer_item(self, slot_index: int, target_inventory: 'Inventory', quantity: int = None) -> bool:
         """アイテムを他のインベントリに転送"""
         if slot_index < 0 or slot_index >= len(self.slots):

@@ -80,17 +80,19 @@ class DungeonInteractionManager:
         if detected:
             # 解除試行
             if trap_system.can_disarm_trap(detector, trap_type):
-                logger.info(f"{detector.name}がトラップを解除しました")
+                detector_name = detector.name if detector else "Unknown"
+                logger.info(f"{detector_name}がトラップを解除しました")
                 cell.has_trap = False
                 cell.trap_type = None
                 return {
                     "type": "trap", 
                     "success": True, 
-                    "message": f"{detector.name}がトラップを発見・解除した！",
+                    "message": f"{detector_name}がトラップを発見・解除した！",
                     "disarmed": True
                 }
             else:
-                logger.info(f"{detector.name}がトラップを発見しましたが解除に失敗")
+                detector_name = detector.name if detector else "Unknown"
+                logger.info(f"{detector_name}がトラップを発見しましたが解除に失敗")
                 # 発見したが解除失敗 - 発動
                 current_dungeon = self.state_manager.get_current_dungeon()
                 trap_result = trap_system.activate_trap(trap_type, party, current_dungeon.player_position.level)

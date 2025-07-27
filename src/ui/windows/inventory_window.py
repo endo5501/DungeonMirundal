@@ -490,8 +490,7 @@ class InventoryWindow(Window):
         try:
             result = item_usage_manager.use_item(
                 item_instance, 
-                self.current_character, 
-                quantity=1
+                self.current_character
             )
             
             if result.success:
