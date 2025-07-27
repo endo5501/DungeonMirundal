@@ -1,6 +1,6 @@
 """ナビゲーション管理システム"""
 
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Optional, Any, cast
 from dataclasses import dataclass
 from enum import Enum
 import time
@@ -121,8 +121,8 @@ class NavigationManager:
             return validation_result
         
         # すでに_validate_movement_preconditionsでチェック済み
-        dungeon_state = self.dungeon_manager.current_dungeon
-        old_pos = dungeon_state.player_position
+        dungeon_state = cast(DungeonState, cast(DungeonManager, self.dungeon_manager).current_dungeon)
+        old_pos = cast(PlayerPosition, dungeon_state.player_position)
         old_position = (old_pos.x, old_pos.y, old_pos.level)
         
         # 移動速度の調整

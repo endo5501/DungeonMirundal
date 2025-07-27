@@ -312,7 +312,10 @@ class UIButton(UIElement):
                 wrapped_lines = wrap_text(self.text, use_font, max_text_width)
                 
                 # 複数行テキストの描画
-                line_height = use_font.get_height()
+                if use_font:
+                    line_height = use_font.get_height()
+                else:
+                    line_height = 20  # デフォルトの行高
                 total_height = len(wrapped_lines) * line_height
                 start_y = self.rect.centery - total_height // 2
                 

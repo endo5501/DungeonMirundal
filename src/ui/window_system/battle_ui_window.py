@@ -201,6 +201,8 @@ class BattleUIWindow(Window):
     
     def _create_enemy_status_panel(self) -> None:
         """敵ステータスパネルを作成"""
+        if not self.rect:
+            return
         enemy_rect = pygame.Rect(
             self.rect.width - self.layout.enemy_status_width - self.layout.panel_padding,
             self.layout.panel_padding,
@@ -250,6 +252,8 @@ class BattleUIWindow(Window):
     
     def _create_action_menu_panel(self) -> None:
         """アクションメニューパネルを作成"""
+        if not self.rect:
+            return
         action_rect = pygame.Rect(
             self.layout.panel_padding,
             self.rect.height - self.layout.action_menu_height - self.layout.panel_padding,

@@ -1319,14 +1319,14 @@ class GameManager(EventHandler):
     
     def _render_startup_screen(self):
         """スタートアップ画面の描画"""
-        if hasattr(self, 'debug_font') and self.debug_font:
+        if hasattr(self, 'debug_font') and self.debug_font and self.screen:
             text = self.debug_font.render(self.get_text("system.startup"), True, (255, 255, 255))
             text_rect = text.get_rect(center=(self.screen.get_width()//2, self.screen.get_height()//2))
             self.screen.blit(text, text_rect)
     
     def _render_debug_info(self):
         """デバッグ情報の描画"""
-        if self.debug_font and self.show_fps:
+        if self.debug_font and self.show_fps and self.screen:
             fps_text = f"FPS: {int(self.clock.get_fps())}"
             fps_surface = self.debug_font.render(fps_text, True, (255, 255, 0))
             self.screen.blit(fps_surface, (10, 10))

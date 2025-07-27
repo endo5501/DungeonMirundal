@@ -147,19 +147,23 @@ class DungeonRendererPygame:
             return
             
         # 位置情報表示
-        pos_text = f"Position: ({player_position.x}, {player_position.y}) Level: {player_position.level}"
-        text_surface = font.render(pos_text, True, (255, 255, 255))
-        self.screen.blit(text_surface, (10, 10))
-        
-        # 向いている方向
-        direction_text = f"Facing: {player_position.facing.value}"
-        dir_surface = font.render(direction_text, True, (255, 255, 255))
-        self.screen.blit(dir_surface, (10, 40))
-        
-        # 操作説明
-        help_text = "WASD: Move, Space: Menu, ESC: Return"
-        help_surface = font.render(help_text, True, (200, 200, 200))
-        self.screen.blit(help_surface, (10, self.screen_height - 30))
+        if self.screen:
+            pos_text = f"Position: ({player_position.x}, {player_position.y}) Level: {player_position.level}"
+            text_surface = font.render(pos_text, True, (255, 255, 255))
+            self.screen.blit(text_surface, (10, 10))
+            
+            # 向いている方向
+            direction_text = f"Facing: {player_position.facing.value}"
+            dir_surface = font.render(direction_text, True, (255, 255, 255))
+            self.screen.blit(dir_surface, (10, 40))
+            
+            # 操作説明
+            help_text = "WASD: Move, Space: Menu, ESC: Return"
+            help_surface = font.render(help_text, True, (200, 200, 200))
+            if hasattr(self, 'screen_height'):
+                self.screen.blit(help_surface, (10, self.screen_height - 30))
+            else:
+                self.screen.blit(help_surface, (10, self.screen.get_height() - 30))
         
         # キャラクターステータスバーを描画
         if self.dungeon_ui_manager:
@@ -629,6 +633,8 @@ class DungeonRendererPygame:
     
     def _handle_move_forward(self) -> bool:
         """前進処理"""
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon or not self.dungeon_manager.current_dungeon.player_position:
+            return False
         facing = self.dungeon_manager.current_dungeon.player_position.facing
         success, _ = self.dungeon_manager.move_player(facing)
         if success:
@@ -637,6 +643,8 @@ class DungeonRendererPygame:
     
     def _handle_move_backward(self) -> bool:
         """後退処理"""
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon or not self.dungeon_manager.current_dungeon.player_position:
+            return False
         facing = self.dungeon_manager.current_dungeon.player_position.facing
         opposite = self._get_opposite_direction(facing)
         success, _ = self.dungeon_manager.move_player(opposite)
@@ -646,6 +654,8 @@ class DungeonRendererPygame:
     
     def _handle_turn_left(self) -> bool:
         """左回転処理"""
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon or not self.dungeon_manager.current_dungeon.player_position:
+            return False
         facing = self.dungeon_manager.current_dungeon.player_position.facing
         left = self._get_left_direction(facing)
         self.dungeon_manager.turn_player(left)
@@ -654,6 +664,8 @@ class DungeonRendererPygame:
     
     def _handle_turn_right(self) -> bool:
         """右回転処理"""
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon or not self.dungeon_manager.current_dungeon.player_position:
+            return False
         facing = self.dungeon_manager.current_dungeon.player_position.facing
         right = self._get_right_direction(facing)
         self.dungeon_manager.turn_player(right)

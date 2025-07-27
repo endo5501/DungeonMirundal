@@ -283,6 +283,8 @@ class DungeonRendererPygame:
     
     def _render_walls_raycast(self, level: DungeonLevel, player_pos: PlayerPosition):
         """レイキャスティングによる壁面描画"""
+        if not self.screen:
+            return
         # レイキャスティングの準備
         ray_count = self.config.raycast.calculate_ray_count(self.screen.get_width())
         ray_start = self.camera.get_ray_start_position(player_pos)

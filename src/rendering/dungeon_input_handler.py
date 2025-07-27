@@ -4,7 +4,7 @@ DungeonRendererから入力処理ロジックを分離。
 Fowlerの「Extract Class」と「Move Method」パターンを適用。
 """
 
-from typing import Optional, Dict, Callable, Any
+from typing import Optional, Dict, Callable, Any, cast
 from enum import Enum
 import pygame
 
@@ -145,7 +145,7 @@ class DungeonInputHandler:
             return MovementResult(False, "移動できません")
         
         # _can_move()/_can_turn()でNoneチェック済み
-        current_pos = self.dungeon_manager.current_dungeon.player_position
+        current_pos = cast(PlayerPosition, cast(DungeonState, cast(DungeonManager, self.dungeon_manager).current_dungeon).player_position)
         facing_direction = current_pos.facing
         
         success, move_message = self.dungeon_manager.move_player(facing_direction)
@@ -172,7 +172,7 @@ class DungeonInputHandler:
             return MovementResult(False, "移動できません")
         
         # _can_move()/_can_turn()でNoneチェック済み
-        current_pos = self.dungeon_manager.current_dungeon.player_position
+        current_pos = cast(PlayerPosition, cast(DungeonState, cast(DungeonManager, self.dungeon_manager).current_dungeon).player_position)
         facing_direction = current_pos.facing
         backward_direction = DirectionHelper.get_opposite_direction(facing_direction)
         
@@ -194,7 +194,7 @@ class DungeonInputHandler:
             return MovementResult(False, "移動できません")
         
         # _can_move()/_can_turn()でNoneチェック済み
-        current_pos = self.dungeon_manager.current_dungeon.player_position
+        current_pos = cast(PlayerPosition, cast(DungeonState, cast(DungeonManager, self.dungeon_manager).current_dungeon).player_position)
         facing_direction = current_pos.facing
         left_direction = DirectionHelper.get_left_direction(facing_direction)
         
@@ -215,7 +215,7 @@ class DungeonInputHandler:
             return MovementResult(False, "移動できません")
         
         # _can_move()/_can_turn()でNoneチェック済み
-        current_pos = self.dungeon_manager.current_dungeon.player_position
+        current_pos = cast(PlayerPosition, cast(DungeonState, cast(DungeonManager, self.dungeon_manager).current_dungeon).player_position)
         facing_direction = current_pos.facing
         right_direction = DirectionHelper.get_right_direction(facing_direction)
         
@@ -266,7 +266,7 @@ class DungeonInputHandler:
             return MovementResult(False, "移動できません")
         
         # _can_move()/_can_turn()でNoneチェック済み
-        current_pos = self.dungeon_manager.current_dungeon.player_position
+        current_pos = cast(PlayerPosition, cast(DungeonState, cast(DungeonManager, self.dungeon_manager).current_dungeon).player_position)
         facing_direction = current_pos.facing
         left_direction = DirectionHelper.get_left_direction(facing_direction)
         
@@ -287,7 +287,7 @@ class DungeonInputHandler:
             return MovementResult(False, "移動できません")
         
         # _can_move()/_can_turn()でNoneチェック済み
-        current_pos = self.dungeon_manager.current_dungeon.player_position
+        current_pos = cast(PlayerPosition, cast(DungeonState, cast(DungeonManager, self.dungeon_manager).current_dungeon).player_position)
         facing_direction = current_pos.facing
         right_direction = DirectionHelper.get_right_direction(facing_direction)
         
