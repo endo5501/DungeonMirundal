@@ -37,7 +37,8 @@ closed_at: null   # Do not modify manually
 - [ ] 階段アイコンまたはシンボルの追加検討
 - [ ] 様々な距離での視認性テスト
 - [ ] 実際のゲームプレイでの視覚的確認テスト
-- [ ] Run tests before closing and pass all tests (No exceptions)
+- [ ] Run static analysis (`pyright`) before closing and pass all tests (No exceptions)
+- [ ] Run tests (`uv run pytest`) before closing and pass all tests (No exceptions)
 - [ ] Get developer approval before closing
 
 ## Notes

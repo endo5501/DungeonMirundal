@@ -48,6 +48,8 @@
 - [ ] ダンジョン入場→移動→階段への復帰の全フローテスト
 - [ ] 複数回の移動パターンでの動作確認
 - [ ] 他のダンジョン機能（戦闘、宝箱など）への影響確認
+- [ ] Run static analysis (`pyright`) before closing and pass all tests (No exceptions)
+- [ ] Run tests (`uv run pytest`) before closing and pass all tests (No exceptions)
 
 ## 技術的アプローチ
 

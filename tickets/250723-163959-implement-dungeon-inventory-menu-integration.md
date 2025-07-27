@@ -40,7 +40,8 @@ closed_at: null   # Do not modify manually
 - [ ] インベントリウィンドウからの正常な復帰動作確認
 - [ ] 複数キャラクターのインベントリ表示テスト
 - [ ] アイテム使用・移動・破棄機能の動作確認
-- [ ] Run tests before closing and pass all tests (No exceptions)
+- [ ] Run static analysis (`pyright`) before closing and pass all tests (No exceptions)
+- [ ] Run tests (`uv run pytest`) before closing and pass all tests (No exceptions)
 - [ ] Get developer approval before closing
 
 ## 受け入れ条件

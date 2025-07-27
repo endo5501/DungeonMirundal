@@ -33,7 +33,8 @@ closed_at: null   # Do not modify manually
 - [ ] 日本語テキストの実装と確認
 - [ ] ユニットテストの作成
 - [ ] 統合テストの実施
-- [ ] Run tests before closing and pass all tests (No exceptions)
+- [ ] Run static analysis (`pyright`) before closing and pass all tests (No exceptions)
+- [ ] Run tests (`uv run pytest`) before closing and pass all tests (No exceptions)
 - [ ] Get developer approval before closing
 
 ## 受け入れ条件

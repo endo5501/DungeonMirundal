@@ -29,7 +29,8 @@ closed_at: null   # Do not modify manually
 - [ ] 全体的なUIテーマとの整合性確認
 - [ ] 変更前後のスクリーンショット取得（記録用）
 - [ ] 各画面での動作確認（入力、表示、フォーカス）
-- [ ] Run tests before closing and pass all tests (No exceptions)
+- [ ] Run static analysis (`pyright`) before closing and pass all tests (No exceptions)
+- [ ] Run tests (`uv run pytest`) before closing and pass all tests (No exceptions)
 - [ ] Get developer approval before closing
 
 ## 受け入れ条件

@@ -44,7 +44,8 @@ default_content: |
   - [ ] {{Task 1}}
   - [ ] {{Task 2}}
   ...
-  - [ ] Run tests before closing and pass all tests (No exceptions)
+  - [ ] Run static analysis (`pyright`) before closing and pass all tests (No exceptions)
+  - [ ] Run tests (`uv run pytest`) before closing and pass all tests (No exceptions)
   - [ ] Get developer approval before closing
   
   

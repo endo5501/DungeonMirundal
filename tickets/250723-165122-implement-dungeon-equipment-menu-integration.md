@@ -60,7 +60,8 @@ closed_at: null   # Do not modify manually
 - [ ] 複数キャラクターの装備表示テスト
 - [ ] 装備効果反映・計算機能の動作確認
 - [ ] 装備ウィンドウからの正常な復帰動作確認
-- [ ] Run tests before closing and pass all tests (No exceptions)
+- [ ] Run static analysis (`pyright`) before closing and pass all tests (No exceptions)
+- [ ] Run tests (`uv run pytest`) before closing and pass all tests (No exceptions)
 - [ ] Get developer approval before closing
 
 ## 受け入れ条件

@@ -36,7 +36,8 @@ closed_at: null   # Do not modify manually
 - [ ] UIの一貫性確認（ナビゲーションパネル等）
 - [ ] ユニットテストの実行・修正
 - [ ] 統合テストの実施
-- [ ] Run tests before closing and pass all tests (No exceptions)
+- [ ] Run static analysis (`pyright`) before closing and pass all tests (No exceptions)
+- [ ] Run tests (`uv run pytest`) before closing and pass all tests (No exceptions)
 - [ ] Get developer approval before closing
 
 ## 受け入れ条件

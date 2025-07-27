@@ -47,7 +47,8 @@ closed_at: null   # Do not modify manually
 - [ ] ダンジョンシーン遷移処理を修正
 - [ ] 永続化されたダンジョンデータの読み込み処理を改善
 - [ ] 統合テスト（新規ゲーム→生成→セーブ→ロード→アクセス）を実装
-- [ ] Run tests before closing and pass all tests (No exceptions)
+- [ ] Run static analysis (`pyright`) before closing and pass all tests (No exceptions)
+- [ ] Run tests (`uv run pytest`) before closing and pass all tests (No exceptions)
 - [ ] Get developer approval before closing
 
 ## Notes

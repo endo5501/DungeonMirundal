@@ -62,7 +62,8 @@ closed_at: null   # Do not modify manually
 - [ ] ステータス効果一覧表示・管理機能の動作確認
 - [ ] 複数キャラクターのステータス切り替え機能テスト
 - [ ] ステータスウィンドウからの正常な復帰動作確認
-- [ ] Run tests before closing and pass all tests (No exceptions)
+- [ ] Run static analysis (`pyright`) before closing and pass all tests (No exceptions)
+- [ ] Run tests (`uv run pytest`) before closing and pass all tests (No exceptions)
 - [ ] Get developer approval before closing
 
 ## 受け入れ条件

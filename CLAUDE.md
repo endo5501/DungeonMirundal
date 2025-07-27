@@ -16,6 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 仮想環境での実行: `uv run python main.py`
 - Pygame依存関係追加: `uv add pygame`
 - テスト実行: `uv run pytest`
+- 静的解析: `pyright`
 
 ### ゲームデバッグ
 
