@@ -1816,6 +1816,45 @@ class OverworldManager:
     # 新施設システムでは施設退場時の処理はFacilityRegistryが管理
     # レガシーのon_facility_exit()コールバックは削除
     
+    def save_overworld_state(self) -> Dict[str, Any]:
+        """地上部状態をセーブ"""
+        try:
+            state = {
+                'current_location': self.current_location.value if hasattr(self.current_location, 'value') else str(self.current_location),
+                'is_active': self.is_active,
+                'settings_menu_active': getattr(self, 'settings_menu_active', False)
+            }
+            logger.debug(f"地上部状態をセーブ: {state}")
+            return state
+        except Exception as e:
+            logger.error(f"地上部状態セーブエラー: {e}")
+            return {}
+    
+    def load_overworld_state(self, state: Dict[str, Any]) -> bool:
+        """地上部状態をロード"""
+        try:
+            if 'current_location' in state:
+                # Enumとして取得を試行
+                try:
+                    from src.overworld.overworld_location import OverworldLocation
+                    location_value = state['current_location']
+                    self.current_location = OverworldLocation(location_value)
+                except (ImportError, ValueError):
+                    # 文字列として保存
+                    self.current_location = state['current_location']
+            
+            if 'is_active' in state:
+                self.is_active = state['is_active']
+            
+            if 'settings_menu_active' in state:
+                self.settings_menu_active = state['settings_menu_active']
+            
+            logger.debug(f"地上部状態をロード: {state}")
+            return True
+        except Exception as e:
+            logger.error(f"地上部状態ロードエラー: {e}")
+            return False
+    
     def get_current_party(self) -> Optional[Party]:
         """現在のパーティを取得"""
         return self.current_party

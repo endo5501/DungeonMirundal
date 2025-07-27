@@ -134,6 +134,43 @@ class Character:
     # === コンポーネントアクセス用プロパティ ===
     
     @property
+    def hp(self) -> int:
+        """現在のHP"""
+        return getattr(self.derived_stats, 'hp', 0) if self.derived_stats else 0
+    
+    @hp.setter
+    def hp(self, value: int):
+        """HPを設定"""
+        if self.derived_stats:
+            self.derived_stats.hp = max(0, value)
+    
+    @property
+    def max_hp(self) -> int:
+        """最大HP"""
+        return getattr(self.derived_stats, 'max_hp', 0) if self.derived_stats else 0
+    
+    def gain_experience(self, amount: int) -> bool:
+        """経験値を取得してレベルアップ判定"""
+        if amount <= 0:
+            return False
+        
+        # 現在の経験値に追加
+        self.experience.current_xp += amount
+        
+        # レベルアップチェック
+        char_config = config_manager.load_config("characters")
+        xp_table = char_config.get("level_progression", {}).get("experience_table", {})
+        
+        old_level = self.experience.level
+        leveled_up = self.experience.add_experience(0, xp_table)  # レベルチェックのみ
+        
+        if leveled_up and self.experience.level > old_level:
+            logger.info(f"{self.name} がレベルアップしました: {old_level} -> {self.experience.level}")
+            return True
+        
+        return False
+    
+    @property
     def equipment(self) -> Optional['EquipmentComponent']:
         """装備コンポーネントを取得（後方互換性含む）"""
         # モックが設定されている場合はそれを返す（テスト用）

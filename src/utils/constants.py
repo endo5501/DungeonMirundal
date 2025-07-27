@@ -99,7 +99,9 @@ ASSET_DIR = "assets"
 LOG_DIR = "logs"
 
 # ゲームロケーション定義
-class GameLocation:
+from enum import Enum
+
+class GameLocation(Enum):
     """ゲーム内の場所を表す定数"""
     OVERWORLD = "overworld"
     DUNGEON = "dungeon"

@@ -142,6 +142,21 @@ class Party:
     # 新しいインベントリシステム
     _party_inventory_initialized: bool = field(default=False, init=False)
     
+    def initialize_party_inventory(self):
+        """パーティインベントリを初期化（遅延初期化）"""
+        if not self._party_inventory_initialized:
+            from src.inventory.inventory import inventory_manager
+            inventory_manager.create_party_inventory(self.party_id)
+            self._party_inventory_initialized = True
+            logger.debug(f"パーティインベントリを初期化: {self.party_id}")
+    
+    @property
+    def shared_inventory(self):
+        """パーティ共有インベントリ"""
+        self.initialize_party_inventory()
+        from src.inventory.inventory import inventory_manager
+        return inventory_manager.get_party_inventory(self.party_id)
+    
     def add_character(self, character: Character, position: Optional[PartyPosition] = None) -> bool:
         """キャラクターをパーティに追加"""
         if len(self.characters) >= MAX_PARTY_SIZE:

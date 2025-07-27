@@ -155,6 +155,9 @@ class GameLogHandler(logging.Handler):
 
 class DummyGameLogger:
     """無効化時に使用するダミーロガー"""
+    def __init__(self):
+        self.handler = None  # ダミーハンドラー
+    
     def add_log(self, *args, **kwargs):
         pass
     
