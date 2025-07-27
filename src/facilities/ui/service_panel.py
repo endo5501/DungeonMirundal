@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 from ..core.facility_controller import FacilityController
 from ..core.service_result import ServiceResult
 from .ui_element_manager import UIElementManager, DestructionMixin
+from .ui_element_factory import UIElementFactory
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +56,10 @@ class ServicePanel(ABC, DestructionMixin):
         self.ui_elements: List[pygame_gui.core.UIElement] = []
         self.is_visible = False
         
-        # ボタンインデックスのカウンター（ショートカットキー用）
-        self._button_index_counter = 0
+        # UI要素作成ファクトリーを初期化
+        self.ui_factory = UIElementFactory(
+            ui_manager, self.container, self.ui_element_manager, self.ui_elements
+        )
         
         # 初期化
         self._create_ui()
@@ -120,6 +123,7 @@ class ServicePanel(ABC, DestructionMixin):
         # 属性をクリア
         self.container = None
         self.ui_element_manager = None
+        self.ui_factory = None
         
         logger.info(f"ServicePanel destroyed: {self.service_id}")
     
@@ -153,171 +157,32 @@ class ServicePanel(ABC, DestructionMixin):
     
     def _create_label(self, element_id: str, text: str, rect: pygame.Rect, 
                      container: Optional[pygame_gui.core.UIContainer] = None) -> pygame_gui.elements.UILabel:
-        """ラベルを作成（UIElementManager使用）
-        
-        Args:
-            element_id: 要素ID
-            text: ラベルテキスト
-            rect: 矩形領域
-            container: コンテナ（省略時はself.container）
-            
-        Returns:
-            作成したラベル
-        """
-        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
-            return self.ui_element_manager.create_label(element_id, text, rect, container)
-        else:
-            # フォールバック（レガシー）
-            if container is None:
-                container = self.container
-                
-            label = pygame_gui.elements.UILabel(
-                relative_rect=rect,
-                text=text,
-                manager=self.ui_manager,
-                container=container
-            )
-            self.ui_elements.append(label)
-            return label
+        """ラベルを作成（ファクトリー統合）"""
+        return self.ui_factory.create_label(element_id, text, rect, container)
     
     def _create_button(self, element_id: str, text: str, rect: pygame.Rect,
                       container: Optional[pygame_gui.core.UIContainer] = None,
                       object_id: Optional[str] = None,
                       on_click: Optional[callable] = None) -> pygame_gui.elements.UIButton:
-        """ボタンを作成（UIElementManager使用）
-        
-        Args:
-            element_id: 要素ID
-            text: ボタンテキスト
-            rect: 矩形領域
-            container: コンテナ（省略時はself.container）
-            object_id: オブジェクトID
-            on_click: クリック時のコールバック
-            
-        Returns:
-            作成したボタン
-        """
-        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
-            button = self.ui_element_manager.create_button(
-                element_id, text, rect, container, on_click, object_id=object_id
-            )
-        else:
-            # フォールバック（レガシー）
-            if container is None:
-                container = self.container
-                
-            button = pygame_gui.elements.UIButton(
-                relative_rect=rect,
-                text=text,
-                manager=self.ui_manager,
-                container=container,
-                object_id=object_id
-            )
-            self.ui_elements.append(button)
-        
-        # ショートカットキー情報を設定
-        if self._button_index_counter < 9:  # 1-9の数字キーまで対応
-            button.button_index = self._button_index_counter
-            button.shortcut_key = str(self._button_index_counter + 1)
-            self._button_index_counter += 1
-        
-        return button
+        """ボタンを作成（ファクトリー統合）"""
+        return self.ui_factory.create_button(element_id, text, rect, container, object_id, on_click)
     
     def _create_text_box(self, element_id: str, initial_text: str, rect: pygame.Rect,
                         container: Optional[pygame_gui.core.UIContainer] = None) -> pygame_gui.elements.UITextBox:
-        """テキストボックスを作成（UIElementManager使用）
-        
-        Args:
-            element_id: 要素ID
-            initial_text: 初期テキスト
-            rect: 矩形領域
-            container: コンテナ（省略時はself.container）
-            
-        Returns:
-            作成したテキストボックス
-        """
-        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
-            return self.ui_element_manager.create_text_box(element_id, initial_text, rect, container)
-        else:
-            # フォールバック（レガシー）
-            if container is None:
-                container = self.container
-                
-            text_box = pygame_gui.elements.UITextBox(
-                html_text=initial_text,
-                relative_rect=rect,
-                manager=self.ui_manager,
-                container=container
-            )
-            self.ui_elements.append(text_box)
-            return text_box
+        """テキストボックスを作成（ファクトリー統合）"""
+        return self.ui_factory.create_text_box(element_id, initial_text, rect, container)
     
     def _create_selection_list(self, element_id: str, rect: pygame.Rect,
                               item_list: List[str],
                               container: Optional[pygame_gui.core.UIContainer] = None) -> pygame_gui.elements.UISelectionList:
-        """選択リストを作成（UIElementManager使用）
-        
-        Args:
-            element_id: 要素ID
-            rect: 矩形領域
-            item_list: 選択項目リスト
-            container: コンテナ（省略時はself.container）
-            
-        Returns:
-            作成した選択リスト
-        """
-        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
-            return self.ui_element_manager.create_selection_list(element_id, rect, item_list, container)
-        else:
-            # フォールバック（レガシー）
-            if container is None:
-                container = self.container
-                
-            selection_list = pygame_gui.elements.UISelectionList(
-                relative_rect=rect,
-                item_list=item_list,
-                manager=self.ui_manager,
-                container=container
-            )
-            self.ui_elements.append(selection_list)
-            return selection_list
+        """選択リストを作成（ファクトリー統合）"""
+        return self.ui_factory.create_selection_list(element_id, rect, item_list, container)
     
     def _create_text_entry(self, element_id: str, text: str, rect: pygame.Rect,
                           container: Optional[pygame_gui.core.UIContainer] = None,
                           placeholder_text: str = "", **kwargs) -> Optional[pygame_gui.elements.UITextEntryLine]:
-        """テキスト入力フィールドを作成（UIElementManager統合）
-        
-        Args:
-            element_id: 要素ID
-            text: 初期テキスト
-            rect: 矩形領域
-            container: コンテナ（省略時はself.container）
-            placeholder_text: プレースホルダーテキスト
-            **kwargs: その他の引数
-            
-        Returns:
-            作成したテキスト入力フィールド
-        """
-        if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
-            return self.ui_element_manager.create_text_entry(
-                element_id, rect, initial_text=text, container=container, 
-                placeholder_text=placeholder_text, **kwargs
-            )
-        else:
-            # フォールバック（レガシー）
-            if container is None:
-                container = self.container
-                
-            text_entry = pygame_gui.elements.UITextEntryLine(
-                relative_rect=rect,
-                manager=self.ui_manager,
-                container=container,
-                initial_text=text,
-                placeholder_text=placeholder_text,
-                **kwargs
-            )
-            self.ui_elements.append(text_entry)
-            return text_entry
+        """テキスト入力フィールドを作成（ファクトリー統合）"""
+        return self.ui_factory.create_text_entry(element_id, rect, text, placeholder_text, container, **kwargs)
     
     def _show_message(self, message: str, message_type: str = "info") -> None:
         """メッセージを表示

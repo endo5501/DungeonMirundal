@@ -55,7 +55,8 @@ class TestServicePanel(unittest.TestCase):
         self.assertEqual(panel.service_id, self.service_id)
         self.assertEqual(panel.ui_manager, self.mock_ui_manager)
         self.assertFalse(panel.is_visible)
-        self.assertEqual(panel._button_index_counter, 0)
+        # ボタンカウンターはUIElementFactoryに移動されたため、ファクトリ経由でアクセス
+        self.assertEqual(panel.ui_factory.button_index_counter, 0)
         
         # コンテナが作成されていることを確認
         mock_panel.assert_called_once()

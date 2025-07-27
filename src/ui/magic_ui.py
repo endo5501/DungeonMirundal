@@ -8,6 +8,7 @@ from src.ui.window_system.magic_window import MagicWindow
 from src.magic.spells import SpellBook, Spell
 from src.character.party import Party
 from src.character.character import Character
+from src.ui.ui_component_base import PartyAwareUIComponent
 from src.utils.logger import logger
 
 
@@ -20,10 +21,11 @@ class MagicUIMode(Enum):
     SPELL_CASTING = "spell_casting"     # 魔法詠唱
 
 
-class MagicUI:
+class MagicUI(PartyAwareUIComponent):
     """魔法UI管理クラス（WindowSystem統合版）"""
     
     def __init__(self):
+        super().__init__()
         self.current_party: Optional[Party] = None
         self.current_character: Optional[Character] = None
         self.current_spellbook: Optional[SpellBook] = None
@@ -50,11 +52,29 @@ class MagicUI:
         return self.magic_window
     
     def set_party(self, party: Party):
-        """パーティを設定"""
+        """パーティを設定（オーバーライド）"""
+        # 基底クラスのset_partyを呼び出し（UIUpdateableインターフェースの実装）
+        super().set_party(party)
+        # MagicUI固有の処理
         self.current_party = party
         if self.magic_window:
             self.magic_window.set_party(party)
         logger.debug(f"パーティを設定: {party.name if party else None}")
+    
+    def on_party_changed(self, party: Optional[Party]) -> None:
+        """パーティ変更時のコールバック（PartyAwareUIComponent実装）"""
+        self.current_party = party
+        if self.magic_window:
+            self.magic_window.set_party(party)
+    
+    def refresh_ui(self) -> None:
+        """UIの再描画処理（PartyAwareUIComponent実装）"""
+        if self.magic_window and self.is_open:
+            # 魔法ウィンドウが開いている場合のみ更新
+            if self.current_party:
+                self.magic_window.set_party(self.current_party)
+            if self.current_character:
+                self.magic_window.set_character(self.current_character)
     
     def set_character(self, character: Character):
         """キャラクターを設定"""
