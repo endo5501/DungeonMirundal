@@ -62,7 +62,7 @@ class GameEvent:
     event_type: EventType
     source: str  # イベント発生源の識別子
     data: Optional[Dict[str, Any]] = None
-    timestamp: float = None
+    timestamp: Optional[float] = None
     
     def __post_init__(self):
         if self.data is None:

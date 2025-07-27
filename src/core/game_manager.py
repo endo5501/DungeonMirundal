@@ -51,6 +51,7 @@ class GameManager(EventHandler):
         
         # ゲーム状態（簡素化）
         self.game_state = "startup"
+        self.current_state = None  # 現在の状態オブジェクト
         self.paused = False
         self.current_location = GameLocation.OVERWORLD
         
@@ -65,6 +66,7 @@ class GameManager(EventHandler):
         self.combat_manager = None
         self.encounter_manager = None
         self.dungeon_renderer = None
+        self.window_manager = None  # ウィンドウ管理システム
         
         # パーティ情報
         self.current_party = None
@@ -281,9 +283,10 @@ class GameManager(EventHandler):
     
     def _handle_party_created(self, event: GameEvent) -> bool:
         """パーティ作成イベントの処理"""
-        party = event.data.get('party')
-        if party:
-            self.set_current_party(party)
+        if event.data:
+            party = event.data.get('party')
+            if party:
+                self.set_current_party(party)
         return True
     
     def _handle_combat_started(self, event: GameEvent) -> bool:
@@ -409,7 +412,8 @@ class GameManager(EventHandler):
         status = self.game_config.get_text("ui.settings.enabled") if self.debug_enabled else self.game_config.get_text("ui.settings.disabled")
 
         # デバッグサーバ起動（GameManagerインスタンスを登録）
-        dbg_api.start(self.screen, self)
+        if self.screen is not None:
+            dbg_api.start(self.screen, self)
         
         # main.pyのgame_manager変数を確実に更新
         try:
@@ -460,7 +464,7 @@ class GameManager(EventHandler):
                 
                 try:
                     if hasattr(self.dungeon_renderer, 'manual_recovery_attempt'):
-                        recovery_success = self.dungeon_renderer.manual_recovery_attempt()
+                        recovery_success = getattr(self.dungeon_renderer, 'manual_recovery_attempt', lambda: False)()
                         
                         if recovery_success:
                             logger.info(self.game_config.get_text("app_log.3d_manual_recovery_success"))
@@ -499,15 +503,17 @@ class GameManager(EventHandler):
             logger.info(self.game_config.get_text("app_log.3d_stage_advance_debug"))
             
             # 現在の状態を表示
-            self.dungeon_renderer.log_current_status()
+            if hasattr(self.dungeon_renderer, 'log_current_status'):
+                getattr(self.dungeon_renderer, 'log_current_status', lambda: None)()
             
             # 次の段階に進行
-            success = self.dungeon_renderer.manual_advance_next_stage()
+            success = getattr(self.dungeon_renderer, 'manual_advance_next_stage', lambda: False)()
             
             if success:
                 logger.info(self.game_config.get_text("app_log.3d_stage_advance_success"))
                 # 進行後の状態も表示
-                self.dungeon_renderer.log_current_status()
+                if hasattr(self.dungeon_renderer, 'log_current_status'):
+                    getattr(self.dungeon_renderer, 'log_current_status', lambda: None)()
                 
                 # UIを更新
                 try:
@@ -523,7 +529,8 @@ class GameManager(EventHandler):
             logger.info(self.game_config.get_text("app_log.3d_emergency_reset_debug"))
             
             # 緊急無効化を実行
-            self.dungeon_renderer.emergency_disable()
+            if hasattr(self.dungeon_renderer, 'emergency_disable'):
+                getattr(self.dungeon_renderer, 'emergency_disable', lambda: None)()
             logger.info(self.game_config.get_text("app_log.3d_emergency_reset_complete"))
     
     def _on_pause_action(self, action: str, pressed: bool, input_type):
@@ -557,24 +564,27 @@ class GameManager(EventHandler):
         if pressed:
             logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.equipment_action"), input_type=input_type.value))
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
-                if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
-                    self.dungeon_renderer.ui_manager._open_equipment()
+                ui_manager = getattr(self.dungeon_renderer, 'ui_manager', None)
+                if ui_manager and hasattr(ui_manager, '_open_equipment'):
+                    getattr(ui_manager, '_open_equipment', lambda: None)()
     
     def _on_status_action(self, action: str, pressed: bool, input_type):
         """ステータスアクションの処理"""
         if pressed:
             logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.status_action"), input_type=input_type.value))
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
-                if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
-                    self.dungeon_renderer.ui_manager._open_status()
+                ui_manager = getattr(self.dungeon_renderer, 'ui_manager', None)
+                if ui_manager and hasattr(ui_manager, '_open_status'):
+                    getattr(ui_manager, '_open_status', lambda: None)()
     
     def _on_camp_action(self, action: str, pressed: bool, input_type):
         """キャンプアクションの処理"""
         if pressed:
             logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.camp_action"), input_type=input_type.value))
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
-                if hasattr(self.dungeon_renderer, 'ui_manager') and self.dungeon_renderer.ui_manager:
-                    self.dungeon_renderer.ui_manager._open_camp()
+                ui_manager = getattr(self.dungeon_renderer, 'ui_manager', None)
+                if ui_manager and hasattr(ui_manager, '_open_camp'):
+                    getattr(ui_manager, '_open_camp', lambda: None)()
     
     def _on_help_action(self, action: str, pressed: bool, input_type):
         """ヘルプアクションの処理"""

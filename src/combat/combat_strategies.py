@@ -69,13 +69,19 @@ class AttackStrategy(CombatStrategy):
             return False
         
         # 麻痺や意識不明状態では攻撃できない
-        if hasattr(context.attacker, 'status_effects'):
+        if (hasattr(context.attacker, 'status_effects') and 
+            context.attacker.status_effects is not None and
+            not isinstance(context.attacker.status_effects, list)):  # List[str]でないことを確認
             from src.character.components.status_effects_component import StatusEffectType
             status_effects = context.attacker.status_effects
-            if (status_effects and hasattr(status_effects, 'has_status_effect') and 
-                (status_effects.has_status_effect(StatusEffectType.PARALYZED) or
-                 status_effects.has_status_effect(StatusEffectType.UNCONSCIOUS))):
-                return False
+            if hasattr(status_effects, 'has_status_effect'):
+                try:
+                    if (status_effects.has_status_effect(StatusEffectType.PARALYZED) or
+                        status_effects.has_status_effect(StatusEffectType.UNCONSCIOUS)):
+                        return False
+                except (AttributeError, TypeError):
+                    # 安全措置：エラーが発生した場合は攻撃可能とする
+                    pass
         
         return True
     
@@ -202,6 +208,7 @@ class DefendStrategy(CombatStrategy):
         
         # 防御効果を適用（次のターンまで防御力上昇）
         if (hasattr(attacker, 'status_effects') and attacker.status_effects and 
+            not isinstance(attacker.status_effects, list) and
             hasattr(attacker.status_effects, 'apply_status_effect')):
             from src.character.components.status_effects_component import StatusEffectType
             attacker.status_effects.apply_status_effect(
@@ -237,6 +244,7 @@ class CastSpellStrategy(CombatStrategy):
         
         # 混乱状態では魔法を唱えられない
         if (hasattr(attacker, 'status_effects') and attacker.status_effects and 
+            not isinstance(attacker.status_effects, list) and
             hasattr(attacker.status_effects, 'has_status_effect')):
             from src.character.components.status_effects_component import StatusEffectType
             if attacker.status_effects.has_status_effect(StatusEffectType.CONFUSED):
@@ -378,11 +386,15 @@ class UseItemStrategy(CombatStrategy):
         if not item_id:
             return False
         
-        # アイテムを所持しているかチェック
-        if hasattr(attacker, 'inventory') and attacker.inventory:
-            return attacker.inventory.has_item(item_id, 1)
-        elif hasattr(attacker, 'items') and attacker.items:
-            return attacker.items.has_item(item_id, 1)
+        # アイテムを所持しているかチェック（Characterのみ）
+        if isinstance(attacker, Character):
+            if (hasattr(attacker, 'inventory') and attacker.inventory and 
+                not isinstance(attacker.inventory, list)):
+                return attacker.inventory.has_item(item_id, 1)
+            elif (hasattr(attacker, 'items') and attacker.items and
+                  not isinstance(attacker.items, list)):
+                return attacker.items.has_item(item_id, 1)
+        # Monsterはアイテムを使用できない
         
         return False
     
@@ -398,15 +410,20 @@ class UseItemStrategy(CombatStrategy):
         item_id = context.action_data.get('item_id')
         target = context.target or attacker
         
-        # アイテムを消費
-        if hasattr(attacker, 'items') and attacker.items:
-            attacker.items.remove_item(item_id, 1)
+        # アイテムを消費（Characterのみ）
+        if isinstance(attacker, Character):
+            if (hasattr(attacker, 'inventory') and attacker.inventory and item_id and
+                not isinstance(attacker.inventory, list)):
+                attacker.inventory.remove_item(item_id, 1)
+            elif (hasattr(attacker, 'items') and attacker.items and item_id and
+                  not isinstance(attacker.items, list)):
+                attacker.items.remove_item(item_id, 1)
         
         # アイテム効果を適用
         if item_id:
             result = self._apply_item_effect(item_id, attacker, target)
         else:
-            result = {"damage": 0, "success": False, "message": "アイテムが見つかりません"}
+            result = ActionResult(success=False, message="アイテムが見つかりません")
         
         return result
     
@@ -457,6 +474,7 @@ class UseItemStrategy(CombatStrategy):
         
         from src.character.components.status_effects_component import StatusEffectType
         if (target.status_effects and 
+            not isinstance(target.status_effects, list) and
             target.status_effects.has_status_effect(StatusEffectType.POISONED)):
             target.status_effects.remove_status_effect(StatusEffectType.POISONED)
             return ActionResult(
@@ -496,6 +514,7 @@ class FleeStrategy(CombatStrategy):
         # 麻痺状態では逃走できない
         if (hasattr(context.attacker, 'status_effects') and 
             context.attacker.status_effects and
+            not isinstance(context.attacker.status_effects, list) and
             hasattr(context.attacker.status_effects, 'has_status_effect')):
             from src.character.components.status_effects_component import StatusEffectType
             if context.attacker.status_effects.has_status_effect(StatusEffectType.PARALYZED):
@@ -558,6 +577,7 @@ class NegotiateStrategy(CombatStrategy):
         # 混乱状態では交渉できない
         if (hasattr(context.attacker, 'status_effects') and 
             context.attacker.status_effects and
+            not isinstance(context.attacker.status_effects, list) and
             hasattr(context.attacker.status_effects, 'has_status_effect')):
             from src.character.components.status_effects_component import StatusEffectType
             if context.attacker.status_effects.has_status_effect(StatusEffectType.CONFUSED):

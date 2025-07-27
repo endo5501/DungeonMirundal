@@ -73,10 +73,8 @@ class PreparationState(CombatState):
         """準備段階に入る"""
         logger.info("戦闘準備段階に入りました")
         
-        # 戦闘統計の初期化（メソッドが存在しない場合はスキップ）
-        # initialize_combat_statsメソッドは存在しないためコメントアウト
-        # if hasattr(self.combat_manager, 'initialize_combat_stats'):
-        #     self.combat_manager.initialize_combat_stats()
+        # 戦闘統計の初期化
+        self.combat_manager.initialize_combat_stats()
         
         # パーティとモンスターの状態確認
         if not self._validate_combatants():
@@ -195,6 +193,7 @@ class PlayerTurnState(CombatState):
         # 状態異常のターン経過処理
         if (hasattr(current_character, 'status_effects') and 
             current_character.status_effects and
+            not isinstance(current_character.status_effects, list) and
             hasattr(current_character.status_effects, 'process_turn_effects')):
             expired_effects = current_character.status_effects.process_turn_effects()
             if expired_effects:
@@ -207,9 +206,8 @@ class PlayerTurnState(CombatState):
     def execute(self) -> Optional['CombatState']:
         """プレイヤーターンの実行"""
         # プレイヤーの行動が完了したら次のターンまたは結果判定に移行
-        # is_action_completedメソッドは存在しないため常にFalseとして扱う
-        # if hasattr(self.combat_manager, 'is_action_completed') and self.combat_manager.is_action_completed():
-        #     return self._determine_next_state()
+        if self.combat_manager.is_action_completed():
+            return self._determine_next_state()
         
         # 行動が未完了の場合は現在の状態を維持
         return None
@@ -233,9 +231,7 @@ class PlayerTurnState(CombatState):
             return NegotiatedState(self.combat_manager)
         
         # 次のアクターに移行
-        # advance_turnメソッドは存在しないためスキップ
-        # if hasattr(self.combat_manager, 'advance_turn'):
-        #     self.combat_manager.advance_turn()
+        self.combat_manager.advance_turn()
         
         next_actor = self.combat_manager.get_current_actor()
         if next_actor:
@@ -261,13 +257,11 @@ class PlayerTurnState(CombatState):
     
     def _check_flee_condition(self) -> bool:
         """逃走条件をチェック"""
-        # flee_attempted, flee_successfulプロパティは存在しないため常にFalse
-        return False
+        return self.combat_manager.flee_attempted and self.combat_manager.flee_successful
     
     def _check_negotiate_condition(self) -> bool:
         """交渉条件をチェック"""
-        # negotiate_attempted, negotiate_successfulプロパティは存在しないため常にFalse
-        return False
+        return self.combat_manager.negotiate_attempted and self.combat_manager.negotiate_successful
 
 
 class MonsterTurnState(CombatState):
@@ -313,9 +307,7 @@ class MonsterTurnState(CombatState):
         logger.info(action_result.message)
         
         # 戦闘統計を更新
-        # update_combat_statsメソッドは存在しないためスキップ
-        # if hasattr(self.combat_manager, 'update_combat_stats'):
-        #     self.combat_manager.update_combat_stats(current_monster, action_result)
+        self.combat_manager.update_combat_stats(current_monster, action_result)
         
         return self._determine_next_state()
     
@@ -370,8 +362,7 @@ class MonsterTurnState(CombatState):
             return DefeatState(self.combat_manager)
         
         # 次のアクターに移行
-        # advance_turnメソッドは存在しないためスキップ
-        # self.combat_manager.advance_turn()
+        self.combat_manager.advance_turn()
         next_actor = self.combat_manager.get_current_actor()
         
         if next_actor:
@@ -413,9 +404,7 @@ class VictoryState(CombatState):
     def execute(self) -> Optional['CombatState']:
         """勝利状態の実行"""
         # 戦闘終了
-        # end_combatメソッドは存在しないためスキップ
-        # self.combat_manager.end_combat('victory')
-        logger.info("戦闘が勝利で終了しました")
+        self.combat_manager.end_combat('victory')
         return None
     
     def exit(self):
@@ -460,9 +449,7 @@ class DefeatState(CombatState):
     def execute(self) -> Optional['CombatState']:
         """敗北状態の実行"""
         # 戦闘終了
-        # end_combatメソッドは存在しないためスキップ
-        # self.combat_manager.end_combat('defeat')
-        logger.info("戦闘が敗北で終了しました")
+        self.combat_manager.end_combat('defeat')
         return None
     
     def exit(self):
@@ -494,9 +481,7 @@ class FledState(CombatState):
     def execute(self) -> Optional['CombatState']:
         """逃走状態の実行"""
         # 戦闘終了
-        # end_combatメソッドは存在しないためスキップ
-        # self.combat_manager.end_combat('fled')
-        logger.info("戦闘が逃走で終了しました")
+        self.combat_manager.end_combat('fled')
         return None
     
     def exit(self):
@@ -522,9 +507,7 @@ class NegotiatedState(CombatState):
     def execute(self) -> Optional['CombatState']:
         """交渉成功状態の実行"""
         # 戦闘終了
-        # end_combatメソッドは存在しないためスキップ
-        # self.combat_manager.end_combat('negotiated')
-        logger.info("戦闘が交渉成功で終了しました")
+        self.combat_manager.end_combat('negotiated')
         return None
     
     def exit(self):

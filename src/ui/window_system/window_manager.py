@@ -4,7 +4,7 @@ WindowManager クラス
 Window Systemの中核となる管理クラス
 """
 
-from typing import Dict, Optional, List, Type, Any
+from typing import Dict, Optional, List, Type, Any, Callable
 import pygame
 import pygame_gui
 from datetime import datetime
@@ -76,7 +76,7 @@ class WindowManager:
     
     def _initialize_event_handling(self):
         """イベントハンドリングを初期化"""
-        self.escape_handlers: List[callable] = []
+        self.escape_handlers: List[Callable] = []
     
     @classmethod
     def get_instance(cls) -> 'WindowManager':
@@ -614,7 +614,7 @@ class WindowManager:
         
         self.statistics_manager.increment_counter('frames_rendered')
     
-    def add_escape_handler(self, handler: callable) -> None:
+    def add_escape_handler(self, handler: Callable) -> None:
         """
         ESCキーハンドラーを追加
         
@@ -624,7 +624,7 @@ class WindowManager:
         if handler not in self.escape_handlers:
             self.escape_handlers.append(handler)
     
-    def remove_escape_handler(self, handler: callable) -> None:
+    def remove_escape_handler(self, handler: Callable) -> None:
         """
         ESCキーハンドラーを削除
         

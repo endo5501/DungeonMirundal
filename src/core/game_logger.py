@@ -5,7 +5,7 @@ import logging
 import threading
 from datetime import datetime
 from collections import deque
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from enum import Enum
 
 class LogLevel(str, Enum):
@@ -138,11 +138,11 @@ class GameLogHandler(logging.Handler):
             # 追加情報を収集
             extra = {}
             if hasattr(record, 'game_state'):
-                extra['game_state'] = record.game_state
+                extra['game_state'] = getattr(record, 'game_state', None)
             if hasattr(record, 'player_action'):
-                extra['player_action'] = record.player_action
+                extra['player_action'] = getattr(record, 'player_action', None)
             if hasattr(record, 'error_code'):
-                extra['error_code'] = record.error_code
+                extra['error_code'] = getattr(record, 'error_code', None)
             
             self.game_logger.add_log(
                 level=record.levelname,
@@ -173,7 +173,7 @@ class DummyGameLogger:
 # シングルトンインスタンス
 _game_logger: Optional[GameLogger] = None
 
-def get_game_logger() -> GameLogger:
+def get_game_logger() -> Union[GameLogger, DummyGameLogger]:
     """ゲームログインスタンスを取得"""
     if not GAME_LOGGER_ENABLED:
         # 無効化されているため、何もしないダミーを返す
@@ -192,7 +192,7 @@ def setup_game_logging(root_logger_name: str = "game", enable_standard_logging: 
     game_logger = get_game_logger()
     
     # 標準ログシステムとの統合は無効にする（二重出力を防ぐ）
-    if enable_standard_logging and game_logger.handler is not None:
+    if enable_standard_logging and hasattr(game_logger, 'handler') and game_logger.handler is not None:
         # ルートゲームロガーを設定
         logger = logging.getLogger(root_logger_name)
         logger.addHandler(game_logger.handler)

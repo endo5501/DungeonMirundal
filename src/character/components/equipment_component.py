@@ -225,6 +225,11 @@ class EquipmentComponent(CharacterComponent):
         
         return list(self._equipment_data.equipment_slots.keys())
     
+    @property
+    def equipped_items(self) -> Dict[str, EquipmentSlot]:
+        """装備中アイテムのプロパティアクセス"""
+        return self.get_all_equipped_items()
+    
     def _publish_equipment_changed_event(self, slot_id: str, new_item_id: Optional[str], old_item_id: Optional[str]):
         """装備変更イベントを発行"""
         try:
