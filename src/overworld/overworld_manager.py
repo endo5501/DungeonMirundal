@@ -1497,8 +1497,11 @@ class OverworldManager:
                     self.current_party = game_manager.current_party
                     logger.info(f"パーティを復元: {self.current_party.name}")
                 
-                # ロード完了後、メインメニューに戻る
+                # ロード完了後、メインメニューに戻る（CharacterStatusBarが再作成される）
                 self._go_back_to_main_menu()
+                
+                # UI更新処理を追加（CharacterStatusBar再作成後に実行）
+                self._update_ui_after_party_change()
                 return True
             else:
                 logger.error(f"スロット {slot_id} からのロードに失敗")
@@ -1507,6 +1510,28 @@ class OverworldManager:
         except Exception as e:
             logger.error(f"ロード処理エラー: {e}")
             return False
+    
+    def _update_ui_after_party_change(self):
+        """パーティ変更後のUI更新処理"""
+        try:
+            # WindowManagerから現在のウィンドウを取得
+            if not self.window_manager:
+                logger.warning("WindowManagerが利用できません")
+                return
+            
+            current_window = self.window_manager.get_active_window()
+            
+            # OverworldMainWindowの場合、CharacterStatusBarを更新
+            if hasattr(current_window, 'character_status_bar') and current_window.character_status_bar:
+                current_window.character_status_bar.set_party(self.current_party)
+                logger.info(f"CharacterStatusBarを更新: {self.current_party.name} ({len(self.current_party.characters)}人)")
+                
+            # パーティステータス更新も実行
+            if hasattr(current_window, 'update_party_status'):
+                current_window.update_party_status()
+                
+        except Exception as e:
+            logger.error(f"UI更新エラー: {e}")
     
     def _back_to_settings_menu(self, from_party_status=False, from_save_menu=False, from_load_menu=False):
         """設定メニューに戻る"""
