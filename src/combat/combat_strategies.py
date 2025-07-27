@@ -71,9 +71,10 @@ class AttackStrategy(CombatStrategy):
         # 麻痺や意識不明状態では攻撃できない
         if hasattr(context.attacker, 'status_effects'):
             from src.character.components.status_effects_component import StatusEffectType
-            if (context.attacker.status_effects and 
-                (context.attacker.status_effects.has_status_effect(StatusEffectType.PARALYZED) or
-                 context.attacker.status_effects.has_status_effect(StatusEffectType.UNCONSCIOUS))):
+            status_effects = context.attacker.status_effects
+            if (status_effects and hasattr(status_effects, 'has_status_effect') and 
+                (status_effects.has_status_effect(StatusEffectType.PARALYZED) or
+                 status_effects.has_status_effect(StatusEffectType.UNCONSCIOUS))):
                 return False
         
         return True
@@ -200,7 +201,8 @@ class DefendStrategy(CombatStrategy):
         attacker = context.attacker
         
         # 防御効果を適用（次のターンまで防御力上昇）
-        if hasattr(attacker, 'status_effects') and attacker.status_effects:
+        if (hasattr(attacker, 'status_effects') and attacker.status_effects and 
+            hasattr(attacker.status_effects, 'apply_status_effect')):
             from src.character.components.status_effects_component import StatusEffectType
             attacker.status_effects.apply_status_effect(
                 StatusEffectType.PROTECTION,
@@ -228,12 +230,14 @@ class CastSpellStrategy(CombatStrategy):
             return False
         
         # キャラクターのMP確認
-        if hasattr(attacker, 'derived_stats') and attacker.derived_stats:
-            if attacker.derived_stats.current_mp <= 0:
+        derived_stats = getattr(attacker, 'derived_stats', None)
+        if derived_stats and hasattr(derived_stats, 'current_mp'):
+            if derived_stats.current_mp <= 0:
                 return False
         
         # 混乱状態では魔法を唱えられない
-        if hasattr(attacker, 'status_effects') and attacker.status_effects:
+        if (hasattr(attacker, 'status_effects') and attacker.status_effects and 
+            hasattr(attacker.status_effects, 'has_status_effect')):
             from src.character.components.status_effects_component import StatusEffectType
             if attacker.status_effects.has_status_effect(StatusEffectType.CONFUSED):
                 return False
@@ -254,8 +258,9 @@ class CastSpellStrategy(CombatStrategy):
         
         # MP消費
         mp_cost = self._get_spell_mp_cost(spell_id)
-        if hasattr(attacker, 'derived_stats') and attacker.derived_stats:
-            attacker.derived_stats.current_mp = max(0, attacker.derived_stats.current_mp - mp_cost)
+        derived_stats = getattr(attacker, 'derived_stats', None)
+        if derived_stats and hasattr(derived_stats, 'current_mp'):
+            derived_stats.current_mp = max(0, derived_stats.current_mp - mp_cost)
         
         # 魔法効果を適用
         result = self._apply_spell_effect(spell_id, attacker, target, context)
