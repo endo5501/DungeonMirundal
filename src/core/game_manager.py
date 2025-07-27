@@ -1627,32 +1627,34 @@ class GameManager(EventHandler):
             # 逃走方向を決定（現在の向きと逆方向）
             from src.dungeon.dungeon_generator import Direction
             
-            escape_direction = {
-                Direction.NORTH: Direction.SOUTH,
-                Direction.SOUTH: Direction.NORTH,
-                Direction.EAST: Direction.WEST,
-                Direction.WEST: Direction.EAST
-            }.get(player_pos.facing, Direction.SOUTH)
-            
-            # 逃走先の座標計算
-            direction_offsets = {
-                Direction.NORTH: (0, -1),
-                Direction.SOUTH: (0, 1),
-                Direction.EAST: (1, 0),
-                Direction.WEST: (-1, 0)
-            }
-            
-            offset_x, offset_y = direction_offsets[escape_direction]
-            new_x = player_pos.x + offset_x
-            new_y = player_pos.y + offset_y
-            
-            # 移動可能かチェック
-            current_level = current_dungeon.levels.get(player_pos.level)
-            if current_level and self.dungeon_manager.can_move_to(new_x, new_y, player_pos.level):
-                # 移動実行
-                self.dungeon_manager.move_player(escape_direction)
-                logger.info(f"逃走により位置が移動しました: ({new_x}, {new_y})")
+            if player_pos:
+                escape_direction = {
+                    Direction.NORTH: Direction.SOUTH,
+                    Direction.SOUTH: Direction.NORTH,
+                    Direction.EAST: Direction.WEST,
+                    Direction.WEST: Direction.EAST
+                }.get(player_pos.facing, Direction.SOUTH)
+                
+                # 逃走先の座標計算
+                direction_offsets = {
+                    Direction.NORTH: (0, -1),
+                    Direction.SOUTH: (0, 1),
+                    Direction.EAST: (1, 0),
+                    Direction.WEST: (-1, 0)
+                }
+                
+                offset_x, offset_y = direction_offsets[escape_direction]
+                new_x = player_pos.x + offset_x
+                new_y = player_pos.y + offset_y
+                
+                # 移動可能かチェック
+                current_level = current_dungeon.levels.get(player_pos.level)
+                if current_level and self.dungeon_manager and self.dungeon_manager.can_move_to(new_x, new_y, player_pos.level):
+                    # 移動実行
+                    self.dungeon_manager.move_player(escape_direction)
+                    logger.info(f"逃走により位置が移動しました: ({new_x}, {new_y})")
             else:
+                logger.warning("Player position not available for escape calculation")
                 logger.info("逃走したが、移動できませんでした")
                 
         except Exception as e:
@@ -1769,7 +1771,11 @@ class GameManager(EventHandler):
         
         try:
             # ダンジョンマネージャーでパーティ状態をチェック
-            status = self.dungeon_manager.check_party_status(self.current_party)
+            if self.dungeon_manager:
+                status = self.dungeon_manager.check_party_status(self.current_party)
+            else:
+                logger.warning("DungeonManager not available for party status check")
+                return
             
             # 状態に応じた警告
             if status["needs_healing"] and status["critically_injured"]:
