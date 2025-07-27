@@ -99,6 +99,7 @@ class ColorConfig:
     white: Tuple[int, int, int] = (255, 255, 255)
     gray: Tuple[int, int, int] = (128, 128, 128)
     dark_gray: Tuple[int, int, int] = (64, 64, 64)
+    yellow: Tuple[int, int, int] = (255, 255, 0)  # 黄色を追加
     floor: Tuple[int, int, int] = (101, 67, 33)
     ceiling: Tuple[int, int, int] = (51, 51, 51)
     wall: Tuple[int, int, int] = (102, 102, 102)

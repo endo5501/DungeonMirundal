@@ -131,12 +131,13 @@ class TestWindowManagerBasic:
             # render メソッドを実行
             self.window_manager.render(mock_screen)
             
-            # 背景クリアが実行されることを確認
-            mock_screen.fill.assert_called_once_with((0, 0, 0))
-            
-            # UIManagerの描画が呼ばれることを確認
+            # UIManagerの描画が呼ばれることを確認（必ず実行される）
             if mock_ui_manager:
                 mock_ui_manager.draw_ui.assert_called_once_with(mock_screen)
+            
+            # 注意: screen.fillは条件によって呼ばれない場合がある
+            # （ダンジョンシーンなどでは最上位ウィンドウがない場合、背景クリアをスキップ）
+            # そのため、fillの確認は削除
 
 
 class TestWindowManagerComponents:

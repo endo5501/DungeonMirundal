@@ -39,6 +39,7 @@ class CellType(Enum):
     DOOR = "door"           # ドア
     STAIRS_UP = "stairs_up" # 上階段
     STAIRS_DOWN = "stairs_down" # 下階段
+    EXIT = "exit"           # 地上への出口
     TREASURE = "treasure"   # 宝箱
     TRAP = "trap"           # トラップ
     SPECIAL = "special"     # 特殊
@@ -140,6 +141,7 @@ class DungeonLevel:
     start_position: Optional[Tuple[int, int]] = None
     stairs_up_position: Optional[Tuple[int, int]] = None
     stairs_down_position: Optional[Tuple[int, int]] = None
+    exit_position: Optional[Tuple[int, int]] = None  # 地上への出口位置
     boss_position: Optional[Tuple[int, int]] = None
     
     # レベル特性
@@ -166,6 +168,7 @@ class DungeonLevel:
             CellType.DOOR, 
             CellType.STAIRS_UP, 
             CellType.STAIRS_DOWN,
+            CellType.EXIT,
             CellType.TREASURE,
             CellType.SPECIAL
         ]
@@ -481,8 +484,14 @@ class DungeonGenerator:
     
     def _place_stairs(self, dungeon_level: DungeonLevel, floor_cells: List, rng: random.Random, dungeon_id: str):
         """階段を配置"""
-        # 上階段を配置（レベル1以外）
-        if dungeon_level.level > 1:
+        # レベル1の場合は地上への出口を配置
+        if dungeon_level.level == 1:
+            exit_pos, exit_cell = rng.choice(floor_cells)
+            exit_cell.cell_type = CellType.EXIT
+            dungeon_level.exit_position = exit_pos
+            floor_cells.remove((exit_pos, exit_cell))
+        else:
+            # 上階段を配置（レベル2以降）
             up_pos, up_cell = rng.choice(floor_cells)
             up_cell.cell_type = CellType.STAIRS_UP
             dungeon_level.stairs_up_position = up_pos
@@ -534,12 +543,21 @@ class DungeonGenerator:
         if not floor_cells:
             return
         
-        # 開始位置を設定（最初の部屋の中央付近）
-        start_pos, start_cell = floor_cells[0]
-        dungeon_level.start_position = start_pos
-        
         # 階段とボス配置
         self._place_stairs(dungeon_level, floor_cells, rng, dungeon_id)
+        
+        # 開始位置を設定（レベル1の場合はEXIT階段の位置、それ以外は上階段の位置）
+        if dungeon_level.level == 1 and hasattr(dungeon_level, 'exit_position') and dungeon_level.exit_position:
+            dungeon_level.start_position = dungeon_level.exit_position
+            logger.info(f"レベル1開始位置をEXIT階段に設定: {dungeon_level.exit_position}")
+        elif hasattr(dungeon_level, 'stairs_up_position') and dungeon_level.stairs_up_position:
+            dungeon_level.start_position = dungeon_level.stairs_up_position
+            logger.info(f"レベル{dungeon_level.level}開始位置を上階段に設定: {dungeon_level.stairs_up_position}")
+        else:
+            # フォールバック：最初の床セルを使用
+            start_pos, start_cell = floor_cells[0] if floor_cells else ((1, 1), None)
+            dungeon_level.start_position = start_pos
+            logger.warning(f"レベル{dungeon_level.level}でフォールバック開始位置を使用: {start_pos}")
         
         # 宝箱配置
         treasure_count = self._place_treasures(dungeon_level, floor_cells, rng)

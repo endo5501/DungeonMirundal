@@ -81,6 +81,9 @@ class DungeonRendererPygame:
         # 入力ハンドラー（分離されたコンポーネント）
         self.input_handler = DungeonInputHandler()
         
+        # ダイアログ管理
+        self.current_stairs_dialog = None
+        
         logger.info("DungeonRendererPygame 初期化完了")
     
     # === 新しい入力システムのアクセサー ===
@@ -99,9 +102,16 @@ class DungeonRendererPygame:
         if result:
             logger.debug(f"キー入力処理: {result.message}")
             
-            # SHOW_MENUアクションの場合はメニューを表示
-            if result.effects and result.effects.get("action_type") == "menu":
-                self._show_dungeon_menu()
+            # アクションタイプに応じた処理
+            if result.effects:
+                action_type = result.effects.get("action_type")
+                
+                if action_type == "menu":
+                    # メニュー表示
+                    self._show_dungeon_menu()
+                elif action_type == "use_stairs" and result.effects.get("needs_confirmation"):
+                    # 階段使用確認ダイアログを表示
+                    self._show_stairs_confirmation_dialog(result.effects.get("stairs_type"))
             
             return result.success
         return False
@@ -138,11 +148,8 @@ class DungeonRendererPygame:
         if self.dungeon_ui_manager:
             try:
                 self.dungeon_ui_manager.set_party(party)
-                logger.debug("DungeonRendererからDungeonUIManagerにパーティを設定しました")
             except Exception as e:
                 logger.error(f"DungeonUIManagerへのパーティ設定でエラー: {e}")
-        else:
-            logger.debug("DungeonUIManagerが設定されていないため、パーティ設定をスキップします")
         
         if party is not None:
             logger.info(f"パーティ{party.name}を設定しました")
@@ -157,11 +164,17 @@ class DungeonRendererPygame:
             
         self.dungeon_ui_manager = dungeon_ui_manager
         
+        # DungeonUIManagerに自身への参照を設定（階段使用処理のため）
+        if dungeon_ui_manager and hasattr(dungeon_ui_manager, 'set_dungeon_renderer'):
+            try:
+                dungeon_ui_manager.set_dungeon_renderer(self)
+            except Exception as e:
+                logger.error(f"DungeonUIManagerへのDungeonRenderer参照設定でエラー: {e}")
+        
         # 現在のパーティが設定されている場合は確実に設定
         if self.current_party and dungeon_ui_manager:
             try:
                 dungeon_ui_manager.set_party(self.current_party)
-                logger.debug(f"ダンジョンUIマネージャー設定時にパーティ{self.current_party.name}を再設定しました")
             except Exception as e:
                 logger.error(f"ダンジョンUIマネージャー設定時のパーティ設定でエラー: {e}")
         
@@ -194,6 +207,9 @@ class DungeonRendererPygame:
             
             # 壁面描画
             self._render_walls_raycast(level, player_position)
+            
+            # プロップ（階段、宝箱など）を描画
+            self.prop_renderer.render_props_3d(level, player_position, self.camera)
             
             # UI描画（簡易版）
             self.ui_renderer.render_basic_ui(player_position, level)
@@ -467,6 +483,68 @@ class DungeonRendererPygame:
     def _show_menu(self) -> None:
         """ダンジョン内メニューを表示（InputHandlerCoordinator用エイリアス）"""
         self._show_dungeon_menu()
+    
+    def _show_stairs_confirmation_dialog(self, stairs_type: str) -> None:
+        """階段使用確認ダイアログを表示"""
+        if not self.dungeon_ui_manager:
+            logger.error("DungeonUIManagerが設定されていません")
+            return
+        
+        # 既存のダイアログがある場合は破棄
+        if self.current_stairs_dialog:
+            self.current_stairs_dialog.kill()
+            self.current_stairs_dialog = None
+        
+        # 確認ダイアログを表示
+        from src.ui.windows.dungeon_stairs_dialog import DungeonStairsDialog
+        
+        def on_confirm():
+            """確認時の処理"""
+            logger.info(f"階段使用を確認: {stairs_type}")
+            self._use_stairs_confirmed(stairs_type)
+            # ダイアログを破棄
+            if self.current_stairs_dialog:
+                self.current_stairs_dialog.kill()
+                self.current_stairs_dialog = None
+        
+        def on_cancel():
+            """キャンセル時の処理"""
+            logger.info("階段使用をキャンセル")
+            # ダイアログを破棄
+            if self.current_stairs_dialog:
+                self.current_stairs_dialog.kill()
+                self.current_stairs_dialog = None
+        
+        # UIマネージャーを取得
+        ui_manager = self.dungeon_ui_manager.window_manager.ui_manager
+        
+        # ダイアログを作成して参照を保持
+        self.current_stairs_dialog = DungeonStairsDialog(
+            ui_manager=ui_manager,
+            stairs_type=stairs_type,
+            on_confirm=on_confirm,
+            on_cancel=on_cancel
+        )
+    
+    def _use_stairs_confirmed(self, stairs_type: str) -> None:
+        """階段使用を実行"""
+        if not self.dungeon_manager:
+            logger.error("DungeonManagerが設定されていません")
+            return
+        
+        # 階段を使用
+        success, message, _ = self.dungeon_manager.use_stairs()
+        
+        if success:
+            logger.info(f"階段使用成功: {message}")
+            
+            # 出口の場合は地上への遷移が行われるため、ここでは何もしない
+            if stairs_type != "exit":
+                # 階層移動後に再描画
+                if self.dungeon_manager.current_dungeon:
+                    self.render_dungeon(self.dungeon_manager.current_dungeon)
+        else:
+            logger.warning(f"階段使用失敗: {message}")
     
     def handle_menu_event(self, event: pygame.event.Event) -> bool:
         """メニューのイベント処理"""

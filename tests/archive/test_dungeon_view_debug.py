@@ -113,8 +113,9 @@ class TestDungeonViewDebug:
         print(f"現在の位置が歩行可能: {current_level.is_walkable(player_pos.x, player_pos.y)}")
         print(f"壁情報: {[(dir.value, has_wall) for dir, has_wall in current_cell.walls.items()]}")
         
-        # セルタイプが床であることを確認
-        assert current_cell.cell_type == CellType.FLOOR, f"開始位置が床ではありません: {current_cell.cell_type}"
+        # セルタイプが床またはEXIT（ダンジョン出口）であることを確認
+        # レベル1では開始位置がEXIT階段に設定される場合がある
+        assert current_cell.cell_type in [CellType.FLOOR, CellType.EXIT], f"開始位置が歩行可能なセルではありません: {current_cell.cell_type}"
         
         # 歩行可能であることを確認
         assert current_level.is_walkable(player_pos.x, player_pos.y), "開始位置が歩行不可能です"

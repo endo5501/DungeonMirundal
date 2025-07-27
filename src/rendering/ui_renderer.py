@@ -66,13 +66,40 @@ class UIRenderer:
             self.screen.blit(dir_surface, (self.ui_config.position_text_x, 
                                          self.ui_config.position_text_y + 30))
             
+            # 現在のセル情報
+            current_cell = level.get_cell(player_position.x, player_position.y)
+            if current_cell:
+                cell_info = self._get_cell_type_text(current_cell.cell_type)
+                cell_surface = self.font_small.render(cell_info, True, self.color_config.yellow)
+                self.screen.blit(cell_surface, (self.ui_config.position_text_x, 
+                                              self.ui_config.position_text_y + 60))
+            
             # 操作説明
-            help_text = "WASD: Move, Space: Menu, ESC: Return"
+            help_text = "WASD: Move, E: Use Stairs, P: Menu, ESC: Return"
             help_surface = self.font_small.render(help_text, True, self.color_config.gray)
             self.screen.blit(help_surface, (self.ui_config.help_text_x, 
                                           self.screen_height - self.ui_config.bottom_margin))
         except Exception as e:
             logger.warning(f"基本UI描画エラー: {e}")
+    
+    def _get_cell_type_text(self, cell_type) -> str:
+        """セルタイプの表示テキストを取得"""
+        from src.dungeon.dungeon_generator import CellType
+        
+        type_map = {
+            CellType.FLOOR: "Floor",
+            CellType.WALL: "Wall", 
+            CellType.DOOR: "Door",
+            CellType.STAIRS_UP: "Stairs (Up) - Press E to use",
+            CellType.STAIRS_DOWN: "Stairs (Down) - Press E to use",
+            CellType.EXIT: "Exit to Overworld - Press E to use",
+            CellType.TREASURE: "Treasure",
+            CellType.TRAP: "Trap",
+            CellType.SPECIAL: "Special",
+            CellType.BOSS: "Boss"
+        }
+        
+        return type_map.get(cell_type, "Unknown")
     
     def render_game_ui(self, dungeon_state: DungeonState, dungeon_ui_manager=None):
         """ゲームUI描画"""
