@@ -26,7 +26,6 @@ class EquipmentData(ComponentData):
     equipment_slots: Dict[str, EquipmentSlot] = field(default_factory=dict)
     
     def __post_init__(self):
-        super().__post_init__()
         self.component_type = ComponentType.EQUIPMENT
     
     def to_dict(self) -> Dict[str, Any]:
@@ -82,6 +81,7 @@ class EquipmentComponent(CharacterComponent):
             # デフォルトの装備スロットを設定
             default_slots = self._get_default_equipment_slots()
             self._equipment_data = EquipmentData(
+                component_type=ComponentType.EQUIPMENT,
                 equipment_slots=default_slots,
                 initialized=True
             )
@@ -132,7 +132,8 @@ class EquipmentComponent(CharacterComponent):
     
     def _migrate_legacy_equipment(self):
         """既存の装備データを新システムに移行"""
-        if not hasattr(self.owner, 'equipped_items') or not self.owner.equipped_items:
+        if (not hasattr(self.owner, 'equipped_items') or not self.owner.equipped_items or 
+            self._equipment_data is None):
             return
         
         logger.info(f"装備データ移行開始: {self.owner.name}")
@@ -143,9 +144,9 @@ class EquipmentComponent(CharacterComponent):
         
         logger.info(f"装備データ移行完了: {self.owner.name}")
     
-    def equip_item(self, slot_id: str, item_id: str, item_name: str = None) -> bool:
+    def equip_item(self, slot_id: str, item_id: str, item_name: Optional[str] = None) -> bool:
         """アイテムを装備"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._equipment_data is None:
             return False
         
         if slot_id not in self._equipment_data.equipment_slots:
@@ -172,7 +173,7 @@ class EquipmentComponent(CharacterComponent):
     
     def unequip_item(self, slot_id: str) -> Optional[str]:
         """アイテムを外す"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._equipment_data is None:
             return None
         
         if slot_id not in self._equipment_data.equipment_slots:
@@ -195,14 +196,14 @@ class EquipmentComponent(CharacterComponent):
     
     def get_equipped_item(self, slot_id: str) -> Optional[EquipmentSlot]:
         """指定スロットの装備アイテムを取得"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._equipment_data is None:
             return None
         
         return self._equipment_data.equipment_slots.get(slot_id)
     
     def get_all_equipped_items(self) -> Dict[str, EquipmentSlot]:
         """装備中の全アイテムを取得"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._equipment_data is None:
             return {}
         
         equipped_items = {}
@@ -219,7 +220,7 @@ class EquipmentComponent(CharacterComponent):
     
     def get_available_slots(self) -> List[str]:
         """利用可能な装備スロット一覧を取得"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._equipment_data is None:
             return []
         
         return list(self._equipment_data.equipment_slots.keys())

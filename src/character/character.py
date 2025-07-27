@@ -134,51 +134,38 @@ class Character:
     # === コンポーネントアクセス用プロパティ ===
     
     @property
-    def equipment(self) -> Optional[EquipmentComponent]:
-        """装備コンポーネントを取得"""
+    def equipment(self) -> Optional['EquipmentComponent']:
+        """装備コンポーネントを取得（後方互換性含む）"""
+        # モックが設定されている場合はそれを返す（テスト用）
+        if hasattr(self, '_mock_equipment'):
+            return self._mock_equipment
+        
+        # 新コンポーネントシステムから取得
         if self._component_manager:
-            return self._component_manager.get_component(ComponentType.EQUIPMENT)
+            from typing import cast
+            component = self._component_manager.get_component(ComponentType.EQUIPMENT)
+            return cast('EquipmentComponent', component) if component else None
         return None
     
     @property
-    def items(self) -> Optional[InventoryComponent]:
+    def items(self) -> Optional['InventoryComponent']:
         """インベントリコンポーネントを取得"""
         if self._component_manager:
-            return self._component_manager.get_component(ComponentType.INVENTORY)
+            from typing import cast
+            component = self._component_manager.get_component(ComponentType.INVENTORY)
+            return cast('InventoryComponent', component) if component else None
         return None
     
     @property
-    def status_effects(self) -> Optional[StatusEffectsComponent]:
+    def status_effects(self) -> Optional['StatusEffectsComponent']:
         """状態異常コンポーネントを取得"""
         if self._component_manager:
-            return self._component_manager.get_component(ComponentType.STATUS_EFFECTS)
+            from typing import cast
+            component = self._component_manager.get_component(ComponentType.STATUS_EFFECTS)
+            return cast('StatusEffectsComponent', component) if component else None
         return None
     
     # === 互換性メソッド（旧APIとの互換性を保つ） ===
-    
-    def initialize_inventory(self):
-        """インベントリ初期化（互換性用）"""
-        if self.items:
-            success = self.items.ensure_initialized()
-            self._inventory_initialized = success
-            return success
-        return False
-    
-    def initialize_equipment(self):
-        """装備初期化（互換性用）"""
-        if self.equipment:
-            success = self.equipment.ensure_initialized()
-            self._equipment_initialized = success
-            return success
-        return False
-    
-    def initialize_status_effects(self):
-        """状態異常初期化（互換性用）"""
-        if self.status_effects:
-            success = self.status_effects.ensure_initialized()
-            self._status_effects_initialized = success
-            return success
-        return False
     
     def initialize_derived_stats(self):
         """派生統計値を初期化"""
@@ -492,18 +479,6 @@ class Character:
         
         return damage_taken
     
-    def restore_mp(self, amount: int):
-        """MP回復"""
-        old_mp = self.derived_stats.current_mp
-        self.derived_stats.current_mp = min(
-            self.derived_stats.max_mp,
-            self.derived_stats.current_mp + amount
-        )
-        restored = self.derived_stats.current_mp - old_mp
-        
-        if restored > 0:
-            logger.info(f"{self.name} がMP回復: +{restored}")
-    
     def is_alive(self) -> bool:
         """生存しているかチェック"""
         return self.status in [CharacterStatus.GOOD, CharacterStatus.INJURED]
@@ -607,7 +582,7 @@ class Character:
                 self.experience = Experience()
                 
             if not hasattr(self, 'inventory'):
-                self.inventory = {}
+                self.inventory = []
                 
             if not hasattr(self, 'equipped_items'):
                 self.equipped_items = {}
@@ -648,13 +623,6 @@ class Character:
             created_at=datetime.fromisoformat(data.get('created_at', datetime.now().isoformat()))
         )
         return character
-    
-    @property
-    def equipment(self):
-        """装備品プロパティ（後方互換性のため）"""
-        if hasattr(self, '_mock_equipment'):
-            return self._mock_equipment
-        return self.get_equipment()
     
     @equipment.setter
     def equipment(self, value):

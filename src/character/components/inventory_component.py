@@ -47,7 +47,6 @@ class InventoryData(ComponentData):
     current_slots: int = 0
     
     def __post_init__(self):
-        super().__post_init__()
         self.component_type = ComponentType.INVENTORY
     
     def to_dict(self) -> Dict[str, Any]:
@@ -110,6 +109,7 @@ class InventoryComponent(CharacterComponent):
             max_slots = self._get_max_slots_for_class()
             
             self._inventory_data = InventoryData(
+                component_type=ComponentType.INVENTORY,
                 max_slots=max_slots,
                 current_slots=0,
                 initialized=True
@@ -164,9 +164,9 @@ class InventoryComponent(CharacterComponent):
         
         logger.info(f"インベントリデータ移行完了: {self.owner.name}")
     
-    def add_item(self, item_id: str, item_name: str = None, quantity: int = 1, category: str = "misc") -> bool:
+    def add_item(self, item_id: str, item_name: Optional[str] = None, quantity: int = 1, category: str = "misc") -> bool:
         """アイテムを追加"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._inventory_data is None:
             return False
         
         if quantity <= 0:
@@ -193,6 +193,9 @@ class InventoryComponent(CharacterComponent):
     
     def _add_new_item_slot(self, item_id: str, item_name: str, quantity: int, category: str) -> bool:
         """新しいアイテムスロットを追加"""
+        if not self.ensure_initialized() or self._inventory_data is None:
+            return False
+        
         if self._inventory_data.current_slots >= self._inventory_data.max_slots:
             return False
         
@@ -218,7 +221,7 @@ class InventoryComponent(CharacterComponent):
     
     def remove_item(self, item_id: str, quantity: int = 1) -> int:
         """アイテムを削除し、実際に削除された数を返す"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._inventory_data is None:
             return 0
         
         removed_total = 0
@@ -246,7 +249,7 @@ class InventoryComponent(CharacterComponent):
     
     def get_item_quantity(self, item_id: str) -> int:
         """指定アイテムの総数を取得"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._inventory_data is None:
             return 0
         
         total = 0
@@ -262,14 +265,14 @@ class InventoryComponent(CharacterComponent):
     
     def get_all_items(self) -> List[InventoryItem]:
         """全アイテムを取得"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._inventory_data is None:
             return []
         
         return list(self._inventory_data.items.values())
     
     def get_items_by_category(self, category: str) -> List[InventoryItem]:
         """カテゴリ別アイテムを取得"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._inventory_data is None:
             return []
         
         return [item for item in self._inventory_data.items.values() 
@@ -277,7 +280,7 @@ class InventoryComponent(CharacterComponent):
     
     def get_inventory_status(self) -> Dict[str, Any]:
         """インベントリ状況を取得"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._inventory_data is None:
             return {'current_slots': 0, 'max_slots': 0, 'usage_rate': 0.0}
         
         usage_rate = (self._inventory_data.current_slots / self._inventory_data.max_slots) * 100
@@ -291,7 +294,7 @@ class InventoryComponent(CharacterComponent):
     
     def is_full(self) -> bool:
         """インベントリが満杯かチェック"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._inventory_data is None:
             return True
         
         return self._inventory_data.current_slots >= self._inventory_data.max_slots
