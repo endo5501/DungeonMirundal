@@ -146,12 +146,12 @@ class TempleService(FacilityService, ActionExecutorMixin):
             if member.status in ["dead", "ashes"]:
                 cost = self._calculate_resurrect_cost(member)
                 dead_members.append({
-                    "id": member.id,
+                    "id": getattr(member, 'id', member.name),
                     "name": member.name,
-                    "level": member.level,
+                    "level": getattr(member, 'level', 1),
                     "status": member.status,
                     "cost": cost,
-                    "vitality": member.vitality
+                    "vitality": getattr(member, 'vitality', 0)
                 })
         
         if not dead_members:
@@ -186,7 +186,8 @@ class TempleService(FacilityService, ActionExecutorMixin):
             )
         
         # 生命力チェック
-        if character.vitality <= 0:
+        character_vitality = getattr(character, 'vitality', 0)
+        if character_vitality <= 0:
             return ServiceResult(
                 success=False,
                 message=f"{character.name}は生命力が尽きているため蘇生できません",
@@ -195,7 +196,7 @@ class TempleService(FacilityService, ActionExecutorMixin):
         
         return ServiceResult(
             success=True,
-            message=f"{character.name}を蘇生させますか？\n費用: {cost} G\n生命力が1減少します（現在: {character.vitality}）",
+            message=f"{character.name}を蘇生させますか？\n費用: {cost} G\n生命力が1減少します（現在: {character_vitality}）",
             result_type=ResultType.CONFIRM,
             data={
                 "character_id": character_id,
@@ -218,28 +219,32 @@ class TempleService(FacilityService, ActionExecutorMixin):
         if self.party.gold < cost:
             return ServiceResult(False, "蘇生費用が不足しています")
         
-        if character.vitality <= 0:
+        character_vitality = getattr(character, 'vitality', 0)
+        if character_vitality <= 0:
             return ServiceResult(False, "生命力が尽きているため蘇生できません")
         
         # 蘇生実行
         character.status = "normal"
         character.hp = 1  # HP1で復活
-        character.vitality -= 1  # 生命力減少
+        # 生命力減少（vitality属性がある場合）
+        if hasattr(character, 'vitality'):
+            character.vitality -= 1
         self.party.gold -= cost
         
         return ServiceResult(
             success=True,
-            message=f"{character.name}が蘇生しました（生命力: {character.vitality + 1}→{character.vitality}）",
+            message=f"{character.name}が蘇生しました（生命力: {character_vitality}→{getattr(character, 'vitality', 0)}）",
             result_type=ResultType.SUCCESS,
             data={
                 "remaining_gold": self.party.gold,
-                "new_vitality": character.vitality
+                "new_vitality": getattr(character, 'vitality', 0)
             }
         )
     
     def _calculate_resurrect_cost(self, character: Character) -> int:
         """蘇生費用を計算"""
-        base_cost = character.level * self.resurrect_cost_per_level
+        character_level = getattr(character, 'level', 1)
+        base_cost = character_level * self.resurrect_cost_per_level
         
         # 灰状態は追加料金
         if character.status == "ashes":
@@ -404,7 +409,8 @@ class TempleService(FacilityService, ActionExecutorMixin):
             return None
         
         for member in self.party.members:
-            if member.id == character_id:
+            member_id = getattr(member, 'id', member.name)
+            if member_id == character_id:
                 return member
         
         return None

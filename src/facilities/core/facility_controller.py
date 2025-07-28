@@ -30,8 +30,11 @@ class FacilityController:
         except TypeError:
             # 引数が必要な場合はfacility_idを渡す
             self.service = service_class(facility_id)
+        except Exception:
+            # その他のエラーの場合もfacility_idを渡して再試行
+            self.service = service_class(facility_id)
         
-        # サービスにコントローラーの参照を設定（GuildServiceの場合）
+        # サービスにコントローラーの参照を設定（set_controllerメソッドがある場合）
         if hasattr(self.service, 'set_controller') and callable(getattr(self.service, 'set_controller', None)):
             self.service.set_controller(self)
         
@@ -55,7 +58,7 @@ class FacilityController:
         """GameManagerの参照を設定"""
         self._game_manager = game_manager
         
-        # サービスにGameManagerの参照を設定
+        # サービスにGameManagerの参照を設定（set_game_managerメソッドがある場合）
         if hasattr(self.service, 'set_game_manager') and callable(getattr(self.service, 'set_game_manager', None)):
             self.service.set_game_manager(game_manager)
             logger.debug(f"[DEBUG] FacilityController: GameManager set to service: {self.facility_id}")
@@ -288,7 +291,7 @@ class FacilityController:
                     window_manager.close_window(self.window)
                     logger.info(f"FacilityWindow closed via WindowManager: {self.window.window_id}")
                 else:
-                    # フォールバック: 直接削除
+                    # フォールバック: 直接削除（closeメソッドがある場合）
                     if hasattr(self.window, 'close') and callable(getattr(self.window, 'close', None)):
                         self.window.close()
                     logger.warning("WindowManager not available, closing window directly")
@@ -323,6 +326,7 @@ class FacilityController:
         """ウィンドウを更新"""
         if self.window:
             try:
+                # refresh_contentメソッドがある場合のみ呼び出し
                 if hasattr(self.window, 'refresh_content') and callable(getattr(self.window, 'refresh_content', None)):
                     self.window.refresh_content()
             except Exception:

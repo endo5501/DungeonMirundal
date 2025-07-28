@@ -2,6 +2,7 @@
 
 import logging
 from typing import List, Dict, Any, Optional
+# pygameとpygame_guiの型アノテーションをAnyで置き換え（循環インポート回避）
 from ..core.facility_service import FacilityService, MenuItem
 from ..core.service_result import ServiceResult, ResultType
 from .service_utils import (
@@ -176,8 +177,8 @@ class InnService(FacilityService, ActionExecutorMixin):
         return self._handle_management_action(params, action_map, default_action)
     
     def _handle_management_action(self, params: Dict[str, Any], 
-                                action_map: Dict[str, callable],
-                                default_action: callable) -> ServiceResult:
+                                action_map: Dict[str, Any],
+                                default_action: Any) -> ServiceResult:
         """管理アクションの共通ハンドラー"""
         action = params.get("action")
         
@@ -222,39 +223,43 @@ class InnService(FacilityService, ActionExecutorMixin):
         item_name = ""
         
         for member in self.party.members:
-            if hasattr(member, 'inventory') and member.inventory:
-                for item in member.inventory.get_all_items():
-                    if item.id == item_id:
-                        item_found = True
-                        item_name = item.name
-                        
-                        # 数量チェック
-                        available_quantity = getattr(item, 'quantity', 1)
-                        if quantity > available_quantity:
-                            return ServiceResult(
-                                False, 
-                                f"指定された数量（{quantity}）が所持数（{available_quantity}）を超えています"
-                            )
-                        
-                        # アイテムを保管庫に移動
-                        try:
-                            # 宿屋保管庫に追加
-                            self.storage_manager.add_item(item_id, item_name, quantity)
+            # member.inventoryが実際のInventoryオブジェクトかチェック
+            if hasattr(member, 'inventory') and member.inventory and hasattr(member.inventory, 'get_all_items'):
+                # get_all_itemsメソッドが呼び出し可能かチェック
+                if callable(getattr(member.inventory, 'get_all_items', None)):
+                    for item in member.inventory.get_all_items():
+                        if item.id == item_id:
+                            item_found = True
+                            item_name = item.name
                             
-                            # メンバーのインベントリから削除
-                            member.inventory.remove_item(item_id, quantity)
+                            # 数量チェック
+                            available_quantity = getattr(item, 'quantity', 1)
+                            if quantity > available_quantity:
+                                return ServiceResult(
+                                    False, 
+                                    f"指定された数量（{quantity}）が所持数（{available_quantity}）を超えています"
+                                )
                             
-                            return ServiceResult(
-                                success=True,
-                                message=f"{item_name}を{quantity}個預けました",
-                                result_type=ResultType.SUCCESS
-                            )
-                        except Exception as e:
-                            logger.error(f"Failed to deposit item: {e}")
-                            return ServiceResult(
-                                False,
-                                f"アイテムの預け入れに失敗しました: {str(e)}"
-                            )
+                            # アイテムを保管庫に移動
+                            try:
+                                # 宿屋保管庫に追加
+                                self.storage_manager.add_item(item_id, item_name, quantity)
+                                
+                                # メンバーのインベントリから削除
+                                if hasattr(member.inventory, 'remove_item') and callable(getattr(member.inventory, 'remove_item', None)):
+                                    member.inventory.remove_item(item_id, quantity)
+                                
+                                return ServiceResult(
+                                    success=True,
+                                    message=f"{item_name}を{quantity}個預けました",
+                                    result_type=ResultType.SUCCESS
+                                )
+                            except Exception as e:
+                                logger.error(f"Failed to deposit item: {e}")
+                                return ServiceResult(
+                                    False,
+                                    f"アイテムの預け入れに失敗しました: {str(e)}"
+                                )
         
         if not item_found:
             return ServiceResult(False, "指定されたアイテムが見つかりません")
@@ -310,7 +315,8 @@ class InnService(FacilityService, ActionExecutorMixin):
                         self.storage_manager.remove_item(item_id, quantity)
                         
                         # メンバーのインベントリに追加
-                        target_member.inventory.add_item(item_id, quantity)
+                        if hasattr(target_member, 'inventory') and target_member.inventory and hasattr(target_member.inventory, 'add_item') and callable(getattr(target_member.inventory, 'add_item', None)):
+                            target_member.inventory.add_item(item_id, quantity)
                         
                         return ServiceResult(
                             success=True,
@@ -345,7 +351,8 @@ class InnService(FacilityService, ActionExecutorMixin):
         
         # 全メンバーのアイテムを収集
         for member in self.party.members:
-            if hasattr(member, 'inventory') and member.inventory:
+            # member.inventoryが実際のInventoryオブジェクトかチェック
+            if hasattr(member, 'inventory') and member.inventory and hasattr(member.inventory, 'get_all_items') and callable(getattr(member.inventory, 'get_all_items', None)):
                 for item in member.inventory.get_all_items():
                     inventory_items.append({
                         "id": item.id,
@@ -451,9 +458,13 @@ class InnService(FacilityService, ActionExecutorMixin):
         items_by_character = {}
         for member in self.party.members:
             if member.is_alive():
-                items_by_character[member.id] = {
+                member_id = getattr(member, 'id', member.name)
+                items = []
+                if hasattr(member, 'inventory') and member.inventory and hasattr(member.inventory, 'get_all_items') and callable(getattr(member.inventory, 'get_all_items', None)):
+                    items = member.inventory.get_all_items()
+                items_by_character[member_id] = {
                     "name": member.name,
-                    "items": member.inventory.get_all_items()
+                    "items": items
                 }
         
         return ServiceResult(
@@ -469,11 +480,15 @@ class InnService(FacilityService, ActionExecutorMixin):
         
         spells_by_character = {}
         for member in self.party.members:
-            if member.is_alive() and member.can_use_magic():
-                spells_by_character[member.id] = {
+            can_use_magic = getattr(member, 'can_use_magic', lambda: False)
+            if member.is_alive() and callable(can_use_magic) and can_use_magic():
+                member_id = getattr(member, 'id', member.name)
+                learned_spells = getattr(member, 'get_learned_spells', lambda: [])
+                equipped_spells = getattr(member, 'get_equipped_spells', lambda: [])
+                spells_by_character[member_id] = {
                     "name": member.name,
-                    "learned_spells": member.get_learned_spells(),
-                    "equipped_spells": member.get_equipped_spells()
+                    "learned_spells": learned_spells() if callable(learned_spells) else [],
+                    "equipped_spells": equipped_spells() if callable(equipped_spells) else []
                 }
         
         return ServiceResult(
@@ -490,13 +505,14 @@ class InnService(FacilityService, ActionExecutorMixin):
         equipment_by_character = {}
         for member in self.party.members:
             if member.is_alive():
-                equipment_by_character[member.id] = {
+                member_id = getattr(member, 'id', member.name)
+                equipment_by_character[member_id] = {
                     "name": member.name,
-                    "equipment": member.get_equipment(),
+                    "equipment": member.get_equipment() if hasattr(member, 'get_equipment') and callable(getattr(member, 'get_equipment', None)) else [],
                     "stats": {
-                        "ac": member.ac,
-                        "attack": member.attack_bonus,
-                        "defense": member.defense_bonus
+                        "ac": getattr(member, 'ac', 0),
+                        "attack": getattr(member, 'attack_bonus', 0),
+                        "defense": getattr(member, 'defense_bonus', 0)
                     }
                 }
         
@@ -546,8 +562,7 @@ class InnService(FacilityService, ActionExecutorMixin):
         # TODO: 実装
         return ServiceResult(True, "装備最適化機能は実装中です", result_type=ResultType.INFO)
     
-    def create_service_panel(self, service_id: str, rect: 'pygame.Rect', parent: 'pygame_gui.elements.UIPanel',
-                           ui_manager: 'pygame_gui.UIManager') -> Optional['ServicePanel']:
+    def create_service_panel(self, service_id: str, rect, parent, ui_manager) -> Optional[Any]:
         """宿屋専用のサービスパネルを作成"""
         try:
             if service_id == "storage":

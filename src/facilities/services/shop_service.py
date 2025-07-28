@@ -133,8 +133,8 @@ class ShopService(FacilityService, ActionExecutorMixin):
         # 確認→実行フローを使用
         return ConfirmationFlowUtility.handle_confirmation_flow(
             params,
-            lambda p: self._confirm_purchase(p.get("item_id"), p.get("quantity", 1), p.get("buyer_id", "party")),
-            lambda p: self._execute_purchase(p.get("item_id"), p.get("quantity", 1), p.get("buyer_id", "party"))
+            lambda p: self._confirm_purchase(p.get("item_id") or "", p.get("quantity", 1), p.get("buyer_id", "party")),
+            lambda p: self._execute_purchase(p.get("item_id") or "", p.get("quantity", 1), p.get("buyer_id", "party"))
         )
     
     def _get_shop_inventory(self, category: Optional[str] = None) -> ServiceResult:
@@ -359,8 +359,8 @@ class ShopService(FacilityService, ActionExecutorMixin):
         # 確認→実行フローを使用
         return ConfirmationFlowUtility.handle_confirmation_flow(
             params,
-            lambda p: self._confirm_sell(p.get("item_id"), p.get("quantity", 1)),
-            lambda p: self._execute_sell(p.get("item_id"), p.get("quantity", 1))
+            lambda p: self._confirm_sell(p.get("item_id") or "", p.get("quantity", 1)),
+            lambda p: self._execute_sell(p.get("item_id") or "", p.get("quantity", 1))
         )
     
     def _get_sellable_items(self) -> ServiceResult:
@@ -495,9 +495,9 @@ class ShopService(FacilityService, ActionExecutorMixin):
             return confirm_result
         
         sell_data = confirm_result.data or {}
-        slot_index = sell_data.get("slot_index")
+        slot_index = sell_data.get("slot_index", 0)  # デフォルトでint型を指定
         owner_type = sell_data.get("owner_type")
-        owner_id = sell_data.get("owner_id")
+        owner_id = sell_data.get("owner_id", "")  # デフォルトでstr型を指定
         total_price = sell_data.get("total_price", 0)
         
         # インベントリからアイテムを削除
@@ -551,8 +551,8 @@ class ShopService(FacilityService, ActionExecutorMixin):
         # 確認→実行フローを使用
         return ConfirmationFlowUtility.handle_confirmation_flow(
             params,
-            lambda p: self._confirm_identify(p.get("item_id")),
-            lambda p: self._execute_identify(p.get("item_id"))
+            lambda p: self._confirm_identify(p.get("item_id") or ""),
+            lambda p: self._execute_identify(p.get("item_id") or "")
         )
     
     def _get_unidentified_items(self) -> ServiceResult:
@@ -671,9 +671,9 @@ class ShopService(FacilityService, ActionExecutorMixin):
             return ServiceResult(False, "識別データが取得できませんでした")
         
         instance_id = identify_data["instance_id"]
-        slot_index = identify_data["slot_index"]
+        slot_index = identify_data.get("slot_index", 0)  # デフォルトでint型を指定
         owner_type = identify_data["owner_type"]
-        owner_id = identify_data.get("owner_id")
+        owner_id = identify_data.get("owner_id", "")  # デフォルトでstr型を指定
         
         # インベントリからアイテムインスタンスを取得
         item_instance = None
