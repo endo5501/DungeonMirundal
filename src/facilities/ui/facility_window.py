@@ -276,10 +276,11 @@ class FacilityWindow(Window):
         
         # メニュー項目を検索
         menu_item = None
-        for item in self.controller.get_menu_items():
-            if item.id == service_id:
-                menu_item = item
-                break
+        if self.controller:
+            for item in self.controller.get_menu_items():
+                if item.id == service_id:
+                    menu_item = item
+                    break
         
         if not menu_item:
             logger.error(f"Menu item not found: {service_id}")
@@ -335,9 +336,10 @@ class FacilityWindow(Window):
             element_id=f"{service_id}_panel"
         )
         
-        # UIElementManagerを使用してUI要素を管理
+        # UIElementManagerを使用してUI要素を管理  
         assert self.ui_manager is not None, "ui_manager must not be None"
-        ui_element_manager = UIElementManager(self.ui_manager, panel)
+        # UIPanel は UIContainer を継承しているため、型キャストで安全に変換
+        ui_element_manager = UIElementManager(self.ui_manager, cast(Any, panel))
         
         # サービス名を表示
         ui_element_manager.create_label(
@@ -413,7 +415,8 @@ class FacilityWindow(Window):
         
         # UIElementManagerを使用してUI要素を管理
         assert self.ui_manager is not None, "ui_manager must not be None"
-        ui_element_manager = UIElementManager(self.ui_manager, panel)
+        # UIPanel は UIContainer を継承しているため、型キャストで安全に変換
+        ui_element_manager = UIElementManager(self.ui_manager, cast(Any, panel))
         
         # サービス名を表示
         ui_element_manager.create_label(
@@ -447,6 +450,9 @@ class FacilityWindow(Window):
     
     def _get_facility_title(self) -> str:
         """施設タイトルを取得"""
+        if not self.controller:
+            return "未知の施設"
+        
         # 設定から取得
         title = self.controller.get_config("name")
         if title:
@@ -468,15 +474,19 @@ class FacilityWindow(Window):
         
         try:
             # UIマネージャー内の orphaned elements をクリア
-            if hasattr(self.ui_manager, 'get_sprite_group'):
+            if self.ui_manager and hasattr(self.ui_manager, 'get_sprite_group'):
                 sprite_group = self.ui_manager.get_sprite_group()
                 if sprite_group:
                     # main_panelに属さないスプライトをチェック
                     orphaned_sprites = []
                     for sprite in sprite_group.sprites():
-                        if (hasattr(sprite, 'container') and 
-                            sprite.container != self.main_panel and
-                            sprite.container != self.navigation_panel.container if self.navigation_panel else True):
+                        # sprite の container 属性チェックを安全に行う
+                        sprite_container = getattr(sprite, 'container', None)
+                        nav_container = getattr(self.navigation_panel, 'container', None) if self.navigation_panel else None
+                        
+                        if (sprite_container is not None and 
+                            sprite_container != self.main_panel and
+                            sprite_container != nav_container):
                             orphaned_sprites.append(sprite)
                     
                     # orphaned sprites を削除
@@ -539,7 +549,11 @@ class FacilityWindow(Window):
                 if hasattr(self.navigation_panel, 'destroy'):
                     self.navigation_panel.destroy()
                 elif hasattr(self.navigation_panel, 'kill'):
-                    self.navigation_panel.kill()
+                    # navigation_panel は pygame_gui の要素ではない可能性があるため、
+                    # kill メソッドの存在を確認してから呼び出し
+                    kill_method = getattr(self.navigation_panel, 'kill', None)
+                    if callable(kill_method):
+                        kill_method()
             except Exception as e:
                 logger.error(f"Failed to destroy navigation panel: {e}")
             self.navigation_panel = None
@@ -695,9 +709,12 @@ class FacilityWindow(Window):
         if self.navigation_panel and event.type == pygame_gui.UI_BUTTON_PRESSED:
             if hasattr(self.navigation_panel, 'handle_button_click'):
                 # NavigationPanelのボタンかどうかチェック
-                for nav_button in self.navigation_panel.nav_buttons.values():
+                nav_buttons = getattr(self.navigation_panel, 'nav_buttons', {})
+                for nav_button in nav_buttons.values():
                     if event.ui_element == nav_button:
-                        logger.info(f"[DEBUG] NavigationPanel button clicked: {nav_button.item_id}")
+                        # nav_button の item_id 属性を安全に取得
+                        item_id = getattr(nav_button, 'item_id', None)
+                        logger.info(f"[DEBUG] NavigationPanel button clicked: {item_id}")
                         if self.navigation_panel.handle_button_click(nav_button):
                             return True
                         break
@@ -706,8 +723,11 @@ class FacilityWindow(Window):
         if hasattr(self, 'nav_buttons') and event.type == pygame_gui.UI_BUTTON_PRESSED:
             for button in self.nav_buttons:
                 if event.ui_element == button:
-                    self._on_service_selected(button.item_id)
-                    return True
+                    # button の item_id 属性を安全に取得
+                    item_id = getattr(button, 'item_id', None)
+                    if item_id:
+                        self._on_service_selected(item_id)
+                        return True
         
         # UIManagerがイベントを処理した場合はTrueを返す
         return ui_consumed

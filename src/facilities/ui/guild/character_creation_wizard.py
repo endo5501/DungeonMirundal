@@ -2,7 +2,7 @@
 
 import pygame
 import pygame_gui
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, cast
 import logging
 import random
 from ..wizard_service_panel import WizardServicePanel, WizardStep
@@ -153,7 +153,7 @@ class CharacterCreationWizard(WizardServicePanel):
             "character_creation_name_input",
             "",
             input_rect,
-            panel,
+            cast(pygame_gui.core.UIContainer, panel),
             placeholder_text="キャラクター名を入力"
         )
         
@@ -172,7 +172,7 @@ class CharacterCreationWizard(WizardServicePanel):
             "character_creation_test_name_button",
             "テスト名前",
             test_button_rect,
-            panel
+            cast(pygame_gui.core.UIContainer, panel)
         )
     
     def _create_race_selection_content(self, panel: pygame_gui.elements.UIPanel) -> None:
@@ -217,7 +217,7 @@ class CharacterCreationWizard(WizardServicePanel):
                 f"character_creation_race_{race_data.id}",
                 f"{race_data.name} - {race_data.description}",
                 button_rect,
-                panel
+                cast(pygame_gui.core.UIContainer, panel)
             )
             
             if button:
@@ -282,7 +282,7 @@ class CharacterCreationWizard(WizardServicePanel):
             "character_creation_roll_button",
             "ダイスを振る",
             roll_rect,
-            panel
+            cast(pygame_gui.core.UIContainer, panel)
         )
         
         # 能力値表示
@@ -297,7 +297,7 @@ class CharacterCreationWizard(WizardServicePanel):
                 f"character_creation_stat_label_{stat}",
                 f"{stat_name}:",
                 label_rect,
-                panel
+                cast(pygame_gui.core.UIContainer, panel)
             )
             
             # 値表示
@@ -306,7 +306,7 @@ class CharacterCreationWizard(WizardServicePanel):
                 f"character_creation_stat_value_{stat}",
                 "--",
                 value_rect,
-                panel
+                cast(pygame_gui.core.UIContainer, panel)
             )
             if value_label:
                 self.stat_labels[stat] = value_label
@@ -369,7 +369,7 @@ class CharacterCreationWizard(WizardServicePanel):
                 f"character_creation_class_{class_data.id}",
                 f"{class_data.name} - {class_data.description}",
                 button_rect,
-                panel
+                cast(pygame_gui.core.UIContainer, panel)
             )
             
             if button:
@@ -423,7 +423,7 @@ class CharacterCreationWizard(WizardServicePanel):
                     f"character_creation_confirm_label_{i}",
                     line,
                     label_rect,
-                    panel
+                    cast(pygame_gui.core.UIContainer, panel)
                 )
                 if label:
                     self.confirm_labels.append(label)
@@ -659,13 +659,13 @@ class CharacterCreationWizard(WizardServicePanel):
     def _highlight_button(self, button: pygame_gui.elements.UIButton) -> None:
         """ボタンをハイライト"""
         # TODO: pygame_guiのテーマでハイライトスタイルを定義
-        if hasattr(button, 'selected'):
-            button.selected = True
+        # selected 属性を動的に設定
+        setattr(button, 'selected', True)
     
     def _unhighlight_button(self, button: pygame_gui.elements.UIButton) -> None:
         """ボタンのハイライトを解除"""
-        if hasattr(button, 'selected'):
-            button.selected = False
+        # selected 属性を動的に設定
+        setattr(button, 'selected', False)
     
     
     def _validate_name(self, data: Dict[str, Any]) -> bool:

@@ -145,7 +145,8 @@ class PartyFormationPanel(ServicePanel):
         else:
             # フォールバック
             self.add_button = self._create_button(
-                "追加 → (A)",
+                "add_member_button",
+                "追加 → (A)", 
                 add_rect,
                 container=self.container,
                 object_id="#add_member_button"
@@ -160,6 +161,7 @@ class PartyFormationPanel(ServicePanel):
         else:
             # フォールバック
             self.remove_button = self._create_button(
+                "remove_member_button",
                 "← 削除 (R)",
                 remove_rect,
                 container=self.container,
@@ -179,6 +181,7 @@ class PartyFormationPanel(ServicePanel):
         else:
             # フォールバック
             self.up_button = self._create_button(
+                "move_up_button",
                 "↑ 上へ (U)",
                 up_rect,
                 container=self.container,
@@ -194,6 +197,7 @@ class PartyFormationPanel(ServicePanel):
         else:
             # フォールバック
             self.down_button = self._create_button(
+                "move_down_button",
                 "↓ 下へ (D)",
                 down_rect,
                 container=self.container,

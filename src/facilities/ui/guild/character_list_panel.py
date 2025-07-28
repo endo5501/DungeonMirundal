@@ -2,7 +2,7 @@
 
 import pygame
 import pygame_gui
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, cast
 import logging
 from ..service_panel import ServicePanel
 from ...core.service_result import ServiceResult
@@ -101,12 +101,12 @@ class CharacterListPanel(ServicePanel):
         filter_options = ["全員", "パーティ外", "パーティ内"]
         if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
             self.filter_dropdown = self.ui_element_manager.create_dropdown(
-                "filter_dropdown", filter_options, "全員", filter_rect
+                "filter_dropdown", filter_rect, filter_options, "全員"
             )
         else:
             # フォールバック
             self.filter_dropdown = pygame_gui.elements.UIDropDownMenu(
-                options_list=filter_options,
+                options_list=cast(List[str | tuple[str, str]], filter_options),
                 starting_option="全員",
                 relative_rect=filter_rect,
                 manager=self.ui_manager,
@@ -135,12 +135,12 @@ class CharacterListPanel(ServicePanel):
         sort_options = ["名前順", "レベル順", "職業順"]
         if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
             self.sort_dropdown = self.ui_element_manager.create_dropdown(
-                "sort_dropdown", sort_options, "名前順", sort_rect
+                "sort_dropdown", sort_rect, sort_options, "名前順"
             )
         else:
             # フォールバック
             self.sort_dropdown = pygame_gui.elements.UIDropDownMenu(
-                options_list=sort_options,
+                options_list=cast(List[str | tuple[str, str]], sort_options),
                 starting_option="名前順",
                 relative_rect=sort_rect,
                 manager=self.ui_manager,
@@ -156,7 +156,7 @@ class CharacterListPanel(ServicePanel):
         
         if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
             self.character_list = self.ui_element_manager.create_selection_list(
-                "character_list", [], list_rect, allow_multi_select=False
+                "character_list", list_rect, [], allow_multi_select=False
             )
         else:
             # フォールバック
@@ -203,9 +203,10 @@ class CharacterListPanel(ServicePanel):
             else:
                 # フォールバック
                 self.action_button = self._create_button(
+                    "action_button",
                     "クラス変更",
                     button_rect,
-                    container=self.container,
+                    container=cast(pygame_gui.core.UIContainer, self.container),
                     object_id="#action_button"
                 )
             
@@ -237,7 +238,7 @@ class CharacterListPanel(ServicePanel):
                 if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
                     # UIElementManagerで管理されている場合はそちらで破棄
                     try:
-                        self.ui_element_manager.remove_element("filter_dropdown")
+                        self.ui_element_manager.destroy_element("filter_dropdown")
                     except:
                         pass
                 else:
@@ -248,7 +249,7 @@ class CharacterListPanel(ServicePanel):
                 if self.ui_element_manager and not self.ui_element_manager.is_destroyed:
                     # UIElementManagerで管理されている場合はそちらで破棄
                     try:
-                        self.ui_element_manager.remove_element("sort_dropdown")
+                        self.ui_element_manager.destroy_element("sort_dropdown")
                     except:
                         pass
                 else:
@@ -417,10 +418,35 @@ class CharacterListPanel(ServicePanel):
         else:
             # 選択されたインデックスを取得
             try:
-                index = self.character_list.item_list.index(selection) if self.character_list.item_list else -1
-                if 0 <= index < len(self.characters):
-                    self.selected_index = index
-                    self.selected_character = self.characters[index]
+                if self.character_list and hasattr(self.character_list, 'item_list') and self.character_list.item_list:
+                    # selection が文字列の場合のみ index を呼び出す
+                    if isinstance(selection, str):
+                        # item_list の内容に応じて適切に検索
+                        try:
+                            if self.character_list.item_list and len(self.character_list.item_list) > 0:
+                                # item_list が文字列のリストの場合
+                                if isinstance(self.character_list.item_list[0], str):
+                                    index = self.character_list.item_list.index(selection)
+                                else:
+                                    # item_list が辞書のリストの場合、文字列表現で検索
+                                    index = -1
+                                    for i, item in enumerate(self.character_list.item_list):
+                                        if str(item) == selection:
+                                            index = i
+                                            break
+                            else:
+                                index = -1
+                        except (ValueError, TypeError):
+                            index = -1
+                        if 0 <= index < len(self.characters):
+                            self.selected_index = index
+                            self.selected_character = self.characters[index]
+                        else:
+                            self.selected_character = None
+                            self.selected_index = None
+                    else:
+                        self.selected_character = None
+                        self.selected_index = None
                 else:
                     self.selected_character = None
                     self.selected_index = None
@@ -540,7 +566,19 @@ HP: {character.get('hp', '?')}/{character.get('max_hp', '?')}
         """選択リスト変更イベントを処理"""
         if event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
             if event.ui_element == self.character_list:
-                selection = self.character_list.get_single_selection() if hasattr(self.character_list, 'get_single_selection') else None
+                raw_selection = (self.character_list.get_single_selection() 
+                               if self.character_list and hasattr(self.character_list, 'get_single_selection') 
+                               else None)
+                
+                # 型を安全にstr | Noneに変換
+                if isinstance(raw_selection, tuple):
+                    # タプルの場合は最初の要素を使用
+                    selection = raw_selection[0] if raw_selection else None
+                elif isinstance(raw_selection, str):
+                    selection = raw_selection
+                else:
+                    selection = None
+                    
                 self._handle_character_selection(selection)
                 return True
         
