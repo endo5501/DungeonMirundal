@@ -31,6 +31,8 @@ class SellPanel(ServicePanel):
         self.gold_label: Optional[pygame_gui.elements.UILabel] = None
         self.sell_info_label: Optional[pygame_gui.elements.UILabel] = None
         self.sell_price_label: Optional[pygame_gui.elements.UILabel] = None
+        self.total_price_label: Optional[pygame_gui.elements.UILabel] = None  # 追加
+        self.detail_text_box: Optional[pygame_gui.elements.UITextBox] = None  # 追加
         self.owner_ids: List[str] = []
         
         # データ（_create_ui()で参照されるため先に初期化）
@@ -191,7 +193,8 @@ class SellPanel(ServicePanel):
             container=self.container,
             object_id="#sell_button"
         )
-        self.sell_button.disable()
+        if self.sell_button:
+            self.sell_button.disable()
         
         # 売却金額表示
         self.sell_price_label = self._create_label("sell_price_label", "売却額: 0 G", pygame.Rect(300, y_position, 200, 35))
@@ -398,8 +401,14 @@ class SellPanel(ServicePanel):
             return
         
         try:
-            quantity = int(self.quantity_input.get_text())
-            quantity = max(1, min(quantity, self.selected_item["quantity"]))
+            if self.quantity_input:
+                quantity = int(self.quantity_input.get_text())
+                if self.selected_item:
+                    quantity = max(1, min(quantity, self.selected_item["quantity"]))
+                else:
+                    quantity = 1
+            else:
+                quantity = 1
         except:
             quantity = 1
         
@@ -417,8 +426,14 @@ class SellPanel(ServicePanel):
             return
         
         try:
-            quantity = int(self.quantity_input.get_text())
-            quantity = max(1, min(quantity, self.selected_item["quantity"]))
+            if self.quantity_input:
+                quantity = int(self.quantity_input.get_text())
+                if self.selected_item:
+                    quantity = max(1, min(quantity, self.selected_item["quantity"]))
+                else:
+                    quantity = 1
+            else:
+                quantity = 1
         except:
             quantity = 1
         
@@ -453,12 +468,12 @@ class SellPanel(ServicePanel):
     def handle_selection_list_changed(self, event: pygame.event.Event) -> bool:
         """選択リスト変更イベントを処理"""
         if event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
-            if event.ui_element == self.owner_list:
+            if event.ui_element == self.owner_list and self.owner_list:
                 # 所有者が選択された
                 selection = self.owner_list.get_single_selection()
                 logger.debug(f"SellPanel: Owner selection changed to: {selection}")
                 
-                if selection is not None:
+                if selection is not None and self.owner_list.item_list:
                     # 安全にインデックスを取得 - 文字列と辞書両方に対応
                     indices = []
                     for i, item in enumerate(self.owner_list.item_list):
@@ -483,7 +498,7 @@ class SellPanel(ServicePanel):
                 
                 return True
                 
-            elif event.ui_element == self.item_list:
+            elif event.ui_element == self.item_list and self.item_list:
                 # アイテムが選択された
                 selection = self.item_list.get_single_selection()
                 if selection is not None:
@@ -496,13 +511,14 @@ class SellPanel(ServicePanel):
                     
                     # 安全にインデックスを取得 - 文字列と辞書両方に対応
                     indices = []
-                    for i, item in enumerate(self.item_list.item_list):
-                        if isinstance(item, dict):
-                            if item.get('text') == selection:
-                                indices.append(i)
-                        elif isinstance(item, str):
-                            if item == selection:
-                                indices.append(i)
+                    if self.item_list.item_list:
+                        for i, item in enumerate(self.item_list.item_list):
+                            if isinstance(item, dict):
+                                if item.get('text') == selection:
+                                    indices.append(i)
+                            elif isinstance(item, str):
+                                if item == selection:
+                                    indices.append(i)
                     if indices and indices[0] < len(self.displayed_items):
                         self.selected_item = self.displayed_items[indices[0]]
                         self._update_detail_view()

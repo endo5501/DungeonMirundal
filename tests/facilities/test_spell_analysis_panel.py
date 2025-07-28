@@ -455,13 +455,11 @@ class TestSpellAnalysisPanelAnalysis:
         panel._execute_service_action.assert_has_calls(expected_calls)
         
         # 結果が表示される
-        expected_text = """
-                <b>魔法分析結果</b><br>
-                <br>
-                ファイアーボールの分析が完了しました。<br>詳細な魔法構造が判明しました。<br>
-                <br>
-                <i>残り所持金: 1850 G</i>
-                """
+        expected_text = """<b>魔法分析結果</b><br>
+<br>
+ファイアーボールの分析が完了しました。<br>詳細な魔法構造が判明しました。<br>
+<br>
+<i>残り所持金: 1850 G</i>"""
         assert panel.result_box.html_text == expected_text.strip()
         panel.result_box.rebuild.assert_called_once()
         

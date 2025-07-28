@@ -2,7 +2,7 @@
 
 import pygame
 import pygame_gui
-from typing import List, Optional, Callable, Dict, Any
+from typing import List, Optional, Callable, Dict, Any, cast
 import logging
 from ..core.facility_service import MenuItem
 from .service_panel import ServicePanel
@@ -40,7 +40,10 @@ class NavigationPanel(ServicePanel):
         self.button_padding = 10
         
         # ServicePanel初期化（navigationという仮のservice_idを使用）
-        super().__init__(rect, parent, None, "navigation", ui_manager)
+        # controllerはNavigationPanelでは不要だが、型エラーを避けるため仮の値を使用
+        from ..core.facility_controller import FacilityController
+        dummy_controller = cast(FacilityController, None)  # 実際には使用されない
+        super().__init__(rect, parent, dummy_controller, "navigation", ui_manager)
         
         logger.info("NavigationPanel created")
     

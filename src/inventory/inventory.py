@@ -40,7 +40,8 @@ class InventorySlot:
             return True
         
         # 同じアイテムでスタック可能な場合
-        if (self.item_instance.item_id == item_instance.item_id and
+        if (self.item_instance and item_instance and 
+            self.item_instance.item_id == item_instance.item_id and
             self.item_instance.condition == item_instance.condition and
             self.item_instance.identified == item_instance.identified):
             
@@ -58,18 +59,18 @@ class InventorySlot:
             return True
         
         # スタック処理
-        if self.can_store_item(item_instance):
+        if self.can_store_item(item_instance) and self.item_instance and item_instance:
             self.item_instance.quantity += item_instance.quantity
             return True
         
         return False
     
-    def remove_item(self, quantity: int = None) -> Optional[ItemInstance]:
+    def remove_item(self, quantity: Optional[int] = None) -> Optional[ItemInstance]:
         """アイテムを削除"""
         if self.is_empty():
             return None
         
-        if quantity is None or quantity >= self.item_instance.quantity:
+        if self.item_instance and (quantity is None or quantity >= self.item_instance.quantity):
             # 全て削除
             removed_item = self.item_instance
             self.item_instance = None
@@ -80,17 +81,20 @@ class InventorySlot:
                 return None
             
             # 新しいインスタンスを作成
-            removed_item = ItemInstance(
-                item_id=self.item_instance.item_id,
-                quantity=quantity,
-                identified=self.item_instance.identified,
-                condition=self.item_instance.condition,
-                enchantments=self.item_instance.enchantments.copy(),
-                custom_properties=self.item_instance.custom_properties.copy()
-            )
-            
-            # 元のアイテムの数量を減らす
-            self.item_instance.quantity -= quantity
+            if self.item_instance:
+                removed_item = ItemInstance(
+                    item_id=self.item_instance.item_id,
+                    quantity=quantity,
+                    identified=self.item_instance.identified,
+                    condition=self.item_instance.condition,
+                    enchantments=self.item_instance.enchantments.copy() if self.item_instance.enchantments else [],
+                    custom_properties=self.item_instance.custom_properties.copy() if self.item_instance.custom_properties else {}
+                )
+                
+                # 元のアイテムの数量を減らす
+                self.item_instance.quantity -= quantity
+            else:
+                return None
             
             return removed_item
     
@@ -184,7 +188,7 @@ class Inventory:
         logger.warning(f"インベントリが満杯のためアイテムを追加できません: {item_instance.item_id} for inventory {self.owner_id}")
         return False
     
-    def remove_item(self, slot_index: int, quantity: int = None) -> Optional[ItemInstance]:
+    def remove_item(self, slot_index: int, quantity: Optional[int] = None) -> Optional[ItemInstance]:
         """指定スロットからアイテムを削除"""
         if slot_index < 0 or slot_index >= len(self.slots):
             return None

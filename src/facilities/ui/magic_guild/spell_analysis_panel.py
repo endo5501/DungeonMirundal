@@ -217,17 +217,20 @@ class SpellAnalysisPanel(ServicePanel):
                 char_items.append(item_text)
             
             # UIリストを更新
-            self.character_list.set_item_list(char_items)
+            if self.character_list:
+                self.character_list.set_item_list(char_items)
             
             # 結果メッセージを更新
-            if result.message:
+            if result.message and self.result_box:
                 self.result_box.html_text = result.message
                 self.result_box.rebuild()
         else:
-            self.character_list.set_item_list([])
+            if self.character_list:
+                self.character_list.set_item_list([])
             message = result.message if result.message else "魔法を持つキャラクターがいません"
-            self.result_box.html_text = message
-            self.result_box.rebuild()
+            if self.result_box:
+                self.result_box.html_text = message
+                self.result_box.rebuild()
     
     def _refresh_spells(self, character_id: str) -> None:
         """魔法リストを更新"""
@@ -247,19 +250,23 @@ class SpellAnalysisPanel(ServicePanel):
                 spell_items.append(item_text)
             
             # UIリストを更新
-            self.spell_list.set_item_list(spell_items)
+            if self.spell_list:
+                self.spell_list.set_item_list(spell_items)
             
             # 所持金を更新
             if self.gold_label:
                 self.gold_label.set_text(f"所持金: {party_gold} G")
             
             # 結果をクリア
-            self.result_box.html_text = ""
-            self.result_box.rebuild()
+            if self.result_box:
+                self.result_box.html_text = ""
+                self.result_box.rebuild()
         else:
-            self.spell_list.set_item_list([])
-            self.result_box.html_text = result.message if result.message else ""
-            self.result_box.rebuild()
+            if self.spell_list:
+                self.spell_list.set_item_list([])
+            if self.result_box:
+                self.result_box.html_text = result.message if result.message else ""
+                self.result_box.rebuild()
     
     def handle_event(self, event: pygame.event.Event) -> bool:
         """イベントを処理（後方互換性のため）"""
@@ -294,28 +301,28 @@ class SpellAnalysisPanel(ServicePanel):
             })
             
             # 結果を表示
-            if result.is_success():
-                result_text = f"""
-                <b>魔法分析結果</b><br>
-                <br>
-                {result.message.replace('\n', '<br>')}<br>
-                <br>
-                <i>残り所持金: {result.data.get('remaining_gold', 0)} G</i>
-                """
-                self.result_box.html_text = result_text.strip()
-            else:
-                self.result_box.html_text = f"<font color='#FF0000'>{result.message}</font>"
-            
-            self.result_box.rebuild()
+            if self.result_box:
+                if result.is_success() and result.data:
+                    result_text = f"""<b>魔法分析結果</b><br>
+<br>
+{result.message.replace('\n', '<br>')}<br>
+<br>
+<i>残り所持金: {result.data.get('remaining_gold', 0) if result.data else 0} G</i>"""
+                    self.result_box.html_text = result_text.strip()
+                else:
+                    self.result_box.html_text = f"<font color='#FF0000'>{result.message}</font>"
+                
+                self.result_box.rebuild()
             
             if result.is_success():
                 # 成功時は金額を更新
-                if self.gold_label:
+                if self.gold_label and result.data:
                     self.gold_label.set_text(f"所持金: {result.data.get('remaining_gold', 0)} G")
         else:
             # エラーメッセージを表示
-            self.result_box.html_text = f"<font color='#FF0000'>{result.message}</font>"
-            self.result_box.rebuild()
+            if self.result_box:
+                self.result_box.html_text = f"<font color='#FF0000'>{result.message}</font>"
+                self.result_box.rebuild()
     
     def handle_button_click(self, button: pygame_gui.elements.UIButton) -> bool:
         """ボタンクリックを処理（ServicePanelパターン）"""
@@ -330,13 +337,15 @@ class SpellAnalysisPanel(ServicePanel):
         if event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
             if event.ui_element == self.character_list:
                 # キャラクターが選択された
-                selection_index = self.character_list.get_single_selection()
-                if selection_index is not None and selection_index < len(self.characters_data):
-                    selected_char = self.characters_data[selection_index]
-                    self.selected_character = selected_char["id"]
-                    
-                    # 魔法リストを更新
-                    self._refresh_spells(self.selected_character)
+                if self.character_list:
+                    selection_index = self.character_list.get_single_selection()
+                    if selection_index is not None and selection_index < len(self.characters_data):
+                        selected_char = self.characters_data[selection_index]
+                        self.selected_character = selected_char["id"]
+                        
+                        # 魔法リストを更新
+                        if self.selected_character:
+                            self._refresh_spells(self.selected_character)
                     
                     # 魔法選択をリセット
                     self.selected_spell = None
@@ -348,10 +357,11 @@ class SpellAnalysisPanel(ServicePanel):
             
             elif event.ui_element == self.spell_list:
                 # 魔法が選択された
-                selection_index = self.spell_list.get_single_selection()
-                if selection_index is not None and selection_index < len(self.spells_data):
-                    selected_spell = self.spells_data[selection_index]
-                    self.selected_spell = selected_spell["id"]
+                if self.spell_list:
+                    selection_index = self.spell_list.get_single_selection()
+                    if selection_index is not None and selection_index < len(self.spells_data):
+                        selected_spell = self.spells_data[selection_index]
+                        self.selected_spell = selected_spell["id"]
                     
                     # コスト表示を更新
                     if self.cost_label:

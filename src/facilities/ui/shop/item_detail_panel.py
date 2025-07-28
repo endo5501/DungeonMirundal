@@ -25,7 +25,10 @@ class ItemDetailPanel(ServicePanel):
         self.stats_box: Optional[pygame_gui.elements.UITextBox] = None
         
         # ServicePanel初期化（表示専用なのでcontrollerは不要）
-        super().__init__(rect, parent, None, "item_detail", ui_manager)
+        from typing import cast
+        from ...core.facility_controller import FacilityController
+        dummy_controller = cast(FacilityController, None)  # 実際には使用されない
+        super().__init__(rect, parent, dummy_controller, "item_detail", ui_manager)
         
         logger.info("ItemDetailPanel initialized")
     

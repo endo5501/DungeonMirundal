@@ -143,7 +143,8 @@ class PrayerShopPanel(ServicePanel):
             )
             self.ui_elements.append(self.purchase_button)
         
-        self.purchase_button.disable()
+        if self.purchase_button:
+            self.purchase_button.disable()
     
     def _load_prayer_data(self) -> None:
         """祈祷書データを読み込み"""

@@ -310,6 +310,8 @@ class EquipmentManagementPanel(ServicePanel):
             else:
                 # キャラクター詳細表示中
                 party = self.controller.service.party
+                if not party:
+                    return
                 characters = party.get_all_characters()
                 if self.selected_character_index < len(characters):
                     character = characters[self.selected_character_index]

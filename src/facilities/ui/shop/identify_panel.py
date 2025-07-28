@@ -150,7 +150,8 @@ class IdentifyPanel(ServicePanel):
             container=self.container,
             object_id="#identify_button"
         )
-        self.identify_button.disable()
+        if self.identify_button:
+            self.identify_button.disable()
     
     def _load_unidentified_items(self) -> None:
         """未鑑定アイテムを読み込み"""
@@ -354,16 +355,16 @@ class IdentifyPanel(ServicePanel):
     def handle_selection_list_changed(self, event: pygame.event.Event) -> bool:
         """選択リスト変更イベントを処理"""
         if event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
-            if event.ui_element == self.owner_list:
+            if event.ui_element == self.owner_list and self.owner_list:
                 selection = self.owner_list.get_single_selection()
-                if selection and self.owner_ids:
+                if selection and self.owner_ids and self.owner_list.item_list:
                     indices = [i for i, item in enumerate(self.owner_list.item_list) if item == selection]
                     if indices and indices[0] < len(self.owner_ids):
                         self.selected_owner = self.owner_ids[indices[0]]
                         self._update_item_list()
                 return True
                 
-            elif event.ui_element == self.item_list:
+            elif event.ui_element == self.item_list and self.item_list:
                 selection = self.item_list.get_single_selection()
                 if selection is not None:
                     # 「未鑑定アイテムがありません」メッセージの場合は無視
@@ -373,7 +374,10 @@ class IdentifyPanel(ServicePanel):
                         self._update_controls()
                         return True
                     
-                    indices = [i for i, item in enumerate(self.item_list.item_list) if item == selection]
+                    if self.item_list.item_list:
+                        indices = [i for i, item in enumerate(self.item_list.item_list) if item == selection]
+                    else:
+                        indices = []
                     if indices:
                         index = indices[0]
                         if 0 <= index < len(self.displayed_items):

@@ -92,7 +92,8 @@ class ResurrectPanel(ServicePanel):
             )
             self.ui_elements.append(self.resurrect_button)
         
-        self.resurrect_button.disable()
+        if self.resurrect_button:
+            self.resurrect_button.disable()
         
         # コスト表示
         cost_rect = pygame.Rect(120, 240, 200, 30)
@@ -177,7 +178,8 @@ class ResurrectPanel(ServicePanel):
                 member_items.append(item_text)
             
             # UIリストを更新
-            self.members_list.set_item_list(member_items)
+            if self.members_list:
+                self.members_list.set_item_list(member_items)
             
             # 所持金を更新
             if self.gold_label:
@@ -187,7 +189,8 @@ class ResurrectPanel(ServicePanel):
             if result.message and self.result_label:
                 self.result_label.set_text(result.message)
         else:
-            self.members_list.set_item_list([])
+            if self.members_list:
+                self.members_list.set_item_list([])
             if self.result_label:
                 self.result_label.set_text(result.message if result.message else "蘇生が必要なメンバーはいません")
     

@@ -2,7 +2,7 @@
 
 import pygame
 import pygame_gui
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Callable
 import logging
 from abc import ABC, abstractmethod
 from ..core.facility_controller import FacilityController
@@ -73,13 +73,15 @@ class ServicePanel(ABC, DestructionMixin):
     
     def show(self) -> None:
         """パネルを表示"""
-        self.container.show()
+        if self.container:
+            self.container.show()
         self.is_visible = True
         self._on_show()
     
     def hide(self) -> None:
         """パネルを非表示"""
-        self.container.hide()
+        if self.container:
+            self.container.hide()
         self.is_visible = False
         self._on_hide()
     
@@ -158,30 +160,40 @@ class ServicePanel(ABC, DestructionMixin):
     def _create_label(self, element_id: str, text: str, rect: pygame.Rect, 
                      container: Optional[pygame_gui.core.UIContainer] = None) -> pygame_gui.elements.UILabel:
         """ラベルを作成（ファクトリー統合）"""
+        if not self.ui_factory:
+            raise RuntimeError("ui_factory is not initialized")
         return self.ui_factory.create_label(element_id, text, rect, container)
     
     def _create_button(self, element_id: str, text: str, rect: pygame.Rect,
                       container: Optional[pygame_gui.core.UIContainer] = None,
                       object_id: Optional[str] = None,
-                      on_click: Optional[callable] = None) -> pygame_gui.elements.UIButton:
+                      on_click: Optional[Callable] = None) -> pygame_gui.elements.UIButton:
         """ボタンを作成（ファクトリー統合）"""
+        if not self.ui_factory:
+            raise RuntimeError("ui_factory is not initialized")
         return self.ui_factory.create_button(element_id, text, rect, container, object_id, on_click)
     
     def _create_text_box(self, element_id: str, initial_text: str, rect: pygame.Rect,
                         container: Optional[pygame_gui.core.UIContainer] = None) -> pygame_gui.elements.UITextBox:
         """テキストボックスを作成（ファクトリー統合）"""
+        if not self.ui_factory:
+            raise RuntimeError("ui_factory is not initialized")
         return self.ui_factory.create_text_box(element_id, initial_text, rect, container)
     
     def _create_selection_list(self, element_id: str, rect: pygame.Rect,
                               item_list: List[str],
                               container: Optional[pygame_gui.core.UIContainer] = None) -> pygame_gui.elements.UISelectionList:
         """選択リストを作成（ファクトリー統合）"""
+        if not self.ui_factory:
+            raise RuntimeError("ui_factory is not initialized")
         return self.ui_factory.create_selection_list(element_id, rect, item_list, container)
     
     def _create_text_entry(self, element_id: str, text: str, rect: pygame.Rect,
                           container: Optional[pygame_gui.core.UIContainer] = None,
                           placeholder_text: str = "", **kwargs) -> Optional[pygame_gui.elements.UITextEntryLine]:
         """テキスト入力フィールドを作成（ファクトリー統合）"""
+        if not self.ui_factory:
+            raise RuntimeError("ui_factory is not initialized")
         return self.ui_factory.create_text_entry(element_id, rect, text, placeholder_text, container, **kwargs)
     
     def _show_message(self, message: str, message_type: str = "info") -> None:

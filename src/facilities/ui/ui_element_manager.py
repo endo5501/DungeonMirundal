@@ -546,7 +546,8 @@ class DestructionMixin:
         
         try:
             # 破棄処理を実行
-            self.destroy()
+            if hasattr(self, 'destroy'):
+                self.destroy()
             
             # 破棄の検証
             if self.verify_destruction():
@@ -570,16 +571,17 @@ class DestructionMixin:
         """
         # UIElementManagerを持つ場合は検証
         if hasattr(self, 'ui_element_manager'):
-            manager = self.ui_element_manager
+            manager = getattr(self, 'ui_element_manager', None)
             if manager and not manager.is_destroyed:
                 logger.warning("UIElementManager is not destroyed")
                 return False
         
         # containerを持つ場合は検証
-        if hasattr(self, 'container') and self.container is not None:
+        if hasattr(self, 'container') and getattr(self, 'container', None) is not None:
             try:
                 # コンテナがまだ有効かチェック
-                if hasattr(self.container, 'rect'):
+                container = getattr(self, 'container', None)
+                if container and hasattr(container, 'rect'):
                     logger.warning("Container still has rect attribute")
                     return False
             except Exception:

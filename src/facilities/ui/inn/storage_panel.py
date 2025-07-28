@@ -404,19 +404,20 @@ class StoragePanel(ServicePanel):
         if event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
             if event.ui_element == self.inventory_list:
                 # インベントリアイテムが選択された
-                selection = self.inventory_list.get_single_selection()
-                if selection is not None:
-                    index = self.inventory_list.item_list.index(selection)
-                    if 0 <= index < len(self.inventory_items):
-                        self.selected_inventory_item = self.inventory_items[index]
-                        # 保管庫の選択をクリア
-                        self.selected_storage_item = None
-                        if self.storage_list:
-                            self.storage_list.set_selected_index(None)
+                if self.inventory_list:
+                    selection = self.inventory_list.get_single_selection()
+                    if selection is not None and self.inventory_list.item_list:
+                        index = self.inventory_list.item_list.index(selection)
+                        if 0 <= index < len(self.inventory_items):
+                            self.selected_inventory_item = self.inventory_items[index]
+                            # 保管庫の選択をクリア
+                            self.selected_storage_item = None
+                            if self.storage_list:
+                                self.storage_list.set_selected_index(None)
+                        else:
+                            self.selected_inventory_item = None
                     else:
                         self.selected_inventory_item = None
-                else:
-                    self.selected_inventory_item = None
                 
                 # 数量を設定
                 if self.selected_inventory_item and self.quantity_input:
@@ -428,19 +429,20 @@ class StoragePanel(ServicePanel):
                 
             elif event.ui_element == self.storage_list:
                 # 保管庫アイテムが選択された
-                selection = self.storage_list.get_single_selection()
-                if selection is not None:
-                    index = self.storage_list.item_list.index(selection)
-                    if 0 <= index < len(self.storage_items):
-                        self.selected_storage_item = self.storage_items[index]
-                        # インベントリの選択をクリア
-                        self.selected_inventory_item = None
-                        if self.inventory_list:
-                            self.inventory_list.set_selected_index(None)
+                if self.storage_list:
+                    selection = self.storage_list.get_single_selection()
+                    if selection is not None and self.storage_list.item_list:
+                        index = self.storage_list.item_list.index(selection)
+                        if 0 <= index < len(self.storage_items):
+                            self.selected_storage_item = self.storage_items[index]
+                            # インベントリの選択をクリア
+                            self.selected_inventory_item = None
+                            if self.inventory_list:
+                                self.inventory_list.set_selected_index(None)
+                        else:
+                            self.selected_storage_item = None
                     else:
                         self.selected_storage_item = None
-                else:
-                    self.selected_storage_item = None
                 
                 # 数量を設定
                 if self.selected_storage_item and self.quantity_input:

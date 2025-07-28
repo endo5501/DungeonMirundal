@@ -20,7 +20,7 @@ class WizardStep:
     name: str
     description: Optional[str] = None
     validator: Optional[Callable[[Dict[str, Any]], bool]] = None
-    required_fields: List[str] = None
+    required_fields: Optional[List[str]] = None
     
     def __post_init__(self):
         if self.required_fields is None:
@@ -52,6 +52,8 @@ class WizardServicePanel(ServicePanel):
         self.current_step_index = 0
         self.step_panels: Dict[str, pygame_gui.elements.UIPanel] = {}
         self.step_validators: Dict[str, Callable] = {}
+        self.race_data: Optional[Dict[str, Any]] = None  # 追加
+        self.class_data: Optional[Dict[str, Any]] = None  # 追加
         
         # UI要素
         self.indicator_panel: Optional[pygame_gui.elements.UIPanel] = None
@@ -289,12 +291,20 @@ class WizardServicePanel(ServicePanel):
     
     def _create_step_panel(self, step: WizardStep) -> None:
         """ステップパネルを作成"""
-        panel = pygame_gui.elements.UIPanel(
-            relative_rect=pygame.Rect(0, 0, self.content_area.relative_rect.width,
-                                    self.content_area.relative_rect.height),
-            manager=self.ui_manager,
-            container=self.content_area
-        )
+        if self.content_area:
+            panel = pygame_gui.elements.UIPanel(
+                relative_rect=pygame.Rect(0, 0, self.content_area.relative_rect.width,
+                                        self.content_area.relative_rect.height),
+                manager=self.ui_manager,
+                container=self.content_area
+            )
+        else:
+            # フォールバック
+            panel = pygame_gui.elements.UIPanel(
+                relative_rect=pygame.Rect(0, 0, 400, 300),
+                manager=self.ui_manager,
+                container=self.container
+            )
         
         # ステップ説明
         if step.description:
