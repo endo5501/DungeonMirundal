@@ -46,6 +46,7 @@ class FacilityService(ABC):
         self.service_id = facility_id  # service_idとfacility_idは同じ
         self.party: Optional[Party] = None
         self._service_data: Dict[str, Any] = {}
+        self.game = None  # GameManager の参照
     
     @abstractmethod
     def get_menu_items(self) -> List[MenuItem]:
@@ -94,6 +95,22 @@ class FacilityService(ABC):
             作成されたパネル（作成しない場合はNone）
         """
         return None  # デフォルトは汎用パネルを使用
+    
+    def set_controller(self, controller) -> None:
+        """コントローラーを設定
+        
+        Args:
+            controller: FacilityController インスタンス
+        """
+        self._controller = controller
+    
+    def set_game_manager(self, game_manager) -> None:
+        """GameManagerを設定
+        
+        Args:
+            game_manager: GameManager インスタンス
+        """
+        self.game = game_manager
     
     def set_party(self, party: Party) -> None:
         """パーティを設定

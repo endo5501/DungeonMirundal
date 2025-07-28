@@ -2,7 +2,7 @@
 
 import pygame
 import pygame_gui
-from typing import Dict, Optional, Any, TYPE_CHECKING
+from typing import Dict, Optional, Any, TYPE_CHECKING, cast
 import logging
 from src.ui.window_system.window import Window
 from src.ui.window_system.window_manager import WindowManager
@@ -99,7 +99,7 @@ class FacilityWindow(Window):
         self.main_panel = pygame_gui.elements.UIPanel(
             relative_rect=main_rect,
             manager=self.ui_manager,
-            element_id=f"{self.controller.facility_id}_main_panel"
+            element_id=f"{self.controller.facility_id if self.controller else 'unknown'}_main_panel"
         )
         
         # タイトルバー
@@ -126,8 +126,8 @@ class FacilityWindow(Window):
             )
             
             # メニュー項目を取得
-            menu_items = self.controller.get_menu_items()
-            logger.debug(f"[DEBUG] NavigationPanel: controller.is_active={self.controller.is_active}, menu_items count={len(menu_items)}")
+            menu_items = self.controller.get_menu_items() if self.controller else [] if self.controller else []
+            logger.debug(f"[DEBUG] NavigationPanel: controller.is_active={self.controller.is_active if self.controller else False}, menu_items count={len(menu_items)}")
             
             # main_panelとui_managerがNoneでないことを保証
             assert self.main_panel is not None, "main_panel must be initialized before creating navigation"
@@ -147,7 +147,7 @@ class FacilityWindow(Window):
     
     def _create_simple_navigation(self) -> None:
         """シンプルなナビゲーションボタンを作成（フォールバック）"""
-        menu_items = self.controller.get_menu_items()
+        menu_items = self.controller.get_menu_items() if self.controller else []
         
         button_width = 120
         button_height = 40
@@ -176,7 +176,7 @@ class FacilityWindow(Window):
     
     def _show_initial_service(self) -> None:
         """初期サービスを表示"""
-        menu_items = self.controller.get_menu_items()
+        menu_items = self.controller.get_menu_items() if self.controller else []
         if menu_items:
             # exitではない最初の項目を選択
             for item in menu_items:
@@ -194,7 +194,8 @@ class FacilityWindow(Window):
         
         if service_id == "exit":
             # 施設から退出
-            self.controller.exit()
+            if self.controller:
+                self.controller.exit()
         else:
             # サービスを表示
             self._show_service(service_id)
@@ -286,7 +287,7 @@ class FacilityWindow(Window):
         
         try:
             # サービス自体に専用パネル作成を委任
-            if hasattr(self.controller.service, 'create_service_panel'):
+            if self.controller and hasattr(self.controller.service, 'create_service_panel'):
                 logger.debug(f"[DEBUG] Calling create_service_panel for {service_id}")
                 custom_panel = self.controller.service.create_service_panel(
                     service_id, content_rect, self.main_panel, self.ui_manager
@@ -297,7 +298,7 @@ class FacilityWindow(Window):
                 else:
                     logger.info(f"[DEBUG] create_service_panel returned None for {service_id}")
             else:
-                logger.info(f"[DEBUG] Service {self.controller.service.__class__.__name__} has no create_service_panel method")
+                logger.info(f"[DEBUG] Service {self.controller.service.__class__.__name__ if self.controller else 'None'} has no create_service_panel method")
             
             # 汎用サービスタイプに応じてパネルを作成
             if menu_item.service_type == "wizard":
@@ -335,6 +336,7 @@ class FacilityWindow(Window):
         )
         
         # UIElementManagerを使用してUI要素を管理
+        assert self.ui_manager is not None, "ui_manager must not be None"
         ui_element_manager = UIElementManager(self.ui_manager, panel)
         
         # サービス名を表示
@@ -360,10 +362,10 @@ class FacilityWindow(Window):
         )
         
         # パネルにUIElementManagerを追加
-        panel.ui_element_manager = ui_element_manager
+        cast(Any, panel).ui_element_manager = ui_element_manager
         
         # パネルにカスタム属性を追加（show/hideメソッド用）
-        panel.is_visible = True
+        cast(Any, panel).is_visible = True
         
         # 元のshow/hideメソッドを保存
         original_show = panel.show
@@ -371,11 +373,11 @@ class FacilityWindow(Window):
         
         def show_panel():
             original_show()
-            panel.is_visible = True
+            cast(Any, panel).is_visible = True
             
         def hide_panel():
             original_hide()
-            panel.is_visible = False
+            cast(Any, panel).is_visible = False
             
         # destroy()メソッドを追加してUIElementManagerによる完全な破棄を可能にする
         def destroy_panel():
@@ -383,7 +385,7 @@ class FacilityWindow(Window):
             try:
                 # UIElementManagerによる完全破棄
                 if hasattr(panel, 'ui_element_manager'):
-                    panel.ui_element_manager.destroy_all()
+                    cast(Any, panel).ui_element_manager.destroy_all()
                     logger.debug(f"Generic panel: UIElementManager destroyed for {service_id}")
                 
                 # パネル自体を破棄
@@ -392,9 +394,9 @@ class FacilityWindow(Window):
             except Exception as e:
                 logger.error(f"Generic panel destroy: Error destroying {service_id}: {e}")
         
-        panel.show = show_panel
-        panel.hide = hide_panel
-        panel.destroy = destroy_panel
+        cast(Any, panel).show = show_panel
+        cast(Any, panel).hide = hide_panel
+        cast(Any, panel).destroy = destroy_panel
         
         logger.info(f"Generic service panel created with UIElementManager: {service_id}")
         return panel
@@ -410,6 +412,7 @@ class FacilityWindow(Window):
         )
         
         # UIElementManagerを使用してUI要素を管理
+        assert self.ui_manager is not None, "ui_manager must not be None"
         ui_element_manager = UIElementManager(self.ui_manager, panel)
         
         # サービス名を表示
@@ -420,7 +423,7 @@ class FacilityWindow(Window):
         )
         
         # パネルにUIElementManagerを追加
-        panel.ui_element_manager = ui_element_manager
+        cast(Any, panel).ui_element_manager = ui_element_manager
         
         # destroy()メソッドを追加してUIElementManagerによる完全な破棄を可能にする
         def destroy_panel():
@@ -428,7 +431,7 @@ class FacilityWindow(Window):
             try:
                 # UIElementManagerによる完全破棄
                 if hasattr(panel, 'ui_element_manager'):
-                    panel.ui_element_manager.destroy_all()
+                    cast(Any, panel).ui_element_manager.destroy_all()
                     logger.debug(f"Fallback panel: UIElementManager destroyed for {service_id}")
                 
                 # パネル自体を破棄
@@ -437,7 +440,7 @@ class FacilityWindow(Window):
             except Exception as e:
                 logger.error(f"Fallback panel destroy: Error destroying {service_id}: {e}")
         
-        panel.destroy = destroy_panel
+        cast(Any, panel).destroy = destroy_panel
         
         logger.info(f"Fallback service panel created with UIElementManager: {service_id}")
         return panel
@@ -601,7 +604,7 @@ class FacilityWindow(Window):
         
         # ナビゲーションを更新（メニュー項目の有効/無効が変わる可能性）
         if self.navigation_panel:
-            menu_items = self.controller.get_menu_items()
+            menu_items = self.controller.get_menu_items() if self.controller else []
             self.navigation_panel.update_menu_items(menu_items)
     
     def handle_event(self, event: pygame.event.Event) -> bool:
@@ -670,13 +673,14 @@ class FacilityWindow(Window):
         
         # ESCキー処理
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            self.controller.exit()
+            if self.controller:
+                self.controller.exit()
             return True
         
         # 数字キーショートカット処理（1-9）
         if event.type == pygame.KEYDOWN and pygame.K_1 <= event.key <= pygame.K_9:
             button_number = event.key - pygame.K_1 + 1
-            menu_items = self.controller.get_menu_items()
+            menu_items = self.controller.get_menu_items() if self.controller else []
             
             # メニュー項目の番号と対応（exitを除く）
             non_exit_items = [item for item in menu_items if item.id != "exit"]

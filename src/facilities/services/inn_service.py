@@ -227,13 +227,13 @@ class InnService(FacilityService, ActionExecutorMixin):
             if hasattr(member, 'get_inventory') and callable(getattr(member, 'get_inventory', None)):
                 member_inventory = member.get_inventory()
                 if member_inventory and hasattr(member_inventory, 'get_all_items'):
-                    for item in member_inventory.get_all_items():
-                        if item.id == item_id:
+                    for slot_index, item_instance in member_inventory.get_all_items():
+                        if item_instance.item_id == item_id:
                             item_found = True
-                            item_name = item.name
+                            item_name = item_instance.item_id  # 暫定的にitem_idを使用
                             
                             # 数量チェック
-                            available_quantity = getattr(item, 'quantity', 1)
+                            available_quantity = getattr(item_instance, 'quantity', 1)
                             if quantity > available_quantity:
                                 return ServiceResult(
                                     False, 
@@ -318,7 +318,10 @@ class InnService(FacilityService, ActionExecutorMixin):
                         if hasattr(target_member, 'get_inventory'):
                             target_inventory = target_member.get_inventory()
                             if target_inventory and hasattr(target_inventory, 'add_item'):
-                                target_inventory.add_item(item_id, quantity)
+                                # ItemInstanceオブジェクトを作成する必要があります（簡易実装）
+                                from src.items.item import ItemInstance
+                                item_instance = ItemInstance(item_id=item_id, quantity=quantity)
+                                target_inventory.add_item(item_instance)
                         
                         return ServiceResult(
                             success=True,
@@ -357,12 +360,12 @@ class InnService(FacilityService, ActionExecutorMixin):
             if hasattr(member, 'get_inventory') and callable(getattr(member, 'get_inventory', None)):
                 member_inventory = member.get_inventory()
                 if member_inventory and hasattr(member_inventory, 'get_all_items'):
-                    for item in member_inventory.get_all_items():
+                    for slot_index, item_instance in member_inventory.get_all_items():
                         inventory_items.append({
-                            "id": item.id,
-                            "name": item.name,
-                            "quantity": getattr(item, 'quantity', 1),
-                            "stackable": getattr(item, 'stackable', True),
+                            "id": item_instance.item_id,
+                            "name": item_instance.item_id,  # 暫定的にitem_idを使用
+                            "quantity": getattr(item_instance, 'quantity', 1),
+                            "stackable": getattr(item_instance, 'stackable', True),
                             "owner": member.name
                         })
         

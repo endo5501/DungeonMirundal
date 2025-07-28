@@ -1,6 +1,6 @@
 """施設の統一制御クラス"""
 
-from typing import Dict, Optional, Type, Any
+from typing import Dict, Optional, Type, Any, cast
 import logging
 from src.character.party import Party
 from .facility_service import FacilityService
@@ -24,15 +24,9 @@ class FacilityController:
             service_class: サービスクラス
         """
         self.facility_id = facility_id
-        # サービスクラスのコンストラクタにfacility_idが必要な場合に対応
-        try:
-            self.service = service_class()  # まず引数なしで試行
-        except TypeError:
-            # 引数が必要な場合はfacility_idを渡す
-            self.service = service_class(facility_id)
-        except Exception:
-            # その他のエラーの場合もfacility_idを渡して再試行
-            self.service = service_class(facility_id)
+        # サービスクラスのコンストラクタを初期化
+        # FacilityServiceは facility_id パラメータが必要
+        self.service = service_class(facility_id)
         
         # サービスにコントローラーの参照を設定（set_controllerメソッドがある場合）
         if hasattr(self.service, 'set_controller') and callable(getattr(self.service, 'set_controller', None)):
@@ -62,6 +56,11 @@ class FacilityController:
         if hasattr(self.service, 'set_game_manager') and callable(getattr(self.service, 'set_game_manager', None)):
             self.service.set_game_manager(game_manager)
             logger.debug(f"[DEBUG] FacilityController: GameManager set to service: {self.facility_id}")
+        else:
+            # set_game_managerメソッドがない場合はgame属性に直接設定
+            if hasattr(self.service, 'game'):
+                self.service.game = game_manager
+                logger.debug(f"[DEBUG] FacilityController: GameManager set to service.game: {self.facility_id}")
     
     def enter(self, party: Party) -> bool:
         """施設に入る
@@ -293,7 +292,7 @@ class FacilityController:
                 else:
                     # フォールバック: 直接削除（closeメソッドがある場合）
                     if hasattr(self.window, 'close') and callable(getattr(self.window, 'close', None)):
-                        self.window.close()
+                        cast(Any, self.window).close()
                     logger.warning("WindowManager not available, closing window directly")
                 
                 # ウィンドウインスタンスを削除
@@ -328,7 +327,7 @@ class FacilityController:
             try:
                 # refresh_contentメソッドがある場合のみ呼び出し
                 if hasattr(self.window, 'refresh_content') and callable(getattr(self.window, 'refresh_content', None)):
-                    self.window.refresh_content()
+                    cast(Any, self.window).refresh_content()
             except Exception:
                 logger.error(f"Failed to update window: {self.facility_id}", exc_info=True)
     
