@@ -2,7 +2,7 @@
 
 import pygame
 import pygame_gui
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, cast
 import logging
 from ..service_panel import ServicePanel
 
@@ -48,7 +48,7 @@ class EquipmentManagementPanel(ServicePanel):
                 "equipment_title",
                 "装備管理 - キャラクター選択",
                 title_rect,
-                container=self.container
+                container=cast(pygame_gui.core.UIContainer, self.container)
             )
             
             # キャラクターボタンを作成（縦配置、宿屋パネルサイズに最適化）
@@ -61,7 +61,10 @@ class EquipmentManagementPanel(ServicePanel):
             
             for i, character in enumerate(characters[:max_visible_chars]):
                 equipment = character.get_equipment()
-                summary = equipment.get_equipment_summary()
+                if equipment:
+                    summary = equipment.get_equipment_summary()
+                else:
+                    summary = {'equipped_count': 0}
                 equipped_count = summary['equipped_count']
                 
                 # キャラクター情報テキスト
@@ -72,7 +75,7 @@ class EquipmentManagementPanel(ServicePanel):
                     f"character_{i}",
                     char_text,
                     button_rect,
-                    container=self.container,
+                    container=cast(pygame_gui.core.UIContainer, self.container),
                     object_id=f"#character_button_{i}"
                 )
                 self.character_buttons.append(char_button)
@@ -83,7 +86,7 @@ class EquipmentManagementPanel(ServicePanel):
                 "back_button",
                 "← 戻る",
                 back_rect,
-                container=self.container,
+                container=cast(pygame_gui.core.UIContainer, self.container),
                 object_id="#back_button"
             )
             
@@ -100,7 +103,7 @@ class EquipmentManagementPanel(ServicePanel):
             "no_party_title",
             "装備管理",
             title_rect,
-            container=self.container
+            container=cast(pygame_gui.core.UIContainer, self.container)
         )
         
         info_rect = pygame.Rect(10, 100, self.rect.width - 20, 100)
@@ -108,7 +111,7 @@ class EquipmentManagementPanel(ServicePanel):
             "no_party_info",
             "パーティが編成されていません。\n\n先にパーティを編成してから\n装備管理をご利用ください。",
             info_rect,
-            container=self.container
+            container=cast(pygame_gui.core.UIContainer, self.container)
         )
         
         # 戻るボタン
@@ -117,7 +120,7 @@ class EquipmentManagementPanel(ServicePanel):
             "back_button",
             "← 戻る",
             back_rect,
-            container=self.container,
+            container=cast(pygame_gui.core.UIContainer, self.container),
             object_id="#back_button"
         )
     
@@ -145,7 +148,7 @@ class EquipmentManagementPanel(ServicePanel):
             "back_button",
             "← 戻る",
             back_rect,
-            container=self.container,
+            container=cast(pygame_gui.core.UIContainer, self.container),
             object_id="#back_button"
         )
     
@@ -153,6 +156,9 @@ class EquipmentManagementPanel(ServicePanel):
         """キャラクターの装備詳細を表示"""
         try:
             party = self.controller.service.party
+            if not party:
+                logger.error("Party is None")
+                return
             characters = party.get_all_characters()
             
             if character_index >= len(characters):
@@ -163,7 +169,8 @@ class EquipmentManagementPanel(ServicePanel):
             self.selected_character_index = character_index
             
             # UIをクリア
-            self.ui_element_manager.destroy_all()
+            if self.ui_element_manager:
+                self.ui_element_manager.destroy_all()
             
             # キャラクター詳細UI作成
             self._create_character_detail_ui(character)
@@ -219,7 +226,7 @@ class EquipmentManagementPanel(ServicePanel):
             "back_to_list",
             "← 一覧に戻る",
             back_rect,
-            container=self.container,
+            container=cast(pygame_gui.core.UIContainer, self.container),
             object_id="#back_to_list"
         )
     
@@ -265,7 +272,8 @@ class EquipmentManagementPanel(ServicePanel):
                 # キャラクター詳細から一覧に戻る
                 logger.info("EquipmentManagementPanel: Returning to character list")
                 self.selected_character_index = None
-                self.ui_element_manager.destroy_all()
+                if self.ui_element_manager:
+                    self.ui_element_manager.destroy_all()
                 self._create_ui()
                 return True
             else:
@@ -296,7 +304,8 @@ class EquipmentManagementPanel(ServicePanel):
             # UIを再作成（最新のパーティ情報を反映）
             if self.selected_character_index is None:
                 # キャラクター一覧表示中
-                self.ui_element_manager.destroy_all()
+                if self.ui_element_manager:
+                    self.ui_element_manager.destroy_all()
                 self._create_ui()
             else:
                 # キャラクター詳細表示中
@@ -304,12 +313,14 @@ class EquipmentManagementPanel(ServicePanel):
                 characters = party.get_all_characters()
                 if self.selected_character_index < len(characters):
                     character = characters[self.selected_character_index]
-                    self.ui_element_manager.destroy_all()
+                    if self.ui_element_manager:
+                        self.ui_element_manager.destroy_all()
                     self._create_character_detail_ui(character)
                 else:
                     # 無効なインデックス - 一覧に戻る
                     self.selected_character_index = None
-                    self.ui_element_manager.destroy_all()
+                    if self.ui_element_manager:
+                        self.ui_element_manager.destroy_all()
                     self._create_ui()
                     
             logger.debug("EquipmentManagementPanel: Refreshed UI")

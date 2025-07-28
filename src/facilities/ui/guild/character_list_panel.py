@@ -426,7 +426,7 @@ class CharacterListPanel(ServicePanel):
                             if self.character_list.item_list and len(self.character_list.item_list) > 0:
                                 # item_list が文字列のリストの場合
                                 if isinstance(self.character_list.item_list[0], str):
-                                    index = self.character_list.item_list.index(selection)
+                                    index = cast(List[str], self.character_list.item_list).index(selection)
                                 else:
                                     # item_list が辞書のリストの場合、文字列表現で検索
                                     index = -1

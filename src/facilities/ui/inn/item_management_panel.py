@@ -151,19 +151,20 @@ class ItemManagementPanel(ServicePanel):
         for member in party.members:
             if member.is_alive():
                 member_data = {
-                    "id": member.id,
+                    "id": getattr(member, 'character_id', 'unknown'),
                     "name": member.name,
-                    "level": member.level,
-                    "class": member.char_class
+                    "level": getattr(member, 'level', 1),
+                    "class": getattr(member, 'character_class', 'Unknown')
                 }
                 self.party_members.append(member_data)
-                member_names.append(f"{member.name} Lv{member.level}")
+                member_names.append(f"{member.name} Lv{getattr(member, 'level', 1)}")
                 
                 # メンバーのアイテムを取得（仮実装）
-                self.member_items[member.id] = self._get_member_items(member)
+                self.member_items[getattr(member, 'character_id', 'unknown')] = self._get_member_items(member)
         
         # メンバーリストを更新
-        self.member_list.set_item_list(member_names)
+        if self.member_list:
+            self.member_list.set_item_list(member_names)
     
     def _get_member_items(self, member) -> List[Dict[str, Any]]:
         """メンバーのアイテムを取得（仮実装）"""
@@ -278,7 +279,7 @@ class ItemManagementPanel(ServicePanel):
         # 使用ボタン
         if "use" in self.action_buttons:
             # 使用可能なアイテムの場合のみ有効
-            can_use = has_item and self.selected_item.get("usable", False)
+            can_use = has_item and (self.selected_item.get("usable", False) if self.selected_item else False)
             if can_use:
                 self.action_buttons["use"].enable()
             else:
@@ -287,7 +288,7 @@ class ItemManagementPanel(ServicePanel):
         # 破棄ボタン
         if "discard" in self.action_buttons:
             # 重要アイテム以外は破棄可能
-            can_discard = has_item and self.selected_item.get("type") != "key"
+            can_discard = has_item and (self.selected_item.get("type") != "key" if self.selected_item else False)
             if can_discard:
                 self.action_buttons["discard"].enable()
             else:
@@ -314,14 +315,15 @@ class ItemManagementPanel(ServicePanel):
         if event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
             if event.ui_element == self.member_list:
                 # メンバー選択が変更された
-                selection = self.member_list.get_single_selection()
-                if selection is not None:
-                    self.selected_member_index = self.member_list.item_list.index(selection)
-                    if 0 <= self.selected_member_index < len(self.party_members):
-                        self.selected_member = self.party_members[self.selected_member_index]
-                        self._update_item_list()
-                    else:
-                        self.selected_member = None
+                if self.member_list:
+                    selection = self.member_list.get_single_selection()
+                    if selection is not None and self.member_list.item_list:
+                        self.selected_member_index = self.member_list.item_list.index(selection)
+                        if self.selected_member_index is not None and 0 <= self.selected_member_index < len(self.party_members):
+                            self.selected_member = self.party_members[self.selected_member_index]
+                            self._update_item_list()
+                        else:
+                            self.selected_member = None
                 else:
                     self.selected_member = None
                     self.selected_member_index = None
@@ -331,19 +333,20 @@ class ItemManagementPanel(ServicePanel):
                 
             elif event.ui_element == self.item_list:
                 # アイテム選択が変更された
-                selection = self.item_list.get_single_selection()
-                if selection is not None and self.selected_member:
-                    self.selected_item_index = self.item_list.item_list.index(selection)
-                    member_id = self.selected_member["id"]
-                    items = self.member_items.get(member_id, [])
-                    
-                    if 0 <= self.selected_item_index < len(items):
-                        self.selected_item = items[self.selected_item_index]
+                if self.item_list:
+                    selection = self.item_list.get_single_selection()
+                    if selection is not None and self.selected_member and self.item_list.item_list:
+                        self.selected_item_index = self.item_list.item_list.index(selection)
+                        member_id = self.selected_member["id"]
+                        items = self.member_items.get(member_id, [])
+                        
+                        if self.selected_item_index is not None and 0 <= self.selected_item_index < len(items):
+                            self.selected_item = items[self.selected_item_index]
+                        else:
+                            self.selected_item = None
                     else:
                         self.selected_item = None
-                else:
-                    self.selected_item = None
-                    self.selected_item_index = None
+                        self.selected_item_index = None
                 
                 self._update_action_buttons()
                 self._update_detail_view()
