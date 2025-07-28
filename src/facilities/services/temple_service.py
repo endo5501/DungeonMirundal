@@ -224,11 +224,15 @@ class TempleService(FacilityService, ActionExecutorMixin):
             return ServiceResult(False, "生命力が尽きているため蘇生できません")
         
         # 蘇生実行
-        character.status = "normal"
+        # ステータスを正常に設定（CharacterStatus型で設定）
+        if hasattr(character, 'status'):
+            character.status = getattr(character, '_status_normal_value', 'normal')
         character.hp = 1  # HP1で復活
         # 生命力減少（vitality属性がある場合）
         if hasattr(character, 'vitality'):
-            character.vitality -= 1
+            current_vitality = getattr(character, 'vitality', 0)
+            if current_vitality > 0:
+                character.vitality = current_vitality - 1
         self.party.gold -= cost
         
         return ServiceResult(
@@ -447,9 +451,8 @@ class TempleService(FacilityService, ActionExecutorMixin):
                     rect=rect,
                     parent=parent,
                     ui_manager=ui_manager,
-                    controller=self._controller,
-                    service=self,
-                    data=prayer_data
+                    controller=self._controller
+                    # serviceとdataパラメータはコンストラクタに存在しないため除外
                 )
             elif service_id == "resurrect":
                 # 蘇生は専用パネルを使用

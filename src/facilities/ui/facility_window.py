@@ -2,11 +2,16 @@
 
 import pygame
 import pygame_gui
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, TYPE_CHECKING
 import logging
 from src.ui.window_system.window import Window
 from src.ui.window_system.window_manager import WindowManager
-from ..core.facility_controller import FacilityController
+
+if TYPE_CHECKING:
+    from ..core.facility_controller import FacilityController
+else:
+    # ランタイムでも必要なのでインポート
+    from ..core.facility_controller import FacilityController
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +23,7 @@ class FacilityWindow(Window):
     タブベースのナビゲーションで各サービスにアクセス。
     """
     
-    def __init__(self, window_id: str, controller: FacilityController = None, facility_controller: FacilityController = None, **kwargs):
+    def __init__(self, window_id: str, controller: Optional['FacilityController'] = None, facility_controller: Optional['FacilityController'] = None, **kwargs):
         """初期化
         
         Args:
@@ -31,6 +36,9 @@ class FacilityWindow(Window):
         self.controller = controller or facility_controller
         if not self.controller:
             raise ValueError("FacilityController is required")
+        
+        # 型チェッカーのためのassert
+        assert self.controller is not None, "Controller must not be None after validation"
         
         # ウィンドウを初期化
         super().__init__(window_id, parent=kwargs.get('parent'), modal=False)
@@ -86,8 +94,10 @@ class FacilityWindow(Window):
     
     def _create_main_panel(self) -> None:
         """メインパネルを作成"""
+        # self.rectがNoneの場合はデフォルトのサイズを使用
+        main_rect = self.rect if self.rect is not None else pygame.Rect(0, 0, 800, 600)
         self.main_panel = pygame_gui.elements.UIPanel(
-            relative_rect=self.rect,
+            relative_rect=main_rect,
             manager=self.ui_manager,
             element_id=f"{self.controller.facility_id}_main_panel"
         )
@@ -118,6 +128,10 @@ class FacilityWindow(Window):
             # メニュー項目を取得
             menu_items = self.controller.get_menu_items()
             logger.debug(f"[DEBUG] NavigationPanel: controller.is_active={self.controller.is_active}, menu_items count={len(menu_items)}")
+            
+            # main_panelとui_managerがNoneでないことを保証
+            assert self.main_panel is not None, "main_panel must be initialized before creating navigation"
+            assert self.ui_manager is not None, "ui_manager must be initialized"
             
             self.navigation_panel = NavigationPanel(
                 rect=nav_rect,
@@ -157,7 +171,7 @@ class FacilityWindow(Window):
                 manager=self.ui_manager,
                 container=self.main_panel
             )
-            button.item_id = item.id  # カスタム属性として保存
+            setattr(button, 'item_id', item.id)  # カスタム属性として保存
             self.nav_buttons.append(button)
     
     def _show_initial_service(self) -> None:
@@ -288,6 +302,11 @@ class FacilityWindow(Window):
             # 汎用サービスタイプに応じてパネルを作成
             if menu_item.service_type == "wizard":
                 from .wizard_service_panel import WizardServicePanel
+                # Noneチェック
+                assert self.main_panel is not None, "main_panel must be initialized"
+                assert self.controller is not None, "controller must be initialized"
+                assert self.ui_manager is not None, "ui_manager must be initialized"
+                
                 return WizardServicePanel(
                     rect=content_rect,
                     parent=self.main_panel,

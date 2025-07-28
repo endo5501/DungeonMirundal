@@ -223,11 +223,11 @@ class InnService(FacilityService, ActionExecutorMixin):
         item_name = ""
         
         for member in self.party.members:
-            # member.inventoryが実際のInventoryオブジェクトかチェック
-            if hasattr(member, 'inventory') and member.inventory and hasattr(member.inventory, 'get_all_items'):
-                # get_all_itemsメソッドが呼び出し可能かチェック
-                if callable(getattr(member.inventory, 'get_all_items', None)):
-                    for item in member.inventory.get_all_items():
+            # 新インベントリシステムを使用
+            if hasattr(member, 'get_inventory') and callable(getattr(member, 'get_inventory', None)):
+                member_inventory = member.get_inventory()
+                if member_inventory and hasattr(member_inventory, 'get_all_items'):
+                    for item in member_inventory.get_all_items():
                         if item.id == item_id:
                             item_found = True
                             item_name = item.name
@@ -246,8 +246,8 @@ class InnService(FacilityService, ActionExecutorMixin):
                                 self.storage_manager.add_item(item_id, item_name, quantity)
                                 
                                 # メンバーのインベントリから削除
-                                if hasattr(member.inventory, 'remove_item') and callable(getattr(member.inventory, 'remove_item', None)):
-                                    member.inventory.remove_item(item_id, quantity)
+                                if member_inventory and hasattr(member_inventory, 'remove_item'):
+                                    member_inventory.remove_item(item_id, quantity)
                                 
                                 return ServiceResult(
                                     success=True,
@@ -315,8 +315,10 @@ class InnService(FacilityService, ActionExecutorMixin):
                         self.storage_manager.remove_item(item_id, quantity)
                         
                         # メンバーのインベントリに追加
-                        if hasattr(target_member, 'inventory') and target_member.inventory and hasattr(target_member.inventory, 'add_item') and callable(getattr(target_member.inventory, 'add_item', None)):
-                            target_member.inventory.add_item(item_id, quantity)
+                        if hasattr(target_member, 'get_inventory'):
+                            target_inventory = target_member.get_inventory()
+                            if target_inventory and hasattr(target_inventory, 'add_item'):
+                                target_inventory.add_item(item_id, quantity)
                         
                         return ServiceResult(
                             success=True,
@@ -351,16 +353,18 @@ class InnService(FacilityService, ActionExecutorMixin):
         
         # 全メンバーのアイテムを収集
         for member in self.party.members:
-            # member.inventoryが実際のInventoryオブジェクトかチェック
-            if hasattr(member, 'inventory') and member.inventory and hasattr(member.inventory, 'get_all_items') and callable(getattr(member.inventory, 'get_all_items', None)):
-                for item in member.inventory.get_all_items():
-                    inventory_items.append({
-                        "id": item.id,
-                        "name": item.name,
-                        "quantity": getattr(item, 'quantity', 1),
-                        "stackable": getattr(item, 'stackable', True),
-                        "owner": member.name
-                    })
+            # 新インベントリシステムを使用
+            if hasattr(member, 'get_inventory') and callable(getattr(member, 'get_inventory', None)):
+                member_inventory = member.get_inventory()
+                if member_inventory and hasattr(member_inventory, 'get_all_items'):
+                    for item in member_inventory.get_all_items():
+                        inventory_items.append({
+                            "id": item.id,
+                            "name": item.name,
+                            "quantity": getattr(item, 'quantity', 1),
+                            "stackable": getattr(item, 'stackable', True),
+                            "owner": member.name
+                        })
         
         # アイテムがない場合はデモデータを返す
         if not inventory_items:
@@ -460,8 +464,10 @@ class InnService(FacilityService, ActionExecutorMixin):
             if member.is_alive():
                 member_id = getattr(member, 'id', member.name)
                 items = []
-                if hasattr(member, 'inventory') and member.inventory and hasattr(member.inventory, 'get_all_items') and callable(getattr(member.inventory, 'get_all_items', None)):
-                    items = member.inventory.get_all_items()
+                if hasattr(member, 'get_inventory') and callable(getattr(member, 'get_inventory', None)):
+                    member_inventory = member.get_inventory()
+                    if member_inventory and hasattr(member_inventory, 'get_all_items'):
+                        items = member_inventory.get_all_items()
                 items_by_character[member_id] = {
                     "name": member.name,
                     "items": items
