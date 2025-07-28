@@ -64,7 +64,7 @@ class MagicUI(PartyAwareUIComponent):
     def on_party_changed(self, party: Optional[Party]) -> None:
         """パーティ変更時のコールバック（PartyAwareUIComponent実装）"""
         self.current_party = party
-        if self.magic_window:
+        if self.magic_window and party:
             self.magic_window.set_party(party)
     
     def refresh_ui(self) -> None:
@@ -73,13 +73,13 @@ class MagicUI(PartyAwareUIComponent):
             # 魔法ウィンドウが開いている場合のみ更新
             if self.current_party:
                 self.magic_window.set_party(self.current_party)
-            if self.current_character:
+            if self.current_character and hasattr(self.magic_window, 'set_character'):
                 self.magic_window.set_character(self.current_character)
     
     def set_character(self, character: Character):
         """キャラクターを設定"""
         self.current_character = character
-        if self.magic_window:
+        if self.magic_window and hasattr(self.magic_window, 'set_character'):
             self.magic_window.set_character(character)
         logger.debug(f"キャラクターを設定: {character.name if character else None}")
     

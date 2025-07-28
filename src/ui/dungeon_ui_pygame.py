@@ -252,11 +252,15 @@ class DungeonUIManagerPygame:
             )
             
             # 統合マネージャーで戦闘開始
-            success = battle_integration.start_battle(
-                party=self.current_party,
-                enemies=enemies,
-                battle_context=battle_context
-            )
+            if self.current_party:
+                success = battle_integration.start_battle(
+                    party=self.current_party,
+                    enemies=enemies,
+                    battle_context=battle_context
+                )
+            else:
+                logger.error("戦闘開始時にパーティが見つかりません")
+                success = False
             
             if success:
                 logger.info("戦闘UIを表示（統合版）")
@@ -344,7 +348,7 @@ class DungeonUIManagerPygame:
         try:
             # ダンジョン画面の状態を復元
             self.is_menu_open = False
-            self.current_menu_type = DungeonMenuType.NONE
+            self.current_menu_type = None  # メニューなし状態
             
             logger.info("ダンジョンUIに復帰しました")
             

@@ -189,4 +189,4 @@ class FacilityService(ABC):
             return False
         
         cost = self.get_action_cost(action_id)
-        return self.party.gold >= cost
+        return self.party and self.party.gold >= cost

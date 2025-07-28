@@ -171,7 +171,7 @@ class BossEncounter:
     def _execute_rage_attack(self, party: Party) -> Dict[str, Any]:
         """怒りの攻撃"""
         target = random.choice(party.get_living_characters())
-        if target:
+        if target and self.boss_monster and self.boss_monster.stats:
             damage = (self.boss_monster.stats.attack_bonus * 1.5) + random.randint(5, 15)
             actual_damage = target.take_damage(int(damage))
             return {
@@ -196,7 +196,7 @@ class BossEncounter:
     def _execute_desperate_strike(self, party: Party) -> Dict[str, Any]:
         """渾身の一撃"""
         target = random.choice(party.get_living_characters())
-        if target:
+        if target and self.boss_monster and self.boss_monster.current_hp is not None and self.boss_monster.max_hp is not None and self.boss_monster.stats:
             # 現在HPに比例した威力
             hp_ratio = self.boss_monster.current_hp / self.boss_monster.max_hp
             damage_multiplier = 2.0 - hp_ratio  # HPが少ないほど威力増加
@@ -210,6 +210,9 @@ class BossEncounter:
     
     def _execute_last_stand(self) -> Dict[str, Any]:
         """最後の抵抗"""
+        if not self.boss_monster:
+            return {"message": "最後の抵抗に失敗", "effects": []}
+        
         # 自己回復
         heal_amount = self.boss_monster.max_hp // 4
         self.boss_monster.current_hp = min(
@@ -237,6 +240,9 @@ class BossEncounter:
     
     def _execute_heal_self(self) -> Dict[str, Any]:
         """自己回復"""
+        if not self.boss_monster:
+            return {"message": "自己回復に失敗", "effects": []}
+        
         heal_amount = self.boss_monster.max_hp // 6
         self.boss_monster.current_hp = min(
             self.boss_monster.max_hp,
@@ -259,6 +265,9 @@ class BossEncounter:
     
     def _execute_area_attack(self, party: Party) -> Dict[str, Any]:
         """範囲攻撃"""
+        if not self.boss_monster or not self.boss_monster.stats:
+            return {"message": "範囲攻撃に失敗", "effects": []}
+        
         effects = []
         base_damage = self.boss_monster.stats.attack_bonus + 10  # 基本攻撃力
         

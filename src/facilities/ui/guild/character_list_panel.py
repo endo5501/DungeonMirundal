@@ -417,7 +417,7 @@ class CharacterListPanel(ServicePanel):
         else:
             # 選択されたインデックスを取得
             try:
-                index = self.character_list.item_list.index(selection)
+                index = self.character_list.item_list.index(selection) if self.character_list.item_list else -1
                 if 0 <= index < len(self.characters):
                     self.selected_index = index
                     self.selected_character = self.characters[index]
@@ -540,7 +540,7 @@ HP: {character.get('hp', '?')}/{character.get('max_hp', '?')}
         """選択リスト変更イベントを処理"""
         if event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
             if event.ui_element == self.character_list:
-                selection = self.character_list.get_single_selection()
+                selection = self.character_list.get_single_selection() if hasattr(self.character_list, 'get_single_selection') else None
                 self._handle_character_selection(selection)
                 return True
         

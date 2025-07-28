@@ -1423,6 +1423,10 @@ class OverworldManager:
             'current_location': self.current_location.value if hasattr(self.current_location, 'value') else str(self.current_location)
         }
         
+        if not self.current_party:
+            logger.error("セーブ時にパーティが見つかりません")
+            return
+        
         success = save_manager.save_game(
             party=self.current_party,
             slot_id=slot_id,
@@ -1500,7 +1504,8 @@ class OverworldManager:
                 # ロード完了後、パーティ情報を更新
                 if hasattr(game_manager, 'current_party') and game_manager.current_party:
                     self.current_party = game_manager.current_party
-                    logger.info(f"パーティを復元: {self.current_party.name}")
+                    party_name = getattr(self.current_party, 'name', 'Unknown Party')
+                    logger.info(f"パーティを復元: {party_name}")
                 
                 # ロード完了後、メインメニューに戻る（CharacterStatusBarが再作成される）
                 self._go_back_to_main_menu()

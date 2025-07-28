@@ -222,6 +222,12 @@ class DungeonScene(GameScene):
             return False
         
         try:
+            # ダンジョンマネージャーの存在確認
+            if not self.dungeon_manager:
+                logger.error("ダンジョンマネージャーが利用できません")
+                self._handle_dungeon_entry_failure("ダンジョンマネージャーが利用できません")
+                return False
+            
             # ダンジョン作成・入場
             if dungeon_id not in self.dungeon_manager.active_dungeons:
                 try:

@@ -282,18 +282,20 @@ class MainLoopManager(ManagedComponent):
         GameManagerの_render_frameから抽出。
         """
         # 画面をクリア
-        self.screen.fill((0, 0, 0))
+        if self.screen:
+            self.screen.fill((0, 0, 0))
         
         # シーン描画（ダンジョン3D描画など）- 常に実行
-        if self.scene_manager:
+        if self.scene_manager and self.screen:
             self.scene_manager.render(self.screen)
         
         # 登録された描画ハンドラーの実行
-        for handler in self._render_handlers:
-            try:
-                handler(self.screen)
-            except Exception as e:
-                logger.error(f"Render handler error: {e}")
+        if self.screen:
+            for handler in self._render_handlers:
+                try:
+                    handler(self.screen)
+                except Exception as e:
+                    logger.error(f"Render handler error: {e}")
         
         # WindowManager描画
         try:

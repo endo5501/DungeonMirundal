@@ -451,7 +451,7 @@ class ShopService(FacilityService, ActionExecutorMixin):
         if not sellable_result.success:
             return sellable_result
         
-        sellable_items = sellable_result.data.get("items", [])
+        sellable_items = sellable_result.data.get("items", []) if sellable_result.data else []
         target_item = None
         
         for item_info in sellable_items:
@@ -629,7 +629,7 @@ class ShopService(FacilityService, ActionExecutorMixin):
         if not unidentified_result.success:
             return unidentified_result
         
-        unidentified_items = unidentified_result.data.get("items", [])
+        unidentified_items = unidentified_result.data.get("items", []) if unidentified_result.data else []
         target_item = None
         
         for item_info in unidentified_items:
@@ -667,6 +667,9 @@ class ShopService(FacilityService, ActionExecutorMixin):
             return confirm_result
         
         identify_data = confirm_result.data
+        if not identify_data:
+            return ServiceResult(False, "識別データが取得できませんでした")
+        
         instance_id = identify_data["instance_id"]
         slot_index = identify_data["slot_index"]
         owner_type = identify_data["owner_type"]

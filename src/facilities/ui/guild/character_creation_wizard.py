@@ -567,7 +567,7 @@ class CharacterCreationWizard(WizardServicePanel):
         step = self.steps[self.current_step_index]
         
         # ステップ固有のデータ収集
-        if step.id == "name" and hasattr(self, 'name_input'):
+        if step.id == "name" and hasattr(self, 'name_input') and self.name_input:
             self.wizard_data["name"] = self.name_input.get_text()
         elif step.id == "race":
             # 種族選択はボタンクリックで既に設定済み

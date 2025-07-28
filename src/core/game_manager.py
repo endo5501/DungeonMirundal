@@ -1707,7 +1707,7 @@ class GameManager(EventHandler):
             self.set_game_state("overworld")
             
             # 地上部マネージャーを表示
-            if self.overworld_manager:
+            if self.overworld_manager and self.current_party:
                 self.overworld_manager.enter_overworld(self.current_party)
             
         except Exception as e:
@@ -1715,6 +1715,8 @@ class GameManager(EventHandler):
     
     def _handle_force_retreat(self, reason: str):
         """ダンジョンマネージャーからの強制撤退処理"""
+        from src.character.character import CharacterStatus
+        
         logger.critical(f"ダンジョン強制撤退: {reason}")
         
         if not self.current_party:
@@ -1868,6 +1870,9 @@ class GameManager(EventHandler):
         
         try:
             current_dungeon = self.dungeon_manager.current_dungeon
+            if not current_dungeon or not current_dungeon.player_position:
+                return
+            
             player_pos = current_dungeon.player_position
             current_level = current_dungeon.levels.get(player_pos.level)
             
@@ -1917,8 +1922,12 @@ class GameManager(EventHandler):
             return
         
         try:
-            encounter_id = self.current_boss_encounter["encounter_id"]
-            if self.current_party:
+            encounter_id = self.current_boss_encounter.get("encounter_id")
+            if not encounter_id:
+                logger.error("ボス戦エンカウンターIDが見つかりません")
+                return
+            
+            if self.current_party and self.dungeon_manager:
                 result = self.dungeon_manager.complete_boss_encounter(encounter_id, victory, self.current_party)
             else:
                 logger.error("ボス戦完了処理でパーティが見つかりません")
