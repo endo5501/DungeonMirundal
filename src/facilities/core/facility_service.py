@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from src.character.party import Party
+from .service_result import ServiceResult
 
 
 @dataclass
@@ -189,4 +190,4 @@ class FacilityService(ABC):
             return False
         
         cost = self.get_action_cost(action_id)
-        return self.party and self.party.gold >= cost
+        return bool(self.party and self.party.gold >= cost)

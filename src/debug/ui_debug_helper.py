@@ -139,7 +139,7 @@ class UIDebugHelper:
             else:
                 # LayeredGUIGroupの場合は別の方法でアクセスを試行
                 try:
-                    sprites = list(sprite_group)
+                    sprites = list(cast(Any, sprite_group))
                 except (TypeError, AttributeError):
                     # 反復処理できない場合は空のリストを返す
                     sprites = []
@@ -170,7 +170,7 @@ class UIDebugHelper:
             else:
                 # LayeredGUIGroupの場合は別の方法でアクセスを試行
                 try:
-                    sprites = list(sprite_group)
+                    sprites = list(cast(Any, sprite_group))
                 except (TypeError, AttributeError):
                     # 反復処理できない場合は空のリストを返す
                     sprites = []
@@ -245,7 +245,7 @@ class UIDebugHelper:
             else:
                 # LayeredGUIGroupの場合は別の方法でアクセスを試行
                 try:
-                    sprites = list(sprite_group)
+                    sprites = list(cast(Any, sprite_group))
                 except (TypeError, AttributeError):
                     # 反復処理できない場合は空のリストを返す
                     sprites = []

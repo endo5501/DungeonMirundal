@@ -50,6 +50,9 @@ class EncounterManager:
         self.current_party: Optional[Party] = None
         self.current_dungeon: Optional[DungeonState] = None
         
+        # アクティブエンカウンター
+        self.active_encounters: Dict[str, EncounterEvent] = {}
+        
         # エンカウンターテーブル（属性別）
         self.encounter_tables: Dict[DungeonAttribute, Dict[int, List[str]]] = {}
         self._initialize_encounter_tables()

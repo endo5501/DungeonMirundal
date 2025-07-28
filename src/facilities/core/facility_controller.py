@@ -24,10 +24,15 @@ class FacilityController:
             service_class: サービスクラス
         """
         self.facility_id = facility_id
-        self.service = service_class()  # サービスクラスは引数なしで初期化
+        # サービスクラスのコンストラクタにfacility_idが必要な場合に対応
+        try:
+            self.service = service_class()  # まず引数なしで試行
+        except TypeError:
+            # 引数が必要な場合はfacility_idを渡す
+            self.service = service_class(facility_id)
         
         # サービスにコントローラーの参照を設定（GuildServiceの場合）
-        if hasattr(self.service, 'set_controller'):
+        if hasattr(self.service, 'set_controller') and callable(getattr(self.service, 'set_controller', None)):
             self.service.set_controller(self)
         
         self.window = None  # FacilityWindowは後で設定
@@ -51,7 +56,7 @@ class FacilityController:
         self._game_manager = game_manager
         
         # サービスにGameManagerの参照を設定
-        if hasattr(self.service, 'set_game_manager'):
+        if hasattr(self.service, 'set_game_manager') and callable(getattr(self.service, 'set_game_manager', None)):
             self.service.set_game_manager(game_manager)
             logger.debug(f"[DEBUG] FacilityController: GameManager set to service: {self.facility_id}")
     
@@ -258,7 +263,7 @@ class FacilityController:
             else:
                 # フォールバック: 直接作成・表示
                 if self.window is None:
-                    self.window = FacilityWindow(self)
+                    self.window = FacilityWindow(f"facility_{self.facility_id}")
                 self.window.show()
                 logger.warning("WindowManager not available, creating window directly")
             
@@ -284,7 +289,8 @@ class FacilityController:
                     logger.info(f"FacilityWindow closed via WindowManager: {self.window.window_id}")
                 else:
                     # フォールバック: 直接削除
-                    self.window.close()
+                    if hasattr(self.window, 'close') and callable(getattr(self.window, 'close', None)):
+                        self.window.close()
                     logger.warning("WindowManager not available, closing window directly")
                 
                 # ウィンドウインスタンスを削除
@@ -317,7 +323,8 @@ class FacilityController:
         """ウィンドウを更新"""
         if self.window:
             try:
-                self.window.refresh_content()
+                if hasattr(self.window, 'refresh_content') and callable(getattr(self.window, 'refresh_content', None)):
+                    self.window.refresh_content()
             except Exception:
                 logger.error(f"Failed to update window: {self.facility_id}", exc_info=True)
     

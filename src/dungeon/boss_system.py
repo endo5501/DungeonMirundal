@@ -101,7 +101,7 @@ class BossEncounter:
     
     def check_phase_transition(self) -> Optional[BossPhase]:
         """フェーズ移行チェック"""
-        if not self.boss_monster or not self.boss_monster.max_hp:
+        if not self.boss_monster or not self.boss_monster.max_hp or self.boss_monster.current_hp is None:
             return None
         
         hp_ratio = self.boss_monster.current_hp / self.boss_monster.max_hp

@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Tuple, Optional, Any
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import random
 
 from src.character.party import Party
@@ -31,10 +31,10 @@ class TreasureData:
     mimic_chance: float = 0.0   # ミミック確率
     gold_range: Tuple[int, int] = (0, 0)
     item_count_range: Tuple[int, int] = (0, 1)
-    rarity_weights: Dict[ItemRarity, float] = None
+    rarity_weights: Dict[ItemRarity, float] = field(default_factory=dict)
     
     def __post_init__(self):
-        if self.rarity_weights is None:
+        if not self.rarity_weights:
             self.rarity_weights = {
                 ItemRarity.COMMON: 0.6,
                 ItemRarity.UNCOMMON: 0.3,
@@ -234,7 +234,7 @@ class TreasureSystem:
         # アイテム
         for item in contents["items"]:
             # パーティの共有インベントリに追加
-            if hasattr(party, 'shared_inventory'):
+            if hasattr(party, 'shared_inventory') and party.shared_inventory:
                 party.shared_inventory.add_item(item)
             result["items"].append(item)
             result["contents"].append(f"アイテム「{item.get_name()}」を獲得")

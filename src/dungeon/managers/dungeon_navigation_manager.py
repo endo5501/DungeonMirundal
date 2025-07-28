@@ -293,8 +293,8 @@ class DungeonNavigationManager:
         # 移動可能なセルタイプかチェック
         passable_types = {
             CellType.FLOOR, CellType.STAIRS_UP, CellType.STAIRS_DOWN,
-            CellType.ENTRANCE, CellType.EXIT, CellType.TREASURE_CHEST,
-            CellType.BOSS_ROOM
+            CellType.DOOR, CellType.EXIT, CellType.TREASURE,
+            CellType.BOSS, CellType.SPECIAL
         }
         
         return cell.cell_type in passable_types
