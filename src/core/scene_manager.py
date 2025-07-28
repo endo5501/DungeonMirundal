@@ -405,7 +405,8 @@ class SceneManager:
             self.current_scene = new_scene
             
             # GameManagerの状態も更新
-            self._update_game_manager_state(scene_type, context)
+            if context is not None:
+                self._update_game_manager_state(scene_type, context)
             
             logger.info(f"シーン遷移完了: {scene_type.value}")
         else:

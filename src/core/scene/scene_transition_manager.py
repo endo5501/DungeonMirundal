@@ -306,7 +306,19 @@ class SceneTransitionManager(ManagedComponent):
     
     def get_current_location(self) -> GameLocation:
         """現在のロケーション取得"""
-        return self.current_location
+        if isinstance(self.current_location, GameLocation):
+            return self.current_location
+        else:
+            # 文字列の場合はGameLocationに変換を試行
+            if isinstance(self.current_location, str):
+                try:
+                    return GameLocation(self.current_location)
+                except ValueError:
+                    logger.warning(f"Invalid location string: {self.current_location}, returning OVERWORLD")
+                    return GameLocation.OVERWORLD
+            else:
+                logger.warning(f"Unknown location type: {type(self.current_location)}, returning OVERWORLD")
+                return GameLocation.OVERWORLD
     
     def get_current_state(self) -> str:
         """現在のゲーム状態取得"""
@@ -417,7 +429,10 @@ class SceneTransitionManager(ManagedComponent):
     def _add_transition_history(self, transition_type: str, context: Dict[str, Any]) -> None:
         """遷移履歴の追加"""
         # Enumと文字列の両方に対応
-        from_location_value = self.current_location.value if hasattr(self.current_location, 'value') else str(self.current_location)
+        if isinstance(self.current_location, GameLocation):
+            from_location_value = self.current_location.value
+        else:
+            from_location_value = str(self.current_location)
         history_entry = {
             "type": transition_type,
             "timestamp": self._get_timestamp(),

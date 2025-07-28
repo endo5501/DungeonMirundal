@@ -155,7 +155,7 @@ class Party:
         """パーティ共有インベントリ"""
         self.initialize_party_inventory()
         from src.inventory.inventory import inventory_manager
-        return inventory_manager.get_party_inventory(self.party_id)
+        return inventory_manager.get_party_inventory()
     
     def add_character(self, character: Character, position: Optional[PartyPosition] = None) -> bool:
         """キャラクターをパーティに追加"""
@@ -212,14 +212,6 @@ class Party:
         })
         
         return True
-    
-    def initialize_party_inventory(self):
-        """パーティインベントリを初期化（遅延初期化）"""
-        if not self._party_inventory_initialized:
-            from src.inventory.inventory import inventory_manager
-            inventory_manager.create_party_inventory(self.party_id)
-            self._party_inventory_initialized = True
-            logger.debug(f"パーティインベントリを初期化: {self.party_id}")
     
     def get_party_inventory(self):
         """パーティインベントリを取得"""

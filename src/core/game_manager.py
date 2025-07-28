@@ -1569,7 +1569,7 @@ class GameManager(EventHandler):
             if dropped_items:
                 for item in dropped_items:
                     # パーティインベントリに追加
-                    if hasattr(self.current_party, 'shared_inventory'):
+                    if hasattr(self.current_party, 'shared_inventory') and self.current_party.shared_inventory:
                         self.current_party.shared_inventory.add_item(item)
                     logger.info(f"アイテム「{item.name}」を獲得しました")
             
@@ -1578,6 +1578,8 @@ class GameManager(EventHandler):
     
     def _legacy_handle_combat_defeat(self):
         """戦闘敗北時の処理"""
+        from src.character.character import CharacterStatus
+        
         logger.info("戦闘敗北...")
         
         if not self.current_party:

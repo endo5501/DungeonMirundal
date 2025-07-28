@@ -25,10 +25,10 @@ def debug_cli():
 
 @debug_cli.command(name='ui-dump')
 @click.option('--save', '-s', type=click.Path(), help='保存先ファイルパス')
-@click.option('--format', '-f', type=click.Choice(['json', 'tree']), default='json', help='出力形式')
+@click.option('--format', '-f', 'output_format', type=click.Choice(['json', 'tree']), default='json', help='出力形式')
 @click.option('--filter', '-t', help='特定のタイプのみ表示（例：UIButton）')
 @click.option('--verbose', '-v', is_flag=True, help='詳細情報を表示')
-def ui_dump(save: Optional[str], format: str, filter: Optional[str], verbose: bool):
+def ui_dump(save: Optional[str], output_format: str, filter: Optional[str], verbose: bool):
     """現在のUI階層をダンプ"""
     client = GameDebugClient()
     
@@ -45,34 +45,38 @@ def ui_dump(save: Optional[str], format: str, filter: Optional[str], verbose: bo
             click.echo("Error: Failed to get UI hierarchy from game", err=True)
             sys.exit(1)
         
-        # formatがtreeの場合は、UIDebugHelperでツリー形式に変換
-        if format == 'tree':
+        # output_formatがtreeの場合は、UIDebugHelperでツリー形式に変換
+        if output_format == 'tree':
             ui_helper = UIDebugHelper()
             hierarchy = ui_helper._format_as_tree(hierarchy)
         
-        # フィルタリング
-        if filter and format == 'json':
+        # フィルタリング（hierarchyが辞書の場合のみ）
+        if filter and output_format == 'json' and isinstance(hierarchy, dict):
             filtered_hierarchy = {
-                'windows': [w for w in hierarchy.get('windows', []) if filter in w.get('type', '')],
-                'ui_elements': [e for e in hierarchy.get('ui_elements', []) if filter in e.get('type', '')],
+                'windows': [w for w in hierarchy.get('windows', []) if isinstance(w, dict) and filter in w.get('type', '')],
+                'ui_elements': [e for e in hierarchy.get('ui_elements', []) if isinstance(e, dict) and filter in e.get('type', '')],
                 'window_stack': hierarchy.get('window_stack', [])
             }
             hierarchy = filtered_hierarchy
         
         # 出力形式に応じて表示
-        if format == 'json':
+        if output_format == 'json':
             output = json.dumps(hierarchy, indent=2, ensure_ascii=False)
         else:
             output = hierarchy
         
         # 詳細モードの処理
-        if verbose and format == 'json':
+        if verbose and output_format == 'json':
             # 属性情報を含む完全な出力
             click.echo(output)
-        elif format == 'json':
-            # 詳細情報を含む改良された出力
-            enhanced_hierarchy = _enhance_hierarchy_for_json(hierarchy)
-            output = json.dumps(enhanced_hierarchy, indent=2, ensure_ascii=False)
+        elif output_format == 'json':
+            # 詳細情報を含む改良された出力（hierarchyが辞書の場合のみ）
+            if isinstance(hierarchy, dict):
+                enhanced_hierarchy = _enhance_hierarchy_for_json(hierarchy)
+                output = json.dumps(enhanced_hierarchy, indent=2, ensure_ascii=False)
+            else:
+                # hierarchyが文字列など辞書以外の場合はそのまま表示
+                output = str(hierarchy)
             click.echo(output)
         else:
             click.echo(output)
@@ -81,7 +85,7 @@ def ui_dump(save: Optional[str], format: str, filter: Optional[str], verbose: bo
         if save:
             save_path = Path(save)
             with open(save_path, 'w', encoding='utf-8') as f:
-                if format == 'json':
+                if output_format == 'json':
                     json.dump(hierarchy, f, indent=2, ensure_ascii=False)
                 else:
                     f.write(str(hierarchy))

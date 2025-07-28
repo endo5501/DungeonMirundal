@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Tuple, Optional, Any, Union
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import random
 
 from src.character.party import Party
@@ -36,21 +36,18 @@ class BossData:
     level: int
     max_hp: int
     special_abilities: List[str]
-    phase_triggers: Dict[BossPhase, float] = None  # フェーズ移行HP割合
-    victory_rewards: Dict[str, Any] = None
-    defeat_consequences: Dict[str, Any] = None
+    phase_triggers: Dict[BossPhase, float] = field(default_factory=dict)  # フェーズ移行HP割合
+    victory_rewards: Dict[str, Any] = field(default_factory=dict)
+    defeat_consequences: Dict[str, Any] = field(default_factory=dict)
     
     def __post_init__(self):
-        if self.phase_triggers is None:
+        if not self.phase_triggers:
             self.phase_triggers = {
                 BossPhase.INITIAL: 1.0,
                 BossPhase.ENRAGED: 0.5,
                 BossPhase.DESPERATE: 0.2
             }
-        if self.victory_rewards is None:
-            self.victory_rewards = {}
-        if self.defeat_consequences is None:
-            self.defeat_consequences = {}
+        # default_factoryで初期化されるため、Noneチェックは不要
 
 
 class BossEncounter:
@@ -104,7 +101,7 @@ class BossEncounter:
     
     def check_phase_transition(self) -> Optional[BossPhase]:
         """フェーズ移行チェック"""
-        if not self.boss_monster:
+        if not self.boss_monster or not self.boss_monster.max_hp:
             return None
         
         hp_ratio = self.boss_monster.current_hp / self.boss_monster.max_hp
@@ -210,14 +207,15 @@ class BossEncounter:
     
     def _execute_last_stand(self) -> Dict[str, Any]:
         """最後の抵抗"""
-        if not self.boss_monster:
+        if not self.boss_monster or not self.boss_monster.max_hp:
             return {"message": "最後の抵抗に失敗", "effects": []}
         
         # 自己回復
         heal_amount = self.boss_monster.max_hp // 4
+        current_hp = self.boss_monster.current_hp or 0
         self.boss_monster.current_hp = min(
             self.boss_monster.max_hp,
-            self.boss_monster.current_hp + heal_amount
+            current_hp + heal_amount
         )
         
         return {
@@ -240,13 +238,14 @@ class BossEncounter:
     
     def _execute_heal_self(self) -> Dict[str, Any]:
         """自己回復"""
-        if not self.boss_monster:
+        if not self.boss_monster or not self.boss_monster.max_hp:
             return {"message": "自己回復に失敗", "effects": []}
         
         heal_amount = self.boss_monster.max_hp // 6
+        current_hp = self.boss_monster.current_hp or 0
         self.boss_monster.current_hp = min(
             self.boss_monster.max_hp,
-            self.boss_monster.current_hp + heal_amount
+            current_hp + heal_amount
         )
         
         return {
