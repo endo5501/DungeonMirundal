@@ -6,7 +6,12 @@ CharacterCreationUIFactory クラス
 
 import pygame
 import pygame_gui
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, cast
+
+try:
+    from pygame_gui.core.interfaces import IContainerLikeInterface
+except ImportError:
+    IContainerLikeInterface = Any  # type: ignore
 from .character_creation_types import WizardStep, WizardConfig
 from src.utils.logger import logger
 
@@ -67,7 +72,7 @@ class CharacterCreationUIFactory:
             relative_rect=desc_rect,
             text='キャラクターの名前を入力してください：',
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         # 名前入力フィールド
@@ -75,7 +80,7 @@ class CharacterCreationUIFactory:
         name_input = pygame_gui.elements.UITextEntryLine(
             relative_rect=name_rect,
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         name_input.set_text(character_data.get('name', ''))
         ui_elements['name_input'] = name_input
@@ -86,7 +91,7 @@ class CharacterCreationUIFactory:
             relative_rect=limit_rect,
             text=f'（{self.config.min_name_length}〜{self.config.max_name_length}文字）',
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         return ui_elements
@@ -101,16 +106,16 @@ class CharacterCreationUIFactory:
             relative_rect=desc_rect,
             text='種族を選択してください：',
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         # 種族リスト
         race_rect = pygame.Rect(20, 60, 300, 200)
         race_list = pygame_gui.elements.UISelectionList(
             relative_rect=race_rect,
-            item_list=self.config.races,
+            item_list=[item for item in self.config.races],  # 型変換
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         # 現在の選択を設定
@@ -126,7 +131,7 @@ class CharacterCreationUIFactory:
             relative_rect=desc_rect,
             html_text="種族を選択すると説明が表示されます",
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         return ui_elements
@@ -141,7 +146,7 @@ class CharacterCreationUIFactory:
             relative_rect=desc_rect,
             text='ステータスを生成してください：',
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         # ステータス表示パネル
@@ -149,7 +154,7 @@ class CharacterCreationUIFactory:
         ui_elements['stats_panel'] = pygame_gui.elements.UIPanel(
             relative_rect=stats_rect,
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         # 生成ボタン
@@ -158,7 +163,7 @@ class CharacterCreationUIFactory:
             relative_rect=generate_rect,
             text='生成',
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         # 再生成ボタン（設定で許可されている場合）
@@ -168,7 +173,7 @@ class CharacterCreationUIFactory:
                 relative_rect=reroll_rect,
                 text='再生成',
                 manager=self.ui_manager,
-                container=self.content_container
+                container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
             )
         
         # 合計表示エリア
@@ -177,7 +182,7 @@ class CharacterCreationUIFactory:
             relative_rect=total_rect,
             html_text="ステータスを生成してください",
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         return ui_elements
@@ -192,16 +197,16 @@ class CharacterCreationUIFactory:
             relative_rect=desc_rect,
             text='職業を選択してください：',
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         # 職業リスト
         class_rect = pygame.Rect(20, 60, 300, 200)
         class_list = pygame_gui.elements.UISelectionList(
             relative_rect=class_rect,
-            item_list=self.config.character_classes,
+            item_list=[item for item in self.config.character_classes],  # 型変換
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         # 現在の選択を設定
@@ -217,7 +222,7 @@ class CharacterCreationUIFactory:
             relative_rect=desc_rect,
             html_text="職業を選択すると説明が表示されます",
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         # 推奨表示（ステータスが設定されている場合）
@@ -227,7 +232,7 @@ class CharacterCreationUIFactory:
                 relative_rect=recommend_rect,
                 text="推奨職業: （計算中...）",
                 manager=self.ui_manager,
-                container=self.content_container
+                container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
             )
         
         return ui_elements
@@ -242,7 +247,7 @@ class CharacterCreationUIFactory:
             relative_rect=desc_rect,
             text='以下の内容で作成します：',
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         # キャラクター情報表示
@@ -252,7 +257,7 @@ class CharacterCreationUIFactory:
             relative_rect=info_rect,
             html_text=info_text,
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast(IContainerLikeInterface, self.content_container) if self.content_container else None
         )
         
         return ui_elements

@@ -81,9 +81,15 @@ class OverworldMainWindow(Window):
         """UI要素を作成"""
         if not self.surface:
             # デフォルトサーフェスサイズを設定
-            screen_size = pygame.display.get_surface().get_size()
-            self.surface = pygame.Surface(screen_size)
-            self.rect = self.surface.get_rect()
+            display_surface = pygame.display.get_surface()
+            if display_surface:
+                screen_size = display_surface.get_size()
+                self.surface = pygame.Surface(screen_size)
+                self.rect = self.surface.get_rect()
+            else:
+                # フォールバック値
+                self.surface = pygame.Surface((800, 600))
+                self.rect = pygame.Rect(0, 0, 800, 600)
         
         # WindowManagerのUIManagerを取得（フォント・テーマが設定済み）
         from .window_manager import WindowManager
@@ -133,12 +139,12 @@ class OverworldMainWindow(Window):
                 text=item.get('label', ''),
                 manager=self.ui_manager
             )
-            button.menu_item_data = item  # カスタム属性でデータを保持
+            setattr(button, 'menu_item_data', item)  # カスタム属性でデータを保持
             
             # デバッグ用: ボタンインデックスとショートカットキー
-            button.button_index = i
+            setattr(button, 'button_index', i)
             if i < 9:  # 1-9のキーのみ対応
-                button.shortcut_key = str(i + 1)
+                setattr(button, 'shortcut_key', str(i + 1))
             
             self.menu_items.append(button)
         
@@ -148,8 +154,10 @@ class OverworldMainWindow(Window):
         
         # デバッグ: 作成されたUI要素を確認
         if self.ui_manager and hasattr(self.ui_manager, 'get_root_container'):
-            element_count = len(self.ui_manager.get_root_container().elements)
-            logger.debug(f"OverworldMainWindow UIManager内のUI要素総数: {element_count}")
+            root_container = self.ui_manager.get_root_container()
+            if hasattr(root_container, 'elements'):
+                element_count = len(getattr(root_container, 'elements', []))
+                logger.debug(f"OverworldMainWindow UIManager内のUI要素総数: {element_count}")
             
             # 各ボタンの状態を確認
             for i, button in enumerate(self.menu_items):
