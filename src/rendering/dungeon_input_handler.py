@@ -32,7 +32,7 @@ class DungeonInputAction(Enum):
 
 class MovementResult:
     """移動結果"""
-    def __init__(self, success: bool, message: str = "", effects: Dict[str, Any] = None):
+    def __init__(self, success: bool, message: str = "", effects: Optional[Dict[str, Any]] = None):
         self.success = success
         self.message = message
         self.effects = effects or {}
@@ -148,6 +148,9 @@ class DungeonInputHandler:
         current_pos = cast(PlayerPosition, cast(DungeonState, cast(DungeonManager, self.dungeon_manager).current_dungeon).player_position)
         facing_direction = current_pos.facing
         
+        if not self.dungeon_manager:
+            return MovementResult(False, "ダンジョンマネージャーが利用できません")
+        
         success, move_message = self.dungeon_manager.move_player(facing_direction)
         
         if success:
@@ -176,6 +179,9 @@ class DungeonInputHandler:
         facing_direction = current_pos.facing
         backward_direction = DirectionHelper.get_opposite_direction(facing_direction)
         
+        if not self.dungeon_manager:
+            return MovementResult(False, "ダンジョンマネージャーが利用できません")
+        
         success, move_message = self.dungeon_manager.move_player(backward_direction)
         
         if success:
@@ -197,6 +203,9 @@ class DungeonInputHandler:
         current_pos = cast(PlayerPosition, cast(DungeonState, cast(DungeonManager, self.dungeon_manager).current_dungeon).player_position)
         facing_direction = current_pos.facing
         left_direction = DirectionHelper.get_left_direction(facing_direction)
+        
+        if not self.dungeon_manager:
+            return MovementResult(False, "ダンジョンマネージャーが利用できません")
         
         success, move_message = self.dungeon_manager.move_player(left_direction)
         

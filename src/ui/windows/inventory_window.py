@@ -188,7 +188,10 @@ class InventoryWindow(Window):
         self.ui_elements["inventory_management_button"] = management_button
         
         # 閉じるボタン
-        close_rect = pygame.Rect(self.rect.width - 120, self.rect.height - 50, 100, 35)
+        if self.rect is not None:
+            close_rect = pygame.Rect(self.rect.width - 120, self.rect.height - 50, 100, 35)
+        else:
+            close_rect = pygame.Rect(680, 500, 100, 35)  # デフォルト位置
         close_button = pygame_gui.elements.UIButton(
             relative_rect=close_rect,
             text=config_manager.get_text("common.close"),
@@ -313,7 +316,7 @@ class InventoryWindow(Window):
 
     def _create_action_buttons(self) -> None:
         """操作ボタンを作成"""
-        button_y = self.rect.height - 100
+        button_y = self.rect.height - 100 if self.rect is not None else 450
         
         # 整理ボタン
         sort_rect = pygame.Rect(20, button_y, 100, 35)
@@ -338,7 +341,8 @@ class InventoryWindow(Window):
         self.ui_elements["stats_button"] = stats_button
         
         # 戻るボタン
-        back_rect = pygame.Rect(self.rect.width - 120, button_y, 100, 35)
+        back_x = self.rect.width - 120 if self.rect is not None else 680
+        back_rect = pygame.Rect(back_x, button_y, 100, 35)
         back_button = pygame_gui.elements.UIButton(
             relative_rect=back_rect,
             text="戻る",
@@ -362,11 +366,17 @@ class InventoryWindow(Window):
         if not self.content_panel or self.selected_slot is None:
             return
         
+        if self.current_inventory is None or not hasattr(self.current_inventory, 'slots'):
+            return
+        
         slot = self.current_inventory.slots[self.selected_slot]
         if slot.is_empty():
             return
         
         item_instance = slot.item_instance
+        if item_instance is None:
+            return
+        
         item = item_manager.get_item(item_instance.item_id)
         
         # タイトル
@@ -395,7 +405,16 @@ class InventoryWindow(Window):
         y_offset += 45
         
         # 使用ボタン（使用可能な場合）
-        if item and item.is_usable():
+        is_usable = False
+        if item:
+            if hasattr(item, 'is_usable'):
+                is_usable_attr = getattr(item, 'is_usable')
+                if callable(is_usable_attr):
+                    is_usable = is_usable_attr()
+                else:
+                    is_usable = bool(is_usable_attr)
+        
+        if is_usable:
             use_rect = pygame.Rect(20, y_offset, 150, 35)
             use_button = pygame_gui.elements.UIButton(
                 relative_rect=use_rect,
@@ -493,15 +512,25 @@ class InventoryWindow(Window):
                 self.current_character
             )
             
-            if result.success:
+            # resultがタプルの場合は分解
+            if isinstance(result, tuple):
+                usage_result, message, effects = result
+                success = usage_result.success if hasattr(usage_result, 'success') else bool(usage_result)
+                quantity_consumed = getattr(usage_result, 'quantity_consumed', 1) if hasattr(usage_result, 'quantity_consumed') else 1
+            else:
+                success = getattr(result, 'success', False)
+                message = getattr(result, 'message', '使用結果不明')
+                quantity_consumed = getattr(result, 'quantity_consumed', 1)
+            
+            if success:
                 # インベントリから消費量を減らす
-                if result.quantity_consumed > 0:
-                    self.current_inventory.remove_item(slot_index, result.quantity_consumed)
+                if quantity_consumed > 0 and self.current_inventory is not None:
+                    self.current_inventory.remove_item(slot_index, quantity_consumed)
                 
-                self.show_message(result.message)
+                self.show_message(message)
                 self.refresh_view()
             else:
-                self.show_message(f"使用失敗: {result.message}")
+                self.show_message(f"使用失敗: {message}")
                 
         except Exception as e:
             logger.error(f"アイテム使用エラー: {e}")
@@ -532,6 +561,9 @@ class InventoryWindow(Window):
 
     def drop_item(self, item_instance: ItemInstance, slot_index: int) -> None:
         """アイテムを破棄"""
+        if not self.current_inventory:
+            return
+            
         try:
             quantity = item_instance.quantity
             success = self.current_inventory.remove_item(slot_index, quantity)
@@ -647,9 +679,12 @@ class InventoryWindow(Window):
 
     def _filter_items_by_type(self, item_type: str) -> List[Tuple[int, ItemInstance]]:
         """アイテムタイプでフィルタリング"""
+        if not self.current_inventory or not self.current_inventory.slots:
+            return []
+            
         filtered = []
         for i, slot in enumerate(self.current_inventory.slots):
-            if not slot.is_empty():
+            if not slot.is_empty() and slot.item_instance is not None:
                 item = item_manager.get_item(slot.item_instance.item_id)
                 if item and item.item_type.value == item_type:
                     filtered.append((i, slot.item_instance))
@@ -657,11 +692,14 @@ class InventoryWindow(Window):
 
     def _search_items_by_name(self, search_query: str) -> List[Tuple[int, ItemInstance]]:
         """アイテム名で検索"""
+        if not self.current_inventory or not self.current_inventory.slots:
+            return []
+            
         results = []
         query_lower = search_query.lower()
         
         for i, slot in enumerate(self.current_inventory.slots):
-            if not slot.is_empty():
+            if not slot.is_empty() and slot.item_instance is not None:
                 item = item_manager.get_item(slot.item_instance.item_id)
                 if item and query_lower in item.get_name().lower():
                     results.append((i, slot.item_instance))
@@ -673,19 +711,30 @@ class InventoryWindow(Window):
             return "統計情報がありません"
         
         stats = f"【インベントリ統計】\\n\\n"
-        stats += f"総重量: {self.current_inventory.get_total_weight():.1f}kg\\n"
-        stats += f"最大重量: {self.current_inventory.get_max_weight()}kg\\n"
-        stats += f"アイテム数: {self.current_inventory.get_item_count()}\\n"
-        stats += f"最大アイテム数: {self.current_inventory.get_max_items()}\\n"
+        
+        # 統計情報の取得（Noneチェック付き）
+        try:
+            total_weight = self.current_inventory.get_total_weight()
+            max_weight = self.current_inventory.get_max_weight()
+            item_count = self.current_inventory.get_item_count()
+            max_items = self.current_inventory.get_max_items()
+            
+            stats += f"総重量: {total_weight:.1f}kg\\n"
+            stats += f"最大重量: {max_weight}kg\\n"
+            stats += f"アイテム数: {item_count}\\n"
+            stats += f"最大アイテム数: {max_items}\\n"
+        except AttributeError:
+            stats += "統計情報の取得に失敗しました\\n"
         
         # アイテムタイプ別集計
         type_counts = {}
-        for slot in self.current_inventory.slots:
-            if not slot.is_empty():
-                item = item_manager.get_item(slot.item_instance.item_id)
-                if item:
-                    item_type = item.item_type.value
-                    type_counts[item_type] = type_counts.get(item_type, 0) + 1
+        if self.current_inventory.slots is not None:
+            for slot in self.current_inventory.slots:
+                if not slot.is_empty() and slot.item_instance is not None:
+                    item = item_manager.get_item(slot.item_instance.item_id)
+                    if item:
+                        item_type = item.item_type.value
+                        type_counts[item_type] = type_counts.get(item_type, 0) + 1
         
         if type_counts:
             stats += "\\n【アイテムタイプ別】\\n"

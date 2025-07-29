@@ -2,7 +2,7 @@
 
 import math
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Optional
 
 from src.dungeon.dungeon_manager import PlayerPosition
 from src.dungeon.dungeon_generator import Direction
@@ -25,7 +25,7 @@ class CameraState:
 class Camera:
     """ダンジョン探索用カメラ"""
     
-    def __init__(self, direction_config: DirectionConfig = None):
+    def __init__(self, direction_config: Optional[DirectionConfig] = None):
         self.direction_config = direction_config or DirectionConfig()
         self.state = CameraState()
         

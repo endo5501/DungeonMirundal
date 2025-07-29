@@ -61,9 +61,9 @@ class InnStorage:
     
     def _can_stack_with_slot(self, slot: InventorySlot, item_instance: ItemInstance) -> bool:
         """スロットとアイテムがスタック可能かチェック"""
-        return (not slot.is_empty() and 
-                slot.item_instance and
-                slot.item_instance.item_id == item_instance.item_id and
+        if slot.is_empty() or not slot.item_instance:
+            return False
+        return (slot.item_instance.item_id == item_instance.item_id and
                 slot.item_instance.identified == item_instance.identified)
     
     def _try_add_to_new_slot(self, item_instance: ItemInstance) -> bool:

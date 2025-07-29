@@ -306,7 +306,7 @@ class OverworldManager:
             
             # 既存のOverworldMainWindowがあるかチェック
             existing_window = self.window_manager.get_window('overworld_main')
-            if existing_window:
+            if existing_window and isinstance(existing_window, OverworldMainWindow):
                 logger.info("既存のOverworldMainWindowを再利用します")
                 self.main_window = existing_window
                 # メッセージハンドラーを設定
@@ -318,12 +318,17 @@ class OverworldManager:
                 self.window_manager.show_window(self.main_window, push_to_stack=True)
             else:
                 # OverworldMainWindowを作成（WindowManager経由で登録）
-                self.main_window = self.window_manager.create_window(
+                new_window = self.window_manager.create_window(
                     OverworldMainWindow, 'overworld_main', config=menu_config
                 )
                 
-                # メッセージハンドラーを設定
-                self.main_window.message_handler = self.handle_main_menu_message
+                if isinstance(new_window, OverworldMainWindow):
+                    self.main_window = new_window
+                    # メッセージハンドラーを設定
+                    self.main_window.message_handler = self.handle_main_menu_message
+                else:
+                    logger.error("OverworldMainWindowの作成に失敗")
+                    return
                 
                 # ウィンドウを表示
                 self.window_manager.show_window(self.main_window, push_to_stack=True)
@@ -388,11 +393,13 @@ class OverworldManager:
             'party': self.current_party,
         }
     
-    def handle_main_menu_message(self, message_type: str, data: dict) -> bool:
+    def handle_main_menu_message(self, message_type: str, data: Optional[Dict[str, Any]] = None) -> bool:
         """メインメニューメッセージ処理（OverworldMainWindow用）"""
         logger.debug(f"handle_main_menu_message: {message_type}, data: {data}")
         
         if message_type == 'menu_item_selected':
+            if data is None:
+                return False
             item_id = data.get('item_id')
             facility_id = data.get('facility_id')
             
@@ -401,7 +408,8 @@ class OverworldManager:
                 return self._enter_facility_new(facility_id)
             elif item_id == 'dungeon_entrance':
                 # ダンジョン入場
-                return self._enter_dungeon()
+                self._enter_dungeon()
+                return True
             elif item_id in ['party_status', 'save_game', 'load_game']:
                 # 設定メニューから選択された項目
                 if item_id == 'party_status':
@@ -413,7 +421,8 @@ class OverworldManager:
         
         elif message_type == 'settings_menu_requested':
             # ESCキーでの設定メニュー表示
-            return self._show_settings_menu_window()
+            self._show_settings_menu_window()
+            return True
         
         elif message_type == 'party_overview_requested':
             # パーティ全体情報表示
@@ -421,16 +430,20 @@ class OverworldManager:
         
         elif message_type == 'character_details_requested':
             # キャラクター詳細表示
+            if data is None:
+                return False
             character = data.get('character')
             return self._show_character_details_window(character)
         
         elif message_type == 'save_load_requested':
             # セーブ・ロード処理
+            if data is None:
+                return False
             operation = data.get('operation')
             slot_id = data.get('slot_id')
-            if operation == 'save':
+            if operation == 'save' and slot_id is not None:
                 return self._save_to_slot(slot_id)
-            elif operation == 'load':
+            elif operation == 'load' and slot_id is not None:
                 return self._load_selected_save(slot_id)
         
         elif message_type == 'back_requested':
@@ -460,7 +473,7 @@ class OverworldManager:
         try:
             if self.window_manager:
                 # スロット選択画面を閉じてメインメニューに戻る
-                if hasattr(self, 'main_window') and self.main_window:
+                if hasattr(self, 'main_window') and self.main_window and hasattr(self.main_window, '_go_back'):
                     # OverworldMainWindowの_go_backメソッドでスロット選択画面を閉じる
                     self.main_window._go_back()
                 
@@ -477,7 +490,7 @@ class OverworldManager:
                 return True
             
             # フォールバック: OverworldMainWindowを使用
-            if hasattr(self, 'main_window') and self.main_window:
+            if hasattr(self, 'main_window') and self.main_window and hasattr(self.main_window, '_go_back'):
                 return self.main_window._go_back()
             
             return False
@@ -510,7 +523,7 @@ class OverworldManager:
                 'party': self.current_party
             }
             
-            if hasattr(self, 'main_window') and self.main_window:
+            if hasattr(self, 'main_window') and self.main_window and hasattr(self.main_window, 'show_menu'):
                 from src.ui.window_system.overworld_main_window import OverworldMenuType
                 self.main_window.show_menu(OverworldMenuType.PARTY_STATUS, party_config)
                 return True
@@ -539,7 +552,7 @@ class OverworldManager:
                     logger.info("GameMenuWindowをスタックから削除しました")
                 
                 # セーブスロット選択のOverworldMainWindowを表示
-                if hasattr(self, 'main_window') and self.main_window:
+                if hasattr(self, 'main_window') and self.main_window and hasattr(self.main_window, 'show_menu'):
                     from src.ui.window_system.overworld_main_window import OverworldMenuType
                     self.main_window.show_menu(OverworldMenuType.SAVE_LOAD, save_config)
                     logger.info("WindowManagerでセーブスロット選択画面を表示")
@@ -572,7 +585,7 @@ class OverworldManager:
                     logger.info("GameMenuWindowをスタックから削除しました")
                 
                 # ロードスロット選択のOverworldMainWindowを表示
-                if hasattr(self, 'main_window') and self.main_window:
+                if hasattr(self, 'main_window') and self.main_window and hasattr(self.main_window, 'show_menu'):
                     from src.ui.window_system.overworld_main_window import OverworldMenuType
                     self.main_window.show_menu(OverworldMenuType.SAVE_LOAD, load_config)
                     logger.info("WindowManagerでロードスロット選択画面を表示")
@@ -594,7 +607,7 @@ class OverworldManager:
             # OverworldMainWindowで設定メニューを表示
             settings_config = self._create_settings_menu_config()
             
-            if hasattr(self, 'main_window') and self.main_window:
+            if hasattr(self, 'main_window') and self.main_window and hasattr(self.main_window, 'show_menu'):
                 from src.ui.window_system.overworld_main_window import OverworldMenuType
                 self.main_window.show_menu(OverworldMenuType.SETTINGS, settings_config)
                 return True
@@ -775,7 +788,7 @@ class OverworldManager:
             'max_slots': MAX_SAVE_SLOTS
         }
     
-    def _show_settings_menu_window(self):
+    def _show_game_menu_window(self):
         """ゲームメニューをWindowManagerで表示"""
         try:
             from src.ui.window_system.game_menu_window import GameMenuWindow
@@ -800,7 +813,8 @@ class OverworldManager:
                 )
                 logger.debug("新しいゲームメニューウィンドウを作成しました")
             
-            game_menu_window.message_handler = self.handle_game_menu_message
+            if hasattr(game_menu_window, 'message_handler'):
+                setattr(game_menu_window, 'message_handler', self.handle_game_menu_message)
             self.window_manager.show_window(game_menu_window, push_to_stack=True)
             
         except ImportError:
@@ -808,7 +822,7 @@ class OverworldManager:
             logger.warning("SettingsWindow未実装、レガシー設定メニューを使用")
             self.show_settings_menu()
     
-    def handle_game_menu_message(self, message_type: str, data: Dict[str, Any] = None) -> bool:
+    def handle_game_menu_message(self, message_type: str, data: Optional[Dict[str, Any]] = None) -> bool:
         """ゲームメニューメッセージを処理"""
         if data is None:
             data = {}
@@ -840,7 +854,7 @@ class OverworldManager:
         logger.warning(f"未処理のゲームメニューメッセージタイプ: {message_type}")
         return False
     
-    def handle_settings_message(self, message_type: str, data: Dict[str, Any] = None) -> bool:
+    def handle_settings_message(self, message_type: str, data: Optional[Dict[str, Any]] = None) -> bool:
         """詳細設定メッセージを処理"""
         if data is None:
             data = {}
@@ -877,8 +891,8 @@ class OverworldManager:
             self.current_party = None
             
             # GameManagerの新規ゲーム開始処理を呼び出し
-            if hasattr(game_manager, 'start_new_game'):
-                game_manager.start_new_game()
+            if hasattr(game_manager, 'start_new_game') and callable(getattr(game_manager, 'start_new_game', None)):
+                getattr(game_manager, 'start_new_game')()
                 logger.info("新規ゲームが開始されました")
             else:
                 # フォールバック: 基本的なリセット処理
@@ -946,7 +960,8 @@ class OverworldManager:
                 )
                 logger.info("新しい設定ウィンドウを作成しました")
             
-            settings_window.message_handler = self.handle_settings_message
+            if hasattr(settings_window, 'message_handler'):
+                setattr(settings_window, 'message_handler', self.handle_settings_message)
             logger.info("設定ウィンドウにメッセージハンドラを設定")
             self.window_manager.show_window(settings_window, push_to_stack=True)
             logger.info("設定ウィンドウを表示しました")
@@ -963,9 +978,11 @@ class OverworldManager:
         """ダンジョン選択をWindowManagerで表示"""
         # TODO: DungeonSelectionWindowの実装後に追加
         logger.info("ダンジョン選択ウィンドウ（実装予定）")
-        if self.dungeon_selection_ui:
+        if hasattr(self, 'dungeon_selection_ui') and getattr(self, 'dungeon_selection_ui', None) is not None:
             # レガシー実装を使用
-            self.dungeon_selection_ui.show()
+            dungeon_ui = getattr(self, 'dungeon_selection_ui')
+            if hasattr(dungeon_ui, 'show'):
+                dungeon_ui.show()
     
     def _handle_overworld_exit(self) -> bool:
         """オーバーワールド退場処理"""
@@ -1000,56 +1017,13 @@ class OverworldManager:
     
     def show_settings_menu(self):
         """設定画面の表示（ESCキー用）"""
-        if self.location_menu:
-            ui_manager.hide_menu(self.location_menu.menu_id)
-        
-        # ロケーションメニュー作成（UIMenu削除済み - WindowSystem移行）
-        # self.location_menu = UIMenu("settings_menu", config_manager.get_text("menu.settings"))  # 削除
-        self.settings_menu_active = True
-        
-        # パーティ状況確認
-        self.location_menu.add_menu_item(
-            config_manager.get_text("menu.party_status"),
-            self._show_party_status
-        )
-        
-        # セーブ・ロード
-        self.location_menu.add_menu_item(
-            config_manager.get_text("menu.save_game"),
-            self._show_save_menu
-        )
-        
-        self.location_menu.add_menu_item(
-            config_manager.get_text("menu.load_game"),
-            self._show_load_menu
-        )
-        
-        # ゲーム設定
-        self.location_menu.add_menu_item(
-            config_manager.get_text("menu.game_settings"),
-            self._show_game_settings
-        )
-        
-        # ゲーム終了
-        self.location_menu.add_menu_item(
-            config_manager.get_text("menu.exit"),
-            self._exit_game
-        )
-        
-        # 戻る
-        self.location_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            self._back_to_main_menu
-        )
-        
-        ui_manager.add_menu(self.location_menu)
-        ui_manager.show_menu(self.location_menu.menu_id, modal=True)
-        
-        # メインメニューを隠す
-        if self.main_menu:
-            ui_manager.hide_menu(self.main_menu.menu_id)
-        
-        logger.info("設定画面を表示しました")
+        # WindowSystemベースの実装を使用
+        try:
+            self._show_settings_menu_window()
+        except Exception as e:
+            logger.error(f"設定メニュー表示エラー: {e}")
+            # フォールバック: 基本的なメッセージ表示
+            logger.info("設定機能は準備中です")
     
     def _enter_facility_new(self, facility_id: str):
         """施設に入る（新システム）"""
@@ -1098,7 +1072,7 @@ class OverworldManager:
             except Exception as hide_error:
                 logger.warning(f"設定メニューの非表示処理でエラー: {hide_error}")
     
-    def _back_to_main_menu(self):
+    def _back_to_main_menu_legacy(self):
         """メインメニューに戻る（新Window System対応）"""
         # WindowSystemでのメニュー処理
         self.settings_menu_active = False
@@ -1113,38 +1087,12 @@ class OverworldManager:
         if not self.current_party:
             return
         
-        # 詳細パーティ状況メニューを表示
-        # パーティメニュー作成（UIMenu削除済み - WindowSystem移行）
-        # party_menu = UIMenu("party_status_menu", "パーティ状況")  # 削除
-        logger.info("パーティ状況はWindowSystemメニューで実装済み")
-        return  # UIMenuベースの実装は削除
-        
-        # パーティ全体情報
-        party_menu.add_menu_item(
-            "パーティ全体情報",
-            self._show_party_overview
-        )
-        
-        # 各キャラクターの詳細情報
-        for i, character in enumerate(self.current_party.get_all_characters()):
-            char_info = f"{character.name} (Lv.{character.experience.level})"
-            party_menu.add_menu_item(
-                char_info,
-                self._show_character_details,
-                [character]
-            )
-        
-        party_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            lambda: self._back_to_settings_menu(from_party_status=True)
-        )
-        
-        ui_manager.add_menu(party_menu)
-        ui_manager.show_menu(party_menu.menu_id, modal=True)
-        
-        # 設定メニューを隠す
-        if self.location_menu:
-            ui_manager.hide_menu(self.location_menu.menu_id)
+        # WindowSystemベースの実装を使用
+        try:
+            self._show_party_status_window()
+        except Exception as e:
+            logger.error(f"パーティ状況表示エラー: {e}")
+            logger.info("パーティ状況表示は準備中です")
     
     def _format_party_status(self) -> str:
         """パーティ状況をフォーマット"""
@@ -1324,7 +1272,7 @@ class OverworldManager:
             logger.error(f"キャラクター詳細表示エラー: {e}")
             self._show_error_dialog("エラー", f"キャラクター情報の表示中にエラーが発生しました")
     
-    def _back_to_settings_menu(self):
+    def _back_to_settings_menu_legacy(self):
         """設定メニューに戻る（新Window System対応）"""
         # WindowSystemでのメニュー処理
         try:
@@ -1335,44 +1283,15 @@ class OverworldManager:
     def _show_save_menu(self):
         """セーブスロット選択メニュー表示"""
         if not self.current_party:
-            self._show_error_dialog("エラー", "セーブするパーティがありません")
+            logger.error("セーブするパーティがありません")
             return
         
-        # 現在のセーブスロット状況を取得
-        save_slots = save_manager.get_save_slots()
-        save_slot_info = {slot.slot_id: slot for slot in save_slots}
-        
-        # セーブスロット選択メニューを作成
-        # セーブメニュー作成（UIMenu削除済み - WindowSystem移行）
-        # save_menu = UIMenu("save_slot_menu", "セーブスロット選択")  # 削除
-        logger.info("セーブスロット選択はWindowSystemメニューで実装済み")
-        return  # UIMenuベースの実装は削除
-        
-        # セーブスロットを表示
-        for slot_id in range(SAVE_SLOT_RANGE_START, SAVE_SLOT_RANGE_END):
-            if slot_id in save_slot_info:
-                slot = save_slot_info[slot_id]
-                slot_text = f"スロット {slot_id}: {slot.name} (Lv.{slot.party_level}) [{slot.last_saved.strftime('%m/%d %H:%M')}]"
-            else:
-                slot_text = f"スロット {slot_id}: [空]"
-            
-            save_menu.add_menu_item(
-                slot_text,
-                self._save_to_slot,
-                [slot_id]
-            )
-        
-        save_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            lambda: self._back_to_settings_menu(from_save_menu=True)
-        )
-        
-        # 現在のメニューを隠してセーブメニューを表示
-        if self.location_menu:
-            ui_manager.hide_menu(self.location_menu.menu_id)
-        
-        ui_manager.add_menu(save_menu)
-        ui_manager.show_menu(save_menu.menu_id, modal=True)
+        # WindowSystemベースの実装を使用
+        try:
+            self._show_save_menu_window()
+        except Exception as e:
+            logger.error(f"セーブメニュー表示エラー: {e}")
+            logger.info("セーブ機能は準備中です")
     
     def _save_to_slot(self, slot_id: int) -> bool:
         """指定されたスロットにセーブ - WindowSystem対応版"""
@@ -1443,38 +1362,12 @@ class OverworldManager:
     
     def _show_load_menu(self):
         """ロードメニュー表示"""
-        # セーブスロット一覧を取得
-        save_slots = save_manager.get_save_slots()
-        
-        if not save_slots:
-            self._show_error_dialog("ロードエラー", "利用可能なセーブデータがありません")
-            return
-        
-        # セーブデータ選択メニューを作成
-        # ロードメニュー作成（UIMenu削除済み - WindowSystem移行）
-        # load_menu = UIMenu("load_game_menu", "セーブデータ選択")  # 削除
-        logger.info("セーブデータ選択はWindowSystemメニューで実装済み")
-        return  # UIMenuベースの実装は削除
-        
-        for slot in save_slots:
-            slot_info = f"スロット {slot.slot_id}: {slot.name} (Lv.{slot.party_level})"
-            load_menu.add_menu_item(
-                slot_info,
-                self._load_selected_save,
-                [slot.slot_id]
-            )
-        
-        load_menu.add_menu_item(
-            config_manager.get_text("menu.back"),
-            lambda: self._back_to_settings_menu(from_load_menu=True)
-        )
-        
-        # 現在のメニューを隠してロードメニューを表示
-        if self.location_menu:
-            ui_manager.hide_menu(self.location_menu.menu_id)
-        
-        ui_manager.add_menu(load_menu)
-        ui_manager.show_menu(load_menu.menu_id, modal=True)
+        # WindowSystemベースの実装を使用
+        try:
+            self._show_load_menu_window()
+        except Exception as e:
+            logger.error(f"ロードメニュー表示エラー: {e}")
+            logger.info("ロード機能は準備中です")
     
     def _load_selected_save(self, slot_id: int) -> bool:
         """選択されたセーブデータをロード - WindowSystem対応版"""
@@ -1552,38 +1445,31 @@ class OverworldManager:
             current_window = self.window_manager.get_active_window()
             
             # OverworldMainWindowの場合、CharacterStatusBarを更新
-            if hasattr(current_window, 'character_status_bar') and current_window.character_status_bar:
-                current_window.character_status_bar.set_party(self.current_party)
-                logger.info(f"レガシー更新: CharacterStatusBarを更新: {self.current_party.name} ({len(self.current_party.characters)}人)")
+            if (hasattr(current_window, 'character_status_bar') and 
+                getattr(current_window, 'character_status_bar', None) is not None):
+                character_status_bar = getattr(current_window, 'character_status_bar')
+                if hasattr(character_status_bar, 'set_party'):
+                    character_status_bar.set_party(self.current_party)
+                if self.current_party and hasattr(self.current_party, 'name') and hasattr(self.current_party, 'characters'):
+                    logger.info(f"レガシー更新: CharacterStatusBarを更新: {self.current_party.name} ({len(self.current_party.characters)}人)")
                 
             # パーティステータス更新も実行
-            if hasattr(current_window, 'update_party_status'):
-                current_window.update_party_status()
+            if hasattr(current_window, 'update_party_status') and callable(getattr(current_window, 'update_party_status', None)):
+                getattr(current_window, 'update_party_status')()
                 
         except Exception as e:
             logger.error(f"レガシーUI更新エラー: {e}")
     
     def _back_to_settings_menu(self, from_party_status=False, from_save_menu=False, from_load_menu=False):
-        """設定メニューに戻る"""
-        # パーティ状況メニューからの場合
-        if from_party_status:
-            ui_manager.hide_menu("party_status_menu")
-            # ui_manager.unregister_element("party_status_menu") - 不要
-        elif from_save_menu:
-            # セーブメニューからの場合
-            ui_manager.hide_menu("save_slot_menu")
-            # ui_manager.unregister_element("save_slot_menu") - 不要
-        else:
-            # ロードメニューからの場合
-            ui_manager.hide_menu("load_game_menu")
-            # ui_manager.unregister_element("load_game_menu") - 不要
-        
-        # 設定メニューを再表示（メインメニューは表示しない）
-        if self.location_menu:
-            ui_manager.show_menu(self.location_menu.menu_id)
-        else:
-            # 設定メニューが存在しない場合は新規作成
-            self.show_settings_menu()
+        """設定メニューに戻る（WindowSystem対応）"""
+        try:
+            # WindowSystemでのメニュー処理
+            if self.window_manager:
+                self.window_manager.go_back()
+            else:
+                logger.warning("設定メニューに戻る: WindowManagerがnull")
+        except Exception as e:
+            logger.error(f"設定メニュー戻りエラー: {e}")
     
     def _enter_dungeon(self):
         """ダンジョンに入る"""
@@ -1630,7 +1516,19 @@ class OverworldManager:
                 if self.window_manager:
                     # OverworldMainWindowが存在する場合は、UI要素を再表示
                     overworld_window = None
-                    for window in self.window_manager.window_stack._windows:
+                    # WindowStackから安全にWindow一覧を取得
+                    windows = []
+                    if hasattr(self.window_manager, 'get_all_windows') and callable(getattr(self.window_manager, 'get_all_windows', None)):
+                        windows = self.window_manager.get_all_windows()
+                    elif hasattr(self.window_manager, 'window_stack') and hasattr(self.window_manager.window_stack, '_windows'):
+                        windows = getattr(self.window_manager.window_stack, '_windows', [])
+                    # フォールバック: get_active_windowで現在のWindowのみ取得
+                    elif hasattr(self.window_manager, 'get_active_window'):
+                        active_window = self.window_manager.get_active_window()
+                        if active_window:
+                            windows = [active_window]
+                    
+                    for window in windows:
                         if hasattr(window, 'window_id') and window.window_id == 'overworld_main':
                             overworld_window = window
                             break
@@ -1755,10 +1653,8 @@ class OverworldManager:
         error_title = config_manager.get_text("dungeon.entrance_error_title", "ダンジョン入場エラー")
         error_prefix = config_manager.get_text("dungeon.entrance_error_prefix", "ダンジョンに入場できませんでした:")
         
-        ui_manager.show_dialog(
-            title=error_title,
-            message=f"{error_prefix}\n{error_message}"
-        )
+        # TODO: ui_managerをWindowSystemのダイアログで置き換える
+        logger.error(f"{error_title}: {error_prefix}\n{error_message}")
     
     def _emergency_overworld_reset(self):
         """緊急地上部リセット処理"""

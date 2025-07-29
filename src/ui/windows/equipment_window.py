@@ -101,7 +101,10 @@ class EquipmentWindow(Window):
         elif self.current_mode == EquipmentViewMode.SLOT_OPTIONS:
             self.create_slot_options()
         elif self.current_mode == EquipmentViewMode.EQUIPMENT_SELECTION:
-            self.create_equipment_selection(self.selected_slot)
+            if self.selected_slot is not None:
+                self.create_equipment_selection(self.selected_slot)
+            else:
+                logger.warning("No slot selected for equipment selection")
         # 他のモードも必要に応じて追加
 
     def set_party(self, party: Party) -> None:
@@ -138,8 +141,11 @@ class EquipmentWindow(Window):
         y_offset = 60
         for i, character in enumerate(self.current_party.get_all_characters()):
             equipment = character.get_equipment()
-            summary = equipment.get_equipment_summary()
-            equipped_count = summary['equipped_count']
+            if equipment is not None:
+                summary = equipment.get_equipment_summary()
+                equipped_count = summary['equipped_count']
+            else:
+                equipped_count = 0
             
             char_info = f"{character.name} ({equipped_count}/4)"
             
@@ -165,7 +171,10 @@ class EquipmentWindow(Window):
         self.ui_elements["party_stats_button"] = stats_button
         
         # 閉じるボタン
-        close_rect = pygame.Rect(self.rect.width - 120, self.rect.height - 50, 100, 35)
+        if self.rect is not None:
+            close_rect = pygame.Rect(self.rect.width - 120, self.rect.height - 50, 100, 35)
+        else:
+            close_rect = pygame.Rect(680, 500, 100, 35)  # デフォルト位置
         close_button = pygame_gui.elements.UIButton(
             relative_rect=close_rect,
             text=config_manager.get_text("common.close"),
@@ -206,7 +215,10 @@ class EquipmentWindow(Window):
         # 装備スロット表示
         y_offset = 60
         for i, slot in enumerate(EquipmentSlot):
-            item_instance = self.current_equipment.get_equipped_item(slot)
+            if self.current_equipment is not None:
+                item_instance = self.current_equipment.get_equipped_item(slot)
+            else:
+                item_instance = None
             slot_text = self._get_slot_display_text(slot, item_instance)
             
             button_rect = pygame.Rect(20, y_offset + i * 40, 400, 35)
@@ -275,7 +287,10 @@ class EquipmentWindow(Window):
         self.ui_elements["title"] = title
         
         y_offset = 60
-        item_instance = self.current_equipment.get_equipped_item(self.selected_slot)
+        if self.current_equipment is not None and self.selected_slot is not None:
+            item_instance = self.current_equipment.get_equipped_item(self.selected_slot)
+        else:
+            item_instance = None
         
         if item_instance:
             # 装備中の場合のオプション
@@ -372,8 +387,9 @@ class EquipmentWindow(Window):
                 self.ui_elements[f"item_button_{inventory_index}"] = item_button
         
         # キャンセルボタン
+        cancel_y = self.rect.height - 80 if self.rect is not None else 470
         cancel_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect(20, self.rect.height - 80, 100, 35),
+            relative_rect=pygame.Rect(20, cancel_y, 100, 35),
             text="キャンセル",
             manager=self.ui_manager,
             container=self.content_panel,
@@ -387,26 +403,37 @@ class EquipmentWindow(Window):
             return
         
         # 装備試行
+        character_class = self.current_character.character_class
+        if hasattr(character_class, 'value'):
+            class_value = character_class.value
+        elif character_class is not None:
+            class_value = str(character_class)
+        else:
+            class_value = "unknown"
         success, reason, replaced_item = self.current_equipment.equip_item(
-            item_instance, slot, self.current_character.character_class.value
+            item_instance, slot, class_value
         )
         
         if success:
             # インベントリからアイテムを除去
             inventory = self.current_character.get_inventory()
-            inventory.remove_item(inventory_index, 1)
+            if inventory is not None:
+                inventory.remove_item(inventory_index, 1)
             
             # 置き換えられたアイテムがあればインベントリに追加
-            if replaced_item:
+            if replaced_item and inventory is not None:
                 if not inventory.add_item(replaced_item):
                     self.show_message("インベントリに空きがないため、外した装備が失われました")
+            elif replaced_item:
+                self.show_message("インベントリが利用できないため、外した装備が失われました")
             
             item = item_manager.get_item(item_instance.item_id)
             item_name = item.get_name() if item and item_instance.identified else "アイテム"
             self.show_message(f"{item_name}を装備しました")
             
             # キャラクターステータスを更新
-            self.current_character.update_derived_stats()
+            if hasattr(self.current_character, 'update_derived_stats') and callable(getattr(self.current_character, 'update_derived_stats', None)):
+                getattr(self.current_character, 'update_derived_stats')()
             
             # 画面を更新
             self.refresh_view()
@@ -422,13 +449,14 @@ class EquipmentWindow(Window):
         
         if item_instance:
             inventory = self.current_character.get_inventory()
-            if inventory.add_item(item_instance):
+            if inventory is not None and inventory.add_item(item_instance):
                 item = item_manager.get_item(item_instance.item_id)
                 item_name = item.get_name() if item and item_instance.identified else "アイテム"
                 self.show_message(f"{item_name}の装備を解除しました")
                 
                 # キャラクターステータスを更新
-                self.current_character.update_derived_stats()
+                if hasattr(self.current_character, 'update_derived_stats') and callable(getattr(self.current_character, 'update_derived_stats', None)):
+                    getattr(self.current_character, 'update_derived_stats')()
                 
                 # 画面を更新
                 self.refresh_view()
@@ -464,8 +492,12 @@ class EquipmentWindow(Window):
             return
         
         # 装備前後のステータス比較
-        original_stats = self.current_character.get_base_stats()
-        current_stats = self.current_character.get_derived_stats()
+        original_stats = getattr(self.current_character, 'get_base_stats', lambda: None)() if hasattr(self.current_character, 'get_base_stats') else None
+        current_stats = getattr(self.current_character, 'get_derived_stats', lambda: None)() if hasattr(self.current_character, 'get_derived_stats') else None
+        
+        if not original_stats or not current_stats:
+            self.show_dialog("装備効果確認", "キャラクターステータスの取得に失敗しました")
+            return
         equipment_bonus = self.current_equipment.calculate_equipment_bonus()
         
         details = "【装備効果確認】\\n\\n"
@@ -500,20 +532,26 @@ class EquipmentWindow(Window):
         
         for character in self.current_party.get_all_characters():
             equipment = character.get_equipment()
-            summary = equipment.get_equipment_summary()
-            
-            total_equipped += summary['equipped_count']
-            total_slots += len(EquipmentSlot)
-            total_weight += summary['total_weight']
-            
-            # アイテム価値計算
-            for item_instance in equipment.get_all_equipped_items().values():
-                if item_instance:
-                    item = item_manager.get_item(item_instance.item_id)
-                    if item:
-                        total_value += item.price
+            if equipment is not None:
+                summary = equipment.get_equipment_summary()
+                if summary is not None:
+                    total_equipped += summary['equipped_count']
+                    total_slots += len(EquipmentSlot)
+                    total_weight += summary['total_weight']
+                    
+                    # アイテム価値計算
+                    for item_instance in equipment.get_all_equipped_items().values():
+                        if item_instance:
+                            item = item_manager.get_item(item_instance.item_id)
+                            if item:
+                                total_value += item.price
         
-        stats_text += f"装備率: {total_equipped}/{total_slots} ({int(total_equipped/total_slots*100)}%)\\n"
+        if total_slots > 0:
+            equipment_rate = int(total_equipped/total_slots*100)
+        else:
+            equipment_rate = 0
+            
+        stats_text += f"装備率: {total_equipped}/{total_slots} ({equipment_rate}%)\\n"
         stats_text += f"総重量: {total_weight:.1f}kg\\n"
         stats_text += f"総価値: {total_value}G\\n\\n"
         
@@ -521,8 +559,14 @@ class EquipmentWindow(Window):
         stats_text += "【キャラクター別】\\n"
         for character in self.current_party.get_all_characters():
             equipment = character.get_equipment()
-            summary = equipment.get_equipment_summary()
-            stats_text += f"{character.name}: {summary['equipped_count']}/4 ({summary['total_weight']:.1f}kg)\\n"
+            if equipment is not None:
+                summary = equipment.get_equipment_summary()
+                if summary is not None:
+                    stats_text += f"{character.name}: {summary['equipped_count']}/4 ({summary['total_weight']:.1f}kg)\\n"
+                else:
+                    stats_text += f"{character.name}: 装備情報取得不可\\n"
+            else:
+                stats_text += f"{character.name}: 装備なし\\n"
         
         self.show_dialog("パーティ装備統計", stats_text)
 
@@ -570,20 +614,31 @@ class EquipmentWindow(Window):
 
     def _get_suitable_items_for_slot(self, slot: EquipmentSlot) -> List[tuple]:
         """スロットに装備可能なアイテムリストを取得"""
-        if not self.current_character:
+        if not self.current_character or not self.current_equipment:
             return []
         
         suitable_items = []
         inventory = self.current_character.get_inventory()
+        if inventory is None or inventory.slots is None:
+            return []
         
         for i, inventory_slot in enumerate(inventory.slots):
-            if not inventory_slot.is_empty():
+            if not inventory_slot.is_empty() and inventory_slot.item_instance is not None:
                 item_instance = inventory_slot.item_instance
                 item = item_manager.get_item(item_instance.item_id)
                 
                 if item and self._can_equip_in_slot(item, slot):
+                    # character_class.valueアクセスのNone safety
+                    character_class = self.current_character.character_class
+                    if hasattr(character_class, 'value'):
+                        class_value = character_class.value
+                    elif character_class is not None:
+                        class_value = str(character_class)
+                    else:
+                        class_value = "unknown"
+                    
                     can_equip, reason = self.current_equipment.can_equip_item(
-                        item_instance, slot, self.current_character.character_class.value
+                        item_instance, slot, class_value
                     )
                     
                     if can_equip:
@@ -603,7 +658,7 @@ class EquipmentWindow(Window):
 
     def _get_equipment_preview(self, item: Item, item_instance: ItemInstance, slot: EquipmentSlot) -> str:
         """装備効果プレビューを取得"""
-        if not item_instance.identified:
+        if not item_instance.identified or not self.current_equipment:
             return ""
         
         preview = ""
@@ -679,7 +734,7 @@ class EquipmentWindow(Window):
         
         # パーティ概要でのボタン処理
         if self.current_mode == EquipmentViewMode.PARTY_OVERVIEW:
-            if element_id.startswith('char_button_'):
+            if element_id.startswith('char_button_') and self.current_party is not None:
                 index = int(element_id.split('_')[-1])
                 characters = self.current_party.get_all_characters()
                 if 0 <= index < len(characters):

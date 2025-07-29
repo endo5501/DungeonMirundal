@@ -215,9 +215,12 @@ class DungeonSelectionWindow(Window):
         
         # ダンジョンリスト（上部）
         list_rect = pygame.Rect(20, 70, 660, 300)
+        dungeon_items = self._get_dungeon_list_items()
+        # UISelectionListは List[str | Tuple[str, str]] を期待するため、型を明示的に変換
+        converted_items: list[str | tuple[str, str]] = [item for item in dungeon_items]
         self.dungeon_list = pygame_gui.elements.UISelectionList(
             relative_rect=list_rect,
-            item_list=self._get_dungeon_list_items(),
+            item_list=converted_items,
             manager=self.ui_manager,
             container=self.container,
             object_id="#dungeon_list"
@@ -227,11 +230,12 @@ class DungeonSelectionWindow(Window):
         if self.dungeons:
             self.selected_index = 0
             # pygame_guiでリストの先頭項目を選択状態にする
-            if len(self.dungeon_list.item_list) > 0:
+            if self.dungeon_list is not None and hasattr(self.dungeon_list, 'item_list') and len(self.dungeon_list.item_list) > 0:
                 try:
                     # 非公開メソッドだが、利用可能な選択設定方法
-                    self.dungeon_list._set_default_selection()
-                    logger.info(f"先頭ダンジョンを自動選択: {self.dungeon_list.item_list[0]}")
+                    if hasattr(self.dungeon_list, '_set_default_selection'):
+                        self.dungeon_list._set_default_selection()
+                        logger.info(f"先頭ダンジョンを自動選択: {self.dungeon_list.item_list[0]}")
                 except Exception as e:
                     logger.warning(f"自動選択に失敗しました: {e}")
                     # フォールバック: 手動でselected_indexを設定
@@ -291,9 +295,9 @@ class DungeonSelectionWindow(Window):
         self._update_button_states()
         
         # デバッグ: ボタンの状態を確認
-        logger.info(f"新規作成ボタン状態: visible={self.create_button.visible}, enabled={self.create_button.is_enabled}")
-        logger.info(f"街に戻るボタン状態: visible={self.back_button.visible}, enabled={self.back_button.is_enabled}")
-        logger.info(f"選択ボタン状態: visible={self.select_button.visible}, enabled={self.select_button.is_enabled}")
+        logger.info(f"新規作成ボタン状態: visible={getattr(self.create_button, 'visible', None)}, enabled={getattr(self.create_button, 'is_enabled', None)}")
+        logger.info(f"街に戻るボタン状態: visible={getattr(self.back_button, 'visible', None)}, enabled={getattr(self.back_button, 'is_enabled', None)}")
+        logger.info(f"選択ボタン状態: visible={getattr(self.select_button, 'visible', None)}, enabled={getattr(self.select_button, 'is_enabled', None)}")
         
         self.state = WindowState.SHOWN
         logger.info("DungeonSelectionWindowのUI要素を作成しました")
@@ -347,23 +351,29 @@ class DungeonSelectionWindow(Window):
                 return True
         
         elif event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
-            if event.ui_element == self.dungeon_list:
-                selection = self.dungeon_list.get_single_selection()
-                if selection and self.dungeons:
-                    # 選択されたアイテムのインデックスを取得
-                    try:
-                        self.selected_index = self.dungeon_list.item_list.index(selection)
-                        logger.info(f"ダンジョン選択変更: インデックス={self.selected_index}, アイテム={selection}")
-                    except ValueError:
-                        # アイテムが見つからない場合、先頭を選択
-                        self.selected_index = 0
-                        logger.warning(f"選択されたアイテムが見つかりません: {selection}, 先頭を選択します")
-                        # 強制的に先頭項目を選択状態にする
-                        if len(self.dungeon_list.item_list) > 0:
-                            try:
-                                self.dungeon_list._set_default_selection()
-                            except Exception as e:
-                                logger.warning(f"強制選択に失敗: {e}")
+            if event.ui_element == self.dungeon_list and self.dungeon_list is not None:
+                if hasattr(self.dungeon_list, 'get_single_selection'):
+                    selection = self.dungeon_list.get_single_selection()
+                    if selection and self.dungeons and hasattr(self.dungeon_list, 'item_list'):
+                        # 選択されたアイテムのインデックスを取得
+                        try:
+                            # selectionは str | Tuple[str, str] なので、文字列として扱う
+                            selection_str = selection if isinstance(selection, str) else str(selection)
+                            # item_listから文字列として検索
+                            item_list_str = [item if isinstance(item, str) else str(item) for item in self.dungeon_list.item_list]
+                            self.selected_index = item_list_str.index(selection_str)
+                            logger.info(f"ダンジョン選択変更: インデックス={self.selected_index}, アイテム={selection}")
+                        except ValueError:
+                            # アイテムが見つからない場合、先頭を選択
+                            self.selected_index = 0
+                            logger.warning(f"選択されたアイテムが見つかりません: {selection}, 先頭を選択します")
+                            # 強制的に先頭項目を選択状態にする
+                            if hasattr(self.dungeon_list, 'item_list') and len(self.dungeon_list.item_list) > 0:
+                                try:
+                                    if hasattr(self.dungeon_list, '_set_default_selection'):
+                                        self.dungeon_list._set_default_selection()
+                                except Exception as e:
+                                    logger.warning(f"強制選択に失敗: {e}")
                 else:
                     self.selected_index = None
                 
@@ -462,7 +472,9 @@ class DungeonSelectionWindow(Window):
         
         # リスト更新
         if self.dungeon_list:
-            self.dungeon_list.set_item_list(self._get_dungeon_list_items())
+            dungeon_items = self._get_dungeon_list_items()
+            converted_items: list[str | tuple[str, str]] = [item for item in dungeon_items]
+            self.dungeon_list.set_item_list(converted_items)
         
         self._update_button_states()
     
@@ -492,7 +504,9 @@ class DungeonSelectionWindow(Window):
         
         # リスト更新
         if self.dungeon_list:
-            self.dungeon_list.set_item_list(self._get_dungeon_list_items())
+            dungeon_items = self._get_dungeon_list_items()
+            converted_items: list[str | tuple[str, str]] = [item for item in dungeon_items]
+            self.dungeon_list.set_item_list(converted_items)
         
         self._update_button_states()
     
