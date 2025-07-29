@@ -340,7 +340,7 @@ class CharacterCreationWizard(Window):
 
     def create_class_selection_step(self) -> None:
         """職業選択ステップのUI要素を作成"""
-        if not self.content_panel:
+        if not self.content_panel or not pygame or not pygame_gui or not self.ui_manager:
             return
         
         # タイトル
@@ -409,7 +409,7 @@ class CharacterCreationWizard(Window):
 
     def create_confirmation_step(self) -> None:
         """確認ステップのUI要素を作成"""
-        if not self.content_panel or not self.rect:
+        if not self.content_panel or not self.rect or not pygame or not pygame_gui or not self.ui_manager:
             return
         
         # タイトル
@@ -478,7 +478,7 @@ class CharacterCreationWizard(Window):
 
     def create_completed_step(self) -> None:
         """完了ステップのUI要素を作成"""
-        if not self.content_panel:
+        if not self.content_panel or not pygame or not pygame_gui or not self.ui_manager:
             return
         
         # タイトル

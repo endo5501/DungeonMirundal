@@ -217,7 +217,7 @@ class SettingsWindow(Window):
                 relative_rect=tab_rect,
                 text=tab_label,
                 manager=self.ui_manager,
-                container=cast('IContainerLikeInterface', self.tab_container) if self.tab_container else None
+                container=self.tab_container
             )
             
             # SettingsTabオブジェクトを作成
@@ -253,18 +253,24 @@ class SettingsWindow(Window):
         field_id = field_config['id']
         
         # ラベルを作成
-        label_rect = pygame.Rect(20, y_position, 200, 25)
+        if pygame:
+            label_rect = pygame.Rect(20, y_position, 200, 25)
+        else:
+            label_rect = (20, y_position, 200, 25)
         label_text = field_config.get('label', field_id)
         
         label = pygame_gui.elements.UILabel(
             relative_rect=label_rect,
             text=label_text,
             manager=self.ui_manager,
-            container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
+            container=self.content_container
         )
         
         # 入力要素を作成
-        input_rect = pygame.Rect(240, y_position, 300, 25)
+        if pygame:
+            input_rect = pygame.Rect(240, y_position, 300, 25)
+        else:
+            input_rect = (240, y_position, 300, 25)
         ui_element = self._create_input_element(field_type, input_rect, field_config)
         
         # SettingsFieldオブジェクトを作成
@@ -288,8 +294,8 @@ class SettingsWindow(Window):
         
         return settings_field
     
-    def _create_input_element(self, field_type: SettingsFieldType, rect: pygame.Rect, 
-                            config: Dict[str, Any]) -> pygame_gui.core.UIElement:
+    def _create_input_element(self, field_type: SettingsFieldType, rect: Any, 
+                            config: Dict[str, Any]) -> Any:
         """入力要素を作成"""
         if field_type == SettingsFieldType.SLIDER:
             return pygame_gui.elements.UIHorizontalSlider(
@@ -297,7 +303,7 @@ class SettingsWindow(Window):
                 start_value=config.get('default', 0.5),
                 value_range=(config.get('min', 0.0), config.get('max', 1.0)),
                 manager=self.ui_manager,
-                container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
+                container=self.content_container
             )
         elif field_type == SettingsFieldType.DROPDOWN:
             options = config.get('options', [])
@@ -306,32 +312,32 @@ class SettingsWindow(Window):
                 options_list=options,
                 starting_option=options[0] if options else '',
                 manager=self.ui_manager,
-                container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
+                container=self.content_container
             )
         elif field_type == SettingsFieldType.CHECKBOX:
             return pygame_gui.elements.UIButton(
                 relative_rect=rect,
                 text='☐ ' + config.get('label', ''),
                 manager=self.ui_manager,
-                container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
+                container=self.content_container
             )
         elif field_type == SettingsFieldType.TEXT_INPUT:
             return pygame_gui.elements.UITextEntryLine(
                 relative_rect=rect,
                 manager=self.ui_manager,
-                container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
+                container=self.content_container
             )
         elif field_type == SettingsFieldType.BUTTON:
             return pygame_gui.elements.UIButton(
                 relative_rect=rect,
                 text=config.get('name', config.get('label', 'Button')),
                 manager=self.ui_manager,
-                container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
+                container=self.content_container
             )
         else:
             raise ValueError(f"Unsupported field type: {field_type}")
     
-    def _set_ui_element_value(self, ui_element: pygame_gui.core.UIElement, 
+    def _set_ui_element_value(self, ui_element: Any, 
                             field_type: SettingsFieldType, value: Any) -> None:
         """UI要素に値を設定"""
         if field_type == SettingsFieldType.SLIDER and hasattr(ui_element, 'set_current_value'):
@@ -400,7 +406,7 @@ class SettingsWindow(Window):
                     self.set_field_value(field.field_id, new_value)
                     return
     
-    def _get_ui_element_value(self, ui_element: pygame_gui.core.UIElement, 
+    def _get_ui_element_value(self, ui_element: Any, 
                             field_type: SettingsFieldType) -> Any:
         """UI要素から値を取得"""
         if field_type == SettingsFieldType.SLIDER:
