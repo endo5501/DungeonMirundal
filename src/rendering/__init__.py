@@ -10,11 +10,7 @@ def _import_renderer():
         from .dungeon_renderer_pygame import DungeonRendererPygame
         return DungeonRendererPygame
     except ImportError:
-        try:
-            from .dungeon_renderer_pygame_backup import DungeonRendererPygame
-            return DungeonRendererPygame
-        except ImportError:
-            return None
+        return None
 
 DungeonRenderer = _import_renderer()
 
