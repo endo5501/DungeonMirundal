@@ -5,9 +5,17 @@ Window Systemの中核となる管理クラス
 """
 
 from typing import Dict, Optional, List, Type, Any, Callable
-import pygame
-import pygame_gui
 from datetime import datetime
+
+try:
+    import pygame
+except ImportError:
+    pygame = None  # type: ignore
+
+try:
+    import pygame_gui
+except ImportError:
+    pygame_gui = None  # type: ignore
 
 from src.utils.logger import logger
 from .window import Window, WindowState

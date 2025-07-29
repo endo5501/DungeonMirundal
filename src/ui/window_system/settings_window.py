@@ -158,6 +158,11 @@ class SettingsWindow(Window):
         """統一UIコンテナ作成メソッド"""
         has_title = 'title' in self.settings_config
         
+        if not pygame_gui or not self.ui_manager:
+            # pygame_gui が None の場合は何もしない
+            setattr(self, 'tab_container' if container_type == 'tab' else 'content_container', None)
+            return
+            
         # コンテナタイプごとの設定
         container_configs = {
             'tab': {
@@ -177,11 +182,16 @@ class SettingsWindow(Window):
         
         config = container_configs[container_type]
         rect = config['rect_method']()
-        element = config['element_class'](
-            relative_rect=rect,
-            manager=self.ui_manager,
-            container=self.panel
-        )
+        
+        if pygame_gui and self.ui_manager:
+            element = config['element_class'](
+                relative_rect=rect,
+                manager=self.ui_manager,
+                container=self.panel
+            )
+        else:
+            element = None
+            
         setattr(self, config['attribute_name'], element)
     
     def _create_tab_container(self) -> None:
@@ -259,12 +269,15 @@ class SettingsWindow(Window):
             label_rect = (20, y_position, 200, 25)
         label_text = field_config.get('label', field_id)
         
-        label = pygame_gui.elements.UILabel(
-            relative_rect=label_rect,
-            text=label_text,
-            manager=self.ui_manager,
-            container=self.content_container
-        )
+        if pygame_gui and self.ui_manager:
+            label = pygame_gui.elements.UILabel(
+                relative_rect=label_rect,
+                text=label_text,
+                manager=self.ui_manager,
+                container=self.content_container
+            )
+        else:
+            label = None  # type: ignore
         
         # 入力要素を作成
         if pygame:
@@ -297,6 +310,9 @@ class SettingsWindow(Window):
     def _create_input_element(self, field_type: SettingsFieldType, rect: Any, 
                             config: Dict[str, Any]) -> Any:
         """入力要素を作成"""
+        if not pygame_gui or not self.ui_manager:
+            return None  # type: ignore
+            
         if field_type == SettingsFieldType.SLIDER:
             return pygame_gui.elements.UIHorizontalSlider(
                 relative_rect=rect,

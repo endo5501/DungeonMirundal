@@ -10,8 +10,12 @@ t-wada式TDD実装：
 """
 
 from typing import Optional, Dict, List, Any, Callable
-import pygame
 from enum import Enum
+
+try:
+    import pygame
+except ImportError:
+    pygame = None  # type: ignore
 
 from src.ui.window_system.window import Window
 from src.ui.window_system.menu_window import MenuWindow
@@ -313,13 +317,14 @@ class HelpWindow(Window):
         # 実装は段階的に追加
         
         # デバッグ情報を表示
-        font = pygame.font.Font(None, 24)
-        text = font.render("ヘルプシステム", True, (255, 255, 255))
-        surface.blit(text, (self.rect.x + 10, self.rect.y + 10))
-        
-        if self.current_category:
-            category_text = font.render(f"カテゴリ: {self.current_category.value}", True, (200, 200, 200))
-            surface.blit(category_text, (self.rect.x + 10, self.rect.y + 40))
+        if pygame and self.rect:
+            font = pygame.font.Font(None, 24)
+            text = font.render("ヘルプシステム", True, (255, 255, 255))
+            surface.blit(text, (self.rect.x + 10, self.rect.y + 10))
+            
+            if self.current_category:
+                category_text = font.render(f"カテゴリ: {self.current_category.value}", True, (200, 200, 200))
+                surface.blit(category_text, (self.rect.x + 10, self.rect.y + 40))
     
     def close(self) -> None:
         """ウィンドウを閉じる"""

@@ -1,8 +1,12 @@
 """キャラクターステータスバーUI"""
 
-import pygame
 from typing import Optional, List
 from enum import Enum
+
+try:
+    import pygame
+except ImportError:
+    pygame = None  # type: ignore
 
 from src.ui.base_ui_pygame import UIElement, UIState
 from src.character.party import Party

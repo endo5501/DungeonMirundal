@@ -2,8 +2,18 @@
 
 from typing import Dict, List, Optional, Callable, Any
 from enum import Enum
-import pygame
-import pygame_gui
+import warnings
+
+try:
+    import pygame
+except ImportError:
+    pygame = None  # type: ignore
+
+try:
+    import pygame_gui
+except ImportError:
+    pygame_gui = None  # type: ignore
+
 from src.utils.logger import logger
 
 # UI基本定数
@@ -236,7 +246,10 @@ class UIText(UIElement):
             except Exception as e:
                 logger.warning(f"フォントマネージャーの取得に失敗: {e}")
                 # フォールバック：デフォルトフォント（英語のみ）
-                use_font = pygame.font.Font(None, DEFAULT_FONT_SIZE)
+                if pygame:
+                    use_font = pygame.font.Font(None, DEFAULT_FONT_SIZE)
+                else:
+                    use_font = None
                 if not use_font:
                     return  # フォントが取得できない場合は描画しない
         
@@ -309,7 +322,10 @@ class UIButton(UIElement):
                 max_text_width = self.rect.width - 20
                 
                 # テキストを折り返し
-                wrapped_lines = wrap_text(self.text, use_font, max_text_width)
+                if use_font:
+                    wrapped_lines = wrap_text(self.text, use_font, max_text_width)
+                else:
+                    wrapped_lines = [self.text]  # フォントがない場合はそのまま
                 
                 # 複数行テキストの描画
                 if use_font:
@@ -320,11 +336,12 @@ class UIButton(UIElement):
                 start_y = self.rect.centery - total_height // 2
                 
                 for i, line in enumerate(wrapped_lines):
-                    text_surface = use_font.render(line, True, self.text_color)
-                    text_rect = text_surface.get_rect()
-                    text_rect.centerx = self.rect.centerx
-                    text_rect.y = start_y + i * line_height
-                    screen.blit(text_surface, text_rect)
+                    if use_font:
+                        text_surface = use_font.render(line, True, self.text_color)
+                        text_rect = text_surface.get_rect()
+                        text_rect.centerx = self.rect.centerx
+                        text_rect.y = start_y + i * line_height
+                        screen.blit(text_surface, text_rect)
                     
             except Exception as e:
                 logger.warning(f"ボタンテキストレンダリングエラー: {e}")
@@ -354,7 +371,6 @@ class UIManager:
         self.modal_stack: List[str] = []  # モーダル要素のスタック
         
         # pygame-gui マネージャー（テーマファイル付き）
-        import warnings
         try:
             theme_path = "config/ui_theme.json"
             with warnings.catch_warnings():
