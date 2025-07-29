@@ -129,10 +129,16 @@ class NavigationManager:
         speed_multiplier = self._get_speed_multiplier(movement_type)
         
         # 基本移動処理
-        success, message = self.dungeon_manager.move_player(direction)
+        if self.dungeon_manager:
+            success, message = self.dungeon_manager.move_player(direction)
+        else:
+            success, message = False, "ダンジョンマネージャーが利用できません"
         
         new_pos = dungeon_state.player_position
-        new_position = (new_pos.x, new_pos.y, new_pos.level)
+        if new_pos:
+            new_position = (new_pos.x, new_pos.y, new_pos.level)
+        else:
+            new_position = old_position
         
         if not success:
             return self._create_movement_failure_event(message, old_position)
@@ -186,6 +192,9 @@ class NavigationManager:
     
     def _check_cell_events(self, old_position: Tuple[int, int, int], new_position: Tuple[int, int, int], movement_type: MovementType) -> Optional[MovementEvent]:
         """セルイベントをチェック"""
+        if not self.dungeon_manager:
+            return None
+            
         current_cell = self.dungeon_manager.get_current_cell()
         if not current_cell:
             return None
@@ -317,12 +326,15 @@ class NavigationManager:
         
         dungeon_state = self.dungeon_manager.current_dungeon
         old_pos = dungeon_state.player_position
-        old_position = (old_pos.x, old_pos.y, old_pos.level)
+        if old_pos:
+            old_position = (old_pos.x, old_pos.y, old_pos.level)
+        else:
+            old_position = (0, 0, 0)
         
         # 階段の方向を確認
-        if direction == "up" and current_cell.cell_type == CellType.STAIRS_UP:
+        if old_pos and direction == "up" and current_cell.cell_type == CellType.STAIRS_UP:
             target_level = old_pos.level - 1
-        elif direction == "down" and current_cell.cell_type == CellType.STAIRS_DOWN:
+        elif old_pos and direction == "down" and current_cell.cell_type == CellType.STAIRS_DOWN:
             target_level = old_pos.level + 1
         else:
             return MovementEvent(
@@ -336,7 +348,10 @@ class NavigationManager:
         success, message = self.dungeon_manager.change_level(target_level)
         
         new_pos = dungeon_state.player_position
-        new_position = (new_pos.x, new_pos.y, new_pos.level)
+        if new_pos:
+            new_position = (new_pos.x, new_pos.y, new_pos.level)
+        else:
+            new_position = old_position
         
         if success:
             event = MovementEvent(
@@ -422,7 +437,7 @@ class NavigationManager:
         # トラップ発動統計更新
         self._update_trap_statistics()
         
-        return self._get_trap_message(cell.trap_type)
+        return self._get_trap_message(cell.trap_type or "unknown")
     
     def _calculate_trap_avoid_chance(self, movement_type: MovementType) -> float:
         """トラップ回避率を計算"""
@@ -461,7 +476,11 @@ class NavigationManager:
         
         # すでに上でcurrent_dungeonの存在チェック済み
         dungeon_state = self.dungeon_manager.current_dungeon
-        current_level = dungeon_state.levels.get(dungeon_state.player_position.level)
+        player_pos = dungeon_state.player_position
+        if not player_pos:
+            return None
+            
+        current_level = dungeon_state.levels.get(player_pos.level)
         
         if not current_level:
             return None
@@ -535,12 +554,16 @@ class NavigationManager:
         if not dungeon_state:
             return {}
         
-        current_level = dungeon_state.levels.get(dungeon_state.player_position.level)
+        player_pos = dungeon_state.player_position
+        if not player_pos:
+            return {}
+            
+        current_level = dungeon_state.levels.get(player_pos.level)
         if not current_level:
             return {}
         
         # 発見済みセルの情報を収集
-        discovered_cells = dungeon_state.discovered_cells.get(dungeon_state.player_position.level, [])
+        discovered_cells = dungeon_state.discovered_cells.get(player_pos.level, [])
         
         map_data = self._create_map_data_structure(dungeon_state, discovered_cells)
         
@@ -551,10 +574,14 @@ class NavigationManager:
     
     def _create_map_data_structure(self, dungeon_state: DungeonState, discovered_cells: List[Tuple[int, int]]) -> Dict[str, Any]:
         """マップデータ構造を作成"""
+        player_pos = dungeon_state.player_position
+        if not player_pos:
+            return {}
+            
         return {
-            'level': dungeon_state.player_position.level,
-            'player_position': (dungeon_state.player_position.x, dungeon_state.player_position.y),
-            'player_facing': dungeon_state.player_position.facing.value,
+            'level': player_pos.level,
+            'player_position': (player_pos.x, player_pos.y),
+            'player_facing': player_pos.facing.value,
             'discovered_cells': discovered_cells,
             'cell_details': {}
         }

@@ -466,10 +466,11 @@ class WizardServicePanel(ServicePanel):
             return step.validator(self.wizard_data)
         
         # 必須フィールドチェック
-        for field in step.required_fields:
-            if field not in self.wizard_data or not self.wizard_data[field]:
-                self._show_message(f"'{field}'を入力してください", "warning")
-                return False
+        if step.required_fields:
+            for field in step.required_fields:
+                if field not in self.wizard_data or not self.wizard_data[field]:
+                    self._show_message(f"'{field}'を入力してください", "warning")
+                    return False
         
         return True
     
@@ -486,7 +487,7 @@ class WizardServicePanel(ServicePanel):
         elif step.id == "race" and hasattr(self, 'race_selection'):
             # 種族選択のデータを収集
             selection = self.race_selection.get_single_selection()
-            if selection is not None and hasattr(self, 'race_data'):
+            if selection is not None and hasattr(self, 'race_data') and self.race_data:
                 self.wizard_data["race"] = self.race_data[selection]
         elif step.id == "stats" and hasattr(self, 'stats_data'):
             # ステータスのデータを収集
@@ -494,7 +495,7 @@ class WizardServicePanel(ServicePanel):
         elif step.id == "class" and hasattr(self, 'class_selection'):
             # クラス選択のデータを収集
             selection = self.class_selection.get_single_selection()
-            if selection is not None and hasattr(self, 'class_data'):
+            if selection is not None and hasattr(self, 'class_data') and self.class_data:
                 self.wizard_data["class"] = self.class_data[selection]
     
     def next_step(self) -> None:
@@ -553,10 +554,11 @@ class WizardServicePanel(ServicePanel):
         """すべてのステップを検証"""
         for step in self.steps:
             # 必須フィールドチェック
-            for field in step.required_fields:
-                if field not in self.wizard_data or not self.wizard_data[field]:
-                    self._show_message(f"必須項目 '{field}' が未入力です", "error")
-                    return False
+            if step.required_fields:
+                for field in step.required_fields:
+                    if field not in self.wizard_data or not self.wizard_data[field]:
+                        self._show_message(f"必須項目 '{field}' が未入力です", "error")
+                        return False
         return True
     
     def _cancel_wizard(self) -> None:

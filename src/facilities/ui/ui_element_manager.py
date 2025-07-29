@@ -546,7 +546,7 @@ class DestructionMixin:
         
         try:
             # 破棄処理を実行
-            if hasattr(self, 'destroy'):
+            if hasattr(self, 'destroy') and callable(getattr(self, 'destroy', None)):
                 self.destroy()
             
             # 破棄の検証

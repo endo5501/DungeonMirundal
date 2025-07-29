@@ -77,7 +77,7 @@ class InventorySlot:
             return removed_item
         else:
             # 一部削除
-            if quantity < MINIMUM_REMOVE_QUANTITY:
+            if quantity is None or quantity < MINIMUM_REMOVE_QUANTITY:
                 return None
             
             # 新しいインスタンスを作成
@@ -205,6 +205,7 @@ class Inventory:
         """アイテムIDで指定してアイテムを削除"""
         for i, slot in enumerate(self.slots):
             if (not slot.is_empty() and 
+                slot.item_instance and
                 slot.item_instance.item_id == item_id and
                 slot.item_instance.quantity >= quantity):
                 return self.remove_item(i, quantity)
@@ -215,7 +216,7 @@ class Inventory:
         """指定したアイテムを指定数量持っているかチェック"""
         total_quantity = 0
         for slot in self.slots:
-            if not slot.is_empty() and slot.item_instance.item_id == item_id:
+            if not slot.is_empty() and slot.item_instance and slot.item_instance.item_id == item_id:
                 total_quantity += slot.item_instance.quantity
                 if total_quantity >= quantity:
                     return True
@@ -225,7 +226,7 @@ class Inventory:
         """指定したアイテムの総数量を取得"""
         total_quantity = 0
         for slot in self.slots:
-            if not slot.is_empty() and slot.item_instance.item_id == item_id:
+            if not slot.is_empty() and slot.item_instance and slot.item_instance.item_id == item_id:
                 total_quantity += slot.item_instance.quantity
         return total_quantity
     
@@ -301,7 +302,7 @@ class Inventory:
     
     def _calculate_slot_weight(self, slot: InventorySlot) -> float:
         """スロットの重量を計算"""
-        if slot.is_empty():
+        if slot.is_empty() or not slot.item_instance:
             return INITIAL_TOTAL_WEIGHT
             
         item = self.item_manager.get_item(slot.item_instance.item_id)
@@ -329,7 +330,7 @@ class Inventory:
         return self.max_slots
     
     
-    def transfer_item(self, slot_index: int, target_inventory: 'Inventory', quantity: int = None) -> bool:
+    def transfer_item(self, slot_index: int, target_inventory: 'Inventory', quantity: Optional[int] = None) -> bool:
         """アイテムを他のインベントリに転送"""
         if slot_index < 0 or slot_index >= len(self.slots):
             return False
@@ -355,7 +356,7 @@ class Inventory:
     
     def _calculate_slot_value(self, slot: InventorySlot) -> int:
         """スロットの価値を計算"""
-        if slot.is_empty():
+        if slot.is_empty() or not slot.item_instance:
             return INITIAL_TOTAL_VALUE
             
         item = self.item_manager.get_item(slot.item_instance.item_id)
@@ -438,7 +439,7 @@ class InventoryManager:
         return self.party_inventory
     
     def transfer_item(self, from_inventory: Inventory, from_slot: int, 
-                     to_inventory: Inventory, quantity: int = None) -> bool:
+                     to_inventory: Inventory, quantity: Optional[int] = None) -> bool:
         """インベントリ間でアイテムを移動"""
         # アイテムを取得
         removed_item = from_inventory.remove_item(from_slot, quantity)
