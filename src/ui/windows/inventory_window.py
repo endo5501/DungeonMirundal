@@ -515,7 +515,7 @@ class InventoryWindow(Window):
             # resultがタプルの場合は分解
             if isinstance(result, tuple):
                 usage_result, message, effects = result
-                success = usage_result.success if hasattr(usage_result, 'success') else bool(usage_result)
+                success = getattr(usage_result, 'success', bool(usage_result))
                 quantity_consumed = getattr(usage_result, 'quantity_consumed', 1) if hasattr(usage_result, 'quantity_consumed') else 1
             else:
                 success = getattr(result, 'success', False)
@@ -546,7 +546,7 @@ class InventoryWindow(Window):
         try:
             # 同一インベントリ内での移動
             if source_inventory == self.current_inventory:
-                success = self.current_inventory.transfer_item(source_slot, target_slot)
+                success = self.current_inventory.move_item(source_slot, target_slot)
                 if success:
                     self.show_message("アイテムを移動しました")
                     self.refresh_view()
@@ -647,7 +647,7 @@ class InventoryWindow(Window):
         
         total_weight = self.current_inventory.get_total_weight()
         max_weight = self.current_inventory.get_max_weight()
-        item_count = self.current_inventory.get_item_count()
+        item_count = self.current_inventory.get_used_slot_count()
         max_items = self.current_inventory.get_max_items()
         
         return f"重量: {total_weight:.1f}/{max_weight}kg | アイテム: {item_count}/{max_items}"
@@ -716,7 +716,7 @@ class InventoryWindow(Window):
         try:
             total_weight = self.current_inventory.get_total_weight()
             max_weight = self.current_inventory.get_max_weight()
-            item_count = self.current_inventory.get_item_count()
+            item_count = self.current_inventory.get_used_slot_count()
             max_items = self.current_inventory.get_max_items()
             
             stats += f"総重量: {total_weight:.1f}kg\\n"
@@ -799,12 +799,15 @@ class InventoryWindow(Window):
         # パーティ概要でのボタン処理
         if self.current_mode == InventoryViewMode.PARTY_OVERVIEW:
             if element_id == 'shared_inventory_button':
-                shared_inventory = self.current_party.get_party_inventory()
-                self.show_inventory_contents(shared_inventory, "パーティ共有アイテム", "party")
+                if self.current_party is not None:
+                    shared_inventory = self.current_party.get_party_inventory()
+                    if shared_inventory is not None:
+                        self.show_inventory_contents(shared_inventory, "パーティ共有アイテム", "party")
                 return True
             elif element_id.startswith('char_inventory_button_'):
                 index = int(element_id.split('_')[-1])
-                characters = self.current_party.get_all_characters()
+                if self.current_party is not None:
+                    characters = self.current_party.get_all_characters()
                 if 0 <= index < len(characters):
                     char_inventory = characters[index].get_inventory()
                     self.current_character = characters[index]

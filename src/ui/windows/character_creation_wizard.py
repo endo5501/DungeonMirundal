@@ -259,7 +259,7 @@ class CharacterCreationWizard(Window):
 
     def create_stats_generation_step(self) -> None:
         """ステータス生成ステップのUI要素を作成"""
-        if not self.content_panel:
+        if not self.content_panel or not pygame or not pygame_gui or not self.ui_manager:
             return
         
         # タイトル

@@ -404,12 +404,7 @@ class EquipmentWindow(Window):
         
         # 装備試行
         character_class = self.current_character.character_class
-        if hasattr(character_class, 'value'):
-            class_value = character_class.value
-        elif character_class is not None:
-            class_value = str(character_class)
-        else:
-            class_value = "unknown"
+        class_value = getattr(character_class, 'value', str(character_class) if character_class is not None else "unknown")
         success, reason, replaced_item = self.current_equipment.equip_item(
             item_instance, slot, class_value
         )
@@ -630,12 +625,7 @@ class EquipmentWindow(Window):
                 if item and self._can_equip_in_slot(item, slot):
                     # character_class.valueアクセスのNone safety
                     character_class = self.current_character.character_class
-                    if hasattr(character_class, 'value'):
-                        class_value = character_class.value
-                    elif character_class is not None:
-                        class_value = str(character_class)
-                    else:
-                        class_value = "unknown"
+                    class_value = getattr(character_class, 'value', str(character_class) if character_class is not None else "unknown")
                     
                     can_equip, reason = self.current_equipment.can_equip_item(
                         item_instance, slot, class_value
@@ -772,13 +762,16 @@ class EquipmentWindow(Window):
                 # アイテム詳細を表示（実装は省略）
                 return True
             elif element_id == 'unequip_button':
-                self.unequip_item(self.selected_slot)
+                if self.selected_slot is not None:
+                    self.unequip_item(self.selected_slot)
                 return True
             elif element_id == 'change_button':
-                self.show_equipment_selection(self.selected_slot)
+                if self.selected_slot is not None:
+                    self.show_equipment_selection(self.selected_slot)
                 return True
             elif element_id == 'back_button':
-                self.show_character_equipment(self.current_character)
+                if self.current_character is not None:
+                    self.show_character_equipment(self.current_character)
                 return True
         
         # 装備選択でのボタン処理
