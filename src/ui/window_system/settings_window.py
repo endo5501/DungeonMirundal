@@ -69,8 +69,8 @@ class SettingsWindow(Window):
         self.pending_changes: Dict[str, Any] = {}
         
         # UI要素
-        self.tab_container: Optional[pygame_gui.core.UIElement] = None
-        self.content_container: Optional[pygame_gui.core.UIElement] = None
+        self.tab_container: Optional[Any] = None  # pygame_guiがNoneの場合に対応
+        self.content_container: Optional[Any] = None  # pygame_guiがNoneの場合に対応
         
         logger.debug(f"SettingsWindowを初期化: {window_id}")
     
@@ -108,28 +108,45 @@ class SettingsWindow(Window):
             self.ui_manager = window_manager.ui_manager
         else:
             # フォールバック: 独自のUIManagerを作成
-            screen_width = 1024
-            screen_height = 768
-            self.ui_manager = pygame_gui.UIManager((screen_width, screen_height))
+            if pygame_gui:
+                screen_width = 1024
+                screen_height = 768
+                self.ui_manager = pygame_gui.UIManager((screen_width, screen_height))
     
     def _calculate_layout(self) -> None:
         """設定画面のレイアウトを計算"""
         has_title = 'title' in self.settings_config
         
         # Extract Methodパターン適用
-        self.rect = self.layout_manager.calculate_settings_rect(has_title)
+        if hasattr(self.layout_manager, 'calculate_settings_rect'):
+            self.rect = self.layout_manager.calculate_settings_rect(has_title)
+        else:
+            # フォールバック値
+            if pygame:
+                self.rect = pygame.Rect(100, 100, 800, 600)
+            else:
+                self.rect = None  # type: ignore
     
     def _create_panel(self) -> None:
         """設定パネルを作成"""
-        self.panel = pygame_gui.elements.UIPanel(
-            relative_rect=self.rect,
-            manager=self.ui_manager
-        )
+        if pygame_gui and self.ui_manager and self.rect:
+            self.panel = pygame_gui.elements.UIPanel(
+                relative_rect=self.rect,
+                manager=self.ui_manager
+            )
     
     def _create_title_if_needed(self) -> None:
         """タイトルラベルを作成（必要な場合）"""
-        if 'title' in self.settings_config:
-            title_rect = self.layout_manager.calculate_title_rect(self.rect)
+        if 'title' in self.settings_config and pygame_gui and self.ui_manager:
+            if hasattr(self.layout_manager, 'calculate_title_rect'):
+                title_rect = self.layout_manager.calculate_title_rect(self.rect)
+            else:
+                # フォールバック値
+                if pygame:
+                    title_rect = pygame.Rect(20, 20, 400, 40)
+                else:
+                    title_rect = (20, 20, 400, 40)
+                    
             self.title_label = pygame_gui.elements.UILabel(
                 relative_rect=title_rect,
                 text=self.settings_config['title'],
@@ -178,9 +195,12 @@ class SettingsWindow(Window):
     
     def _create_tabs(self) -> None:
         """タブを作成"""
-        if not self.rect:
+        if not self.rect or not pygame_gui or not self.ui_manager:
             return
-        tab_width = (self.rect.width - 80) // len(self.settings_config['categories'])
+            
+        # rectの属性アクセス（dictかpygame.Rectかで処理を分ける）
+        rect_width = getattr(self.rect, 'width', self.rect.get('width', 800) if hasattr(self.rect, 'get') else 800)
+        tab_width = (rect_width - 80) // len(self.settings_config['categories'])
         
         for i, category_config in enumerate(self.settings_config['categories']):
             tab_id = category_config['id'] if isinstance(category_config, dict) else category_config
@@ -188,7 +208,11 @@ class SettingsWindow(Window):
             
             # タブボタンを作成
             tab_x = i * tab_width
-            tab_rect = pygame.Rect(tab_x, 0, tab_width, 40)
+            if pygame:
+                tab_rect = pygame.Rect(tab_x, 0, tab_width, 40)
+            else:
+                tab_rect = (tab_x, 0, tab_width, 40)
+                
             tab_button = pygame_gui.elements.UIButton(
                 relative_rect=tab_rect,
                 text=tab_label,
@@ -327,34 +351,36 @@ class SettingsWindow(Window):
             pass
     
     
-    def handle_event(self, event: pygame.event.Event) -> bool:
+    def handle_event(self, event) -> bool:
         """イベントを処理"""
-        if not self.ui_manager:
+        if not self.ui_manager or not pygame or not pygame_gui:
             return False
         
         # pygame-guiにイベントを渡す
         self.ui_manager.process_events(event)
         
         # キーボードイベント
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_TAB and event.mod & pygame.KMOD_CTRL:
-                self._handle_tab_switch()
+        if hasattr(event, 'type'):
+            if event.type == pygame.KEYDOWN:
+                if hasattr(event, 'key') and hasattr(event, 'mod'):
+                    if event.key == pygame.K_TAB and event.mod & pygame.KMOD_CTRL:
+                        self._handle_tab_switch()
+                        return True
+            
+            # タブクリック処理
+            if event.type == pygame_gui.UI_BUTTON_PRESSED:
+                for i, tab in enumerate(self.tabs):
+                    if hasattr(tab, 'ui_element') and hasattr(event, 'ui_element'):
+                        if event.ui_element == tab.ui_element:
+                            self.switch_tab(i)
+                            return True
+            
+            # フィールド値変更処理
+            if event.type in [pygame_gui.UI_HORIZONTAL_SLIDER_MOVED, 
+                             pygame_gui.UI_DROP_DOWN_MENU_CHANGED,
+                             pygame_gui.UI_TEXT_ENTRY_CHANGED]:
+                self._handle_field_value_change(event)
                 return True
-        
-        # タブクリック処理
-        if event.type == pygame_gui.UI_BUTTON_PRESSED:
-            for i, tab in enumerate(self.tabs):
-                if event.ui_element == tab.ui_element:
-                    self.switch_tab(i)
-                    return True
-        
-        
-        # フィールド値変更処理
-        if event.type in [pygame_gui.UI_HORIZONTAL_SLIDER_MOVED, 
-                         pygame_gui.UI_DROP_DOWN_MENU_CHANGED,
-                         pygame_gui.UI_TEXT_ENTRY_CHANGED]:
-            self._handle_field_value_change(event)
-            return True
         
         return False
     

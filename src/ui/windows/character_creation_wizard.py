@@ -1,6 +1,6 @@
 """キャラクター作成ウィザード - WindowSystem用キャラクター作成UI"""
 
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any, Callable, Union
 from enum import Enum
 try:
     import pygame
@@ -61,8 +61,8 @@ class CharacterCreationWizard(Window):
         }
         
         # UI要素
-        self.ui_elements: Dict[str, pygame_gui.UIElement] = {}
-        self.content_panel: Optional[pygame_gui.elements.UIPanel] = None
+        self.ui_elements: Dict[str, Any] = {}  # pygame_guiがNoneの場合に対応
+        self.content_panel: Optional[Any] = None  # pygame_guiがNoneの場合に対応
         
         # 設定データ
         self.char_config = config_manager.load_config("characters")
@@ -87,20 +87,25 @@ class CharacterCreationWizard(Window):
             return
         
         # ウィンドウサイズ設定
-        screen_rect = self.surface.get_rect()
-        self.rect = pygame.Rect(
-            screen_rect.width // 6,
-            screen_rect.height // 8,
-            screen_rect.width * 2 // 3,
-            screen_rect.height * 3 // 4
-        )
+        screen_rect = self.surface.get_rect() if self.surface else None
+        if pygame and screen_rect:
+            self.rect = pygame.Rect(
+                screen_rect.width // 6,
+                screen_rect.height // 8,
+                screen_rect.width * 2 // 3,
+                screen_rect.height * 3 // 4
+            )
+        else:
+            # フォールバック値（dict形式）
+            self.rect = None  # type: ignore
         
         # メインパネル作成
-        self.content_panel = pygame_gui.elements.UIPanel(
-            relative_rect=self.rect,
-            manager=self.ui_manager,
-            element_id="character_creation_wizard_panel"
-        )
+        if pygame_gui and self.ui_manager and self.rect:
+            self.content_panel = pygame_gui.elements.UIPanel(
+                relative_rect=self.rect,
+                manager=self.ui_manager,
+                element_id="character_creation_wizard_panel"
+            )
         self.ui_elements["main_panel"] = self.content_panel
         
         # 現在のステップに応じてコンテンツを作成
@@ -136,54 +141,58 @@ class CharacterCreationWizard(Window):
             return
         
         # タイトル
-        title_rect = pygame.Rect(20, 20, 400, 40)
-        title = pygame_gui.elements.UILabel(
-            relative_rect=title_rect,
-            text=config_manager.get_text("character.creation_title"),
-            manager=self.ui_manager,
-            container=self.content_panel
-        )
-        self.ui_elements["title"] = title
+        if pygame and pygame_gui and self.ui_manager:
+            title_rect = pygame.Rect(20, 20, 400, 40)
+            title = pygame_gui.elements.UILabel(
+                relative_rect=title_rect,
+                text=config_manager.get_text("character.creation_title"),
+                manager=self.ui_manager,
+                container=self.content_panel
+            )
+            self.ui_elements["title"] = title
         
         # ステップ表示
-        step_rect = pygame.Rect(20, 70, 500, 30)
-        step_label = pygame_gui.elements.UILabel(
-            relative_rect=step_rect,
-            text="ステップ 1/5: キャラクター名を入力してください",
-            manager=self.ui_manager,
-            container=self.content_panel
-        )
-        self.ui_elements["step_label"] = step_label
+        if pygame and pygame_gui and self.ui_manager:
+            step_rect = pygame.Rect(20, 70, 500, 30)
+            step_label = pygame_gui.elements.UILabel(
+                relative_rect=step_rect,
+                text="ステップ 1/5: キャラクター名を入力してください",
+                manager=self.ui_manager,
+                container=self.content_panel
+            )
+            self.ui_elements["step_label"] = step_label
         
         # 名前入力フィールド
-        name_label_rect = pygame.Rect(20, 120, 150, 30)
-        name_label = pygame_gui.elements.UILabel(
-            relative_rect=name_label_rect,
-            text="キャラクター名:",
-            manager=self.ui_manager,
-            container=self.content_panel
-        )
-        self.ui_elements["name_label"] = name_label
-        
-        name_entry_rect = pygame.Rect(180, 120, 300, 30)
-        name_entry = pygame_gui.elements.UITextEntryLine(
-            relative_rect=name_entry_rect,
-            manager=self.ui_manager,
-            container=self.content_panel,
-            initial_text=self.character_data["name"]
-        )
-        self.ui_elements["name_entry"] = name_entry
+        if pygame and pygame_gui and self.ui_manager:
+            name_label_rect = pygame.Rect(20, 120, 150, 30)
+            name_label = pygame_gui.elements.UILabel(
+                relative_rect=name_label_rect,
+                text="キャラクター名:",
+                manager=self.ui_manager,
+                container=self.content_panel
+            )
+            self.ui_elements["name_label"] = name_label
+            
+            name_entry_rect = pygame.Rect(180, 120, 300, 30)
+            name_entry = pygame_gui.elements.UITextEntryLine(
+                relative_rect=name_entry_rect,
+                manager=self.ui_manager,
+                container=self.content_panel,
+                initial_text=self.character_data["name"]
+            )
+            self.ui_elements["name_entry"] = name_entry
         
         # 注意事項
-        note_rect = pygame.Rect(20, 170, 500, 60)
-        note_text = "※ 名前は1-50文字で入力してください。\\n※ 特殊文字は使用できません。"
-        note_label = pygame_gui.elements.UILabel(
-            relative_rect=note_rect,
-            text=note_text,
-            manager=self.ui_manager,
-            container=self.content_panel
-        )
-        self.ui_elements["note"] = note_label
+        if pygame and pygame_gui and self.ui_manager:
+            note_rect = pygame.Rect(20, 170, 500, 60)
+            note_text = "※ 名前は1-50文字で入力してください。\\n※ 特殊文字は使用できません。"
+            note_label = pygame_gui.elements.UILabel(
+                relative_rect=note_rect,
+                text=note_text,
+                manager=self.ui_manager,
+                container=self.content_panel
+            )
+            self.ui_elements["note"] = note_label
         
         # ボタン
         self._create_navigation_buttons(first_step=True)
@@ -194,54 +203,56 @@ class CharacterCreationWizard(Window):
             return
         
         # タイトル
-        title_rect = pygame.Rect(20, 20, 400, 40)
-        title = pygame_gui.elements.UILabel(
-            relative_rect=title_rect,
-            text="種族選択",
-            manager=self.ui_manager,
-            container=self.content_panel
-        )
-        self.ui_elements["title"] = title
-        
-        # ステップ表示
-        step_rect = pygame.Rect(20, 70, 500, 30)
-        step_label = pygame_gui.elements.UILabel(
-            relative_rect=step_rect,
-            text="ステップ 2/5: 種族を選択してください",
-            manager=self.ui_manager,
-            container=self.content_panel
-        )
-        self.ui_elements["step_label"] = step_label
-        
-        # 種族リスト
-        y_offset = 110
-        for i, (race_id, race_data) in enumerate(self.races_config.items()):
-            race_name = race_data.get("name", race_id)
-            race_description = race_data.get("description", "")
-            
-            # 種族ボタン
-            button_rect = pygame.Rect(20, y_offset + i * 60, 400, 35)
-            is_selected = self.character_data["race"] == race_id
-            button_text = f"● {race_name}" if is_selected else f"○ {race_name}"
-            
-            race_button = pygame_gui.elements.UIButton(
-                relative_rect=button_rect,
-                text=button_text,
-                manager=self.ui_manager,
-                container=self.content_panel,
-                object_id=f"race_button_{race_id}"
-            )
-            self.ui_elements[f"race_button_{race_id}"] = race_button
-            
-            # 説明
-            desc_rect = pygame.Rect(40, y_offset + i * 60 + 40, 400, 20)
-            desc_label = pygame_gui.elements.UILabel(
-                relative_rect=desc_rect,
-                text=race_description,
+        if pygame and pygame_gui and self.ui_manager:
+            title_rect = pygame.Rect(20, 20, 400, 40)
+            title = pygame_gui.elements.UILabel(
+                relative_rect=title_rect,
+                text="種族選択",
                 manager=self.ui_manager,
                 container=self.content_panel
             )
-            self.ui_elements[f"race_desc_{race_id}"] = desc_label
+            self.ui_elements["title"] = title
+            
+            # ステップ表示
+            step_rect = pygame.Rect(20, 70, 500, 30)
+            step_label = pygame_gui.elements.UILabel(
+                relative_rect=step_rect,
+                text="ステップ 2/5: 種族を選択してください",
+                manager=self.ui_manager,
+                container=self.content_panel
+            )
+            self.ui_elements["step_label"] = step_label
+        
+        # 種族リスト
+        if pygame and pygame_gui and self.ui_manager:
+            y_offset = 110
+            for i, (race_id, race_data) in enumerate(self.races_config.items()):
+                race_name = race_data.get("name", race_id)
+                race_description = race_data.get("description", "")
+                
+                # 種族ボタン
+                button_rect = pygame.Rect(20, y_offset + i * 60, 400, 35)
+                is_selected = self.character_data["race"] == race_id
+                button_text = f"● {race_name}" if is_selected else f"○ {race_name}"
+                
+                race_button = pygame_gui.elements.UIButton(
+                    relative_rect=button_rect,
+                    text=button_text,
+                    manager=self.ui_manager,
+                    container=self.content_panel,
+                    object_id=f"race_button_{race_id}"
+                )
+                self.ui_elements[f"race_button_{race_id}"] = race_button
+                
+                # 説明
+                desc_rect = pygame.Rect(40, y_offset + i * 60 + 40, 400, 20)
+                desc_label = pygame_gui.elements.UILabel(
+                    relative_rect=desc_rect,
+                    text=race_description,
+                    manager=self.ui_manager,
+                    container=self.content_panel
+                )
+                self.ui_elements[f"race_desc_{race_id}"] = desc_label
         
         # ボタン
         self._create_navigation_buttons()
@@ -433,36 +444,37 @@ class CharacterCreationWizard(Window):
         self.ui_elements["summary"] = summary_label
         
         # 作成ボタン
-        create_rect = pygame.Rect(self.rect.width - 250, self.rect.height - 60, 100, 35)
-        create_button = pygame_gui.elements.UIButton(
-            relative_rect=create_rect,
-            text="作成",
-            manager=self.ui_manager,
-            container=self.content_panel,
-            object_id="create_character_button"
-        )
-        self.ui_elements["create_character_button"] = create_button
-        
-        # 戻る・キャンセルボタン
-        back_rect = pygame.Rect(self.rect.width - 370, self.rect.height - 60, 100, 35)
-        back_button = pygame_gui.elements.UIButton(
-            relative_rect=back_rect,
-            text="戻る",
-            manager=self.ui_manager,
-            container=self.content_panel,
-            object_id="back_button"
-        )
-        self.ui_elements["back_button"] = back_button
-        
-        cancel_rect = pygame.Rect(self.rect.width - 130, self.rect.height - 60, 100, 35)
-        cancel_button = pygame_gui.elements.UIButton(
-            relative_rect=cancel_rect,
-            text="キャンセル",
-            manager=self.ui_manager,
-            container=self.content_panel,
-            object_id="cancel_button"
-        )
-        self.ui_elements["cancel_button"] = cancel_button
+        if pygame and pygame_gui and self.ui_manager and self.rect:
+            create_rect = pygame.Rect(self.rect.width - 250, self.rect.height - 60, 100, 35)
+            create_button = pygame_gui.elements.UIButton(
+                relative_rect=create_rect,
+                text="作成",
+                manager=self.ui_manager,
+                container=self.content_panel,
+                object_id="create_character_button"
+            )
+            self.ui_elements["create_character_button"] = create_button
+            
+            # 戻る・キャンセルボタン
+            back_rect = pygame.Rect(self.rect.width - 370, self.rect.height - 60, 100, 35)
+            back_button = pygame_gui.elements.UIButton(
+                relative_rect=back_rect,
+                text="戻る",
+                manager=self.ui_manager,
+                container=self.content_panel,
+                object_id="back_button"
+            )
+            self.ui_elements["back_button"] = back_button
+            
+            cancel_rect = pygame.Rect(self.rect.width - 130, self.rect.height - 60, 100, 35)
+            cancel_button = pygame_gui.elements.UIButton(
+                relative_rect=cancel_rect,
+                text="キャンセル",
+                manager=self.ui_manager,
+                container=self.content_panel,
+                object_id="cancel_button"
+            )
+            self.ui_elements["cancel_button"] = cancel_button
 
     def create_completed_step(self) -> None:
         """完了ステップのUI要素を作成"""
@@ -491,24 +503,24 @@ class CharacterCreationWizard(Window):
         self.ui_elements["message"] = message_label
         
         # 閉じるボタン
-        rect_width = self.rect.width if self.rect and hasattr(self.rect, 'width') else 800
-        rect_height = self.rect.height if self.rect and hasattr(self.rect, 'height') else 600
-        close_rect = pygame.Rect(rect_width - 120, rect_height - 60, 100, 35) if pygame else None
-        close_button = pygame_gui.elements.UIButton(
-            relative_rect=close_rect,
-            text="閉じる",
-            manager=self.ui_manager,
-            container=self.content_panel,
-            object_id="close_button"
-        )
-        self.ui_elements["close_button"] = close_button
+        if pygame and pygame_gui and self.ui_manager and self.rect:
+            close_rect = pygame.Rect(self.rect.width - 120, self.rect.height - 60, 100, 35)
+            close_button = pygame_gui.elements.UIButton(
+                relative_rect=close_rect,
+                text="閉じる",
+                manager=self.ui_manager,
+                container=self.content_panel,
+                object_id="close_button"
+            )
+            self.ui_elements["close_button"] = close_button
 
     def _create_navigation_buttons(self, first_step: bool = False) -> None:
         """ナビゲーションボタンを作成"""
+        if not pygame or not pygame_gui or not self.ui_manager or not self.rect:
+            return
+            
         # 次へボタン
-        rect_width = self.rect.width if self.rect and hasattr(self.rect, 'width') else 800
-        rect_height = self.rect.height if self.rect and hasattr(self.rect, 'height') else 600
-        next_rect = pygame.Rect(rect_width - 120, rect_height - 60, 100, 35) if pygame else None
+        next_rect = pygame.Rect(self.rect.width - 120, self.rect.height - 60, 100, 35)
         next_button = pygame_gui.elements.UIButton(
             relative_rect=next_rect,
             text="次へ",
@@ -520,9 +532,7 @@ class CharacterCreationWizard(Window):
         
         # 戻るボタン（最初のステップ以外）
         if not first_step:
-            rect_width = self.rect.width if self.rect and hasattr(self.rect, 'width') else 800
-            rect_height = self.rect.height if self.rect and hasattr(self.rect, 'height') else 600
-            back_rect = pygame.Rect(rect_width - 240, rect_height - 60, 100, 35) if pygame else None
+            back_rect = pygame.Rect(self.rect.width - 240, self.rect.height - 60, 100, 35)
             back_button = pygame_gui.elements.UIButton(
                 relative_rect=back_rect,
                 text="戻る",
@@ -533,8 +543,7 @@ class CharacterCreationWizard(Window):
             self.ui_elements["back_button"] = back_button
         
         # キャンセルボタン
-        rect_height = self.rect.height if self.rect and hasattr(self.rect, 'height') else 600
-        cancel_rect = pygame.Rect(20, rect_height - 60, 100, 35) if pygame else None
+        cancel_rect = pygame.Rect(20, self.rect.height - 60, 100, 35)
         cancel_button = pygame_gui.elements.UIButton(
             relative_rect=cancel_rect,
             text="キャンセル",
@@ -724,15 +733,19 @@ class CharacterCreationWizard(Window):
         """キャンセルコールバックを設定"""
         self.cancel_callback = callback
 
-    def handle_event(self, event: pygame.event.Event) -> bool:
+    def handle_event(self, event) -> bool:
         """イベントを処理"""
-        if event.type == pygame_gui.UI_BUTTON_PRESSED:
-            return self._handle_button_press(event)
-        elif event.type == pygame_gui.UI_TEXT_ENTRY_FINISHED:
-            return self._handle_text_entry(event)
+        if not pygame or not pygame_gui:
+            return False
+            
+        if hasattr(event, 'type'):
+            if event.type == pygame_gui.UI_BUTTON_PRESSED:
+                return self._handle_button_press(event)
+            elif event.type == pygame_gui.UI_TEXT_ENTRY_FINISHED:
+                return self._handle_text_entry(event)
         return False
 
-    def _handle_button_press(self, event: pygame.event.Event) -> bool:
+    def _handle_button_press(self, event) -> bool:
         """ボタン押下イベントを処理"""
         element_id = ''
         
@@ -806,7 +819,7 @@ class CharacterCreationWizard(Window):
         
         return False
 
-    def _handle_text_entry(self, event: pygame.event.Event) -> bool:
+    def _handle_text_entry(self, event) -> bool:
         """テキスト入力イベントを処理"""
         if self.current_step == CreationStep.NAME_INPUT:
             name_entry = self.ui_elements.get("name_entry")
