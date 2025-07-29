@@ -2,8 +2,15 @@
 
 from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
-import pygame
-import pygame_gui
+try:
+    import pygame
+except ImportError:
+    pygame = None  # type: ignore
+
+try:
+    import pygame_gui
+except ImportError:
+    pygame_gui = None  # type: ignore
 
 from src.ui.window_system.window import Window
 from src.ui.window_system.window_manager import WindowManager
@@ -484,7 +491,9 @@ class CharacterCreationWizard(Window):
         self.ui_elements["message"] = message_label
         
         # 閉じるボタン
-        close_rect = pygame.Rect(self.rect.width - 120, self.rect.height - 60, 100, 35)
+        rect_width = self.rect.width if self.rect and hasattr(self.rect, 'width') else 800
+        rect_height = self.rect.height if self.rect and hasattr(self.rect, 'height') else 600
+        close_rect = pygame.Rect(rect_width - 120, rect_height - 60, 100, 35) if pygame else None
         close_button = pygame_gui.elements.UIButton(
             relative_rect=close_rect,
             text="閉じる",
@@ -497,7 +506,9 @@ class CharacterCreationWizard(Window):
     def _create_navigation_buttons(self, first_step: bool = False) -> None:
         """ナビゲーションボタンを作成"""
         # 次へボタン
-        next_rect = pygame.Rect(self.rect.width - 120, self.rect.height - 60, 100, 35)
+        rect_width = self.rect.width if self.rect and hasattr(self.rect, 'width') else 800
+        rect_height = self.rect.height if self.rect and hasattr(self.rect, 'height') else 600
+        next_rect = pygame.Rect(rect_width - 120, rect_height - 60, 100, 35) if pygame else None
         next_button = pygame_gui.elements.UIButton(
             relative_rect=next_rect,
             text="次へ",
@@ -509,7 +520,9 @@ class CharacterCreationWizard(Window):
         
         # 戻るボタン（最初のステップ以外）
         if not first_step:
-            back_rect = pygame.Rect(self.rect.width - 240, self.rect.height - 60, 100, 35)
+            rect_width = self.rect.width if self.rect and hasattr(self.rect, 'width') else 800
+            rect_height = self.rect.height if self.rect and hasattr(self.rect, 'height') else 600
+            back_rect = pygame.Rect(rect_width - 240, rect_height - 60, 100, 35) if pygame else None
             back_button = pygame_gui.elements.UIButton(
                 relative_rect=back_rect,
                 text="戻る",
@@ -520,7 +533,8 @@ class CharacterCreationWizard(Window):
             self.ui_elements["back_button"] = back_button
         
         # キャンセルボタン
-        cancel_rect = pygame.Rect(20, self.rect.height - 60, 100, 35)
+        rect_height = self.rect.height if self.rect and hasattr(self.rect, 'height') else 600
+        cancel_rect = pygame.Rect(20, rect_height - 60, 100, 35) if pygame else None
         cancel_button = pygame_gui.elements.UIButton(
             relative_rect=cancel_rect,
             text="キャンセル",

@@ -4,10 +4,19 @@ SettingsWindow クラス
 設定画面表示用のウィンドウ
 """
 
-import pygame
-import pygame_gui
+try:
+    import pygame
+except ImportError:
+    pygame = None  # type: ignore
+
+try:
+    import pygame_gui
+    from pygame_gui.core.interfaces import IContainerLikeInterface
+except ImportError:
+    pygame_gui = None  # type: ignore
+    IContainerLikeInterface = Any  # type: ignore
+
 from pathlib import Path
-from pygame_gui.core.interfaces import IContainerLikeInterface
 from typing import Dict, List, Any, Optional, cast
 
 from .window import Window
@@ -496,8 +505,8 @@ class SettingsWindow(Window):
         self._execute_settings_operation('cancel')
         
         # キャンセル時はウィンドウを非表示にする（破棄しない）
-        if self.message_handler:
-            self.message_handler('settings_cancelled', {'window_id': self.window_id})
+        if hasattr(self, 'message_handler') and callable(getattr(self, 'message_handler', None)):
+            getattr(self, 'message_handler')('settings_cancelled', {'window_id': self.window_id})
         
         from .window_manager import WindowManager
         window_manager = WindowManager()
@@ -576,9 +585,10 @@ class SettingsWindow(Window):
                         field.ui_element.hide()
                     except Exception as e:
                         logger.warning(f"フィールドUI要素非表示エラー ({field.field_id}): {e}")
-                if hasattr(field, 'label_element') and field.label_element:
+                label_element = getattr(field, 'label_element', None)
+                if label_element:
                     try:
-                        field.label_element.hide()
+                        label_element.hide()
                     except Exception as e:
                         logger.warning(f"ラベル要素非表示エラー: {e}")
         
@@ -727,7 +737,8 @@ class SettingsWindow(Window):
             for field in tab.fields:
                 if hasattr(field, 'ui_element') and field.ui_element:
                     field.ui_element.show()
-                if hasattr(field, 'label_element') and field.label_element:
-                    field.label_element.show()
+                label_element = getattr(field, 'label_element', None)
+                if label_element and hasattr(label_element, 'show'):
+                    label_element.show()
         
         logger.debug(f"SettingsWindow UI要素を表示: {self.window_id}")

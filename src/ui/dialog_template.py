@@ -119,7 +119,7 @@ class DialogTemplate:
     
     def __init__(self, menu_stack_manager=None):
         self.menu_stack_manager = menu_stack_manager
-        self.active_dialogs: Dict[str, Any] = {}
+        self.active_dialogs: Dict[str, Dict[str, Any]] = {}
         self.dialog_callbacks: Dict[str, Dict[str, Callable]] = {}
         
         # デフォルト設定
@@ -393,7 +393,8 @@ class DialogTemplate:
         y = (screen_height - self.default_dialog_height) // 2
         
         if pygame and hasattr(pygame, 'Rect'):
-            dialog['rect'] = pygame.Rect(x, y, self.default_dialog_width, self.default_dialog_height)
+            # dialogは辞書なので、rectの値を辞書として保存
+            dialog['rect'] = {'x': x, 'y': y, 'width': self.default_dialog_width, 'height': self.default_dialog_height}
         
         return dialog
     
