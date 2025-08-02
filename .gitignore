@@ -24,3 +24,5 @@ tests/test_transition_system.py
 game_debug.log
 game_debug.pid
 current-ticket.md
+
+.serena/cache
