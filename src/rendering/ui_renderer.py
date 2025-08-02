@@ -12,11 +12,11 @@ from src.utils.logger import logger
 class UIRenderer:
     """UI描画処理クラス"""
     
-    def __init__(self, screen: pygame.Surface, ui_config: UIConfig = None, 
-                 color_config: ColorConfig = None):
+    def __init__(self, screen: pygame.Surface, ui_config: Optional[UIConfig] = None, 
+                 color_config: Optional[ColorConfig] = None):
         self.screen = screen
-        self.ui_config = ui_config or UIConfig()
-        self.color_config = color_config or ColorConfig()
+        self.ui_config = ui_config if ui_config is not None else UIConfig()
+        self.color_config = color_config if color_config is not None else ColorConfig()
         self.screen_width = screen.get_width()
         self.screen_height = screen.get_height()
         

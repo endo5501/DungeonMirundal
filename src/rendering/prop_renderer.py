@@ -2,7 +2,7 @@
 
 import math
 import pygame
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from src.dungeon.dungeon_manager import PlayerPosition
 from src.dungeon.dungeon_generator import DungeonLevel, CellType
@@ -13,11 +13,11 @@ from src.rendering.camera import Camera
 class PropRenderer:
     """プロップ（階段、宝箱など）描画処理クラス"""
     
-    def __init__(self, screen: pygame.Surface, prop_config: PropRenderConfig = None, 
-                 color_config: ColorConfig = None):
+    def __init__(self, screen: pygame.Surface, prop_config: Optional[PropRenderConfig] = None, 
+                 color_config: Optional[ColorConfig] = None):
         self.screen = screen
-        self.prop_config = prop_config or PropRenderConfig()
-        self.color_config = color_config or ColorConfig()
+        self.prop_config = prop_config if prop_config is not None else PropRenderConfig()
+        self.color_config = color_config if color_config is not None else ColorConfig()
         self.screen_width = screen.get_width()
         self.screen_height = screen.get_height()
     

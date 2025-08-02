@@ -119,7 +119,13 @@ class UIElement:
     def __init__(self, element_id: str, x: int = 0, y: int = 0, width: int = DEFAULT_UI_WIDTH, height: int = DEFAULT_UI_HEIGHT):
         self.element_id = element_id
         self.state = UIState.HIDDEN
-        self.rect = pygame.Rect(x, y, width, height)
+        if pygame:
+            self.rect = pygame.Rect(x, y, width, height)
+        else:
+            # pygameが利用できない場合の代替実装
+            self.rect = type('Rect', (), {'x': x, 'y': y, 'width': width, 'height': height, 
+                                          'left': x, 'top': y, 'right': x + width, 'bottom': y + height,
+                                          'collidepoint': lambda x, y: False})()
         self.parent = None
         self.children: List['UIElement'] = []
         
@@ -152,11 +158,14 @@ class UIElement:
         self.state = UIState.HIDDEN
         logger.debug(f"UI要素を破棄: {self.element_id}")
     
-    def handle_event(self, event: pygame.event.Event) -> bool:
+    def handle_event(self, event: Any) -> bool:
         """イベント処理"""
         if self.state != UIState.VISIBLE:
             return False
         
+        if not pygame:
+            return False
+            
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.rect.collidepoint(event.pos):
                 self.is_pressed = True
@@ -164,12 +173,12 @@ class UIElement:
                     self.on_click()
                 return True
         
-        elif event.type == pygame.MOUSEBUTTONUP:
+        elif pygame and event.type == pygame.MOUSEBUTTONUP:
             if self.is_pressed:
                 self.is_pressed = False
                 return True
         
-        elif event.type == pygame.MOUSEMOTION:
+        elif pygame and event.type == pygame.MOUSEMOTION:
             old_hovered = self.is_hovered
             self.is_hovered = self.rect.collidepoint(event.pos)
             
@@ -178,11 +187,14 @@ class UIElement:
         
         return False
     
-    def render(self, screen: pygame.Surface, font: Optional[pygame.font.Font] = None):
+    def render(self, screen: Any, font: Any = None):
         """描画処理"""
         if self.state != UIState.VISIBLE:
             return
         
+        if not pygame:
+            return
+            
         # 背景描画
         bg_color = self._calculate_background_color()
         

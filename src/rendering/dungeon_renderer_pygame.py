@@ -45,11 +45,11 @@ class DungeonRendererPygame:
     リファクタリング版：描画に特化し、入力処理を分離。
     """
     
-    def __init__(self, screen=None, config: RendererConfig = None):
+    def __init__(self, screen=None, config: Optional[RendererConfig] = None):
         logger.info("DungeonRendererPygame 初期化開始")
         
         # 設定初期化
-        self.config = config or RendererConfig()
+        self.config = config if config is not None else RendererConfig()
         
         # Pygame初期化
         if not pygame.get_init():
