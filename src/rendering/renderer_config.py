@@ -2,7 +2,7 @@
 
 import math
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Optional
 
 
 @dataclass
@@ -121,14 +121,14 @@ class DirectionConfig:
 @dataclass
 class RendererConfig:
     """レンダラー統合設定"""
-    screen: ScreenConfig = None
-    camera: CameraConfig = None
-    raycast: RaycastConfig = None
-    wall_render: WallRenderConfig = None
-    prop_render: PropRenderConfig = None
-    ui: UIConfig = None
-    colors: ColorConfig = None
-    directions: DirectionConfig = None
+    screen: Optional[ScreenConfig] = None
+    camera: Optional[CameraConfig] = None
+    raycast: Optional[RaycastConfig] = None
+    wall_render: Optional[WallRenderConfig] = None
+    prop_render: Optional[PropRenderConfig] = None
+    ui: Optional[UIConfig] = None
+    colors: Optional[ColorConfig] = None
+    directions: Optional[DirectionConfig] = None
     
     def __post_init__(self):
         if self.screen is None:

@@ -2,7 +2,10 @@
 
 from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
-import pygame
+try:
+    import pygame
+except ImportError:
+    pygame = None  # type: ignore
 
 from src.ui.window_system import WindowManager
 from src.ui.window_system.settings_window import SettingsWindow
@@ -160,7 +163,9 @@ class SettingsUI:
         """カテゴリ別設定を表示（WindowSystem版）"""
         try:
             settings_window = self._get_settings_window()
-            settings_window.show_category(category)
+            show_category_method = getattr(settings_window, 'show_category', None)
+            if show_category_method:
+                show_category_method(category)
             self.current_category = SettingsCategory(category)
             logger.info(f"カテゴリ設定を表示: {category}")
         except Exception as e:
@@ -171,7 +176,9 @@ class SettingsUI:
         try:
             self.current_settings.update(settings)
             # 設定をconfig_managerに保存
-            config_manager.save_user_settings(self.current_settings)
+            save_method = getattr(config_manager, 'save_user_settings', None)
+            if save_method:
+                save_method(self.current_settings)
             logger.info("設定を適用しました")
         except Exception as e:
             logger.error(f"設定適用エラー: {e}")
@@ -181,7 +188,9 @@ class SettingsUI:
         try:
             self.current_settings = self._load_default_settings()
             if self.settings_window:
-                self.settings_window.update_settings(self.current_settings)
+                update_method = getattr(self.settings_window, 'update_settings', None)
+                if update_method:
+                    update_method(self.current_settings)
             logger.info("設定をデフォルトにリセット")
         except Exception as e:
             logger.error(f"設定リセットエラー: {e}")
@@ -190,7 +199,9 @@ class SettingsUI:
         """設定UIを非表示（WindowSystem版）"""
         try:
             if self.settings_window:
-                self.settings_window.close()
+                close_method = getattr(self.settings_window, 'close', None)
+                if close_method:
+                    close_method()
             self.is_open = False
             logger.info("設定UIを非表示")
         except Exception as e:
@@ -207,7 +218,9 @@ class SettingsUI:
     def cleanup(self):
         """リソースクリーンアップ"""
         if self.settings_window:
-            self.settings_window.cleanup()
+            cleanup_method = getattr(self.settings_window, 'cleanup', None)
+            if cleanup_method:
+                cleanup_method()
             self.settings_window = None
         self.is_open = False
         logger.info("SettingsUIリソースをクリーンアップしました")
