@@ -7,6 +7,8 @@ Window基底クラス
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Optional, List, Dict, Any
+
+from src.interfaces.battle_protocols import WindowMessageHandler
 import pygame
 import pygame_gui
 from datetime import datetime
@@ -214,7 +216,7 @@ class Window(ABC):
         """ウィンドウデータを取得"""
         return self.data.get(key, default)
     
-    def send_message(self, message_type: str, data: Dict[str, Any] = None) -> None:
+    def send_message(self, message_type: str, data: Dict[str, Any] = None) -> None:  # type: ignore
         """
         親ウィンドウまたはWindowManagerにメッセージを送信
         
@@ -229,8 +231,13 @@ class Window(ABC):
             try:
                 from .window_manager import WindowManager
                 window_manager = WindowManager.get_instance()
-                if hasattr(window_manager, 'handle_orphan_message'):
+                # WindowManagerはWindowMessageHandlerプロトコルを実装している
+                if isinstance(window_manager, WindowMessageHandler):
                     window_manager.handle_orphan_message(self, message_type, data or {})
+                else:
+                    # フォールバック: hasattrを使用
+                    if hasattr(window_manager, 'handle_orphan_message'):
+                        window_manager.handle_orphan_message(self, message_type, data or {})
             except Exception as e:
                 logger.debug(f"WindowManager経由のメッセージ送信に失敗: {e}")
     

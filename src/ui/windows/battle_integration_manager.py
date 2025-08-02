@@ -4,7 +4,7 @@
 ダンジョンシステムとBattleUIWindowの橋渡しを行う
 """
 
-from typing import Optional, Dict, Any, Callable
+from typing import Optional, Dict, Any, Callable, cast
 from dataclasses import dataclass
 
 from src.ui.window_system import WindowManager
@@ -13,6 +13,10 @@ from src.combat.combat_manager import CombatManager, CombatState
 from src.character.party import Party
 from src.monsters.monster import Monster
 from src.utils.logger import logger
+
+# Protocol imports for type safety
+from src.interfaces.core_protocols import Cleanupable
+from src.interfaces.battle_protocols import BattleWindow, WindowMessageHandler
 
 
 @dataclass
@@ -30,7 +34,7 @@ class BattleIntegrationManager:
     
     def __init__(self):
         self.window_manager = WindowManager.get_instance()
-        self.current_battle_window: Optional[BattleUIWindow] = None
+        self.current_battle_window: Optional[BattleWindow] = None
         self.current_combat_manager: Optional[CombatManager] = None
         self.battle_context: Optional[BattleContext] = None
         
@@ -78,7 +82,7 @@ class BattleIntegrationManager:
                 self.current_battle_window = created_window
             
             # 戦闘開始メッセージを送信
-            if self.current_battle_window and hasattr(self.current_battle_window, 'send_message'):
+            if self.current_battle_window:
                 self.current_battle_window.send_message('battle_started', {
                 'party': party,
                 'enemies': enemies,
@@ -120,13 +124,12 @@ class BattleIntegrationManager:
             })
             
             # ウィンドウを閉じる
-            self.window_manager.hide_window(self.current_battle_window)
+            # BattleWindowをWindowにキャスト（実際にはBattleUIWindowはWindowを継承）
+            self.window_manager.hide_window(cast(BattleUIWindow, self.current_battle_window))
             
-            # ウィンドウのクリーンアップ（利用可能な場合のみ）
-            if self.current_battle_window and hasattr(self.current_battle_window, 'cleanup'):
-                cleanup_method = getattr(self.current_battle_window, 'cleanup', None)
-                if cleanup_method and callable(cleanup_method):
-                    cleanup_method()
+            # ウィンドウのクリーンアップ
+            if self.current_battle_window:
+                self.current_battle_window.cleanup()
             
             # リターンコールバックを実行
             if self.battle_context and self.battle_context.return_callback:
@@ -265,10 +268,8 @@ class BattleIntegrationManager:
     def cleanup(self):
         """リソースクリーンアップ"""
         try:
-            if self.current_battle_window and hasattr(self.current_battle_window, 'cleanup'):
-                cleanup_method = getattr(self.current_battle_window, 'cleanup', None)
-                if cleanup_method and callable(cleanup_method):
-                    cleanup_method()
+            if self.current_battle_window:
+                self.current_battle_window.cleanup()
             
             self.current_battle_window = None
             self.current_combat_manager = None

@@ -596,14 +596,24 @@ class BattleUIWindow(Window):
         
         # pygame-guiの要素を削除
         if self.ui_manager:
-            root_container = self.ui_manager.get_root_container()
-            if hasattr(root_container, 'elements'):
-                elements = getattr(root_container, 'elements', [])
-                for element in list(elements):
-                    element.kill()
+            try:
+                root_container = self.ui_manager.get_root_container()
+                # UI要素の安全な削除
+                if root_container and hasattr(root_container, 'elements'):
+                    elements = getattr(root_container, 'elements', [])
+                    for element in list(elements):
+                        if hasattr(element, 'kill'):
+                            element.kill()
+            except Exception as e:
+                logger.warning(f"UI要素削除中にエラー: {e}")
+            
             self.ui_manager = None
         
         logger.debug(f"BattleUIWindow UI要素をクリーンアップ: {self.window_id}")
+
+    def cleanup(self) -> None:
+        """リソースクリーンアップ（Protocolインターフェース実装）"""
+        self.cleanup_ui()
 
 
 # BattlePhase, BattleActionTypeを直接エクスポート
