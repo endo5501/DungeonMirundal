@@ -4,7 +4,7 @@ tags: ["code-quality", "static-analysis", "type-safety", "refactoring"]
 description: "pyrightで検出された1509個の静的解析エラーを修正し、型安全性を向上"
 created_at: "2025-07-27T14:21:47Z"
 started_at: 2025-07-27T14:25:23Z
-closed_at: null   # Do not modify manually
+closed_at: 2025-08-02T10:51:46Z # Do not modify manually
 ---
 
 # Pyright静的解析エラー修正
