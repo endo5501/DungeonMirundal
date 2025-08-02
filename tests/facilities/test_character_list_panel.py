@@ -322,9 +322,8 @@ class TestCharacterListPanelSelection:
         
         # Mock the character_list UI element
         panel.character_list = Mock()
-        mock_item_list = Mock()
-        mock_item_list.index.return_value = 0  # First item
-        panel.character_list.item_list = mock_item_list
+        # item_listを実際のリストとして設定
+        panel.character_list.item_list = ["戦士アレン Lv.5"]
         
         with patch.object(panel, '_update_detail_view') as mock_detail, \
              patch.object(panel, '_update_action_button') as mock_action:

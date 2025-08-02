@@ -269,6 +269,36 @@ class DungeonNavigationManager:
         
         return visible_cells
     
+    def can_move_to(self, x: int, y: int, level: int) -> bool:
+        """指定した座標に移動可能かチェック"""
+        current_dungeon = self.state_manager.get_current_dungeon()
+        if not current_dungeon:
+            return False
+        
+        # レベルの存在確認
+        if level not in current_dungeon.levels:
+            return False
+        
+        dungeon_level = current_dungeon.levels[level]
+        
+        # 境界チェック
+        if not (0 <= x < dungeon_level.width and 0 <= y < dungeon_level.height):
+            return False
+        
+        # セルの存在確認
+        cell = dungeon_level.get_cell(x, y)
+        if not cell:
+            return False
+        
+        # 移動可能なセルタイプかチェック
+        passable_types = {
+            CellType.FLOOR, CellType.STAIRS_UP, CellType.STAIRS_DOWN,
+            CellType.DOOR, CellType.EXIT, CellType.TREASURE,
+            CellType.BOSS, CellType.SPECIAL
+        }
+        
+        return cell.cell_type in passable_types
+    
     def _direction_to_delta(self, direction: Direction) -> Tuple[int, int]:
         """方向をデルタ座標に変換"""
         direction_map = {

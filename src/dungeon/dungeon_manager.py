@@ -90,6 +90,10 @@ class DungeonManager:
         """視界内のセルを取得"""
         return self.navigation_manager.get_visible_cells(vision_range)
     
+    def can_move_to(self, x: int, y: int, level: int) -> bool:
+        """指定した座標に移動可能かチェック"""
+        return self.navigation_manager.can_move_to(x, y, level)
+    
     # インタラクション系メソッド
     def set_force_retreat_callback(self, callback):
         """強制撤退コールバックを設定"""

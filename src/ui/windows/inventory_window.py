@@ -188,7 +188,10 @@ class InventoryWindow(Window):
         self.ui_elements["inventory_management_button"] = management_button
         
         # 閉じるボタン
-        close_rect = pygame.Rect(self.rect.width - 120, self.rect.height - 50, 100, 35)
+        if self.rect is not None:
+            close_rect = pygame.Rect(self.rect.width - 120, self.rect.height - 50, 100, 35)
+        else:
+            close_rect = pygame.Rect(680, 500, 100, 35)  # デフォルト位置
         close_button = pygame_gui.elements.UIButton(
             relative_rect=close_rect,
             text=config_manager.get_text("common.close"),
@@ -313,7 +316,7 @@ class InventoryWindow(Window):
 
     def _create_action_buttons(self) -> None:
         """操作ボタンを作成"""
-        button_y = self.rect.height - 100
+        button_y = self.rect.height - 100 if self.rect is not None else 450
         
         # 整理ボタン
         sort_rect = pygame.Rect(20, button_y, 100, 35)
@@ -338,7 +341,8 @@ class InventoryWindow(Window):
         self.ui_elements["stats_button"] = stats_button
         
         # 戻るボタン
-        back_rect = pygame.Rect(self.rect.width - 120, button_y, 100, 35)
+        back_x = self.rect.width - 120 if self.rect is not None else 680
+        back_rect = pygame.Rect(back_x, button_y, 100, 35)
         back_button = pygame_gui.elements.UIButton(
             relative_rect=back_rect,
             text="戻る",
@@ -362,11 +366,17 @@ class InventoryWindow(Window):
         if not self.content_panel or self.selected_slot is None:
             return
         
+        if self.current_inventory is None or not hasattr(self.current_inventory, 'slots'):
+            return
+        
         slot = self.current_inventory.slots[self.selected_slot]
         if slot.is_empty():
             return
         
         item_instance = slot.item_instance
+        if item_instance is None:
+            return
+        
         item = item_manager.get_item(item_instance.item_id)
         
         # タイトル
@@ -395,7 +405,16 @@ class InventoryWindow(Window):
         y_offset += 45
         
         # 使用ボタン（使用可能な場合）
-        if item and item.is_usable():
+        is_usable = False
+        if item:
+            if hasattr(item, 'is_usable'):
+                is_usable_attr = getattr(item, 'is_usable')
+                if callable(is_usable_attr):
+                    is_usable = is_usable_attr()
+                else:
+                    is_usable = bool(is_usable_attr)
+        
+        if is_usable:
             use_rect = pygame.Rect(20, y_offset, 150, 35)
             use_button = pygame_gui.elements.UIButton(
                 relative_rect=use_rect,
@@ -490,19 +509,28 @@ class InventoryWindow(Window):
         try:
             result = item_usage_manager.use_item(
                 item_instance, 
-                self.current_character, 
-                quantity=1
+                self.current_character
             )
             
-            if result.success:
+            # resultがタプルの場合は分解
+            if isinstance(result, tuple):
+                usage_result, message, effects = result
+                success = getattr(usage_result, 'success', bool(usage_result))
+                quantity_consumed = getattr(usage_result, 'quantity_consumed', 1) if hasattr(usage_result, 'quantity_consumed') else 1
+            else:
+                success = getattr(result, 'success', False)
+                message = getattr(result, 'message', '使用結果不明')
+                quantity_consumed = getattr(result, 'quantity_consumed', 1)
+            
+            if success:
                 # インベントリから消費量を減らす
-                if result.quantity_consumed > 0:
-                    self.current_inventory.remove_item(slot_index, result.quantity_consumed)
+                if quantity_consumed > 0 and self.current_inventory is not None:
+                    self.current_inventory.remove_item(slot_index, quantity_consumed)
                 
-                self.show_message(result.message)
+                self.show_message(message)
                 self.refresh_view()
             else:
-                self.show_message(f"使用失敗: {result.message}")
+                self.show_message(f"使用失敗: {message}")
                 
         except Exception as e:
             logger.error(f"アイテム使用エラー: {e}")
@@ -518,7 +546,7 @@ class InventoryWindow(Window):
         try:
             # 同一インベントリ内での移動
             if source_inventory == self.current_inventory:
-                success = self.current_inventory.transfer_item(source_slot, target_slot)
+                success = self.current_inventory.move_item(source_slot, target_slot)
                 if success:
                     self.show_message("アイテムを移動しました")
                     self.refresh_view()
@@ -533,6 +561,9 @@ class InventoryWindow(Window):
 
     def drop_item(self, item_instance: ItemInstance, slot_index: int) -> None:
         """アイテムを破棄"""
+        if not self.current_inventory:
+            return
+            
         try:
             quantity = item_instance.quantity
             success = self.current_inventory.remove_item(slot_index, quantity)
@@ -616,7 +647,7 @@ class InventoryWindow(Window):
         
         total_weight = self.current_inventory.get_total_weight()
         max_weight = self.current_inventory.get_max_weight()
-        item_count = self.current_inventory.get_item_count()
+        item_count = self.current_inventory.get_used_slot_count()
         max_items = self.current_inventory.get_max_items()
         
         return f"重量: {total_weight:.1f}/{max_weight}kg | アイテム: {item_count}/{max_items}"
@@ -648,9 +679,12 @@ class InventoryWindow(Window):
 
     def _filter_items_by_type(self, item_type: str) -> List[Tuple[int, ItemInstance]]:
         """アイテムタイプでフィルタリング"""
+        if not self.current_inventory or not self.current_inventory.slots:
+            return []
+            
         filtered = []
         for i, slot in enumerate(self.current_inventory.slots):
-            if not slot.is_empty():
+            if not slot.is_empty() and slot.item_instance is not None:
                 item = item_manager.get_item(slot.item_instance.item_id)
                 if item and item.item_type.value == item_type:
                     filtered.append((i, slot.item_instance))
@@ -658,11 +692,14 @@ class InventoryWindow(Window):
 
     def _search_items_by_name(self, search_query: str) -> List[Tuple[int, ItemInstance]]:
         """アイテム名で検索"""
+        if not self.current_inventory or not self.current_inventory.slots:
+            return []
+            
         results = []
         query_lower = search_query.lower()
         
         for i, slot in enumerate(self.current_inventory.slots):
-            if not slot.is_empty():
+            if not slot.is_empty() and slot.item_instance is not None:
                 item = item_manager.get_item(slot.item_instance.item_id)
                 if item and query_lower in item.get_name().lower():
                     results.append((i, slot.item_instance))
@@ -674,19 +711,30 @@ class InventoryWindow(Window):
             return "統計情報がありません"
         
         stats = f"【インベントリ統計】\\n\\n"
-        stats += f"総重量: {self.current_inventory.get_total_weight():.1f}kg\\n"
-        stats += f"最大重量: {self.current_inventory.get_max_weight()}kg\\n"
-        stats += f"アイテム数: {self.current_inventory.get_item_count()}\\n"
-        stats += f"最大アイテム数: {self.current_inventory.get_max_items()}\\n"
+        
+        # 統計情報の取得（Noneチェック付き）
+        try:
+            total_weight = self.current_inventory.get_total_weight()
+            max_weight = self.current_inventory.get_max_weight()
+            item_count = self.current_inventory.get_used_slot_count()
+            max_items = self.current_inventory.get_max_items()
+            
+            stats += f"総重量: {total_weight:.1f}kg\\n"
+            stats += f"最大重量: {max_weight}kg\\n"
+            stats += f"アイテム数: {item_count}\\n"
+            stats += f"最大アイテム数: {max_items}\\n"
+        except AttributeError:
+            stats += "統計情報の取得に失敗しました\\n"
         
         # アイテムタイプ別集計
         type_counts = {}
-        for slot in self.current_inventory.slots:
-            if not slot.is_empty():
-                item = item_manager.get_item(slot.item_instance.item_id)
-                if item:
-                    item_type = item.item_type.value
-                    type_counts[item_type] = type_counts.get(item_type, 0) + 1
+        if self.current_inventory.slots is not None:
+            for slot in self.current_inventory.slots:
+                if not slot.is_empty() and slot.item_instance is not None:
+                    item = item_manager.get_item(slot.item_instance.item_id)
+                    if item:
+                        item_type = item.item_type.value
+                        type_counts[item_type] = type_counts.get(item_type, 0) + 1
         
         if type_counts:
             stats += "\\n【アイテムタイプ別】\\n"
@@ -751,16 +799,22 @@ class InventoryWindow(Window):
         # パーティ概要でのボタン処理
         if self.current_mode == InventoryViewMode.PARTY_OVERVIEW:
             if element_id == 'shared_inventory_button':
-                shared_inventory = self.current_party.get_party_inventory()
-                self.show_inventory_contents(shared_inventory, "パーティ共有アイテム", "party")
+                if self.current_party is not None:
+                    shared_inventory = self.current_party.get_party_inventory()
+                    if shared_inventory is not None:
+                        self.show_inventory_contents(shared_inventory, "パーティ共有アイテム", "party")
                 return True
             elif element_id.startswith('char_inventory_button_'):
                 index = int(element_id.split('_')[-1])
-                characters = self.current_party.get_all_characters()
+                if self.current_party is not None:
+                    characters = self.current_party.get_all_characters()
                 if 0 <= index < len(characters):
                     char_inventory = characters[index].get_inventory()
                     self.current_character = characters[index]
-                    self.show_inventory_contents(char_inventory, f"{characters[index].name}のアイテム", "character")
+                    if char_inventory:
+                        self.show_inventory_contents(char_inventory, f"{characters[index].name}のアイテム", "character")
+                    else:
+                        logger.warning(f"キャラクター {characters[index].name} のインベントリが見つかりません")
                 return True
             elif element_id == 'inventory_management_button':
                 self.current_mode = InventoryViewMode.INVENTORY_MANAGEMENT
@@ -776,8 +830,11 @@ class InventoryWindow(Window):
         elif self.current_mode == InventoryViewMode.INVENTORY_CONTENTS:
             if element_id.startswith('item_button_'):
                 slot_index = int(element_id.split('_')[-1])
-                slot = self.current_inventory.slots[slot_index]
-                if not slot.is_empty():
+                if self.current_inventory and self.current_inventory.slots:
+                    slot = self.current_inventory.slots[slot_index]
+                else:
+                    return True
+                if not slot.is_empty() and slot.item_instance:
                     self.show_item_actions(slot_index, slot.item_instance)
                 return True
             elif element_id == 'sort_button':
@@ -793,24 +850,35 @@ class InventoryWindow(Window):
         # アイテムアクションでのボタン処理
         elif self.current_mode == InventoryViewMode.ITEM_ACTIONS:
             if element_id == 'detail_button':
-                slot = self.current_inventory.slots[self.selected_slot]
-                item = item_manager.get_item(slot.item_instance.item_id)
-                self.show_item_details(slot.item_instance, item)
+                if (self.current_inventory and self.current_inventory.slots and 
+                    self.selected_slot is not None):
+                    slot = self.current_inventory.slots[self.selected_slot]
+                    if slot.item_instance:
+                        item = item_manager.get_item(slot.item_instance.item_id)
+                        self.show_item_details(slot.item_instance, item)
                 return True
             elif element_id == 'use_button':
-                slot = self.current_inventory.slots[self.selected_slot]
-                self.use_item(slot.item_instance, self.selected_slot)
+                if (self.current_inventory and self.current_inventory.slots and 
+                    self.selected_slot is not None):
+                    slot = self.current_inventory.slots[self.selected_slot]
+                    if slot.item_instance:
+                        self.use_item(slot.item_instance, self.selected_slot)
                 return True
             elif element_id == 'transfer_button':
-                self.transfer_source = (self.current_inventory, self.selected_slot)
-                self.show_message("移動先のスロットを選択してください")
+                if self.current_inventory and self.selected_slot is not None:
+                    self.transfer_source = (self.current_inventory, self.selected_slot)
+                    self.show_message("移動先のスロットを選択してください")
                 return True
             elif element_id == 'drop_button':
-                slot = self.current_inventory.slots[self.selected_slot]
-                self.drop_item(slot.item_instance, self.selected_slot)
+                if (self.current_inventory and self.current_inventory.slots and 
+                    self.selected_slot is not None):
+                    slot = self.current_inventory.slots[self.selected_slot]
+                    if slot.item_instance:
+                        self.drop_item(slot.item_instance, self.selected_slot)
                 return True
             elif element_id == 'back_button':
-                self.show_inventory_contents(self.current_inventory, "", self.inventory_type)
+                if self.current_inventory:
+                    self.show_inventory_contents(self.current_inventory, "", self.inventory_type)
                 return True
         
         return False

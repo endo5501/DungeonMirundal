@@ -189,6 +189,8 @@ class DialogWindow(Window):
     
     def _create_message_label(self) -> None:
         """メッセージラベルを作成"""
+        if not self.rect:
+            return
         # メッセージエリアは十分な高さを確保
         message_height = self.rect.height - 120  # ボタンと余白を除いた領域
         message_rect = pygame.Rect(20, 20, self.rect.width - 40, message_height)
@@ -202,6 +204,8 @@ class DialogWindow(Window):
     def _create_input_field_if_needed(self) -> None:
         """必要に応じて入力フィールドを作成"""
         if self.dialog_type == DialogType.INPUT:
+            if not self.rect:
+                return
             input_y = 90
             input_rect = pygame.Rect(20, input_y, self.rect.width - 40, 30)
             
@@ -258,6 +262,9 @@ class DialogWindow(Window):
         button_width = 80
         button_height = 30
         button_spacing = 10
+        
+        if not self.rect:
+            return
         
         # ボタン配置の開始位置を計算
         total_button_width = button_count * button_width + (button_count - 1) * button_spacing
@@ -353,8 +360,11 @@ class DialogWindow(Window):
         
         # pygame-guiの要素を削除
         if self.ui_manager:
-            for element in list(self.ui_manager.get_root_container().elements):
-                element.kill()
+            root_container = self.ui_manager.get_root_container()
+            if hasattr(root_container, 'elements'):
+                elements = getattr(root_container, 'elements', [])
+                for element in list(elements):
+                    element.kill()
             self.ui_manager = None
         
         logger.debug(f"DialogWindow UI要素をクリーンアップ: {self.window_id}")

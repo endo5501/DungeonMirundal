@@ -47,7 +47,7 @@ class DungeonMenuWindow(Window):
         self.selected_menu_index = 0
         
         # UI要素
-        self.ui_elements: Dict[str, pygame_gui.UIElement] = {}
+        self.ui_elements: Dict[str, Any] = {}
         self.content_panel: Optional[pygame_gui.elements.UIPanel] = None
         
         # コールバック
@@ -113,7 +113,8 @@ class DungeonMenuWindow(Window):
             manager=self.ui_manager,
             element_id="dungeon_menu_window_panel"
         )
-        self.content_panel.background_colour = pygame.Color(0, 0, 0, 0)  # 透明
+        if self.content_panel is not None and hasattr(self.content_panel, 'background_colour'):
+            self.content_panel.background_colour = pygame.Color(0, 0, 0, 0)  # 透明
         self.ui_elements["main_panel"] = self.content_panel
         
         # フォント初期化
@@ -237,7 +238,7 @@ class DungeonMenuWindow(Window):
             )
             
             # 選択状態の視覚的表現
-            if i == self.selected_menu_index:
+            if i == self.selected_menu_index and hasattr(button, 'background_colour'):
                 button.background_colour = pygame.Color(*self.colors['blue'])
             
             self.ui_elements[f"menu_item_{i}"] = button
@@ -281,8 +282,13 @@ class DungeonMenuWindow(Window):
             elif event.key == pygame.K_ESCAPE:
                 self.close_menu()
                 # ウィンドウをWindowManagerから削除してダンジョンに戻る
-                if hasattr(self, 'window_manager') and self.window_manager:
-                    self.window_manager.hide_window(self, remove_from_stack=True)
+                try:
+                    from src.ui.window_system.window_manager import WindowManager
+                    window_manager = WindowManager.get_instance()
+                    if window_manager:
+                        window_manager.hide_window(self, remove_from_stack=True)
+                except Exception as e:
+                    logger.debug(f"WindowManager経由のウィンドウ非表示に失敗: {e}")
                 
                 # DungeonMenuManagerにも通知してcurrent_windowをクリア
                 try:
@@ -331,10 +337,11 @@ class DungeonMenuWindow(Window):
             button_key = f"menu_item_{i}"
             if button_key in self.ui_elements:
                 button = self.ui_elements[button_key]
-                if i == self.selected_menu_index:
-                    button.background_colour = pygame.Color(*self.colors['blue'])
-                else:
-                    button.background_colour = pygame.Color(*self.colors['dark_gray'])
+                if hasattr(button, 'background_colour'):
+                    if i == self.selected_menu_index:
+                        button.background_colour = pygame.Color(*self.colors['blue'])
+                    else:
+                        button.background_colour = pygame.Color(*self.colors['dark_gray'])
 
     def render(self) -> None:
         """UIを描画（pygame直接描画）"""
@@ -356,24 +363,30 @@ class DungeonMenuWindow(Window):
     def render_menu_background(self) -> None:
         """メニュー背景を描画"""
         # 半透明背景
-        overlay = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 128))
-        self.surface.blit(overlay, (0, 0))
+        if self.surface is not None:
+            overlay = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 128))
+            self.surface.blit(overlay, (0, 0))
 
     def render_menu_frame(self) -> None:
         """メニューフレームを描画"""
         # メニュー背景
-        menu_rect = pygame.Rect(self.menu_x, self.menu_y, self.menu_width, self.menu_height)
-        pygame.draw.rect(self.surface, self.colors['dark_gray'], menu_rect)
-        pygame.draw.rect(self.surface, self.colors['white'], menu_rect, 2)
-        
-        # タイトル
-        title_surface = self.font_large.render("ダンジョンメニュー", True, self.colors['white'])
-        title_rect = title_surface.get_rect(centerx=self.menu_x + self.menu_width // 2, y=self.menu_y + 20)
-        self.surface.blit(title_surface, title_rect)
+        if self.surface is not None:
+            menu_rect = pygame.Rect(self.menu_x, self.menu_y, self.menu_width, self.menu_height)
+            pygame.draw.rect(self.surface, self.colors['dark_gray'], menu_rect)
+            pygame.draw.rect(self.surface, self.colors['white'], menu_rect, 2)
+            
+            # タイトル
+            if self.font_large is not None:
+                title_surface = self.font_large.render("ダンジョンメニュー", True, self.colors['white'])
+                title_rect = title_surface.get_rect(centerx=self.menu_x + self.menu_width // 2, y=self.menu_y + 20)
+                self.surface.blit(title_surface, title_rect)
 
     def render_menu_items(self) -> None:
         """メニュー項目を描画"""
+        if self.surface is None or self.font_medium is None:
+            return
+            
         item_height = 35
         start_y = self.menu_y + 80
         
@@ -392,6 +405,9 @@ class DungeonMenuWindow(Window):
 
     def render_help_text(self) -> None:
         """操作説明を描画"""
+        if self.surface is None or self.font_small is None:
+            return
+            
         help_y = self.menu_y + self.menu_height - 80
         help_texts = [
             "↑↓: 選択",
@@ -416,7 +432,7 @@ class DungeonMenuWindow(Window):
 
     def render_character_status_bar(self) -> None:
         """キャラクターステータスバーを描画"""
-        if not self.current_party:
+        if not self.current_party or self.surface is None or self.font_small is None:
             return
         
         try:
@@ -424,7 +440,12 @@ class DungeonMenuWindow(Window):
             # 実際の実装では、character_status_barを使用
             status_y = 10
             for i, character in enumerate(self.current_party.get_all_characters()):
-                status_text = f"{character.name}: HP {character.current_hp}/{character.max_hp} MP {character.current_mp}/{character.max_mp}"
+                # Character属性への安全なアクセス
+                current_hp = getattr(character, 'current_hp', getattr(character, 'hp', 0))
+                max_hp = getattr(character, 'max_hp', getattr(character, 'base_hp', 0))
+                current_mp = getattr(character, 'current_mp', getattr(character, 'mp', 0))
+                max_mp = getattr(character, 'max_mp', getattr(character, 'base_mp', 0))
+                status_text = f"{character.name}: HP {current_hp}/{max_hp} MP {current_mp}/{max_mp}"
                 status_surface = self.font_small.render(status_text, True, self.colors['white'])
                 self.surface.blit(status_surface, (10, status_y + i * 25))
                 
@@ -433,7 +454,7 @@ class DungeonMenuWindow(Window):
 
     def render_small_map(self) -> None:
         """小地図を描画"""
-        if not self.dungeon_state:
+        if not self.dungeon_state or self.surface is None:
             return
         
         try:
@@ -459,7 +480,7 @@ class DungeonMenuWindow(Window):
 
     def render_location_info(self) -> None:
         """位置情報を描画"""
-        if not self.dungeon_state:
+        if not self.dungeon_state or self.surface is None or self.font_small is None:
             return
         
         try:
@@ -504,10 +525,16 @@ class DungeonMenuWindow(Window):
             # パーティメンバーの状態確認
             party_status = []
             for character in self.current_party.get_all_characters():
-                hp_ratio = character.current_hp / max(character.max_hp, 1)
-                mp_ratio = character.current_mp / max(character.max_mp, 1)
+                # Character属性への安全なアクセス
+                current_hp = getattr(character, 'current_hp', getattr(character, 'hp', 0))
+                max_hp = getattr(character, 'max_hp', getattr(character, 'base_hp', 1))
+                current_mp = getattr(character, 'current_mp', getattr(character, 'mp', 0))
+                max_mp = getattr(character, 'max_mp', getattr(character, 'base_mp', 1))
+                
+                hp_ratio = current_hp / max(max_hp, 1)
+                mp_ratio = current_mp / max(max_mp, 1)
                 status = "良好" if hp_ratio > 0.7 and mp_ratio > 0.7 else "要注意"
-                party_status.append(f"{character.name}: {status} (HP:{character.current_hp}/{character.max_hp}, MP:{character.current_mp}/{character.max_mp})")
+                party_status.append(f"{character.name}: {status} (HP:{current_hp}/{max_hp}, MP:{current_mp}/{max_mp})")
             
             logger.info("キャンプ中のパーティ状態:")
             for status in party_status:
@@ -526,8 +553,14 @@ class DungeonMenuWindow(Window):
         
         summary_parts = []
         for character in self.current_party.get_all_characters():
-            hp_info = f"{character.current_hp}/{character.max_hp}"
-            mp_info = f"{character.current_mp}/{character.max_mp}"
+            # Character属性への安全なアクセス
+            current_hp = getattr(character, 'current_hp', getattr(character, 'hp', 0))
+            max_hp = getattr(character, 'max_hp', getattr(character, 'base_hp', 0))
+            current_mp = getattr(character, 'current_mp', getattr(character, 'mp', 0))
+            max_mp = getattr(character, 'max_mp', getattr(character, 'base_mp', 0))
+            
+            hp_info = f"{current_hp}/{max_hp}"
+            mp_info = f"{current_mp}/{max_mp}"
             summary_parts.append(f"{character.name}: HP {hp_info} MP {mp_info}")
         
         return " | ".join(summary_parts)

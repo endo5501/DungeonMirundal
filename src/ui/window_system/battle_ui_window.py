@@ -6,7 +6,8 @@ BattleUIWindow クラス
 
 import pygame
 import pygame_gui
-from typing import Dict, List, Any, Optional, Tuple
+from pygame_gui.core.interfaces import IContainerLikeInterface
+from typing import Dict, List, Any, Optional, Tuple, cast
 
 from .window import Window
 from .battle_types import (
@@ -163,7 +164,7 @@ class BattleUIWindow(Window):
         self.party_status_panel = pygame_gui.elements.UIPanel(
             relative_rect=party_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
         
         self._create_character_status_displays()
@@ -200,6 +201,8 @@ class BattleUIWindow(Window):
     
     def _create_enemy_status_panel(self) -> None:
         """敵ステータスパネルを作成"""
+        if not self.rect:
+            return
         enemy_rect = pygame.Rect(
             self.rect.width - self.layout.enemy_status_width - self.layout.panel_padding,
             self.layout.panel_padding,
@@ -210,7 +213,7 @@ class BattleUIWindow(Window):
         self.enemy_status_panel = pygame_gui.elements.UIPanel(
             relative_rect=enemy_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
         
         self._create_enemy_status_displays()
@@ -249,6 +252,8 @@ class BattleUIWindow(Window):
     
     def _create_action_menu_panel(self) -> None:
         """アクションメニューパネルを作成"""
+        if not self.rect:
+            return
         action_rect = pygame.Rect(
             self.layout.panel_padding,
             self.rect.height - self.layout.action_menu_height - self.layout.panel_padding,
@@ -259,11 +264,13 @@ class BattleUIWindow(Window):
         self.action_menu_panel = pygame_gui.elements.UIPanel(
             relative_rect=action_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
     
     def _create_battle_log_panel(self) -> None:
         """戦闘ログパネルを作成"""
+        if not self.rect:
+            return
         log_rect = pygame.Rect(
             self.layout.action_menu_width + self.layout.panel_padding * 2,
             self.rect.height - self.layout.battle_log_height - self.layout.panel_padding,
@@ -274,7 +281,7 @@ class BattleUIWindow(Window):
         self.battle_log_panel = pygame_gui.elements.UIPanel(
             relative_rect=log_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
     
     def _create_status_effects_panel(self) -> None:
@@ -289,7 +296,7 @@ class BattleUIWindow(Window):
         self.status_effects_panel = pygame_gui.elements.UIPanel(
             relative_rect=effects_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
     
     def update_battle_phase(self, new_phase: BattlePhase) -> None:
@@ -405,6 +412,8 @@ class BattleUIWindow(Window):
         
         # 魔法メニューパネルを作成
         if not self.magic_menu_panel:
+            if not self.rect:
+                return False
             magic_rect = pygame.Rect(
                 self.layout.action_menu_width + self.layout.panel_padding * 2,
                 self.rect.height - self.layout.action_menu_height - self.layout.panel_padding,
@@ -415,7 +424,7 @@ class BattleUIWindow(Window):
             self.magic_menu_panel = pygame_gui.elements.UIPanel(
                 relative_rect=magic_rect,
                 manager=self.ui_manager,
-                container=self.main_container
+                container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
             )
         
         # 魔法ボタンを作成
@@ -453,6 +462,8 @@ class BattleUIWindow(Window):
         
         # アイテムメニューパネルを作成
         if not self.item_menu_panel:
+            if not self.rect:
+                return False
             item_rect = pygame.Rect(
                 self.layout.action_menu_width + self.layout.panel_padding * 2,
                 self.rect.height - self.layout.action_menu_height - self.layout.panel_padding,
@@ -463,7 +474,7 @@ class BattleUIWindow(Window):
             self.item_menu_panel = pygame_gui.elements.UIPanel(
                 relative_rect=item_rect,
                 manager=self.ui_manager,
-                container=self.main_container
+                container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
             )
         
         # アイテムボタンを作成
@@ -585,8 +596,11 @@ class BattleUIWindow(Window):
         
         # pygame-guiの要素を削除
         if self.ui_manager:
-            for element in list(self.ui_manager.get_root_container().elements):
-                element.kill()
+            root_container = self.ui_manager.get_root_container()
+            if hasattr(root_container, 'elements'):
+                elements = getattr(root_container, 'elements', [])
+                for element in list(elements):
+                    element.kill()
             self.ui_manager = None
         
         logger.debug(f"BattleUIWindow UI要素をクリーンアップ: {self.window_id}")

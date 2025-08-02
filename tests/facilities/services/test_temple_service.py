@@ -111,7 +111,8 @@ class TestTempleService:
         
         assert result.success is True
         assert result.result_type == ResultType.SUCCESS
-        assert self.mock_dead_character.status == "normal"
+        from src.character.character import CharacterStatus
+        assert self.mock_dead_character.status == CharacterStatus.GOOD
         assert self.mock_dead_character.hp == 1
         assert self.mock_dead_character.vitality == 9  # 10 - 1
         assert self.mock_party.gold == 500  # 1000 - 500

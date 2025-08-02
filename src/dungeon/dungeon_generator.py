@@ -211,7 +211,10 @@ class DungeonLevel:
         
         # セル復元
         for pos_str, cell_data in data.get('cells', {}).items():
-            level.cells[tuple(map(int, pos_str.split(',')))] = DungeonCell.from_dict(cell_data)
+            pos_parts = pos_str.split(',')
+            if len(pos_parts) == 2:
+                pos = (int(pos_parts[0]), int(pos_parts[1]))
+                level.cells[pos] = DungeonCell.from_dict(cell_data)
         
         level.start_position = data.get('start_position')
         level.stairs_up_position = data.get('stairs_up_position')

@@ -57,7 +57,8 @@ class EnhancedGameLogger:
         Args:
             context: コンテキスト情報
         """
-        caller_frame = inspect.currentframe().f_back
+        current_frame = inspect.currentframe()
+        caller_frame = current_frame.f_back if current_frame else None
         caller_name = caller_frame.f_code.co_name if caller_frame else "unknown"
         
         context_entry = {
@@ -139,7 +140,12 @@ class EnhancedGameLogger:
         try:
             from src.debug.ui_debug_helper import UIDebugHelper
             ui_helper = UIDebugHelper()
-            return ui_helper.dump_ui_hierarchy()
+            result = ui_helper.dump_ui_hierarchy()
+            # Union型からDict型に変換
+            if isinstance(result, dict):
+                return result
+            else:
+                return {"ui_hierarchy_text": str(result)}
         except ImportError:
             return {"error": "UIDebugHelper not available"}
         except Exception as e:
@@ -156,7 +162,7 @@ class EnhancedGameLogger:
             UI要素情報
         """
         if ui_element is None:
-            return None
+            return {}
         
         info = {
             "type": ui_element.__class__.__name__,

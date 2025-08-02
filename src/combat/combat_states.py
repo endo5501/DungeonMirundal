@@ -5,14 +5,18 @@ Fowlerの「Replace State Code with State」パターンを適用。
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional, Union, Tuple
+from typing import Dict, List, Any, Optional, Union, Tuple, TYPE_CHECKING
 from enum import Enum
+import random
 
 from src.character.character import Character
 from src.character.party import Party
 from src.monsters.monster import Monster
 from src.combat.combat_strategies import CombatContext, ActionResult, CombatStrategyFactory
 from src.utils.logger import logger
+
+if TYPE_CHECKING:
+    from src.combat.combat_manager import CombatManager
 
 
 class CombatPhase(Enum):
@@ -77,7 +81,9 @@ class PreparationState(CombatState):
             return False
         
         # 戦闘開始ログ
-        party_names = [char.name for char in self.combat_manager.party.get_living_characters()]
+        party_names = []
+        if self.combat_manager.party:
+            party_names = [char.name for char in self.combat_manager.party.get_living_characters()]
         monster_names = [monster.name for monster in self.combat_manager.monsters]
         
         logger.info(f"戦闘開始: {', '.join(party_names)} vs {', '.join(monster_names)}")
@@ -95,12 +101,16 @@ class PreparationState(CombatState):
     
     def _validate_combatants(self) -> bool:
         """戦闘参加者の妥当性を確認"""
+        if not self.combat_manager.party:
+            logger.error("パーティが存在しません")
+            return False
+            
         living_characters = self.combat_manager.party.get_living_characters()
         if not living_characters:
             logger.error("生存しているパーティメンバーがいません")
             return False
         
-        alive_monsters = [m for m in self.combat_manager.monsters if m.is_alive()]
+        alive_monsters = [m for m in self.combat_manager.monsters if m.is_alive]
         if not alive_monsters:
             logger.error("生存しているモンスターがいません")
             return False
@@ -142,14 +152,15 @@ class TurnOrderState(CombatState):
         all_actors = []
         
         # パーティメンバーを追加
-        for char in self.combat_manager.party.get_living_characters():
-            agility = getattr(char.base_stats, 'agility', 10) if hasattr(char, 'base_stats') else 10
-            initiative = agility + random.randint(1, 10)
-            all_actors.append((char, initiative))
+        if self.combat_manager.party:
+            for char in self.combat_manager.party.get_living_characters():
+                agility = getattr(char.base_stats, 'agility', 10) if hasattr(char, 'base_stats') else 10
+                initiative = agility + random.randint(1, 10)
+                all_actors.append((char, initiative))
         
         # モンスターを追加
         for monster in self.combat_manager.monsters:
-            if monster.is_alive():
+            if monster.is_alive:
                 agility = getattr(monster, 'agility', 10)
                 initiative = agility + random.randint(1, 10)
                 all_actors.append((monster, initiative))
@@ -173,13 +184,22 @@ class PlayerTurnState(CombatState):
     def enter(self) -> bool:
         """プレイヤーターンに入る"""
         current_character = self.combat_manager.get_current_actor()
+        if not current_character:
+            logger.error("現在のアクターが見つかりません")
+            return False
+            
         logger.debug(f"{current_character.name}のターン開始")
         
         # 状態異常のターン経過処理
-        if hasattr(current_character, 'status_effects') and current_character.status_effects:
+        if (hasattr(current_character, 'status_effects') and 
+            current_character.status_effects and
+            not isinstance(current_character.status_effects, list) and
+            hasattr(current_character.status_effects, 'process_turn_effects')):
             expired_effects = current_character.status_effects.process_turn_effects()
-            for effect in expired_effects:
-                logger.info(f"{current_character.name}の{effect.name}が切れた")
+            if expired_effects:
+                for effect in expired_effects:
+                    if hasattr(effect, 'name'):
+                        logger.info(f"{current_character.name}の{effect.name}が切れた")
         
         return True
     
@@ -195,7 +215,8 @@ class PlayerTurnState(CombatState):
     def exit(self):
         """プレイヤーターンから出る"""
         current_character = self.combat_manager.get_current_actor()
-        logger.debug(f"{current_character.name}のターン終了")
+        if current_character:
+            logger.debug(f"{current_character.name}のターン終了")
     
     def _determine_next_state(self) -> Optional['CombatState']:
         """次の状態を決定"""
@@ -211,20 +232,26 @@ class PlayerTurnState(CombatState):
         
         # 次のアクターに移行
         self.combat_manager.advance_turn()
-        next_actor = self.combat_manager.get_current_actor()
         
-        if isinstance(next_actor, Character):
-            return PlayerTurnState(self.combat_manager)
+        next_actor = self.combat_manager.get_current_actor()
+        if next_actor:
+            if isinstance(next_actor, Character):
+                return PlayerTurnState(self.combat_manager)
+            else:
+                return MonsterTurnState(self.combat_manager)
         else:
-            return MonsterTurnState(self.combat_manager)
+            # アクターが見つからない場合は解決状態に移行
+            return TurnOrderState(self.combat_manager)
     
     def _check_victory_condition(self) -> bool:
         """勝利条件をチェック"""
-        alive_monsters = [m for m in self.combat_manager.monsters if m.is_alive()]
+        alive_monsters = [m for m in self.combat_manager.monsters if m.is_alive]
         return len(alive_monsters) == 0
     
     def _check_defeat_condition(self) -> bool:
         """敗北条件をチェック"""
+        if not self.combat_manager.party:
+            return True
         living_characters = self.combat_manager.party.get_living_characters()
         return len(living_characters) == 0
     
@@ -246,6 +273,9 @@ class MonsterTurnState(CombatState):
     def enter(self) -> bool:
         """モンスターターンに入る"""
         current_monster = self.combat_manager.get_current_actor()
+        if not current_monster:
+            logger.error("現在のモンスターが見つかりません")
+            return False
         logger.debug(f"{current_monster.name}のターン開始")
         
         return True
@@ -253,10 +283,26 @@ class MonsterTurnState(CombatState):
     def execute(self) -> Optional['CombatState']:
         """モンスターターンの実行"""
         current_monster = self.combat_manager.get_current_actor()
+        if not current_monster:
+            logger.error("現在のモンスターが見つかりません")
+            return TurnOrderState(self.combat_manager)
         
         # モンスターAIで行動を決定
-        action_result = self._execute_monster_ai(current_monster)
-        
+        if isinstance(current_monster, Monster):  # Monsterクラスかどうかチェック
+            action_result = self._execute_monster_ai(current_monster)
+        elif hasattr(current_monster, 'name'):  # Character等の場合
+            # CharacterがMonsterTurnStateに来ることは想定外だが安全なログメッセージを返す
+            action_result = ActionResult(
+                success=False,
+                message=f"{current_monster.name}はモンスターではないため行動できません"
+            )
+        else:
+            # nameもない場合のエラー処理
+            action_result = ActionResult(
+                success=False,
+                message="不明なアクターのため行動できません"
+            )
+            
         # 行動結果をログ出力
         logger.info(action_result.message)
         
@@ -268,11 +314,18 @@ class MonsterTurnState(CombatState):
     def exit(self):
         """モンスターターンから出る"""
         current_monster = self.combat_manager.get_current_actor()
-        logger.debug(f"{current_monster.name}のターン終了")
+        if current_monster:
+            logger.debug(f"{current_monster.name}のターン終了")
     
     def _execute_monster_ai(self, monster: Monster) -> ActionResult:
         """モンスターAIを実行"""
         # 簡単なAI：基本的に攻撃
+        if not self.combat_manager.party:
+            return ActionResult(
+                success=False,
+                message=f"{monster.name}は攻撃対象を見つけられない（パーティが存在しない）"
+            )
+            
         living_characters = self.combat_manager.party.get_living_characters()
         if not living_characters:
             return ActionResult(
@@ -285,17 +338,20 @@ class MonsterTurnState(CombatState):
         target = random.choice(living_characters)
         
         # 攻撃戦略を使用
+        turn_number = getattr(self.combat_manager, 'current_turn', 0)
         context = CombatContext(
             attacker=monster,
             target=target,
             party=self.combat_manager.party,
             monsters=self.combat_manager.monsters,
-            turn_number=self.combat_manager.current_turn,
+            turn_number=turn_number,
             action_data={}
         )
         
         attack_strategy = CombatStrategyFactory.get_strategy('attack')
-        return attack_strategy.execute(context)
+        if attack_strategy:
+            return attack_strategy.execute(context)
+        return ActionResult(success=False, message="攻撃戦略が見つかりません")
     
     def _determine_next_state(self) -> Optional['CombatState']:
         """次の状態を決定"""
@@ -309,18 +365,23 @@ class MonsterTurnState(CombatState):
         self.combat_manager.advance_turn()
         next_actor = self.combat_manager.get_current_actor()
         
-        if isinstance(next_actor, Character):
-            return PlayerTurnState(self.combat_manager)
+        if next_actor:
+            if isinstance(next_actor, Character):
+                return PlayerTurnState(self.combat_manager)
+            else:
+                return MonsterTurnState(self.combat_manager)
         else:
-            return MonsterTurnState(self.combat_manager)
+            return TurnOrderState(self.combat_manager)
     
     def _check_victory_condition(self) -> bool:
         """勝利条件をチェック"""
-        alive_monsters = [m for m in self.combat_manager.monsters if m.is_alive()]
+        alive_monsters = [m for m in self.combat_manager.monsters if m.is_alive]
         return len(alive_monsters) == 0
     
     def _check_defeat_condition(self) -> bool:
         """敗北条件をチェック"""
+        if not self.combat_manager.party:
+            return True
         living_characters = self.combat_manager.party.get_living_characters()
         return len(living_characters) == 0
 
@@ -357,12 +418,17 @@ class VictoryState(CombatState):
         total_gold = sum(getattr(m, 'gold_value', 20) for m in self.combat_manager.monsters)
         
         # パーティに報酬を付与
-        for character in self.combat_manager.party.get_living_characters():
-            character.experience.add_experience(total_exp, {})  # XPテーブルは空で簡単に
-        
-        self.combat_manager.party.gold += total_gold
-        
-        logger.info(f"獲得経験値: {total_exp}, 獲得ゴールド: {total_gold}")
+        if self.combat_manager.party:
+            for character in self.combat_manager.party.get_living_characters():
+                if hasattr(character, 'experience') and hasattr(character.experience, 'add_experience'):
+                    character.experience.add_experience(total_exp, {})  # XPテーブルは空で簡単に
+            
+            if hasattr(self.combat_manager.party, 'gold'):
+                self.combat_manager.party.gold += total_gold
+            
+            logger.info(f"獲得経験値: {total_exp}, 獲得ゴールド: {total_gold}")
+        else:
+            logger.warning("パーティが存在しないため報酬を付与できません")
 
 
 class DefeatState(CombatState):
@@ -393,10 +459,12 @@ class DefeatState(CombatState):
     def _process_defeat_penalty(self):
         """敗北ペナルティの処理"""
         # 金の半分を失う
-        lost_gold = self.combat_manager.party.gold // 2
-        self.combat_manager.party.gold -= lost_gold
-        
-        logger.info(f"敗北により{lost_gold}ゴールドを失いました")
+        if self.combat_manager.party and hasattr(self.combat_manager.party, 'gold'):
+            lost_gold = self.combat_manager.party.gold // 2
+            self.combat_manager.party.gold -= lost_gold
+            logger.info(f"敗北により{lost_gold}ゴールドを失いました")
+        else:
+            logger.warning("パーティが存在しないため敗北ペナルティを適用できません")
 
 
 class FledState(CombatState):
@@ -453,12 +521,17 @@ class NegotiatedState(CombatState):
         total_gold = sum(getattr(m, 'gold_value', 20) for m in self.combat_manager.monsters)
         
         # パーティに報酬を付与
-        for character in self.combat_manager.party.get_living_characters():
-            character.experience.add_experience(total_exp, {})
-        
-        self.combat_manager.party.gold += total_gold
-        
-        logger.info(f"交渉により獲得 - 経験値: {total_exp}, ゴールド: {total_gold}")
+        if self.combat_manager.party:
+            for character in self.combat_manager.party.get_living_characters():
+                if hasattr(character, 'experience') and hasattr(character.experience, 'add_experience'):
+                    character.experience.add_experience(total_exp, {})
+            
+            if hasattr(self.combat_manager.party, 'gold'):
+                self.combat_manager.party.gold += total_gold
+            
+            logger.info(f"交渉により獲得 - 経験値: {total_exp}, ゴールド: {total_gold}")
+        else:
+            logger.warning("パーティが存在しないため交渉報酬を付与できません")
 
 
 class CombatStateMachine:

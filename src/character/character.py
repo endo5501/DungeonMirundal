@@ -134,51 +134,75 @@ class Character:
     # === コンポーネントアクセス用プロパティ ===
     
     @property
-    def equipment(self) -> Optional[EquipmentComponent]:
-        """装備コンポーネントを取得"""
+    def hp(self) -> int:
+        """現在のHP"""
+        return getattr(self.derived_stats, 'hp', 0) if self.derived_stats else 0
+    
+    @hp.setter
+    def hp(self, value: int):
+        """HPを設定"""
+        if self.derived_stats:
+            self.derived_stats.hp = max(0, value)
+    
+    @property
+    def max_hp(self) -> int:
+        """最大HP"""
+        return getattr(self.derived_stats, 'max_hp', 0) if self.derived_stats else 0
+    
+    def gain_experience(self, amount: int) -> bool:
+        """経験値を取得してレベルアップ判定"""
+        if amount <= 0:
+            return False
+        
+        # 現在の経験値に追加
+        self.experience.current_xp += amount
+        
+        # レベルアップチェック
+        char_config = config_manager.load_config("characters")
+        xp_table = char_config.get("level_progression", {}).get("experience_table", {})
+        
+        old_level = self.experience.level
+        leveled_up = self.experience.add_experience(0, xp_table)  # レベルチェックのみ
+        
+        if leveled_up and self.experience.level > old_level:
+            logger.info(f"{self.name} がレベルアップしました: {old_level} -> {self.experience.level}")
+            return True
+        
+        return False
+    
+    @property
+    def equipment(self) -> Optional['EquipmentComponent']:
+        """装備コンポーネントを取得（後方互換性含む）"""
+        # モックが設定されている場合はそれを返す（テスト用）
+        if hasattr(self, '_mock_equipment'):
+            return self._mock_equipment
+        
+        # 新コンポーネントシステムから取得
         if self._component_manager:
-            return self._component_manager.get_component(ComponentType.EQUIPMENT)
+            from typing import cast
+            component = self._component_manager.get_component(ComponentType.EQUIPMENT)
+            return cast('EquipmentComponent', component) if component else None
         return None
     
     @property
-    def items(self) -> Optional[InventoryComponent]:
+    def items(self) -> Optional['InventoryComponent']:
         """インベントリコンポーネントを取得"""
         if self._component_manager:
-            return self._component_manager.get_component(ComponentType.INVENTORY)
+            from typing import cast
+            component = self._component_manager.get_component(ComponentType.INVENTORY)
+            return cast('InventoryComponent', component) if component else None
         return None
     
     @property
-    def status_effects(self) -> Optional[StatusEffectsComponent]:
+    def status_effects(self) -> Optional['StatusEffectsComponent']:
         """状態異常コンポーネントを取得"""
         if self._component_manager:
-            return self._component_manager.get_component(ComponentType.STATUS_EFFECTS)
+            from typing import cast
+            component = self._component_manager.get_component(ComponentType.STATUS_EFFECTS)
+            return cast('StatusEffectsComponent', component) if component else None
         return None
     
     # === 互換性メソッド（旧APIとの互換性を保つ） ===
-    
-    def initialize_inventory(self):
-        """インベントリ初期化（互換性用）"""
-        if self.items:
-            success = self.items.ensure_initialized()
-            self._inventory_initialized = success
-            return success
-        return False
-    
-    def initialize_equipment(self):
-        """装備初期化（互換性用）"""
-        if self.equipment:
-            success = self.equipment.ensure_initialized()
-            self._equipment_initialized = success
-            return success
-        return False
-    
-    def initialize_status_effects(self):
-        """状態異常初期化（互換性用）"""
-        if self.status_effects:
-            success = self.status_effects.ensure_initialized()
-            self._status_effects_initialized = success
-            return success
-        return False
     
     def initialize_derived_stats(self):
         """派生統計値を初期化"""
@@ -492,18 +516,6 @@ class Character:
         
         return damage_taken
     
-    def restore_mp(self, amount: int):
-        """MP回復"""
-        old_mp = self.derived_stats.current_mp
-        self.derived_stats.current_mp = min(
-            self.derived_stats.max_mp,
-            self.derived_stats.current_mp + amount
-        )
-        restored = self.derived_stats.current_mp - old_mp
-        
-        if restored > 0:
-            logger.info(f"{self.name} がMP回復: +{restored}")
-    
     def is_alive(self) -> bool:
         """生存しているかチェック"""
         return self.status in [CharacterStatus.GOOD, CharacterStatus.INJURED]
@@ -607,7 +619,7 @@ class Character:
                 self.experience = Experience()
                 
             if not hasattr(self, 'inventory'):
-                self.inventory = {}
+                self.inventory = []
                 
             if not hasattr(self, 'equipped_items'):
                 self.equipped_items = {}
@@ -648,13 +660,6 @@ class Character:
             created_at=datetime.fromisoformat(data.get('created_at', datetime.now().isoformat()))
         )
         return character
-    
-    @property
-    def equipment(self):
-        """装備品プロパティ（後方互換性のため）"""
-        if hasattr(self, '_mock_equipment'):
-            return self._mock_equipment
-        return self.get_equipment()
     
     @equipment.setter
     def equipment(self, value):

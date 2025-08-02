@@ -27,6 +27,7 @@ class FacilityRegistry:
         self.service_classes: Dict[str, Type[FacilityService]] = {}
         self.config: Dict[str, Any] = {}
         self.current_facility_id: Optional[str] = None
+        self.current_facility: Optional[FacilityController] = None  # 現在の施設への参照を追加
         self.current_party: Optional[Party] = None
         self._game_manager = None  # GameManagerの参照
         
@@ -187,6 +188,7 @@ class FacilityRegistry:
                 logger.warning(f"Failed to exit current facility cleanly, continuing: {exit_result.message}")
                 # 状態を強制的にクリア
                 self.current_facility_id = None
+                self.current_facility = None
                 self.current_party = None
         
         # 施設コントローラーを取得/作成
@@ -201,6 +203,7 @@ class FacilityRegistry:
         try:
             if controller.enter(party):
                 self.current_facility_id = facility_id
+                self.current_facility = controller  # 現在の施設への参照を設定
                 self.current_party = party
                 logger.debug(f"Successfully entered facility: {facility_id}")
                 return True
@@ -225,6 +228,7 @@ class FacilityRegistry:
         if not controller:
             # コントローラーがない場合でも状態をクリア
             self.current_facility_id = None
+            self.current_facility = None
             self.current_party = None
             return ServiceResult.warning("Facility controller not found, cleared state")
         
@@ -233,6 +237,7 @@ class FacilityRegistry:
             if controller.exit():
                 facility_id = self.current_facility_id
                 self.current_facility_id = None
+                self.current_facility = None  # 現在の施設参照もクリア
                 self.current_party = None
                 return ServiceResult.ok(f"Exited {facility_id}")
             else:

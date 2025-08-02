@@ -20,14 +20,17 @@ def mock_controller():
     # パーティメンバーのモック
     member1 = Mock()
     member1.is_alive.return_value = True
-    member1.inventory = Mock()
-    # get_all_items()の戻り値をlenで計算可能にする
-    member1.inventory.get_all_items.return_value = ["item1", "item2"]
+    # get_inventory()メソッドを持つようにモック
+    inventory_mock1 = Mock()
+    inventory_mock1.get_all_items.return_value = ["item1", "item2"]
+    member1.get_inventory.return_value = inventory_mock1
     
     member2 = Mock()
     member2.is_alive.return_value = False
-    member2.inventory = Mock()
-    member2.inventory.get_all_items.return_value = ["item3"]
+    # get_inventory()メソッドを持つようにモック
+    inventory_mock2 = Mock()
+    inventory_mock2.get_all_items.return_value = ["item3"]
+    member2.get_inventory.return_value = inventory_mock2
     
     mock_party.members = [member1, member2]
     mock_service.party = mock_party
@@ -130,8 +133,8 @@ class TestAdventurePrepPanelPartyStatus:
         # インベントリなしのメンバー
         member = Mock()
         member.is_alive.return_value = True
-        # inventoryアトリビュートなし（hasattr(member, 'inventory')がFalseになる）
-        delattr(member, 'inventory') if hasattr(member, 'inventory') else None
+        # get_inventory()がNoneを返すようにモック
+        member.get_inventory.return_value = None
         
         mock_party.members = [member]
         mock_service.party = mock_party

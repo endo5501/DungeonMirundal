@@ -229,18 +229,22 @@ class BuyPanel(ServicePanel):
             starting_option = "パーティ共有"
         
         try:
-            self.buyer_dropdown = self.ui_element_manager.create_dropdown(
-                "buyer_dropdown",
-                buyer_dropdown_rect,
-                buyer_options,
-                starting_option
-            )
+            if self.ui_element_manager:
+                self.buyer_dropdown = self.ui_element_manager.create_dropdown(
+                    "buyer_dropdown",
+                    buyer_dropdown_rect,
+                    buyer_options,
+                    starting_option
+                )
+            else:
+                raise RuntimeError("ui_element_manager is None")
         except (ValueError, TypeError) as e:
             logger.warning(f"BuyPanel: Error creating buyer dropdown: {e}")
             # テスト環境ではMockオブジェクトを作成
             from unittest.mock import Mock
             self.buyer_dropdown = Mock()
-            self.buyer_dropdown.selected_option = starting_option
+            if self.buyer_dropdown:
+                self.buyer_dropdown.selected_option = starting_option
         except Exception as e:
             logger.warning(f"BuyPanel: UIElementManager create_dropdown failed: {e}")
             # フォールバック: 従来の方法
@@ -257,7 +261,8 @@ class BuyPanel(ServicePanel):
                 logger.error(f"BuyPanel: Both dropdown creation methods failed: {e2}")
                 from unittest.mock import Mock
                 self.buyer_dropdown = Mock()
-                self.buyer_dropdown.selected_option = starting_option
+                if self.buyer_dropdown:
+                    self.buyer_dropdown.selected_option = starting_option
         
         # 数量と購入ボタンを下の行に配置
         y_position += 40
@@ -267,11 +272,14 @@ class BuyPanel(ServicePanel):
         
         # 数量入力
         quantity_rect = pygame.Rect(75, y_position, 80, 35)
-        self.quantity_input = self.ui_element_manager.create_text_entry(
-            "quantity_input",
-            quantity_rect,
-            initial_text="1"
-        )
+        if self.ui_element_manager:
+            self.quantity_input = self.ui_element_manager.create_text_entry(
+                "quantity_input",
+                quantity_rect,
+                initial_text="1"
+            )
+        else:
+            self.quantity_input = None
         
         # 購入ボタン
         buy_rect = pygame.Rect(170, y_position, 120, 35)
@@ -282,7 +290,8 @@ class BuyPanel(ServicePanel):
             container=self.container,
             object_id="#buy_button"
         )
-        self.buy_button.disable()  # 初期状態は無効
+        if self.buy_button:
+            self.buy_button.disable()  # 初期状態は無効
         
         # 合計金額表示
         self.total_label = self._create_label("total_label", "合計: 0 G", pygame.Rect(300, y_position, 200, 35))
@@ -447,8 +456,11 @@ class BuyPanel(ServicePanel):
             return
         
         try:
-            quantity = int(self.quantity_input.get_text())
-            quantity = max(1, quantity)
+            if self.quantity_input:
+                quantity = int(self.quantity_input.get_text())
+                quantity = max(1, quantity)
+            else:
+                quantity = 1
         except:
             quantity = 1
         
@@ -489,15 +501,23 @@ class BuyPanel(ServicePanel):
             return
         
         try:
-            quantity = int(self.quantity_input.get_text())
-            quantity = max(1, min(quantity, self.selected_item["stock"]))
-            logger.info(f"BuyPanel: Purchase quantity: {quantity}")
+            if self.quantity_input:
+                quantity = int(self.quantity_input.get_text())
+                if self.selected_item:
+                    quantity = max(1, min(quantity, self.selected_item["stock"]))
+                else:
+                    quantity = 1
+                logger.info(f"BuyPanel: Purchase quantity: {quantity}")
+            else:
+                quantity = 1
         except Exception as e:
             logger.warning(f"BuyPanel: Failed to parse quantity, using default: {e}")
             quantity = 1
         
         # 選択された購入者を取得
-        raw_buyer_text = self.buyer_dropdown.selected_option if self.buyer_dropdown else "パーティ共有"
+        raw_buyer_text = "パーティ共有"
+        if self.buyer_dropdown and hasattr(self.buyer_dropdown, 'selected_option'):
+            raw_buyer_text = self.buyer_dropdown.selected_option
         buyer_id = "party"  # デフォルトはパーティ
         
         logger.info(f"BuyPanel: buyer_dropdown.selected_option = '{raw_buyer_text}'")
@@ -636,7 +656,10 @@ class BuyPanel(ServicePanel):
         # 購入ボタン
         if button == self.buy_button:
             logger.info(f"BuyPanel: 購入ボタンがクリックされました - {self.selected_item_id}")
-            logger.info(f"BuyPanel: 購入ボタンの状態 - enabled: {self.buy_button.is_enabled}")
+            if self.buy_button:
+                logger.info(f"BuyPanel: 購入ボタンの状態 - enabled: {self.buy_button.is_enabled}")
+            else:
+                logger.info("BuyPanel: 購入ボタンがNoneです")
             logger.info(f"BuyPanel: 選択されたアイテム: {self.selected_item}")
             self._execute_purchase()
             return True
@@ -685,12 +708,12 @@ class BuyPanel(ServicePanel):
             logger.info(f"BuyPanel: event.ui_element: {event.ui_element}")
             logger.info(f"BuyPanel: self.item_list: {self.item_list}")
             
-            if event.ui_element == self.item_list:
+            if event.ui_element == self.item_list and self.item_list:
                 logger.info(f"BuyPanel: Selection list event matches item_list")
                 selection = self.item_list.get_single_selection()
                 logger.info(f"BuyPanel: get_single_selection returned: {selection}")
                 
-                if selection is not None:
+                if selection is not None and self.item_list.item_list:
                     # UISelectionListの選択されたインデックスを直接取得
                     indices = [i for i, item in enumerate(self.item_list.item_list) if item == selection]
                     logger.info(f"BuyPanel: Found indices: {indices}")
@@ -737,7 +760,8 @@ class BuyPanel(ServicePanel):
         """ドロップダウン変更イベントを処理"""
         if hasattr(event, 'ui_element') and event.ui_element == self.buyer_dropdown:
             # 購入者が変更されたときの処理
-            logger.info(f"BuyPanel: Buyer changed to {self.buyer_dropdown.selected_option}")
+            if self.buyer_dropdown and hasattr(self.buyer_dropdown, 'selected_option'):
+                logger.info(f"BuyPanel: Buyer changed to {self.buyer_dropdown.selected_option}")
             return True
         
         return False

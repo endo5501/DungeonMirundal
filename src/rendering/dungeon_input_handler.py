@@ -4,7 +4,7 @@ DungeonRendererから入力処理ロジックを分離。
 Fowlerの「Extract Class」と「Move Method」パターンを適用。
 """
 
-from typing import Optional, Dict, Callable, Any
+from typing import Optional, Dict, Callable, Any, cast, TYPE_CHECKING
 from enum import Enum
 import pygame
 
@@ -32,7 +32,7 @@ class DungeonInputAction(Enum):
 
 class MovementResult:
     """移動結果"""
-    def __init__(self, success: bool, message: str = "", effects: Dict[str, Any] = None):
+    def __init__(self, success: bool, message: str = "", effects: Optional[Dict[str, Any]] = None):
         self.success = success
         self.message = message
         self.effects = effects or {}
@@ -46,7 +46,7 @@ class DungeonInputHandler:
     """
     
     def __init__(self, dungeon_manager: Optional[DungeonManager] = None):
-        self.dungeon_manager = dungeon_manager
+        self._dungeon_manager = dungeon_manager
         self.input_enabled = True
         self.movement_speed = 1.0
         self.turn_speed = 1.0
@@ -74,9 +74,20 @@ class DungeonInputHandler:
         
         logger.info("ダンジョン入力ハンドラー初期化完了")
     
+    @property
+    def dungeon_manager(self) -> Optional[DungeonManager]:
+        """ダンジョンマネージャーを取得"""
+        return self._dungeon_manager
+    
     def set_dungeon_manager(self, dungeon_manager: DungeonManager):
         """ダンジョンマネージャーを設定"""
-        self.dungeon_manager = dungeon_manager
+        self._dungeon_manager = dungeon_manager
+    
+    def _ensure_dungeon_manager(self) -> DungeonManager:
+        """ダンジョンマネージャーが存在することを保証する型ガード"""
+        if self._dungeon_manager is None:
+            raise RuntimeError("DungeonManager is not set")
+        return self._dungeon_manager
     
     def handle_action(self, action: DungeonInputAction) -> MovementResult:
         """アクションを処理"""
@@ -144,10 +155,17 @@ class DungeonInputHandler:
         if not self._can_move():
             return MovementResult(False, "移動できません")
         
-        current_pos = self.dungeon_manager.current_dungeon.player_position
+        # 型ガードで安全にアクセス
+        dm = self._ensure_dungeon_manager()
+        if not dm.current_dungeon:
+            return MovementResult(False, "ダンジョンが存在しません")
+        
+        current_pos = dm.current_dungeon.player_position
+        if not current_pos:
+            return MovementResult(False, "プレイヤー位置が設定されていません")
         facing_direction = current_pos.facing
         
-        success, move_message = self.dungeon_manager.move_player(facing_direction)
+        success, move_message = dm.move_player(facing_direction)
         
         if success:
             message = "前進しました"
@@ -170,11 +188,18 @@ class DungeonInputHandler:
         if not self._can_move():
             return MovementResult(False, "移動できません")
         
-        current_pos = self.dungeon_manager.current_dungeon.player_position
+        # 型ガードで安全にアクセス
+        dm = self._ensure_dungeon_manager()
+        if not dm.current_dungeon:
+            return MovementResult(False, "ダンジョンが存在しません")
+        
+        current_pos = dm.current_dungeon.player_position
+        if not current_pos:
+            return MovementResult(False, "プレイヤー位置が設定されていません")
         facing_direction = current_pos.facing
         backward_direction = DirectionHelper.get_opposite_direction(facing_direction)
         
-        success, move_message = self.dungeon_manager.move_player(backward_direction)
+        success, move_message = dm.move_player(backward_direction)
         
         if success:
             return MovementResult(True, "後退しました", {
@@ -191,11 +216,18 @@ class DungeonInputHandler:
         if not self._can_move():
             return MovementResult(False, "移動できません")
         
-        current_pos = self.dungeon_manager.current_dungeon.player_position
+        # 型ガードで安全にアクセス
+        dm = self._ensure_dungeon_manager()
+        if not dm.current_dungeon:
+            return MovementResult(False, "ダンジョンが存在しません")
+        
+        current_pos = dm.current_dungeon.player_position
+        if not current_pos:
+            return MovementResult(False, "プレイヤー位置が設定されていません")
         facing_direction = current_pos.facing
         left_direction = DirectionHelper.get_left_direction(facing_direction)
         
-        success, move_message = self.dungeon_manager.move_player(left_direction)
+        success, move_message = dm.move_player(left_direction)
         
         if success:
             return MovementResult(True, "左に移動しました", {
@@ -211,11 +243,18 @@ class DungeonInputHandler:
         if not self._can_move():
             return MovementResult(False, "移動できません")
         
-        current_pos = self.dungeon_manager.current_dungeon.player_position
+        # 型ガードで安全にアクセス
+        dm = self._ensure_dungeon_manager()
+        if not dm.current_dungeon:
+            return MovementResult(False, "ダンジョンが存在しません")
+        
+        current_pos = dm.current_dungeon.player_position
+        if not current_pos:
+            return MovementResult(False, "プレイヤー位置が設定されていません")
         facing_direction = current_pos.facing
         right_direction = DirectionHelper.get_right_direction(facing_direction)
         
-        success, move_message = self.dungeon_manager.move_player(right_direction)
+        success, move_message = dm.move_player(right_direction)
         
         if success:
             return MovementResult(True, "右に移動しました", {
@@ -231,7 +270,8 @@ class DungeonInputHandler:
         if not self._can_turn():
             return MovementResult(False, "回転できません")
         
-        success = self.dungeon_manager.turn_player_left()
+        dm = self._ensure_dungeon_manager()
+        success = dm.turn_player_left()
         
         if success:
             return MovementResult(True, "左を向きました", {
@@ -246,7 +286,8 @@ class DungeonInputHandler:
         if not self._can_turn():
             return MovementResult(False, "回転できません")
         
-        success = self.dungeon_manager.turn_player_right()
+        dm = self._ensure_dungeon_manager()
+        success = dm.turn_player_right()
         
         if success:
             return MovementResult(True, "右を向きました", {
@@ -261,11 +302,18 @@ class DungeonInputHandler:
         if not self._can_move():
             return MovementResult(False, "移動できません")
         
-        current_pos = self.dungeon_manager.current_dungeon.player_position
+        # 型ガードで安全にアクセス
+        dm = self._ensure_dungeon_manager()
+        if not dm.current_dungeon:
+            return MovementResult(False, "ダンジョンが存在しません")
+        
+        current_pos = dm.current_dungeon.player_position
+        if not current_pos:
+            return MovementResult(False, "プレイヤー位置が設定されていません")
         facing_direction = current_pos.facing
         left_direction = DirectionHelper.get_left_direction(facing_direction)
         
-        success, move_message = self.dungeon_manager.move_player(left_direction)
+        success, move_message = dm.move_player(left_direction)
         
         if success:
             return MovementResult(True, "左にストライフしました", {
@@ -281,11 +329,18 @@ class DungeonInputHandler:
         if not self._can_move():
             return MovementResult(False, "移動できません")
         
-        current_pos = self.dungeon_manager.current_dungeon.player_position
+        # 型ガードで安全にアクセス
+        dm = self._ensure_dungeon_manager()
+        if not dm.current_dungeon:
+            return MovementResult(False, "ダンジョンが存在しません")
+        
+        current_pos = dm.current_dungeon.player_position
+        if not current_pos:
+            return MovementResult(False, "プレイヤー位置が設定されていません")
         facing_direction = current_pos.facing
         right_direction = DirectionHelper.get_right_direction(facing_direction)
         
-        success, move_message = self.dungeon_manager.move_player(right_direction)
+        success, move_message = dm.move_player(right_direction)
         
         if success:
             return MovementResult(True, "右にストライフしました", {
@@ -346,7 +401,7 @@ class DungeonInputHandler:
         if not current_pos:
             return MovementResult(False, "プレイヤーの位置が不明です")
         
-        # 現在のレベルを取得
+        # 現在のレベルを取得（上でcurrent_dungeonのチェック済み）
         current_level = self.dungeon_manager.current_dungeon.levels.get(current_pos.level)
         if not current_level:
             return MovementResult(False, "現在のレベルが見つかりません")
@@ -385,10 +440,7 @@ class DungeonInputHandler:
     
     def _can_move(self) -> bool:
         """移動可能かチェック"""
-        if not self.dungeon_manager:
-            return False
-            
-        if not self.dungeon_manager.current_dungeon:
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
             return False
         
         # TODO: パーティの状態、状態異常などをチェック

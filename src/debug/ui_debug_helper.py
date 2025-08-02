@@ -5,7 +5,7 @@ pygame-guiとWindowManagerのUI階層をダンプし、デバッグを支援す�
 """
 
 import logging
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional, Union, cast
 import pygame_gui
 
 logger = logging.getLogger(__name__)
@@ -35,12 +35,12 @@ class UIDebugHelper:
                 logger.warning("WindowManager not available")
         return self._window_manager
     
-    def dump_ui_hierarchy(self, format: str = 'json') -> Union[Dict[str, Any], str]:
+    def dump_ui_hierarchy(self, output_format: str = 'json') -> Union[Dict[str, Any], str]:
         """
         UI階層をダンプ
         
         Args:
-            format: 出力形式 ('json' または 'tree')
+            output_format: 出力形式 ('json' または 'tree')
             
         Returns:
             UI階層情報（辞書またはツリー形式の文字列）
@@ -63,9 +63,9 @@ class UIDebugHelper:
         
         except Exception as e:
             logger.error(f"Error dumping UI hierarchy: {e}")
-            hierarchy['error'] = str(e)
+            hierarchy['error'] = [str(e)]  # errorをリスト形式にする
         
-        if format == 'tree':
+        if output_format == 'tree':
             return self._format_as_tree(hierarchy)
         
         return hierarchy
@@ -75,9 +75,21 @@ class UIDebugHelper:
         windows = []
         
         if self.window_manager:
-            for window_id, window in self.window_manager.windows.items():
-                if hasattr(window, 'visible') and window.visible:
-                    windows.append(self._extract_window_info(window_id, window))
+            # WindowManagerの構造によって異なる属性アクセス方法を試行
+            windows_dict = None
+            try:
+                if hasattr(self.window_manager, 'windows'):
+                    windows_dict = getattr(self.window_manager, 'windows', None)
+                elif hasattr(self.window_manager, '_windows'):
+                    windows_dict = getattr(self.window_manager, '_windows', None)
+            except Exception:
+                # 属性アクセスに失敗した場合は None を設定
+                windows_dict = None
+            
+            if windows_dict:
+                for window_id, window in windows_dict.items():
+                    if hasattr(window, 'visible') and window.visible:
+                        windows.append(self._extract_window_info(window_id, window))
         
         return windows
     
@@ -93,7 +105,18 @@ class UIDebugHelper:
                 if hasattr(sprite_group, 'sprites'):
                     sprites = sprite_group.sprites()
                 else:
-                    sprites = list(sprite_group)
+                    # LayeredGUIGroupの場合は別の方法でアクセスを試行
+                    try:
+                        # pygame_guiの内部構造に依存する部分
+                        if hasattr(sprite_group, '_spritelist'):
+                            sprites = sprite_group._spritelist
+                        elif hasattr(sprite_group, '_layered_sprites'):
+                            sprites = list(getattr(sprite_group, '_layered_sprites', {}).values())
+                        else:
+                            sprites = list(cast(Any, sprite_group))
+                    except (TypeError, AttributeError, Exception):
+                        # 反復処理できない場合は空のリストを返す
+                        sprites = []
                     
                 for sprite in sprites:
                     # UIElementのインスタンスのみを対象にする
@@ -114,7 +137,12 @@ class UIDebugHelper:
             if hasattr(sprite_group, 'sprites'):
                 sprites = sprite_group.sprites()
             else:
-                sprites = list(sprite_group)
+                # LayeredGUIGroupの場合は別の方法でアクセスを試行
+                try:
+                    sprites = list(cast(Any, sprite_group))
+                except (TypeError, AttributeError):
+                    # 反復処理できない場合は空のリストを返す
+                    sprites = []
                 
             for sprite in sprites:
                 if hasattr(sprite, 'object_ids'):
@@ -140,7 +168,12 @@ class UIDebugHelper:
             if hasattr(sprite_group, 'sprites'):
                 sprites = sprite_group.sprites()
             else:
-                sprites = list(sprite_group)
+                # LayeredGUIGroupの場合は別の方法でアクセスを試行
+                try:
+                    sprites = list(cast(Any, sprite_group))
+                except (TypeError, AttributeError):
+                    # 反復処理できない場合は空のリストを返す
+                    sprites = []
             raw_elements = [sprite for sprite in sprites if hasattr(sprite, 'object_ids')]
             
             # 要素情報を抽出
@@ -180,9 +213,21 @@ class UIDebugHelper:
         """WindowManagerからウィンドウ情報を取得"""
         windows = []
         
-        if self.window_manager and hasattr(self.window_manager, 'windows'):
-            for window_id, window in self.window_manager.windows.items():
-                windows.append(self._extract_window_info(window_id, window))
+        if self.window_manager:
+            # WindowManagerの構造によって異なる属性アクセス方法を試行
+            windows_dict = None
+            try:
+                if hasattr(self.window_manager, 'windows'):
+                    windows_dict = getattr(self.window_manager, 'windows', None)
+                elif hasattr(self.window_manager, '_windows'):
+                    windows_dict = getattr(self.window_manager, '_windows', None)
+            except Exception:
+                # 属性アクセスに失敗した場合は None を設定
+                windows_dict = None
+                
+            if windows_dict:
+                for window_id, window in windows_dict.items():
+                    windows.append(self._extract_window_info(window_id, window))
         
         return windows
     
@@ -190,12 +235,20 @@ class UIDebugHelper:
         """pygame-guiからUI要素情報を取得"""
         elements = []
         
+        if not self.ui_manager:
+            return elements
+        
         try:
             sprite_group = self.ui_manager.get_sprite_group()
             if hasattr(sprite_group, 'sprites'):
                 sprites = sprite_group.sprites()
             else:
-                sprites = list(sprite_group)
+                # LayeredGUIGroupの場合は別の方法でアクセスを試行
+                try:
+                    sprites = list(cast(Any, sprite_group))
+                except (TypeError, AttributeError):
+                    # 反復処理できない場合は空のリストを返す
+                    sprites = []
                 
             for sprite in sprites:
                 if hasattr(sprite, 'object_ids'):

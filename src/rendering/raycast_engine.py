@@ -12,8 +12,8 @@ from src.rendering.wall_renderer import WallType
 class RaycastEngine:
     """レイキャスティング処理エンジン"""
     
-    def __init__(self, config: RaycastConfig = None):
-        self.config = config or RaycastConfig()
+    def __init__(self, config: Optional[RaycastConfig] = None):
+        self.config = config if config is not None else RaycastConfig()
     
     def cast_ray(self, level: DungeonLevel, player_pos: PlayerPosition,  # noqa: ARG002
                  ray_start: Tuple[float, float], angle: float) -> Tuple[float, bool, Optional[str]]:

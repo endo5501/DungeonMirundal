@@ -278,6 +278,12 @@ class Window(ABC):
         """破棄時のイベントハンドラ"""
         pass
     
+    def show_main_help_menu(self) -> None:
+        """メインヘルプメニューを表示（デフォルト実装）"""
+        logger.info(f"ヘルプメニュー表示要求: {self.window_id}")
+        # デフォルトでは何もしない（サブクラスでオーバーライド）
+        pass
+    
     def __str__(self) -> str:
         return f"Window({self.window_id}, {self.state.value}, modal={self.modal})"
     

@@ -268,16 +268,17 @@ class FormWindow(Window):
                 field.value = value
                 
                 # UI要素にも値を設定
-                if field.field_type in [FormFieldType.TEXT, FormFieldType.NUMBER]:
-                    field.ui_element.set_text(str(value))
-                elif field.field_type == FormFieldType.DROPDOWN:
-                    if value in field.options:
-                        field.ui_element.selected_option = value
-                elif field.field_type == FormFieldType.CHECKBOX:
-                    # チェックボックスの状態を更新
-                    checked = bool(value)
-                    prefix = '☑ ' if checked else '☐ '
-                    field.ui_element.set_text(prefix + field.label)
+                if field.ui_element:
+                    if field.field_type in [FormFieldType.TEXT, FormFieldType.NUMBER]:
+                        field.ui_element.set_text(str(value))
+                    elif field.field_type == FormFieldType.DROPDOWN:
+                        if value in field.options:
+                            field.ui_element.selected_option = value
+                    elif field.field_type == FormFieldType.CHECKBOX:
+                        # チェックボックスの状態を更新
+                        checked = bool(value)
+                        prefix = '☑ ' if checked else '☐ '
+                        field.ui_element.set_text(prefix + field.label)
                 
                 return True
         return False

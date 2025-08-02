@@ -45,7 +45,11 @@ class MagicUI(PartyAwareUIComponent):
         """MagicWindowインスタンスを取得または作成"""
         if self.magic_window is None:
             # MagicWindowの初期化
+            import pygame
+            window_rect = pygame.Rect(100, 100, 800, 600)
             self.magic_window = MagicWindow(
+                window_manager=self.window_manager,
+                rect=window_rect,
                 window_id="magic_main",
                 title="魔法管理"
             )
@@ -64,7 +68,7 @@ class MagicUI(PartyAwareUIComponent):
     def on_party_changed(self, party: Optional[Party]) -> None:
         """パーティ変更時のコールバック（PartyAwareUIComponent実装）"""
         self.current_party = party
-        if self.magic_window:
+        if self.magic_window and party:
             self.magic_window.set_party(party)
     
     def refresh_ui(self) -> None:
@@ -73,14 +77,14 @@ class MagicUI(PartyAwareUIComponent):
             # 魔法ウィンドウが開いている場合のみ更新
             if self.current_party:
                 self.magic_window.set_party(self.current_party)
-            if self.current_character:
-                self.magic_window.set_character(self.current_character)
+            if self.current_character and hasattr(self.magic_window, 'set_character') and callable(getattr(self.magic_window, 'set_character', None)):
+                getattr(self.magic_window, 'set_character')(self.current_character)
     
     def set_character(self, character: Character):
         """キャラクターを設定"""
         self.current_character = character
-        if self.magic_window:
-            self.magic_window.set_character(character)
+        if self.magic_window and hasattr(self.magic_window, 'set_character') and callable(getattr(self.magic_window, 'set_character', None)):
+            getattr(self.magic_window, 'set_character')(character)
         logger.debug(f"キャラクターを設定: {character.name if character else None}")
     
     def show_magic_menu(self):
@@ -89,10 +93,13 @@ class MagicUI(PartyAwareUIComponent):
             magic_window = self._get_magic_window()
             if self.current_party:
                 magic_window.set_party(self.current_party)
-            if self.current_character:
-                magic_window.set_character(self.current_character)
+            if self.current_character and hasattr(magic_window, 'set_character') and callable(getattr(magic_window, 'set_character', None)):
+                getattr(magic_window, 'set_character')(self.current_character)
             
-            magic_window.show_main_menu()
+            if hasattr(magic_window, 'show_main_menu') and callable(getattr(magic_window, 'show_main_menu', None)):
+                getattr(magic_window, 'show_main_menu')()
+            else:
+                logger.warning("MagicWindow.show_main_menu()メソッドが利用できません")
             self.is_open = True
             logger.info("魔法メニューを表示（WindowSystem版）")
         except Exception as e:
@@ -105,17 +112,21 @@ class MagicUI(PartyAwareUIComponent):
             
             # インターフェースタイプに応じた処理を実行
             interface_methods = {
-                'spellbook': magic_window.show_spellbook_management,
-                'slot': magic_window.show_slot_management,
-                'learning': magic_window.show_spell_learning,
-                'casting': magic_window.show_spell_casting,
-                'overview': magic_window.show_party_overview
+                'spellbook': 'show_spellbook_management',
+                'slot': 'show_slot_management', 
+                'learning': 'show_spell_learning',
+                'casting': 'show_spell_casting',
+                'overview': 'show_party_overview'
             }
             
             if interface_type in interface_methods:
-                interface_methods[interface_type]()
-                self.current_mode = mode
-                logger.info(log_message)
+                method_name = interface_methods[interface_type]
+                if hasattr(magic_window, method_name) and callable(getattr(magic_window, method_name, None)):
+                    getattr(magic_window, method_name)()
+                    self.current_mode = mode
+                    logger.info(log_message)
+                else:
+                    logger.warning(f"MagicWindow.{method_name}()メソッドが利用できません")
             else:
                 logger.error(f"未知のインターフェースタイプ: {interface_type}")
                 
@@ -147,7 +158,10 @@ class MagicUI(PartyAwareUIComponent):
         try:
             self.set_character(character)
             magic_window = self._get_magic_window()
-            magic_window.show_character_detail(character)
+            if hasattr(magic_window, 'show_character_detail') and callable(getattr(magic_window, 'show_character_detail', None)):
+                getattr(magic_window, 'show_character_detail')(character)
+            else:
+                logger.warning("MagicWindow.show_character_detail()メソッドが利用できません")
             logger.info(f"キャラクター魔法詳細を表示: {character.name}")
         except Exception as e:
             logger.error(f"キャラクター魔法詳細表示エラー: {e}")
@@ -165,11 +179,19 @@ class MagicUI(PartyAwareUIComponent):
                 if spell is None:
                     logger.error("装備操作には魔法が必要です")
                     return False
-                success = magic_window.equip_spell_to_slot(spell, slot_index)
+                if hasattr(magic_window, 'equip_spell_to_slot') and callable(getattr(magic_window, 'equip_spell_to_slot', None)):
+                    success = getattr(magic_window, 'equip_spell_to_slot')(spell, slot_index)
+                else:
+                    logger.warning("equip_spell_to_slot()メソッドが利用できません")
+                    return False
                 if success:
                     logger.info(f"魔法をスロットに装備: {spell.name} -> スロット{slot_index}")
             elif operation_type == 'unequip':
-                success = magic_window.unequip_spell_from_slot(slot_index)
+                if hasattr(magic_window, 'unequip_spell_from_slot') and callable(getattr(magic_window, 'unequip_spell_from_slot', None)):
+                    success = getattr(magic_window, 'unequip_spell_from_slot')(slot_index)
+                else:
+                    logger.warning("unequip_spell_from_slot()メソッドが利用できません")
+                    return False
                 if success:
                     logger.info(f"スロットから魔法を外しました: スロット{slot_index}")
             else:
@@ -210,8 +232,8 @@ class MagicUI(PartyAwareUIComponent):
     
     def cleanup(self):
         """リソースクリーンアップ"""
-        if self.magic_window:
-            self.magic_window.cleanup()
+        if self.magic_window and hasattr(self.magic_window, 'cleanup') and callable(getattr(self.magic_window, 'cleanup', None)):
+            getattr(self.magic_window, 'cleanup')()
             self.magic_window = None
         self.is_open = False
         self.current_party = None

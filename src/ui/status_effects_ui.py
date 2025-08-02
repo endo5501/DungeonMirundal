@@ -34,7 +34,10 @@ class StatusEffectsUI:
         """StatusEffectsWindowインスタンスを取得または作成"""
         if self.status_effects_window is None:
             # StatusEffectsWindowの初期化
+            window_rect = pygame.Rect(100, 100, 600, 400)
             self.status_effects_window = StatusEffectsWindow(
+                window_manager=self.window_manager,
+                rect=window_rect,
                 window_id="status_effects_main",
                 title="ステータス効果"
             )
@@ -43,25 +46,26 @@ class StatusEffectsUI:
     def set_party(self, party: Party):
         """パーティを設定"""
         self.current_party = party
-        if self.status_effects_window:
-            self.status_effects_window.set_party(party)
+        if self.status_effects_window and hasattr(self.status_effects_window, 'set_party') and callable(getattr(self.status_effects_window, 'set_party', None)):
+            getattr(self.status_effects_window, 'set_party')(party)
         logger.debug(f"パーティを設定: {party.name if party else None}")
     
     def set_character(self, character: Character):
         """キャラクターを設定"""
         self.current_character = character
-        if self.status_effects_window:
-            self.status_effects_window.set_character(character)
+        if self.status_effects_window and hasattr(self.status_effects_window, 'set_character') and callable(getattr(self.status_effects_window, 'set_character', None)):
+            getattr(self.status_effects_window, 'set_character')(character)
         logger.debug(f"キャラクターを設定: {character.name if character else None}")
     
     def show_party_status_effects(self):
         """パーティ全体のステータス効果を表示（WindowSystem版）"""
         try:
             status_window = self._get_status_effects_window()
-            if self.current_party:
-                status_window.set_party(self.current_party)
+            if self.current_party and hasattr(status_window, 'set_party') and callable(getattr(status_window, 'set_party', None)):
+                getattr(status_window, 'set_party')(self.current_party)
             
-            status_window.show_party_status_effects()
+            if hasattr(status_window, 'show_party_status_effects') and callable(getattr(status_window, 'show_party_status_effects', None)):
+                getattr(status_window, 'show_party_status_effects')()
             self.is_open = True
             logger.info("パーティステータス効果を表示（WindowSystem版）")
         except Exception as e:
@@ -72,7 +76,8 @@ class StatusEffectsUI:
         try:
             self.set_character(character)
             status_window = self._get_status_effects_window()
-            status_window.show_character_status_effects(character)
+            if hasattr(status_window, 'show_character_status_effects') and callable(getattr(status_window, 'show_character_status_effects', None)):
+                getattr(status_window, 'show_character_status_effects')(character)
             self.is_open = True
             logger.info(f"キャラクターステータス効果を表示: {character.name}")
         except Exception as e:
@@ -82,7 +87,8 @@ class StatusEffectsUI:
         """ステータス効果詳細を表示（WindowSystem版）"""
         try:
             status_window = self._get_status_effects_window()
-            status_window.show_status_effect_detail(effect_type, character)
+            if hasattr(status_window, 'show_status_effect_detail') and callable(getattr(status_window, 'show_status_effect_detail', None)):
+                getattr(status_window, 'show_status_effect_detail')(effect_type, character)
             logger.info(f"ステータス効果詳細を表示: {effect_type.value} - {character.name}")
         except Exception as e:
             logger.error(f"ステータス効果詳細表示エラー: {e}")
@@ -91,10 +97,11 @@ class StatusEffectsUI:
         """アクティブ効果概要を表示（WindowSystem版）"""
         try:
             status_window = self._get_status_effects_window()
-            if self.current_party:
-                status_window.set_party(self.current_party)
+            if self.current_party and hasattr(status_window, 'set_party') and callable(getattr(status_window, 'set_party', None)):
+                getattr(status_window, 'set_party')(self.current_party)
             
-            status_window.show_active_effects_summary()
+            if hasattr(status_window, 'show_active_effects_summary') and callable(getattr(status_window, 'show_active_effects_summary', None)):
+                getattr(status_window, 'show_active_effects_summary')()
             self.is_open = True
             logger.info("アクティブ効果概要を表示")
         except Exception as e:
@@ -104,10 +111,11 @@ class StatusEffectsUI:
         """ステータス効果管理メニューを表示（WindowSystem版）"""
         try:
             status_window = self._get_status_effects_window()
-            if self.current_party:
-                status_window.set_party(self.current_party)
+            if self.current_party and hasattr(status_window, 'set_party') and callable(getattr(status_window, 'set_party', None)):
+                getattr(status_window, 'set_party')(self.current_party)
             
-            status_window.show_management_menu()
+            if hasattr(status_window, 'show_management_menu') and callable(getattr(status_window, 'show_management_menu', None)):
+                getattr(status_window, 'show_management_menu')()
             self.is_open = True
             logger.info("ステータス効果管理メニューを表示")
         except Exception as e:
@@ -117,7 +125,10 @@ class StatusEffectsUI:
         """ステータス効果を適用（WindowSystem版）"""
         try:
             status_window = self._get_status_effects_window()
-            success = status_window.apply_status_effect(effect_type, character)
+            if hasattr(status_window, 'apply_status_effect') and callable(getattr(status_window, 'apply_status_effect', None)):
+                success = getattr(status_window, 'apply_status_effect')(effect_type, character)
+            else:
+                success = False
             if success:
                 logger.info(f"ステータス効果を適用: {effect_type.value} -> {character.name}")
             return success
@@ -129,7 +140,10 @@ class StatusEffectsUI:
         """ステータス効果を除去（WindowSystem版）"""
         try:
             status_window = self._get_status_effects_window()
-            success = status_window.remove_status_effect(effect_type, character)
+            if hasattr(status_window, 'remove_status_effect') and callable(getattr(status_window, 'remove_status_effect', None)):
+                success = getattr(status_window, 'remove_status_effect')(effect_type, character)
+            else:
+                success = False
             if success:
                 logger.info(f"ステータス効果を除去: {effect_type.value} -> {character.name}")
             return success
@@ -182,8 +196,8 @@ class StatusEffectsUI:
     
     def cleanup(self):
         """リソースクリーンアップ"""
-        if self.status_effects_window:
-            self.status_effects_window.cleanup()
+        if self.status_effects_window and hasattr(self.status_effects_window, 'cleanup') and callable(getattr(self.status_effects_window, 'cleanup', None)):
+            getattr(self.status_effects_window, 'cleanup')()
             self.status_effects_window = None
         self.is_open = False
         self.current_party = None

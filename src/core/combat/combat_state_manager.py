@@ -1,6 +1,6 @@
 """Combat state management module."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable
 from src.core.interfaces import ManagedComponent
 from src.core.event_bus import EventType, publish_event
 from src.utils.logger import logger
@@ -27,10 +27,10 @@ class CombatStateManager(ManagedComponent):
         self.current_boss_encounter = None
         
         # 戦闘結果処理ハンドラー
-        self._victory_handlers: List[callable] = []
-        self._defeat_handlers: List[callable] = []
-        self._fled_handlers: List[callable] = []
-        self._negotiated_handlers: List[callable] = []
+        self._victory_handlers: List[Callable] = []
+        self._defeat_handlers: List[Callable] = []
+        self._fled_handlers: List[Callable] = []
+        self._negotiated_handlers: List[Callable] = []
     
     def _do_initialize(self, context: Dict[str, Any]) -> bool:
         """CombatStateManagerの初期化"""
@@ -85,22 +85,22 @@ class CombatStateManager(ManagedComponent):
             return self._get_game_state()
         return self.game_state
     
-    def register_victory_handler(self, handler: callable) -> None:
+    def register_victory_handler(self, handler: Callable) -> None:
         """勝利処理ハンドラーの登録"""
         if handler not in self._victory_handlers:
             self._victory_handlers.append(handler)
     
-    def register_defeat_handler(self, handler: callable) -> None:
+    def register_defeat_handler(self, handler: Callable) -> None:
         """敗北処理ハンドラーの登録"""
         if handler not in self._defeat_handlers:
             self._defeat_handlers.append(handler)
     
-    def register_fled_handler(self, handler: callable) -> None:
+    def register_fled_handler(self, handler: Callable) -> None:
         """逃走処理ハンドラーの登録"""
         if handler not in self._fled_handlers:
             self._fled_handlers.append(handler)
     
-    def register_negotiated_handler(self, handler: callable) -> None:
+    def register_negotiated_handler(self, handler: Callable) -> None:
         """交渉処理ハンドラーの登録"""
         if handler not in self._negotiated_handlers:
             self._negotiated_handlers.append(handler)
@@ -114,7 +114,7 @@ class CombatStateManager(ManagedComponent):
             logger.error("エンカウンター発生に必要な条件が満たされていません")
             return False
         
-        if not self.dungeon_manager.current_dungeon:
+        if not self.dungeon_manager or not self.dungeon_manager.current_dungeon:
             logger.error("ダンジョンが設定されていません")
             return False
         

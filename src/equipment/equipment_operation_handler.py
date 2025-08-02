@@ -458,7 +458,8 @@ class EquipmentOperationHandler:
         
         # レベル制限チェック
         if hasattr(item, 'required_level') and hasattr(self.character, 'level'):
-            if self.character.level < item.required_level:
+            character_level = getattr(self.character, 'level', 1)
+            if character_level < item.required_level:
                 return EquipmentOperationResult(
                     success=False,
                     error_type='level_requirement',

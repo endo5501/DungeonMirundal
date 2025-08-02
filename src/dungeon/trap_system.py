@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Tuple, Optional, Any
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import random
 
 from src.character.character import Character
@@ -34,11 +34,11 @@ class TrapData:
     damage_range: Tuple[int, int]
     success_rate: float = 0.7
     effect_duration: int = 0
-    special_effects: Dict[str, Any] = None
+    special_effects: Dict[str, Any] = field(default_factory=dict)
     
     def __post_init__(self):
-        if self.special_effects is None:
-            self.special_effects = {}
+        # field(default_factory=dict)で初期化されるため、Noneチェックは不要
+        pass
 
 
 class TrapSystem:
@@ -300,9 +300,12 @@ class TrapSystem:
         if hasattr(party, 'shared_inventory') and party.shared_inventory:
             items = party.shared_inventory.get_all_items()
             if items:
-                lost_item = random.choice(items)
-                party.shared_inventory.remove_item(lost_item.item_id, 1)
-                return f"アイテム「{lost_item.name}」を紛失した！"
+                # get_all_items()はTuple[int, ItemInstance]のリストを返す
+                lost_item_tuple = random.choice(items)
+                slot_index, lost_item = lost_item_tuple
+                party.shared_inventory.remove_item(slot_index, 1)
+                item_name = getattr(lost_item, 'name', str(lost_item))
+                return f"アイテム「{item_name}」を紛失した！"
         
         return "紛失するアイテムがなかった"
     

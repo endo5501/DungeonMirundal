@@ -2,7 +2,7 @@
 
 import pygame
 import pygame_gui
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, cast
 import logging
 import random
 from ..wizard_service_panel import WizardServicePanel, WizardStep
@@ -124,7 +124,7 @@ class CharacterCreationWizard(WizardServicePanel):
         self.ui_elements.append(self.name_input)
         
         # 既存の値を設定
-        if "name" in self.wizard_data:
+        if "name" in self.wizard_data and self.name_input:
             self.name_input.set_text(self.wizard_data["name"])
         
         # フォーカスを明示的に設定
@@ -153,7 +153,7 @@ class CharacterCreationWizard(WizardServicePanel):
             "character_creation_name_input",
             "",
             input_rect,
-            panel,
+            cast(pygame_gui.core.UIContainer, panel),
             placeholder_text="キャラクター名を入力"
         )
         
@@ -172,7 +172,7 @@ class CharacterCreationWizard(WizardServicePanel):
             "character_creation_test_name_button",
             "テスト名前",
             test_button_rect,
-            panel
+            cast(pygame_gui.core.UIContainer, panel)
         )
     
     def _create_race_selection_content(self, panel: pygame_gui.elements.UIPanel) -> None:
@@ -217,7 +217,7 @@ class CharacterCreationWizard(WizardServicePanel):
                 f"character_creation_race_{race_data.id}",
                 f"{race_data.name} - {race_data.description}",
                 button_rect,
-                panel
+                cast(pygame_gui.core.UIContainer, panel)
             )
             
             if button:
@@ -282,7 +282,7 @@ class CharacterCreationWizard(WizardServicePanel):
             "character_creation_roll_button",
             "ダイスを振る",
             roll_rect,
-            panel
+            cast(pygame_gui.core.UIContainer, panel)
         )
         
         # 能力値表示
@@ -297,7 +297,7 @@ class CharacterCreationWizard(WizardServicePanel):
                 f"character_creation_stat_label_{stat}",
                 f"{stat_name}:",
                 label_rect,
-                panel
+                cast(pygame_gui.core.UIContainer, panel)
             )
             
             # 値表示
@@ -306,7 +306,7 @@ class CharacterCreationWizard(WizardServicePanel):
                 f"character_creation_stat_value_{stat}",
                 "--",
                 value_rect,
-                panel
+                cast(pygame_gui.core.UIContainer, panel)
             )
             if value_label:
                 self.stat_labels[stat] = value_label
@@ -369,7 +369,7 @@ class CharacterCreationWizard(WizardServicePanel):
                 f"character_creation_class_{class_data.id}",
                 f"{class_data.name} - {class_data.description}",
                 button_rect,
-                panel
+                cast(pygame_gui.core.UIContainer, panel)
             )
             
             if button:
@@ -423,7 +423,7 @@ class CharacterCreationWizard(WizardServicePanel):
                     f"character_creation_confirm_label_{i}",
                     line,
                     label_rect,
-                    panel
+                    cast(pygame_gui.core.UIContainer, panel)
                 )
                 if label:
                     self.confirm_labels.append(label)
@@ -548,7 +548,7 @@ class CharacterCreationWizard(WizardServicePanel):
         test_name = "TestCharacter"
         logger.info(f"[DEBUG] Setting test name: {test_name}")
         
-        if hasattr(self, 'name_input'):
+        if hasattr(self, 'name_input') and self.name_input:
             self.name_input.set_text(test_name)
             logger.info(f"[DEBUG] name_input.set_text() called with: {test_name}")
             logger.info(f"[DEBUG] name_input.get_text() after set: '{self.name_input.get_text()}'")
@@ -567,7 +567,7 @@ class CharacterCreationWizard(WizardServicePanel):
         step = self.steps[self.current_step_index]
         
         # ステップ固有のデータ収集
-        if step.id == "name" and hasattr(self, 'name_input'):
+        if step.id == "name" and hasattr(self, 'name_input') and self.name_input:
             self.wizard_data["name"] = self.name_input.get_text()
         elif step.id == "race":
             # 種族選択はボタンクリックで既に設定済み
@@ -608,7 +608,7 @@ class CharacterCreationWizard(WizardServicePanel):
     def _display_stats(self, stats: Dict[str, int]) -> None:
         """能力値を表示"""
         for stat, value in stats.items():
-            if stat in self.stat_labels:
+            if stat in self.stat_labels and self.stat_labels[stat]:
                 self.stat_labels[stat].set_text(str(value))
         
         # ボタンのテキストを変更
@@ -659,13 +659,13 @@ class CharacterCreationWizard(WizardServicePanel):
     def _highlight_button(self, button: pygame_gui.elements.UIButton) -> None:
         """ボタンをハイライト"""
         # TODO: pygame_guiのテーマでハイライトスタイルを定義
-        if hasattr(button, 'selected'):
-            button.selected = True
+        # selected 属性を動的に設定
+        setattr(button, 'selected', True)
     
     def _unhighlight_button(self, button: pygame_gui.elements.UIButton) -> None:
         """ボタンのハイライトを解除"""
-        if hasattr(button, 'selected'):
-            button.selected = False
+        # selected 属性を動的に設定
+        setattr(button, 'selected', False)
     
     
     def _validate_name(self, data: Dict[str, Any]) -> bool:
@@ -678,7 +678,7 @@ class CharacterCreationWizard(WizardServicePanel):
             default_name = "TestCharacter"
             logger.info(f"[DEBUG] Setting default name: {default_name}")
             self.wizard_data["name"] = default_name
-            if hasattr(self, 'name_input'):
+            if hasattr(self, 'name_input') and self.name_input:
                 self.name_input.set_text(default_name)
             return True
         

@@ -2,7 +2,7 @@
 
 import pygame
 import pygame_gui
-from typing import List, Optional, Callable, Dict, Any
+from typing import List, Optional, Callable, Dict, Any, cast
 import logging
 from ..core.facility_service import MenuItem
 from .service_panel import ServicePanel
@@ -40,7 +40,10 @@ class NavigationPanel(ServicePanel):
         self.button_padding = 10
         
         # ServicePanel初期化（navigationという仮のservice_idを使用）
-        super().__init__(rect, parent, None, "navigation", ui_manager)
+        # controllerはNavigationPanelでは不要だが、型エラーを避けるため仮の値を使用
+        from ..core.facility_controller import FacilityController
+        dummy_controller = cast(FacilityController, None)  # 実際には使用されない
+        super().__init__(rect, parent, dummy_controller, "navigation", ui_manager)
         
         logger.info("NavigationPanel created")
     
@@ -188,7 +191,8 @@ class NavigationPanel(ServicePanel):
                     # フォールバック: テキストの背景色や表示を変更
                     original_text = button.text
                     if not original_text.startswith("■ "):
-                        button.set_text(f"■ {original_text}")
+                        if button:
+                            button.set_text(f"■ {original_text}")
             else:
                 # 非選択時の視覚的表現
                 logger.info(f"NavigationPanel: Setting button {item_id} as unselected")
@@ -201,7 +205,8 @@ class NavigationPanel(ServicePanel):
                     # フォールバック: テキストから選択記号を削除
                     current_text = button.text
                     if current_text.startswith("■ "):
-                        button.set_text(current_text[2:])
+                        if button:
+                            button.set_text(current_text[2:])
     
     def update_menu_items(self, menu_items: List[MenuItem]) -> None:
         """メニュー項目を更新

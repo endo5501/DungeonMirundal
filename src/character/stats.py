@@ -77,6 +77,16 @@ class DerivedStats:
     evasion: int = 10
     critical_chance: int = 5
     
+    @property
+    def hp(self) -> int:
+        """現在のHP（current_hpのエイリアス）"""
+        return self.current_hp
+    
+    @hp.setter
+    def hp(self, value: int):
+        """現在のHPを設定"""
+        self.current_hp = max(0, min(value, self.max_hp))
+    
     def to_dict(self) -> Dict[str, int]:
         """辞書形式での出力"""
         return {

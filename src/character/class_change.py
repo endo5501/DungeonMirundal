@@ -1,7 +1,7 @@
 """クラスチェンジシステム"""
 
-from typing import Dict, List, Tuple, Optional
-from dataclasses import dataclass
+from typing import Dict, List, Tuple, Optional, Any
+from dataclasses import dataclass, field
 
 from src.character.character import Character
 from src.character.stats import BaseStats
@@ -17,7 +17,7 @@ DEFAULT_CLASS_CHANGE_COST = 1000
 class ClassChangeRequirements:
     """クラスチェンジの要求条件"""
     min_level: int = 1
-    required_stats: Dict[str, int] = None
+    required_stats: Dict[str, int] = field(default_factory=dict)
     required_gold: int = 0
     
     def __post_init__(self):
@@ -170,7 +170,7 @@ class ClassChangeManager:
         return True, f"{character.name}は{target_class}になりました！"
     
     @staticmethod
-    def get_class_change_info(character: Character, target_class: str) -> Dict[str, any]:
+    def get_class_change_info(character: Character, target_class: str) -> Dict[str, Any]:
         """クラスチェンジ情報を取得"""
         char_config = config_manager.load_config("characters")
         classes_config = char_config.get("classes", {})

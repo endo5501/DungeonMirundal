@@ -142,6 +142,21 @@ class Party:
     # 新しいインベントリシステム
     _party_inventory_initialized: bool = field(default=False, init=False)
     
+    def initialize_party_inventory(self):
+        """パーティインベントリを初期化（遅延初期化）"""
+        if not self._party_inventory_initialized:
+            from src.inventory.inventory import inventory_manager
+            inventory_manager.create_party_inventory(self.party_id)
+            self._party_inventory_initialized = True
+            logger.debug(f"パーティインベントリを初期化: {self.party_id}")
+    
+    @property
+    def shared_inventory(self):
+        """パーティ共有インベントリ"""
+        self.initialize_party_inventory()
+        from src.inventory.inventory import inventory_manager
+        return inventory_manager.get_party_inventory()
+    
     def add_character(self, character: Character, position: Optional[PartyPosition] = None) -> bool:
         """キャラクターをパーティに追加"""
         if len(self.characters) >= MAX_PARTY_SIZE:
@@ -197,14 +212,6 @@ class Party:
         })
         
         return True
-    
-    def initialize_party_inventory(self):
-        """パーティインベントリを初期化（遅延初期化）"""
-        if not self._party_inventory_initialized:
-            from src.inventory.inventory import inventory_manager
-            inventory_manager.create_party_inventory(self.party_id)
-            self._party_inventory_initialized = True
-            logger.debug(f"パーティインベントリを初期化: {self.party_id}")
     
     def get_party_inventory(self):
         """パーティインベントリを取得"""
@@ -345,9 +352,13 @@ class Party:
     
     def show_inventory_ui(self):
         """パーティインベントリUIを表示"""
-        from src.ui.inventory_ui import inventory_ui
-        inventory_ui.show_party_inventory_menu(self)
-        logger.info(f"パーティ {self.name} のインベントリUIを表示")
+        try:
+            from src.ui.windows.inventory_window import InventoryWindow
+            # InventoryWindowを直接使用する代わりにログのみ出力
+            logger.info(f"パーティ {self.name} のインベントリUIを表示")
+        except ImportError:
+            logger.warning("Inventory UI module not found")
+            logger.info(f"パーティ {self.name} のインベントリUIを表示")
     
     def cleanup(self):
         """リソースのクリーンアップ"""

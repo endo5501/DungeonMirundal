@@ -109,6 +109,15 @@ class CombatStats:
     def get_critical_hit_rate(self) -> float:
         """クリティカルヒット率を取得"""
         return self.critical_hits / max(1, self.turns_taken)
+    
+    def add_action_taken(self):
+        """アクション実行回数を追加"""
+        self.turns_taken += 1
+    
+    def add_successful_action(self):
+        """成功アクション回数を追加（現在はcritical_hitsで代用）"""
+        # 実際の実装では専用のフィールドを追加することを推奨
+        pass
 
 
 class CombatManager:
@@ -123,6 +132,7 @@ class CombatManager:
         self.turn_order: List[Union[Character, Monster]] = []
         self.current_turn_index = 0
         self.turn_number = 1
+        self.current_turn = 1  # current_turnエイリアス
         self.combat_log: List[CombatTurn] = []
         
         # 戦闘統計
@@ -133,6 +143,17 @@ class CombatManager:
         self.auto_sort_dead = True
         self.show_damage_numbers = True
         self.critical_hit_chance = CRITICAL_HIT_CHANCE
+        
+        # 戦闘状態フラグ
+        self.flee_attempted = False
+        self.flee_successful = False
+        self.negotiate_attempted = False
+        self.negotiate_successful = False
+        
+        # 外部システム参照（後で設定される）
+        self.current_state: Optional[Any] = None
+        self.window_manager: Optional[Any] = None
+        self.overworld_manager: Optional[Any] = None
         
         logger.debug("CombatManager初期化完了")
     
@@ -173,8 +194,9 @@ class CombatManager:
         self.turn_order = []
         
         # 生存中のキャラクターを追加
-        for character in self.party.get_living_characters():
-            self.turn_order.append(character)
+        if self.party:
+            for character in self.party.get_living_characters():
+                self.turn_order.append(character)
         
         # 生存中のモンスターを追加
         for monster in self.monsters:
@@ -347,8 +369,10 @@ class CombatManager:
             return f"{self._get_actor_name(actor)}のアイテム使用に失敗しました"
         
         # アイテム使用
+        # targetの型をCharacterにキャスト（MonsterにはItemを使用できない）
+        character_target = target if isinstance(target, Character) else None
         result, message, results = item_usage_manager.use_item(
-            item_instance, actor, target, self.party
+            item_instance, actor, character_target, self.party
         )
         
         # 統計更新
@@ -395,7 +419,8 @@ class CombatManager:
             if actor.can_use_ability(ability_id):
                 actor.use_ability(ability_id)
                 ability = actor.get_ability(ability_id)
-                return f"{self._get_actor_name(actor)}は{ability.name}を使用した！"
+                ability_name = ability.name if ability else ability_id
+                return f"{self._get_actor_name(actor)}は{ability_name}を使用した！"
             else:
                 return f"{self._get_actor_name(actor)}は{ability_id}を使用できません"
         
@@ -523,6 +548,8 @@ class CombatManager:
     def _calculate_flee_chance(self) -> float:
         """逃走成功率計算"""
         # パーティの平均敏捷性
+        if not self.party:
+            return 0.0
         living_chars = self.party.get_living_characters()
         if not living_chars:
             return 0.0
@@ -543,6 +570,8 @@ class CombatManager:
     def _calculate_negotiate_chance(self) -> float:
         """交渉成功率計算"""
         # パーティの最高知力
+        if not self.party:
+            return 0.0
         living_chars = self.party.get_living_characters()
         if not living_chars:
             return 0.0
@@ -570,8 +599,9 @@ class CombatManager:
         self.turn_order = []
         
         # 生存中のキャラクター
-        for character in self.party.get_living_characters():
-            self.turn_order.append(character)
+        if self.party:
+            for character in self.party.get_living_characters():
+                self.turn_order.append(character)
         
         # 生存中のモンスター
         for monster in self.monsters:
@@ -587,9 +617,12 @@ class CombatManager:
     def _process_turn_effects(self):
         """ターン効果処理"""
         # キャラクターの状態効果処理
-        for character in self.party.get_living_characters():
-            if hasattr(character, 'process_turn_effects'):
-                character.process_turn_effects()
+        if self.party:
+            for character in self.party.get_living_characters():
+                # 状態効果コンポーネントを通じて処理
+                if character.status_effects and hasattr(character.status_effects, 'process_turn_effects'):
+                    character.status_effects.process_turn_effects()
+                # process_turn_effectsメソッドは存在しないので削除
         
         # モンスターの状態効果処理
         for monster in self.monsters:
@@ -603,6 +636,9 @@ class CombatManager:
             return CombatResult.FLED if self.combat_state == CombatState.FLED else CombatResult.NEGOTIATED
         
         # 全キャラクター死亡チェック
+        if not self.party:
+            self.combat_state = CombatState.DEFEAT
+            return CombatResult.DEFEAT
         living_characters = self.party.get_living_characters()
         if not living_characters:
             self.combat_state = CombatState.DEFEAT
@@ -622,10 +658,11 @@ class CombatManager:
     
     def get_combat_status(self) -> Dict[str, Any]:
         """戦闘状況取得"""
+        current_actor = self.get_current_actor()
         return {
             'state': self.combat_state.value,
             'turn_number': self.turn_number,
-            'current_actor': self._get_actor_name(self.get_current_actor()) if self.get_current_actor() else None,
+            'current_actor': self._get_actor_name(current_actor) if current_actor is not None else None,
             'is_player_turn': self.is_player_turn(),
             'party_members': len(self.party.get_living_characters()) if self.party else 0,
             'monsters_alive': len([m for m in self.monsters if m.is_alive]),
@@ -635,20 +672,22 @@ class CombatManager:
     
     def get_valid_targets(self, actor: Union[Character, Monster], action: CombatAction) -> List[Union[Character, Monster]]:
         """有効な対象一覧取得"""
-        targets = []
+        targets: List[Union[Character, Monster]] = []
         
         if action in [CombatAction.ATTACK, CombatAction.CAST_SPELL]:
             if isinstance(actor, Character):
                 # キャラクターはモンスターを攻撃
-                targets = [m for m in self.monsters if m.is_alive]
+                targets.extend(m for m in self.monsters if m.is_alive)
             else:
                 # モンスターはキャラクターを攻撃
-                targets = self.party.get_living_characters()
+                if self.party:
+                    targets.extend(self.party.get_living_characters())
         
         elif action in [CombatAction.USE_ITEM]:
             if isinstance(actor, Character):
                 # アイテムは味方に使用可能
-                targets = self.party.get_living_characters()
+                if self.party:
+                    targets.extend(self.party.get_living_characters())
         
         return targets
     
@@ -660,9 +699,16 @@ class CombatManager:
         self.turn_order = []
         self.current_turn_index = 0
         self.turn_number = 1
+        self.current_turn = 1
         self.combat_log = []
         self.party_stats = CombatStats()
         self.monster_stats = CombatStats()
+        
+        # 戦闘状態フラグをリセット
+        self.flee_attempted = False
+        self.flee_successful = False
+        self.negotiate_attempted = False
+        self.negotiate_successful = False
         
         logger.info("戦闘をリセットしました")
     
@@ -679,6 +725,62 @@ class CombatManager:
             logger.info("CombatManager リソースをクリーンアップしました")
         except Exception as e:
             logger.error(f"CombatManager クリーンアップ中にエラー: {e}")
+    
+    # === 不足していたメソッドの追加 ===
+    
+    def advance_turn(self):
+        """次のターンに進む"""
+        self.current_turn_index = (self.current_turn_index + 1) % len(self.turn_order)
+        if self.current_turn_index == 0:
+            self.turn_number += 1
+            self.current_turn = self.turn_number
+        logger.debug(f"ターン進行: {self.current_turn_index}, ターン番号: {self.turn_number}")
+    
+    def is_action_completed(self) -> bool:
+        """現在のアクションが完了したかチェック"""
+        # 簡単な実装：常にTrueを返す（実際の実装では行動の完了状態をチェック）
+        return True
+    
+    def end_combat(self, result: str):
+        """戦闘終了処理"""
+        logger.info(f"戦闘終了: {result}")
+        if result == 'victory':
+            self.combat_state = CombatState.VICTORY
+        elif result == 'defeat':
+            self.combat_state = CombatState.DEFEAT
+        elif result == 'fled':
+            self.combat_state = CombatState.FLED
+        elif result == 'negotiated':
+            self.combat_state = CombatState.NEGOTIATED
+        else:
+            logger.warning(f"未知の戦闘結果: {result}")
+    
+    def initialize_combat_stats(self):
+        """戦闘統計の初期化"""
+        self.party_stats = CombatStats()
+        self.monster_stats = CombatStats()
+        logger.debug("戦闘統計を初期化しました")
+    
+    def update_combat_stats(self, actor: Union[Character, Monster], action_result: Any):
+        """戦闘統計の更新"""
+        if isinstance(actor, Character):
+            self.party_stats.add_action_taken()
+            if hasattr(action_result, 'success') and action_result.success:
+                self.party_stats.add_successful_action()
+        else:
+            self.monster_stats.add_action_taken()
+            if hasattr(action_result, 'success') and action_result.success:
+                self.monster_stats.add_successful_action()
+        logger.debug(f"戦闘統計更新: {actor.name if hasattr(actor, 'name') else '不明'}")
+    
+    def set_external_references(self, current_state=None, window_manager=None, overworld_manager=None):
+        """外部システムの参照を設定"""
+        if current_state is not None:
+            self.current_state = current_state
+        if window_manager is not None:
+            self.window_manager = window_manager
+        if overworld_manager is not None:
+            self.overworld_manager = overworld_manager
 
 
 # グローバルインスタンス

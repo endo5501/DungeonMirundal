@@ -6,7 +6,12 @@ CharacterCreationUIFactory クラス
 
 import pygame
 import pygame_gui
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, cast
+
+try:
+    from pygame_gui.core.interfaces import IContainerLikeInterface
+except ImportError:
+    IContainerLikeInterface = Any  # type: ignore
 from .character_creation_types import WizardStep, WizardConfig
 from src.utils.logger import logger
 
@@ -108,7 +113,7 @@ class CharacterCreationUIFactory:
         race_rect = pygame.Rect(20, 60, 300, 200)
         race_list = pygame_gui.elements.UISelectionList(
             relative_rect=race_rect,
-            item_list=self.config.races,
+            item_list=[item for item in self.config.races],  # 型変換
             manager=self.ui_manager,
             container=self.content_container
         )
@@ -199,7 +204,7 @@ class CharacterCreationUIFactory:
         class_rect = pygame.Rect(20, 60, 300, 200)
         class_list = pygame_gui.elements.UISelectionList(
             relative_rect=class_rect,
-            item_list=self.config.character_classes,
+            item_list=[item for item in self.config.character_classes],  # 型変換
             manager=self.ui_manager,
             container=self.content_container
         )

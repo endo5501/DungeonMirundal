@@ -7,7 +7,8 @@ CharacterCreationWizard クラス
 import pygame
 import pygame_gui
 import random
-from typing import Dict, List, Any, Optional
+from pygame_gui.core.interfaces import IContainerLikeInterface
+from typing import Dict, List, Any, Optional, cast
 from pathlib import Path
 
 from .window import Window
@@ -146,30 +147,36 @@ class CharacterCreationWizard(Window):
     
     def _create_step_title(self) -> None:
         """ステップタイトルを作成"""
+        if not self.rect:
+            return
         title_rect = pygame.Rect(20, 20, self.rect.width - 40, 40)
         self.step_title = pygame_gui.elements.UILabel(
             relative_rect=title_rect,
             text=self._get_step_title(),
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
     
     def _create_content_container(self) -> None:
         """コンテンツコンテナを作成"""
+        if not self.rect:
+            return
         content_rect = pygame.Rect(20, 80, self.rect.width - 40, 350)
         self.content_container = pygame_gui.elements.UIPanel(
             relative_rect=content_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
     
     def _create_button_container(self) -> None:
         """ボタンコンテナを作成"""
+        if not self.rect:
+            return
         button_rect = pygame.Rect(20, 450, self.rect.width - 40, 40)
         self.button_container = pygame_gui.elements.UIPanel(
             relative_rect=button_rect,
             manager=self.ui_manager,
-            container=self.main_container
+            container=cast('IContainerLikeInterface', self.main_container) if self.main_container else None
         )
         
         # ナビゲーションボタンを作成
@@ -187,7 +194,7 @@ class CharacterCreationWizard(Window):
             relative_rect=cancel_rect,
             text='キャンセル',
             manager=self.ui_manager,
-            container=self.button_container
+            container=cast('IContainerLikeInterface', self.button_container) if self.button_container else None
         )
         
         # 次へボタン（右端）
@@ -197,7 +204,7 @@ class CharacterCreationWizard(Window):
             relative_rect=next_rect,
             text='次へ',
             manager=self.ui_manager,
-            container=self.button_container
+            container=cast('IContainerLikeInterface', self.button_container) if self.button_container else None
         )
         
         # 戻るボタン（次へボタンの左）
@@ -207,7 +214,7 @@ class CharacterCreationWizard(Window):
             relative_rect=back_rect,
             text='戻る',
             manager=self.ui_manager,
-            container=self.button_container
+            container=cast('IContainerLikeInterface', self.button_container) if self.button_container else None
         )
         
         self._update_button_states()
@@ -263,7 +270,7 @@ class CharacterCreationWizard(Window):
             relative_rect=desc_rect,
             text='キャラクターの名前を入力してください：',
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
         )
         
         # 名前入力フィールド
@@ -271,7 +278,7 @@ class CharacterCreationWizard(Window):
         name_input = pygame_gui.elements.UITextEntryLine(
             relative_rect=name_rect,
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
         )
         name_input.set_text(self.character_data.get('name', ''))
         
@@ -288,7 +295,7 @@ class CharacterCreationWizard(Window):
             relative_rect=desc_rect,
             text='種族を選択してください：',
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
         )
         
         # 種族リスト
@@ -297,7 +304,7 @@ class CharacterCreationWizard(Window):
             relative_rect=race_rect,
             item_list=self.wizard_config.races,
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
         )
         
         # 現在の選択を設定
@@ -318,7 +325,7 @@ class CharacterCreationWizard(Window):
             relative_rect=desc_rect,
             text='ステータスを生成してください：',
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
         )
         
         # ステータス表示エリア
@@ -326,7 +333,7 @@ class CharacterCreationWizard(Window):
         stats_panel = pygame_gui.elements.UIPanel(
             relative_rect=stats_rect,
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
         )
         
         # 生成ボタン
@@ -335,7 +342,7 @@ class CharacterCreationWizard(Window):
             relative_rect=generate_rect,
             text='生成',
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
         )
         
         self.current_ui_elements = {
@@ -356,7 +363,7 @@ class CharacterCreationWizard(Window):
             relative_rect=desc_rect,
             text='職業を選択してください：',
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
         )
         
         # 職業リスト
@@ -365,7 +372,7 @@ class CharacterCreationWizard(Window):
             relative_rect=class_rect,
             item_list=self.wizard_config.character_classes,
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
         )
         
         # 現在の選択を設定
@@ -386,7 +393,7 @@ class CharacterCreationWizard(Window):
             relative_rect=desc_rect,
             text='以下の内容で作成します：',
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
         )
         
         # キャラクター情報表示
@@ -396,7 +403,7 @@ class CharacterCreationWizard(Window):
             relative_rect=info_rect,
             html_text=info_text,
             manager=self.ui_manager,
-            container=self.content_container
+            container=cast('IContainerLikeInterface', self.content_container) if self.content_container else None
         )
         
         self.current_ui_elements = {
@@ -579,7 +586,7 @@ class CharacterCreationWizard(Window):
                     relative_rect=label_rect,
                     text=f"{stat_label}:",
                     manager=self.ui_manager,
-                    container=stats_panel
+                    container=cast('IContainerLikeInterface', stats_panel) if stats_panel else None
                 )
                 
                 # 値
@@ -587,7 +594,7 @@ class CharacterCreationWizard(Window):
                     relative_rect=value_rect,
                     text=str(self.character_data[stat_name]),
                     manager=self.ui_manager,
-                    container=stats_panel
+                    container=cast('IContainerLikeInterface', stats_panel) if stats_panel else None
                 )
                 
                 self.current_ui_elements[f'stat_{stat_name}_label'] = label
@@ -709,8 +716,11 @@ class CharacterCreationWizard(Window):
         
         # pygame-guiの要素を削除
         if self.ui_manager:
-            for element in list(self.ui_manager.get_root_container().elements):
-                element.kill()
+            root_container = self.ui_manager.get_root_container()
+            if hasattr(root_container, 'elements'):
+                elements = getattr(root_container, 'elements', [])
+                for element in list(elements):
+                    element.kill()
             self.ui_manager = None
         
         logger.debug(f"CharacterCreationWizard UI要素をクリーンアップ: {self.window_id}")

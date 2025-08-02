@@ -7,14 +7,10 @@ FALLBACK_RENDERER = "dungeon_renderer"
 def _import_renderer():
     """レンダラーをインポート"""
     try:
-        from .dungeon_renderer_pygame import DungeonRenderer
-        return DungeonRenderer
+        from .dungeon_renderer_pygame import DungeonRendererPygame
+        return DungeonRendererPygame
     except ImportError:
-        try:
-            from .dungeon_renderer import DungeonRenderer
-            return DungeonRenderer
-        except ImportError:
-            return None
+        return None
 
 DungeonRenderer = _import_renderer()
 

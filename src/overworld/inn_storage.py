@@ -44,7 +44,7 @@ class InnStorage:
             return False
         
         for slot in self.slots:
-            if self._can_stack_with_slot(slot, item_instance):
+            if self._can_stack_with_slot(slot, item_instance) and slot.item_instance:
                 slot.item_instance.quantity += item_instance.quantity
                 logger.debug(f"宿屋倉庫でアイテムをスタック: {item_instance.item_id} +{item_instance.quantity}")
                 return True
@@ -55,12 +55,15 @@ class InnStorage:
         """アイテムがスタック可能かチェック"""
         from src.items.item import item_manager
         item = item_manager.get_item(item_instance.item_id)
-        return item and item.item_data.get('stackable', False) if item else False
+        if item:
+            return item.item_data.get('stackable', False)
+        return False
     
     def _can_stack_with_slot(self, slot: InventorySlot, item_instance: ItemInstance) -> bool:
         """スロットとアイテムがスタック可能かチェック"""
-        return (not slot.is_empty() and 
-                slot.item_instance.item_id == item_instance.item_id and
+        if slot.is_empty() or not slot.item_instance:
+            return False
+        return (slot.item_instance.item_id == item_instance.item_id and
                 slot.item_instance.identified == item_instance.identified)
     
     def _try_add_to_new_slot(self, item_instance: ItemInstance) -> bool:
@@ -84,10 +87,12 @@ class InnStorage:
             return None
         
         item_instance = slot.item_instance
-        if quantity >= item_instance.quantity:
+        if item_instance and quantity >= item_instance.quantity:
             return self._remove_all_items_from_slot(slot, item_instance)
-        else:
+        elif item_instance:
             return self._remove_partial_items_from_slot(item_instance, quantity)
+        else:
+            return None
     
     def _is_valid_slot_index(self, slot_index: int) -> bool:
         """スロットインデックスが有効かチェック"""

@@ -155,7 +155,7 @@ class MagicGuildService(FacilityService):
         for member in self.party.members:
             if member.is_alive() and hasattr(member, 'known_spells') and member.known_spells:
                 characters.append({
-                    "id": member.id,
+                    "id": getattr(member, 'id', member.name),
                     "name": member.name,
                     "class": member.character_class,
                     "spell_count": len(member.known_spells)
@@ -216,7 +216,8 @@ class MagicGuildService(FacilityService):
             return None
         
         for member in self.party.members:
-            if member.id == character_id:
+            member_id = getattr(member, 'id', member.name)
+            if member_id == character_id:
                 return member
         
         return None
@@ -346,8 +347,8 @@ class MagicGuildService(FacilityService):
                     rect=rect,
                     parent=parent,
                     ui_manager=ui_manager,
-                    controller=self._controller,
-                    service=self
+                    controller=self._controller
+                    # serviceパラメータはコンストラクタに存在しないため除外
                 )
             else:
                 logger.warning(f"[DEBUG] Unknown service_id for panel creation: {service_id}")
@@ -478,10 +479,11 @@ class MagicGuildService(FacilityService):
         """購入制限をチェック（職業、レベル）"""
         # レベル制限チェック
         required_level = item.get("required_level", 1)
-        if character.level < required_level:
+        character_level = getattr(character, 'level', 1)
+        if character_level < required_level:
             return ServiceResult(
                 success=False,
-                message=f"{character.name}のレベルが不足しています（必要: Lv{required_level}、現在: Lv{character.level}）",
+                message=f"{character.name}のレベルが不足しています（必要: Lv{required_level}、現在: Lv{character_level}）",
                 result_type=ResultType.WARNING
             )
         
@@ -494,7 +496,7 @@ class MagicGuildService(FacilityService):
                 required_class_names = [class_names.get(cls, cls) for cls in required_classes]
                 return ServiceResult(
                     success=False,
-                    message=f"{character.name}の職業では購入できません（必要職業: {', '.join(required_class_names)}）",
+                    message=f"{character.name}の職業では購入できません（必要職業: {', '.join([name for name in required_class_names if name is not None])}）",
                     result_type=ResultType.WARNING
                 )
         else:

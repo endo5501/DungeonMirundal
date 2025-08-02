@@ -48,7 +48,7 @@ class ConfigManager:
         config = self.load_config(config_name)
         return config.get(key, default)
     
-    def load_text_data(self, language: str = None) -> Dict[str, str]:
+    def load_text_data(self, language: Optional[str] = None) -> Dict[str, str]:
         """テキストデータの読み込み"""
         if language is None:
             language = self.current_language
@@ -72,7 +72,7 @@ class ConfigManager:
             logger.error(f"テキストファイルの読み込みに失敗: {language}, エラー: {e}")
             return {}
     
-    def get_text(self, key: str, default: str = None, language: str = None) -> str:
+    def get_text(self, key: str, default: Optional[str] = None, language: Optional[str] = None) -> str:
         """テキストの取得"""
         if language is None:
             language = self.current_language

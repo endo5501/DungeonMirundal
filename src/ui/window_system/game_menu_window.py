@@ -4,9 +4,17 @@ GameMenuWindow クラス
 ESCキーで表示されるメインゲームメニュー
 """
 
-import pygame
-import pygame_gui
 from typing import Dict, List, Any, Optional
+
+try:
+    import pygame
+except ImportError:
+    pygame = None  # type: ignore
+
+try:
+    import pygame_gui
+except ImportError:
+    pygame_gui = None  # type: ignore
 
 from .window import Window
 from src.utils.logger import logger
@@ -185,9 +193,9 @@ class GameMenuWindow(Window):
         logger.info(f"=== GameMenuWindow: メニューアイテム選択 ===")
         logger.info(f"アクション: {action}")
         logger.info(f"メニューアイテム: {menu_item}")
-        logger.info(f"メッセージハンドラ存在: {self.message_handler is not None}")
+        logger.info(f"メッセージハンドラ存在: {hasattr(self, 'message_handler') and self.message_handler is not None}")
         
-        if self.message_handler:
+        if hasattr(self, 'message_handler') and self.message_handler:
             logger.info("メッセージハンドラに送信中...")
             self.message_handler('menu_item_selected', {
                 'action': action,
@@ -203,7 +211,7 @@ class GameMenuWindow(Window):
     def handle_escape(self) -> bool:
         """ESCキーの処理"""
         # ゲームメニューを閉じる
-        if self.message_handler:
+        if hasattr(self, 'message_handler') and self.message_handler:
             self.message_handler('game_menu_cancelled', {'window_id': self.window_id})
         
         from .window_manager import WindowManager

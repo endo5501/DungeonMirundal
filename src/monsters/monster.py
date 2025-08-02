@@ -193,7 +193,7 @@ class Monster:
     @property
     def is_alive(self) -> bool:
         """生存状態"""
-        return self.current_hp > 0
+        return self.current_hp is not None and self.current_hp > 0
     
     @property
     def max_hp(self) -> int:
@@ -203,7 +203,8 @@ class Monster:
     def take_damage(self, damage: int, damage_type: DungeonAttribute = DungeonAttribute.PHYSICAL) -> int:
         """ダメージを受ける"""
         actual_damage = self._calculate_damage_with_resistance(damage, damage_type)
-        self.current_hp = max(COOLDOWN_EXPIRED, self.current_hp - actual_damage)
+        if self.current_hp is not None:
+            self.current_hp = max(COOLDOWN_EXPIRED, self.current_hp - actual_damage)
         
         logger.debug(f"{self.name}が{actual_damage}ダメージを受けました（HP: {self.current_hp}/{self.max_hp}）")
         return actual_damage
@@ -223,6 +224,9 @@ class Monster:
     
     def heal(self, amount: int) -> int:
         """回復"""
+        if self.current_hp is None:
+            return 0
+            
         old_hp = self.current_hp
         self.current_hp = min(self.max_hp, self.current_hp + amount)
         actual_heal = self.current_hp - old_hp

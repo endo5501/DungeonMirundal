@@ -5,7 +5,11 @@
 
 from typing import Dict, List, Optional, Callable, Any, Union
 from enum import Enum
-import pygame
+try:
+    import pygame
+except ImportError:
+    pygame = None  # type: ignore
+
 from src.ui.base_ui_pygame import UIButton, UIElement, ui_manager  # UIDialog: Phase 4.5で削除
 # MenuStackManager削除により、MenuTypeインポートも削除
 from src.core.config_manager import config_manager
@@ -42,43 +46,43 @@ class ButtonTemplate:
             'text_key': 'common.ok',
             'default_text': 'OK',
             'color': (100, 150, 100),
-            'hotkey': pygame.K_RETURN
+            'hotkey': getattr(pygame, 'K_RETURN', 13) if pygame else 13
         },
         ButtonType.CANCEL: {
             'text_key': 'common.cancel',
             'default_text': 'キャンセル',
             'color': (150, 100, 100),
-            'hotkey': pygame.K_ESCAPE
+            'hotkey': getattr(pygame, 'K_ESCAPE', 27) if pygame else 27
         },
         ButtonType.BACK: {
             'text_key': 'common.back',
             'default_text': '戻る',
             'color': (100, 100, 150),
-            'hotkey': pygame.K_ESCAPE
+            'hotkey': getattr(pygame, 'K_ESCAPE', 27) if pygame else 27
         },
         ButtonType.YES: {
             'text_key': 'common.yes',
             'default_text': 'はい',
             'color': (100, 150, 100),
-            'hotkey': pygame.K_y
+            'hotkey': getattr(pygame, 'K_y', ord('y')) if pygame else ord('y')
         },
         ButtonType.NO: {
             'text_key': 'common.no',
             'default_text': 'いいえ',
             'color': (150, 100, 100),
-            'hotkey': pygame.K_n
+            'hotkey': getattr(pygame, 'K_n', ord('n')) if pygame else ord('n')
         },
         ButtonType.CONFIRM: {
             'text_key': 'common.confirm',
             'default_text': '確定',
             'color': (100, 150, 100),
-            'hotkey': pygame.K_RETURN
+            'hotkey': getattr(pygame, 'K_RETURN', 13) if pygame else 13
         },
         ButtonType.CLOSE: {
             'text_key': 'common.close',
             'default_text': '閉じる',
             'color': (120, 120, 120),
-            'hotkey': pygame.K_ESCAPE
+            'hotkey': getattr(pygame, 'K_ESCAPE', 27) if pygame else 27
         }
     }
     
@@ -115,7 +119,7 @@ class DialogTemplate:
     
     def __init__(self, menu_stack_manager=None):
         self.menu_stack_manager = menu_stack_manager
-        self.active_dialogs: Dict[str, UIDialog] = {}
+        self.active_dialogs: Dict[str, Dict[str, Any]] = {}
         self.dialog_callbacks: Dict[str, Dict[str, Callable]] = {}
         
         # デフォルト設定
@@ -128,7 +132,7 @@ class DialogTemplate:
         logger.debug("DialogTemplateを初期化しました")
     
     def create_information_dialog(self, dialog_id: str, title: str, message: str, 
-                                on_close: Optional[Callable] = None) -> UIDialog:
+                                on_close: Optional[Callable] = None) -> Any:
         """情報表示ダイアログを作成
         
         Args:
@@ -154,7 +158,7 @@ class DialogTemplate:
     
     def create_confirmation_dialog(self, dialog_id: str, title: str, message: str,
                                  on_confirm: Optional[Callable] = None,
-                                 on_cancel: Optional[Callable] = None) -> UIDialog:
+                                 on_cancel: Optional[Callable] = None) -> Any:
         """確認ダイアログを作成
         
         Args:
@@ -188,7 +192,7 @@ class DialogTemplate:
     def create_selection_dialog(self, dialog_id: str, title: str, message: str,
                               selections: List[Dict[str, Any]],
                               on_select: Optional[Callable] = None,
-                              on_cancel: Optional[Callable] = None) -> UIDialog:
+                              on_cancel: Optional[Callable] = None) -> Any:
         """選択ダイアログを作成
         
         Args:
@@ -236,7 +240,7 @@ class DialogTemplate:
         return dialog
     
     def create_error_dialog(self, dialog_id: str, title: str, message: str,
-                          on_close: Optional[Callable] = None) -> UIDialog:
+                          on_close: Optional[Callable] = None) -> Any:
         """エラーダイアログを作成
         
         Args:
@@ -264,7 +268,7 @@ class DialogTemplate:
         return dialog
     
     def create_success_dialog(self, dialog_id: str, title: str, message: str,
-                            on_close: Optional[Callable] = None) -> UIDialog:
+                            on_close: Optional[Callable] = None) -> Any:
         """成功ダイアログを作成
         
         Args:
@@ -291,7 +295,7 @@ class DialogTemplate:
         self._add_buttons_to_dialog(dialog, [ok_button])
         return dialog
     
-    def show_dialog(self, dialog: UIDialog) -> bool:
+    def show_dialog(self, dialog: Any) -> bool:
         """ダイアログを表示
         
         Args:
@@ -376,9 +380,10 @@ class DialogTemplate:
             return True
         return False
     
-    def _create_base_dialog(self, dialog_id: str, title: str, message: str) -> UIDialog:
+    def _create_base_dialog(self, dialog_id: str, title: str, message: str) -> Any:
         """基本ダイアログを作成"""
-        dialog = UIDialog(dialog_id, title, message)
+        # UIDialogは利用できないため、ダミーオブジェクトを返す
+        dialog = {'id': dialog_id, 'title': title, 'message': message}
         
         # デフォルトサイズと位置を設定
         screen_width = 800  # デフォルト画面幅
@@ -387,7 +392,9 @@ class DialogTemplate:
         x = (screen_width - self.default_dialog_width) // 2
         y = (screen_height - self.default_dialog_height) // 2
         
-        dialog.rect = pygame.Rect(x, y, self.default_dialog_width, self.default_dialog_height)
+        if pygame and hasattr(pygame, 'Rect'):
+            # dialogは辞書なので、rectの値を辞書として保存
+            dialog['rect'] = {'x': x, 'y': y, 'width': self.default_dialog_width, 'height': self.default_dialog_height}
         
         return dialog
     
@@ -409,7 +416,7 @@ class DialogTemplate:
         
         return button
     
-    def _add_buttons_to_dialog(self, dialog: UIDialog, buttons: List[UIButton]) -> None:
+    def _add_buttons_to_dialog(self, dialog: Any, buttons: List[UIButton]) -> None:
         """ダイアログにボタンを追加"""
         if not buttons:
             return

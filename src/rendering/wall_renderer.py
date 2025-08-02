@@ -1,7 +1,7 @@
 """壁描画レンダラー"""
 
 import pygame
-from typing import Tuple
+from typing import Tuple, Optional, cast
 from enum import Enum
 
 from src.rendering.renderer_config import WallRenderConfig, ColorConfig
@@ -17,15 +17,15 @@ class WallType(Enum):
 class WallRenderer:
     """壁描画処理クラス"""
     
-    def __init__(self, screen: pygame.Surface, wall_config: WallRenderConfig = None, 
-                 color_config: ColorConfig = None):
+    def __init__(self, screen: pygame.Surface, wall_config: Optional[WallRenderConfig] = None, 
+                 color_config: Optional[ColorConfig] = None):
         self.screen = screen
-        self.wall_config = wall_config or WallRenderConfig()
-        self.color_config = color_config or ColorConfig()
+        self.wall_config = wall_config if wall_config is not None else WallRenderConfig()
+        self.color_config = color_config if color_config is not None else ColorConfig()
         self.screen_width = screen.get_width()
         self.screen_height = screen.get_height()
     
-    def render_wall_column(self, ray_index: int, distance: float, wall_type: str = WallType.FACE.value, ray_count: int = None):
+    def render_wall_column(self, ray_index: int, distance: float, wall_type: str = WallType.FACE.value, ray_count: Optional[int] = None):
         """壁の縦線を描画"""
         # 広角補正のための距離調整
         corrected_distance = self._apply_fisheye_correction(distance, ray_index, ray_count) if ray_count else distance
@@ -72,7 +72,7 @@ class WallRenderer:
         """距離と壁タイプに基づいて壁の色を計算"""
         brightness = self._calculate_brightness(distance)
         base_color = self._get_base_color_for_wall_type(wall_type)
-        return tuple(int(c * brightness) for c in base_color)
+        return cast(Tuple[int, int, int], tuple(int(c * brightness) for c in base_color))
     
     def _calculate_brightness(self, distance: float) -> float:
         """距離に基づいて明度を計算"""
@@ -83,10 +83,10 @@ class WallRenderer:
         """壁タイプに基づいて基本色を取得"""
         if wall_type == WallType.CORNER.value:
             multiplier = self.wall_config.corner_brightness_multiplier
-            return tuple(min(255, int(c * multiplier)) for c in self.color_config.wall)
+            return cast(Tuple[int, int, int], tuple(min(255, int(c * multiplier)) for c in self.color_config.wall))
         elif wall_type == WallType.SOLID.value:
             multiplier = self.wall_config.solid_wall_brightness_multiplier
-            return tuple(int(c * multiplier) for c in self.color_config.wall)
+            return cast(Tuple[int, int, int], tuple(int(c * multiplier) for c in self.color_config.wall))
         else:  # WallType.FACE.value
             return self.color_config.wall
     

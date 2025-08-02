@@ -1,8 +1,16 @@
 """入力管理システム"""
 
-import pygame
-from typing import Dict, Callable, Optional, List, Tuple
+from typing import Dict, Callable, Optional, List, Tuple, Any
 from enum import Enum
+
+try:
+    import pygame
+    JoystickType = pygame.joystick.JoystickType
+    EventType = pygame.event.Event
+except ImportError:
+    pygame = None  # type: ignore
+    JoystickType = Any  # type: ignore
+    EventType = Any  # type: ignore
 from src.utils.logger import logger
 
 
@@ -67,7 +75,8 @@ class InputManager:
     
     def __init__(self):
         # Pygame用ジョイスティック初期化
-        pygame.joystick.init()
+        if pygame:
+            pygame.joystick.init()
         
         # バインディング管理
         self.action_callbacks: Dict[str, Callable] = {}
@@ -75,8 +84,8 @@ class InputManager:
         self.gamepad_bindings: Dict[str, str] = {}   # ボタン -> アクション
         
         # デバイス管理
-        self.joysticks: List[pygame.joystick.Joystick] = []
-        self.active_gamepad: Optional[pygame.joystick.Joystick] = None
+        self.joysticks: List[Any] = []
+        self.active_gamepad: Optional[Any] = None
         
         # 設定
         self.controller_enabled = True
@@ -162,6 +171,10 @@ class InputManager:
     
     def setup_controllers(self):
         """コントローラーのセットアップ"""
+        if not pygame:
+            logger.info("pygameが利用できないため、コントローラーセットアップをスキップします")
+            return
+            
         try:
             # 利用可能なジョイスティックを検出
             joystick_count = pygame.joystick.get_count()
@@ -182,8 +195,11 @@ class InputManager:
         except Exception as e:
             logger.error(f"コントローラーセットアップエラー: {e}")
     
-    def handle_event(self, event: pygame.event.Event):
+    def handle_event(self, event: Any):
         """Pygameイベントを処理"""
+        if not pygame:
+            return
+            
         if event.type == pygame.KEYDOWN:
             self._handle_keyboard_event(event.key, True)
         elif event.type == pygame.KEYUP:
@@ -197,7 +213,7 @@ class InputManager:
     
     def _handle_keyboard_event(self, key: int, pressed: bool):
         """キーボードイベントの処理"""
-        if not self.keyboard_enabled:
+        if not self.keyboard_enabled or not pygame:
             return
         
         # Pygameキーコードを文字列に変換
@@ -340,9 +356,12 @@ class InputManager:
     
     def cleanup(self):
         """クリーンアップ"""
+        if not pygame:
+            return
+            
         # ジョイスティックのクリーンアップ
         for joystick in self.joysticks:
-            if joystick.get_init():
+            if hasattr(joystick, 'get_init') and joystick.get_init():
                 joystick.quit()
         
         pygame.joystick.quit()
@@ -379,25 +398,7 @@ class InputManager:
             del self.action_callbacks[action]
             logger.debug(f"アクション '{action}' のバインドを解除しました")
     
-    def bind_key_direct(self, key: str, callback: Callable):
-        """キーを直接コールバックにバインド（デバッグ用）"""
-        def wrapper():
-            callback(f"key_{key}", True, InputType.KEYBOARD)
-        
-        def wrapper_up():
-            callback(f"key_{key}", False, InputType.KEYBOARD)
-        
-        try:
-            # Panda3Dメソッドを削除（Pygame版では不要）
-            # self.accept(key, wrapper)
-            # self.accept(f"{key}-up", wrapper_up)
-            logger.debug(f"キー '{key}' を直接バインドしました")
-        except Exception as e:
-            logger.error(f"キー '{key}' のバインドに失敗: {e}")
-            raise
-    
-    
-    def get_active_gamepad(self) -> Optional[pygame.joystick.Joystick]:
+    def get_active_gamepad(self) -> Optional[Any]:
         """アクティブなゲームパッドを取得"""
         return self.active_gamepad
     
@@ -447,7 +448,7 @@ class InputManager:
         
         logger.info(f"カスタムバインディング設定: {input_type.value} {key_or_button} -> {action}")
     
-    def get_binding_info(self) -> Dict[str, Dict]:
+    def get_binding_info(self) -> Dict[str, Any]:
         """バインディング情報を取得"""
         return {
             "keyboard": self.keyboard_bindings.copy(),
@@ -458,11 +459,13 @@ class InputManager:
     def is_action_pressed(self, action: str) -> bool:
         """アクションが現在押されているかチェック"""
         # キーボードチェック
-        for key, bound_action in self.keyboard_bindings.items():
-            if bound_action == action:
-                # Panda3Dのキー状態をチェック
-                if hasattr(base, 'mouseWatcherNode') and base.mouseWatcherNode:
-                    if base.mouseWatcherNode.is_button_down(key):
+        if pygame:
+            for key, bound_action in self.keyboard_bindings.items():
+                if bound_action == action:
+                    # Pygameではキー状態を直接チェック
+                    keys = pygame.key.get_pressed()
+                    key_code = pygame.key.key_code(key) if hasattr(pygame.key, 'key_code') else None
+                    if key_code and keys[key_code]:
                         return True
         
         # ゲームパッドチェック
@@ -487,83 +490,15 @@ class InputManager:
             self.active_gamepad = None
         logger.info(f"コントローラー入力: {'有効' if enabled else '無効'}")
     
-    def get_input_status(self) -> Dict[str, any]:
+    def get_input_status(self) -> Dict[str, Any]:
         """入力システムの状態を取得"""
         return {
             "keyboard_enabled": self.keyboard_enabled,
             "controller_enabled": self.controller_enabled,
-            "active_gamepad": self.active_gamepad.name if self.active_gamepad else None,
+            "active_gamepad": self.active_gamepad.get_name() if self.active_gamepad else None,
             "available_controllers": self.get_available_controllers(),
             "analog_deadzone": self.analog_deadzone,
             "analog_sensitivity": self.analog_sensitivity,
             "left_stick": (self.left_stick_x, self.left_stick_y),
             "right_stick": (self.right_stick_x, self.right_stick_y)
         }
-    
-    def save_bindings(self) -> Dict[str, Dict]:
-        """バインディング設定を保存用に取得"""
-        return {
-            "keyboard_bindings": self.keyboard_bindings.copy(),
-            "gamepad_bindings": self.gamepad_bindings.copy(),
-            "analog_deadzone": self.analog_deadzone,
-            "analog_sensitivity": self.analog_sensitivity,
-            "controller_enabled": self.controller_enabled,
-            "keyboard_enabled": self.keyboard_enabled
-        }
-    
-    def load_bindings(self, bindings_data: Dict[str, any]):
-        """バインディング設定を読み込み"""
-        try:
-            if "keyboard_bindings" in bindings_data:
-                self.keyboard_bindings = bindings_data["keyboard_bindings"]
-                # キーボードイベントを再バインド（Panda3Dメソッドを削除）
-                # self.ignoreAll()
-                for key, action in self.keyboard_bindings.items():
-                    # Panda3Dメソッドを削除（Pygame版では不要）
-                    # self.accept(key, self._on_keyboard_input, [action, True])
-                    # self.accept(f"{key}-up", self._on_keyboard_input, [action, False])
-                    pass  # forループに実処理が必要
-            
-            if "gamepad_bindings" in bindings_data:
-                self.gamepad_bindings = bindings_data["gamepad_bindings"]
-            
-            if "analog_deadzone" in bindings_data:
-                self.set_analog_deadzone(bindings_data["analog_deadzone"])
-            
-            if "analog_sensitivity" in bindings_data:
-                self.set_analog_sensitivity(bindings_data["analog_sensitivity"])
-            
-            if "controller_enabled" in bindings_data:
-                self.enable_controller(bindings_data["controller_enabled"])
-            
-            if "keyboard_enabled" in bindings_data:
-                self.enable_keyboard(bindings_data["keyboard_enabled"])
-            
-            logger.info("バインディング設定を読み込みました")
-            
-        except Exception as e:
-            logger.error(f"バインディング読み込みエラー: {e}")
-    
-    def cleanup(self):
-        """リソースのクリーンアップ"""
-        # タスクを停止
-        if hasattr(self, 'taskMgr'):
-            self.taskMgr.remove("poll_gamepad")
-        
-        # イベントを無視（Panda3Dメソッドを削除）
-        pass
-        
-        # データをクリア
-        self.action_callbacks.clear()
-        self.keyboard_bindings.clear()
-        self.gamepad_bindings.clear()
-        if hasattr(self, 'devices'):
-            self.devices.clear()
-        if hasattr(self, 'button_states'):
-            self.button_states.clear()
-        if hasattr(self, 'previous_button_states'):
-            self.previous_button_states.clear()
-        
-        self.active_gamepad = None
-        
-        logger.info("拡張入力システムをクリーンアップしました")

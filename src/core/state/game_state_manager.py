@@ -90,6 +90,10 @@ class GameStateManager(ManagedComponent):
             }
             
             # セーブ実行
+            if not self.save_manager:
+                logger.error("セーブマネージャーが利用できません")
+                return False
+            
             success = self.save_manager.save_game(
                 party=self.current_party,
                 slot_id=slot_id,
@@ -162,6 +166,10 @@ class GameStateManager(ManagedComponent):
                 slot_id_int = slot_id
             
             # セーブデータの読み込み
+            if not self.save_manager:
+                logger.error("セーブマネージャーが利用できません")
+                return False
+            
             save_data = self.save_manager.load_game(slot_id_int)
             if not save_data:
                 logger.error(f"セーブデータの読み込みに失敗: スロット{slot_id_int}")
@@ -226,6 +234,11 @@ class GameStateManager(ManagedComponent):
     def try_auto_load(self) -> bool:
         """自動ロードの試行（GameManagerから抽出）"""
         try:
+            # セーブマネージャーの存在確認
+            if not self.save_manager:
+                logger.error("セーブマネージャーが利用できません")
+                return False
+            
             # 最新のセーブデータを検索
             save_slots = self.save_manager.get_save_slots()
             if not save_slots:

@@ -145,7 +145,7 @@ class DungeonUIEnhancer:
         return message
     
     def create_party_status_alert(self, alert_type: str, character_name: str, 
-                                 details: Dict[str, Any] = None) -> str:
+                                 details: Optional[Dict[str, Any]] = None) -> str:
         """パーティステータス警告作成"""
         details = details or {}
         message = ""
@@ -196,7 +196,7 @@ class DungeonUIEnhancer:
         
         return message
     
-    def get_ui_hint_for_situation(self, situation: str, context: Dict[str, Any] = None) -> str:
+    def get_ui_hint_for_situation(self, situation: str, context: Optional[Dict[str, Any]] = None) -> str:
         """状況に応じたUIヒント取得"""
         context = context or {}
         

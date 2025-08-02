@@ -1,7 +1,7 @@
 """Scene transition management module."""
 
 import logging
-from typing import Any, Dict, Optional, Callable
+from typing import Any, Dict, Optional, Callable, Literal
 from enum import Enum
 
 from src.core.interfaces import ManagedComponent
@@ -137,7 +137,7 @@ class SceneTransitionManager(ManagedComponent):
             }
         )
     
-    def set_current_location(self, location: GameLocation) -> None:
+    def set_current_location(self, location: Literal['overworld', 'dungeon']) -> None:
         """現在のロケーション設定"""
         old_location = self.current_location
         self.current_location = location
@@ -214,7 +214,7 @@ class SceneTransitionManager(ManagedComponent):
                         self.overworld_manager.exit_overworld()
                     
                     # ゲーム状態とロケーションを更新
-                    self.set_current_location(GameLocation.DUNGEON)
+                    self.set_current_location("dungeon")
                     self.set_game_state("dungeon_exploration")
                     
                     # エンカウンターマネージャーにダンジョン状態を設定
@@ -287,7 +287,7 @@ class SceneTransitionManager(ManagedComponent):
                     self.dungeon_manager.exit_dungeon()
             
             # ゲーム状態とロケーションを更新
-            self.set_current_location(GameLocation.OVERWORLD)
+            self.set_current_location("overworld")
             self.set_game_state("overworld_main")
             
             # オーバーワールドマネージャーの初期化
@@ -306,7 +306,19 @@ class SceneTransitionManager(ManagedComponent):
     
     def get_current_location(self) -> GameLocation:
         """現在のロケーション取得"""
-        return self.current_location
+        if isinstance(self.current_location, GameLocation):
+            return self.current_location
+        else:
+            # 文字列の場合はGameLocationに変換を試行
+            if isinstance(self.current_location, str):
+                try:
+                    return GameLocation(self.current_location)
+                except ValueError:
+                    logger.warning(f"Invalid location string: {self.current_location}, returning OVERWORLD")
+                    return GameLocation.OVERWORLD
+            else:
+                logger.warning(f"Unknown location type: {type(self.current_location)}, returning OVERWORLD")
+                return GameLocation.OVERWORLD
     
     def get_current_state(self) -> str:
         """現在のゲーム状態取得"""
@@ -417,7 +429,10 @@ class SceneTransitionManager(ManagedComponent):
     def _add_transition_history(self, transition_type: str, context: Dict[str, Any]) -> None:
         """遷移履歴の追加"""
         # Enumと文字列の両方に対応
-        from_location_value = self.current_location.value if hasattr(self.current_location, 'value') else str(self.current_location)
+        if isinstance(self.current_location, GameLocation):
+            from_location_value = self.current_location.value
+        else:
+            from_location_value = str(self.current_location)
         history_entry = {
             "type": transition_type,
             "timestamp": self._get_timestamp(),
@@ -501,7 +516,7 @@ class SceneTransitionManager(ManagedComponent):
                 logger.info("地上部UI復旧処理が完了しました")
             
             # ゲーム状態を地上部に戻す
-            self.set_current_location(GameLocation.OVERWORLD)
+            self.set_current_location("overworld")
             self.set_game_state("overworld_main")
             
             # SceneManagerで地上部シーンに切り替え

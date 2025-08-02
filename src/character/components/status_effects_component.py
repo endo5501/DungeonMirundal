@@ -83,7 +83,6 @@ class StatusEffectsData(ComponentData):
     effect_history: List[Dict[str, Any]] = field(default_factory=list)
     
     def __post_init__(self):
-        super().__post_init__()
         self.component_type = ComponentType.STATUS_EFFECTS
     
     def to_dict(self) -> Dict[str, Any]:
@@ -142,7 +141,7 @@ class StatusEffectsComponent(CharacterComponent):
             if self.initialized:
                 return True
             
-            self._status_data = StatusEffectsData(initialized=True)
+            self._status_data = StatusEffectsData(component_type=ComponentType.STATUS_EFFECTS, initialized=True)
             
             self.initialized = True
             self.set_data(self._status_data)
@@ -168,6 +167,9 @@ class StatusEffectsComponent(CharacterComponent):
         # 効果情報を取得
         effect_info = self._get_status_effect_info(effect_type)
         
+        if self._status_data is None:
+            return False
+        
         effect_id = f"{effect_type.value}_{len(self._status_data.active_effects)}"
         
         from datetime import datetime
@@ -185,6 +187,8 @@ class StatusEffectsComponent(CharacterComponent):
         existing_effect_id = self._find_existing_effect(effect_type)
         if existing_effect_id:
             # 既存効果を更新または延長
+            if self._status_data is None:
+                return False
             existing_effect = self._status_data.active_effects[existing_effect_id]
             if duration > existing_effect.duration or duration == -1:
                 existing_effect.duration = duration
@@ -195,6 +199,8 @@ class StatusEffectsComponent(CharacterComponent):
                 return False
         else:
             # 新しい効果を追加
+            if self._status_data is None:
+                return False
             self._status_data.active_effects[effect_id] = new_effect
             logger.info(f"状態異常適用: {self.owner.name} - {new_effect.name} (期間: {duration})")
         
@@ -208,7 +214,7 @@ class StatusEffectsComponent(CharacterComponent):
     
     def remove_status_effect(self, effect_type: StatusEffectType) -> bool:
         """状態異常を除去"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._status_data is None:
             return False
         
         effect_id = self._find_existing_effect(effect_type)
@@ -237,7 +243,7 @@ class StatusEffectsComponent(CharacterComponent):
     
     def get_status_effect(self, effect_type: StatusEffectType) -> Optional[StatusEffect]:
         """指定された状態異常の詳細を取得"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._status_data is None:
             return None
         
         effect_id = self._find_existing_effect(effect_type)
@@ -247,7 +253,7 @@ class StatusEffectsComponent(CharacterComponent):
     
     def get_all_status_effects(self) -> List[StatusEffect]:
         """全ての状態異常を取得"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._status_data is None:
             return []
         
         return list(self._status_data.active_effects.values())
@@ -262,7 +268,7 @@ class StatusEffectsComponent(CharacterComponent):
     
     def process_turn_effects(self) -> List[StatusEffect]:
         """ターン経過処理を行い、切れた効果を返す"""
-        if not self.ensure_initialized():
+        if not self.ensure_initialized() or self._status_data is None:
             return []
         
         expired_effects = []
@@ -275,6 +281,8 @@ class StatusEffectsComponent(CharacterComponent):
         
         # 切れた効果を削除
         for effect_id in effects_to_remove:
+            if self._status_data is None:
+                break
             del self._status_data.active_effects[effect_id]
             logger.info(f"状態異常期限切れ: {self.owner.name} - {expired_effects[-1].name}")
         
@@ -285,6 +293,9 @@ class StatusEffectsComponent(CharacterComponent):
     
     def _find_existing_effect(self, effect_type: StatusEffectType) -> Optional[str]:
         """既存の同じタイプの効果を検索"""
+        if self._status_data is None:
+            return None
+        
         for effect_id, effect in self._status_data.active_effects.items():
             if effect.effect_type == effect_type:
                 return effect_id

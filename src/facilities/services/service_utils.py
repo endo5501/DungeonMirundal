@@ -71,7 +71,7 @@ class PartyMemberUtility:
         if not self.has_party():
             return []
         
-        return [member for member in self.party.members if condition_func(member)]
+        return [member for member in (self.party.members if self.party else []) if condition_func(member)]
     
     def has_members_with_condition(self, condition_func: Callable[[Character], bool]) -> bool:
         """条件に合うメンバーが存在するかチェック"""
@@ -82,7 +82,7 @@ class PartyMemberUtility:
         if not self.has_party():
             return None
         
-        for member in self.party.members:
+        for member in (self.party.members if self.party else []):
             member_id = getattr(member, 'character_id', getattr(member, 'id', ''))
             if member_id == character_id:
                 return member
@@ -221,7 +221,8 @@ class CostCalculationUtility:
     def calculate_level_based_cost(self, character: Character, 
                                  base_cost: int, multiplier: float = 1.0) -> int:
         """レベルベースのコスト計算"""
-        return int(base_cost * (character.level ** 0.5) * multiplier)
+        level = getattr(character, 'level', 1)
+        return int(base_cost * (level ** 0.5) * multiplier)
     
     def validate_and_get_cost_info(self, cost: int, action_name: str) -> ServiceResult:
         """コスト検証と情報取得"""

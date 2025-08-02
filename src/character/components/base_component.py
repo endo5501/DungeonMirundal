@@ -5,12 +5,15 @@ Characterクラスの複雑な責務をコンポーネントに分離。
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, TYPE_CHECKING
+from typing import Dict, Any, Optional, TYPE_CHECKING, TypeVar, cast
 from dataclasses import dataclass
 from enum import Enum
 
 if TYPE_CHECKING:
     from src.character.character import Character
+
+# 型変数の定義
+T = TypeVar('T', bound='CharacterComponent')
 
 
 class ComponentType(Enum):
@@ -202,7 +205,7 @@ def create_component_manager(character: 'Character') -> ComponentManager:
 
 def ensure_component(character: 'Character', component_type: ComponentType) -> Optional[CharacterComponent]:
     """キャラクターに指定されたコンポーネントが存在することを確認"""
-    if not hasattr(character, '_component_manager'):
+    if not hasattr(character, '_component_manager') or character._component_manager is None:
         character._component_manager = create_component_manager(character)
     
     return character._component_manager.get_component(component_type)

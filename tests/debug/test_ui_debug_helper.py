@@ -212,7 +212,7 @@ class TestUIDebugHelper:
         mock_ui_manager.get_sprite_group.return_value = mock_sprite_group
         
         # ツリー形式でダンプ
-        tree_result = ui_debug_helper.dump_ui_hierarchy(format='tree')
+        tree_result = ui_debug_helper.dump_ui_hierarchy(output_format='tree')
         
         assert isinstance(tree_result, str)
         assert "MainWindow" in tree_result

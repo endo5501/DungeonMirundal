@@ -2,7 +2,7 @@
 
 import pygame
 import pygame_gui
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, cast
 import logging
 from ..service_panel import ServicePanel
 from ...core.service_result import ServiceResult
@@ -140,8 +140,10 @@ class AdventurePrepPanel(ServicePanel):
         # アイテム数を集計
         total_items = 0
         for member in party.members:
-            if hasattr(member, 'inventory'):
-                total_items += len(member.inventory.get_all_items())
+            if hasattr(member, 'get_inventory'):
+                inventory = member.get_inventory()
+                if inventory:
+                    total_items += len(inventory.get_all_items())
         
         status_text = f"<b>パーティ情報</b><br>"
         status_text += f"パーティ名: {party.name}<br>"
@@ -181,7 +183,8 @@ class AdventurePrepPanel(ServicePanel):
             # メインボタンを隠す
             for button in self.sub_service_buttons.values():
                 button.hide()
-            self.info_box.hide()
+            if self.info_box:
+                self.info_box.hide()
     
     def _create_sub_panel(self, service_id: str) -> Optional[ServicePanel]:
         """サブパネルを作成"""
@@ -189,13 +192,13 @@ class AdventurePrepPanel(ServicePanel):
         
         if service_id == "item_management":
             from .item_management_panel import ItemManagementPanel
-            return ItemManagementPanel(panel_rect, self.container, self.controller, self.ui_manager)
+            return ItemManagementPanel(panel_rect, cast(pygame_gui.elements.UIPanel, self.container), self.controller, self.ui_manager)
         elif service_id == "spell_management":
             from .spell_management_panel import SpellManagementPanel
-            return SpellManagementPanel(panel_rect, self.container, self.controller, self.ui_manager)
+            return SpellManagementPanel(panel_rect, cast(pygame_gui.elements.UIPanel, self.container), self.controller, self.ui_manager)
         elif service_id == "equipment_management":
             from .equipment_management_panel import EquipmentManagementPanel
-            return EquipmentManagementPanel(panel_rect, self.container, self.controller, self.ui_manager)
+            return EquipmentManagementPanel(panel_rect, cast(pygame_gui.elements.UIPanel, self.container), self.controller, self.ui_manager)
         
         return None
     

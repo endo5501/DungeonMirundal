@@ -711,20 +711,22 @@ def get_game_state():
             "timestamp": get_timestamp()
         }
         
-        # ゲーム状態を取得
-        if hasattr(game_manager, 'current_state'):
-            game_state["current_state"] = str(game_manager.current_state)
-        
-        # 現在の施設を取得
-        if hasattr(game_manager, 'overworld_manager') and game_manager.overworld_manager:
-            if hasattr(game_manager.overworld_manager, 'facility_registry'):
-                fm = game_manager.overworld_manager.facility_registry
-                if hasattr(fm, 'current_facility') and fm.current_facility:
-                    game_state["current_facility"] = fm.current_facility
-        
-        # WindowManagerから情報を取得
-        if hasattr(game_manager, 'window_manager') and game_manager.window_manager:
-            wm = game_manager.window_manager
+        # GameManagerが有効な場合のみ状態を取得
+        if game_manager is not None:
+            # ゲーム状態を取得
+            if hasattr(game_manager, 'current_state'):
+                game_state["current_state"] = str(game_manager.current_state)
+            
+            # 現在の施設を取得
+            if hasattr(game_manager, 'overworld_manager') and game_manager.overworld_manager:
+                if hasattr(game_manager.overworld_manager, 'facility_registry'):
+                    fm = game_manager.overworld_manager.facility_registry
+                    if hasattr(fm, 'current_facility') and fm.current_facility:
+                        game_state["current_facility"] = fm.current_facility
+            
+            # WindowManagerから情報を取得
+            if hasattr(game_manager, 'window_manager') and game_manager.window_manager:
+                wm = game_manager.window_manager
             if hasattr(wm, 'get_active_window'):
                 active = wm.get_active_window()
                 if active:
@@ -897,7 +899,7 @@ def clear_history():
 @app.post("/debug/log", 
           summary="Add debug log entry",
           description="Adds a custom debug log entry with context")
-def add_debug_log(level: str, message: str, context: Dict[str, Any] = None):
+def add_debug_log(level: str, message: str, context: Optional[Dict[str, Any]] = None):
     """カスタムデバッグログエントリを追加"""
     try:
         if enhanced_logger:
@@ -1168,25 +1170,20 @@ def get_character_details(character_index: int):
                     character_info["inventory_count"] = 0
                     
                     # 装備中のアイテム
-                    if hasattr(char, 'equipment') and hasattr(char.equipment, 'equipped_items'):
+                    if hasattr(char, 'equipment') and char.equipment and hasattr(char.equipment, 'equipped_items'):
                         equipped = char.equipment.equipped_items
-                        for slot, item in equipped.items():
-                            if item:
+                        for slot, equipment_slot in equipped.items():
+                            if equipment_slot and equipment_slot.item_id:
                                 equipment_item = {
                                     "slot": slot,
-                                    "item_name": getattr(item, 'name', 'Unknown Item'),
-                                    "item_id": getattr(item, 'item_id', 'Unknown ID'),
-                                    "equipped": True
+                                    "item_name": getattr(equipment_slot, 'item_name', 'Unknown Item'),
+                                    "item_id": getattr(equipment_slot, 'item_id', 'Unknown ID'),
+                                    "equipped": True,
+                                    "equipped_at": getattr(equipment_slot, 'equipped_at', None)
                                 }
                                 
-                                # アイテムの詳細情報を追加
-                                if hasattr(item, 'item_type'):
-                                    equipment_item["item_type"] = getattr(item.item_type, 'value', str(item.item_type))
-                                if hasattr(item, 'description'):
-                                    equipment_item["description"] = item.description
-                                if hasattr(item, 'stats_modifier'):
-                                    equipment_item["stats_modifier"] = item.stats_modifier
-                                
+                                # EquipmentSlotからは基本情報のみ取得
+                                # 詳細なアイテム情報はitem_idを使って別途取得する必要がある
                                 character_info["equipment"].append(equipment_item)
                     
                     # 所持品（インベントリ）- 新しいインベントリシステムを使用

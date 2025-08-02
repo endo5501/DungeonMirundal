@@ -126,8 +126,10 @@ class WindowPool:
         # 基本プロパティのリセット
         window.window_id = new_window_id
         window.state = window.state.__class__.CREATED  # WindowState.CREATED
-        window.visible = False
-        window.focused = False
+        if hasattr(window, 'visible'):
+            window.visible = False
+        if hasattr(window, 'focused'):
+            window.focused = False
         
         # 子Window関係のクリア
         if hasattr(window, 'children'):
