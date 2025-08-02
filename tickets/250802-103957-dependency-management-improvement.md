@@ -3,6 +3,8 @@ priority: 2
 tags: ["infrastructure", "build-tools", "dependencies", "pyright"]
 description: "pyrightのimportエラー160個を解決し、依存関係管理を改善"
 created_at: "2025-08-02T10:39:57Z"
+started_at: null  # Do not modify manually
+closed_at: null   # Do not modify manually
 ---
 
 # 依存関係管理改善

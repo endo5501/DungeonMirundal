@@ -3,6 +3,8 @@ priority: 2
 tags: ["code-quality", "refactoring", "type-safety", "anti-pattern"]
 description: "hasattr/getattrパターンを型安全な実装に置き換え、コード品質を向上"
 created_at: "2025-08-02T10:45:27Z"
+started_at: null  # Do not modify manually
+closed_at: null   # Do not modify manually
 ---
 
 # hasattr/getattr パターンの排除
