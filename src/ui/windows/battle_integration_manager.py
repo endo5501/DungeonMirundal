@@ -68,14 +68,18 @@ class BattleIntegrationManager:
             unique_id = f"integrated_battle_{int(time.time() * 1000000)}"
             
             # BattleUIWindowを作成
-            self.current_battle_window = self.window_manager.create_window(
+            created_window = self.window_manager.create_window(
                 window_class=BattleUIWindow,
                 window_id=unique_id,
                 battle_config=battle_config
             )
+            # 型チェックして代入
+            if isinstance(created_window, BattleUIWindow):
+                self.current_battle_window = created_window
             
             # 戦闘開始メッセージを送信
-            self.current_battle_window.send_message('battle_started', {
+            if self.current_battle_window and hasattr(self.current_battle_window, 'send_message'):
+                self.current_battle_window.send_message('battle_started', {
                 'party': party,
                 'enemies': enemies,
                 'context': battle_context
@@ -119,8 +123,10 @@ class BattleIntegrationManager:
             self.window_manager.hide_window(self.current_battle_window)
             
             # ウィンドウのクリーンアップ（利用可能な場合のみ）
-            if hasattr(self.current_battle_window, 'cleanup'):
-                self.current_battle_window.cleanup()
+            if self.current_battle_window and hasattr(self.current_battle_window, 'cleanup'):
+                cleanup_method = getattr(self.current_battle_window, 'cleanup', None)
+                if cleanup_method and callable(cleanup_method):
+                    cleanup_method()
             
             # リターンコールバックを実行
             if self.battle_context and self.battle_context.return_callback:
@@ -259,8 +265,10 @@ class BattleIntegrationManager:
     def cleanup(self):
         """リソースクリーンアップ"""
         try:
-            if self.current_battle_window:
-                self.current_battle_window.cleanup()
+            if self.current_battle_window and hasattr(self.current_battle_window, 'cleanup'):
+                cleanup_method = getattr(self.current_battle_window, 'cleanup', None)
+                if cleanup_method and callable(cleanup_method):
+                    cleanup_method()
             
             self.current_battle_window = None
             self.current_combat_manager = None

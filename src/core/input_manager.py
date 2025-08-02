@@ -1,8 +1,16 @@
 """入力管理システム"""
 
-import pygame
 from typing import Dict, Callable, Optional, List, Tuple, Any
 from enum import Enum
+
+try:
+    import pygame
+    JoystickType = pygame.joystick.JoystickType
+    EventType = pygame.event.Event
+except ImportError:
+    pygame = None  # type: ignore
+    JoystickType = Any  # type: ignore
+    EventType = Any  # type: ignore
 from src.utils.logger import logger
 
 
@@ -67,7 +75,8 @@ class InputManager:
     
     def __init__(self):
         # Pygame用ジョイスティック初期化
-        pygame.joystick.init()
+        if pygame:
+            pygame.joystick.init()
         
         # バインディング管理
         self.action_callbacks: Dict[str, Callable] = {}
@@ -75,8 +84,8 @@ class InputManager:
         self.gamepad_bindings: Dict[str, str] = {}   # ボタン -> アクション
         
         # デバイス管理
-        self.joysticks: List[pygame.joystick.JoystickType] = []
-        self.active_gamepad: Optional[pygame.joystick.JoystickType] = None
+        self.joysticks: List[Any] = []
+        self.active_gamepad: Optional[Any] = None
         
         # 設定
         self.controller_enabled = True
@@ -162,6 +171,10 @@ class InputManager:
     
     def setup_controllers(self):
         """コントローラーのセットアップ"""
+        if not pygame:
+            logger.info("pygameが利用できないため、コントローラーセットアップをスキップします")
+            return
+            
         try:
             # 利用可能なジョイスティックを検出
             joystick_count = pygame.joystick.get_count()
@@ -182,8 +195,11 @@ class InputManager:
         except Exception as e:
             logger.error(f"コントローラーセットアップエラー: {e}")
     
-    def handle_event(self, event: pygame.event.Event):
+    def handle_event(self, event: Any):
         """Pygameイベントを処理"""
+        if not pygame:
+            return
+            
         if event.type == pygame.KEYDOWN:
             self._handle_keyboard_event(event.key, True)
         elif event.type == pygame.KEYUP:
@@ -197,7 +213,7 @@ class InputManager:
     
     def _handle_keyboard_event(self, key: int, pressed: bool):
         """キーボードイベントの処理"""
-        if not self.keyboard_enabled:
+        if not self.keyboard_enabled or not pygame:
             return
         
         # Pygameキーコードを文字列に変換
@@ -340,9 +356,12 @@ class InputManager:
     
     def cleanup(self):
         """クリーンアップ"""
+        if not pygame:
+            return
+            
         # ジョイスティックのクリーンアップ
         for joystick in self.joysticks:
-            if joystick.get_init():
+            if hasattr(joystick, 'get_init') and joystick.get_init():
                 joystick.quit()
         
         pygame.joystick.quit()
@@ -379,7 +398,7 @@ class InputManager:
             del self.action_callbacks[action]
             logger.debug(f"アクション '{action}' のバインドを解除しました")
     
-    def get_active_gamepad(self) -> Optional[pygame.joystick.JoystickType]:
+    def get_active_gamepad(self) -> Optional[Any]:
         """アクティブなゲームパッドを取得"""
         return self.active_gamepad
     
@@ -440,13 +459,14 @@ class InputManager:
     def is_action_pressed(self, action: str) -> bool:
         """アクションが現在押されているかチェック"""
         # キーボードチェック
-        for key, bound_action in self.keyboard_bindings.items():
-            if bound_action == action:
-                # Pygameではキー状態を直接チェック
-                keys = pygame.key.get_pressed()
-                key_code = pygame.key.key_code(key) if hasattr(pygame.key, 'key_code') else None
-                if key_code and keys[key_code]:
-                    return True
+        if pygame:
+            for key, bound_action in self.keyboard_bindings.items():
+                if bound_action == action:
+                    # Pygameではキー状態を直接チェック
+                    keys = pygame.key.get_pressed()
+                    key_code = pygame.key.key_code(key) if hasattr(pygame.key, 'key_code') else None
+                    if key_code and keys[key_code]:
+                        return True
         
         # ゲームパッドチェック
         for button, bound_action in self.gamepad_bindings.items():

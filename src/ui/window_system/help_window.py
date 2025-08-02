@@ -34,7 +34,7 @@ class HelpWindow(Window):
     カテゴリ別ヘルプ、コンテキストヘルプ、クイックリファレンスを統括。
     """
     
-    def __init__(self, window_manager, rect: pygame.Rect, window_id: str = "help_window", **kwargs):
+    def __init__(self, window_manager, rect: Any, window_id: str = "help_window", **kwargs):
         """HelpWindow初期化
         
         Args:
@@ -267,7 +267,7 @@ class HelpWindow(Window):
         # 実装は段階的に追加
         logger.info(f"詳細ヘルプダイアログを表示: {topic}")
     
-    def handle_event(self, event: pygame.event.Event) -> bool:
+    def handle_event(self, event: Any) -> bool:
         """イベント処理
         
         Args:
@@ -283,7 +283,7 @@ class HelpWindow(Window):
             return True
         
         # ヘルプウィンドウ固有のイベント処理
-        if event.type == pygame.KEYDOWN:
+        if pygame and event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 self.close()
                 return True
@@ -305,13 +305,16 @@ class HelpWindow(Window):
         # ヘルプウィンドウ固有の更新処理
         # 実装は段階的に追加
     
-    def render(self, surface: pygame.Surface) -> None:
+    def render(self, surface: Any) -> None:
         """ウィンドウ描画
         
         Args:
             surface: 描画対象サーフェス
         """
-        super().render(surface)
+        try:
+            super().render(surface)
+        except AttributeError:
+            pass
         
         # ヘルプウィンドウ固有の描画処理
         # 実装は段階的に追加
