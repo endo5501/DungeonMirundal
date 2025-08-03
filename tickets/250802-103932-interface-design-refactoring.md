@@ -4,7 +4,7 @@ tags: ["architecture", "refactoring", "type-safety", "design-patterns"]
 description: "hasattr/getattr使用箇所をインターフェース設計で置き換え、型安全性を向上"
 created_at: "2025-08-02T10:39:32Z"
 started_at: 2025-08-02T10:54:40Z # Do not modify manually
-closed_at: null   # Do not modify manually
+closed_at: 2025-08-03T00:07:11Z # Do not modify manually
 ---
 
 # インターフェース設計見直し
