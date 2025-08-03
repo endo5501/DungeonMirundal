@@ -28,8 +28,12 @@ class FacilityController:
         # FacilityServiceは facility_id パラメータが必要
         self.service = service_class(facility_id)
         
-        # サービスにコントローラーの参照を設定（set_controllerメソッドがある場合）
-        if hasattr(self.service, 'set_controller') and callable(getattr(self.service, 'set_controller', None)):
+        # サービスにコントローラーの参照を設定（Protocol型安全チェック）
+        from src.interfaces import FacilityService as FacilityServiceProtocol
+        if isinstance(self.service, FacilityServiceProtocol):
+            self.service.set_controller(self)
+        elif hasattr(self.service, 'set_controller') and callable(getattr(self.service, 'set_controller', None)):
+            # フォールバック：従来のhasattrチェック
             self.service.set_controller(self)
         
         self.window = None  # FacilityWindowは後で設定
@@ -52,8 +56,19 @@ class FacilityController:
         """GameManagerの参照を設定"""
         self._game_manager = game_manager
         
-        # サービスにGameManagerの参照を設定（set_game_managerメソッドがある場合）
-        if hasattr(self.service, 'set_game_manager') and callable(getattr(self.service, 'set_game_manager', None)):
+        # サービスにGameManagerの参照を設定（Protocol型安全チェック）
+        from src.interfaces import FacilityService as FacilityServiceProtocol
+        if isinstance(self.service, FacilityServiceProtocol):
+            # set_game_managerメソッドがProtocolに定義されていないため、hasattrで確認
+            if hasattr(self.service, 'set_game_manager') and callable(getattr(self.service, 'set_game_manager', None)):
+                self.service.set_game_manager(game_manager)
+                logger.debug(f"[DEBUG] FacilityController: GameManager set to service: {self.facility_id}")
+            elif hasattr(self.service, 'game'):
+                # game属性に直接設定
+                self.service.game = game_manager
+                logger.debug(f"[DEBUG] FacilityController: GameManager set to service.game: {self.facility_id}")
+        elif hasattr(self.service, 'set_game_manager') and callable(getattr(self.service, 'set_game_manager', None)):
+            # フォールバック：従来のhasattrチェック
             self.service.set_game_manager(game_manager)
             logger.debug(f"[DEBUG] FacilityController: GameManager set to service: {self.facility_id}")
         else:

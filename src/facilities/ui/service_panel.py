@@ -9,6 +9,7 @@ from ..core.facility_controller import FacilityController
 from ..core.service_result import ServiceResult
 from .ui_element_manager import UIElementManager, DestructionMixin
 from .ui_element_factory import UIElementFactory
+from src.interfaces import UIDestructible
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,10 @@ class ServicePanel(ABC, DestructionMixin):
             destroyed_count = 0
             for element in self.ui_elements[:]:  # コピーを作って安全に反復
                 try:
-                    if hasattr(element, 'kill'):
+                    if isinstance(element, UIDestructible):
+                        element.kill()
+                        destroyed_count += 1
+                    elif hasattr(element, 'kill'):  # フォールバック
                         element.kill()
                         destroyed_count += 1
                 except Exception as e:
@@ -115,9 +119,12 @@ class ServicePanel(ABC, DestructionMixin):
             logger.debug(f"ServicePanel: Destroyed {destroyed_count} legacy UI elements from list")
         
         # コンテナを破棄
-        if self.container and hasattr(self.container, 'kill'):
+        if self.container:
             try:
-                self.container.kill()
+                if isinstance(self.container, UIDestructible):
+                    self.container.kill()
+                elif hasattr(self.container, 'kill'):  # フォールバック
+                    self.container.kill()
                 logger.debug(f"ServicePanel: Container killed for {self.service_id}")
             except Exception as e:
                 logger.error(f"ServicePanel: Failed to destroy container for {self.service_id}: {e}")

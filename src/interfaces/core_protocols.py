@@ -6,12 +6,13 @@
 静的型チェックへ移行できます。
 """
 
-from typing import Protocol, Any, Dict, Union, Optional, TYPE_CHECKING
+from typing import Protocol, Any, Dict, TYPE_CHECKING, runtime_checkable
 
 if TYPE_CHECKING:
     import pygame
 
 
+@runtime_checkable
 class Cleanupable(Protocol):
     """リソースクリーンアップが可能なオブジェクト"""
     
@@ -20,6 +21,7 @@ class Cleanupable(Protocol):
         ...
 
 
+@runtime_checkable
 class MessageSender(Protocol):
     """メッセージ送信が可能なオブジェクト"""
     
@@ -28,6 +30,7 @@ class MessageSender(Protocol):
         ...
 
 
+@runtime_checkable
 class MessageReceiver(Protocol):
     """メッセージ受信が可能なオブジェクト"""
     
@@ -36,6 +39,7 @@ class MessageReceiver(Protocol):
         ...
 
 
+@runtime_checkable
 class Renderable(Protocol):
     """描画が可能なオブジェクト"""
     
@@ -44,6 +48,7 @@ class Renderable(Protocol):
         ...
 
 
+@runtime_checkable
 class Updatable(Protocol):
     """更新が可能なオブジェクト"""
     

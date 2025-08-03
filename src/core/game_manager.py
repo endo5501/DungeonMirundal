@@ -314,7 +314,8 @@ class GameManager(EventHandler):
         """入力設定の読み込み"""
         try:
             input_settings = self.game_config.load_config("input_settings")
-            if input_settings and hasattr(self, 'input_manager'):
+            input_manager = getattr(self, 'input_manager', None)
+            if input_settings and input_manager:
                 self.input_manager.load_bindings(input_settings)
                 logger.info(self.game_config.get_text("app_log.input_config_loaded"))
         except Exception as e:
@@ -418,7 +419,8 @@ class GameManager(EventHandler):
         # main.pyのgame_manager変数を確実に更新
         try:
             import main
-            if hasattr(main, 'game_manager'):
+            game_manager = getattr(main, 'game_manager', None)
+            if game_manager:
                 main.game_manager = self
                 logger.info(f"main.game_manager updated to {hex(id(self))}")
         except Exception as e:
@@ -430,8 +432,10 @@ class GameManager(EventHandler):
         """メニューアクションの処理 - InputHandlerCoordinatorに委譲"""
         logger.debug(f"GameManager._on_menu_action: 呼び出し開始 action={action}, pressed={pressed}, input_type={input_type}")
         
-        if hasattr(self, 'input_handler_coordinator'):
-            result = self.input_handler_coordinator.handle_input_action('menu', pressed, input_type.value if hasattr(input_type, 'value') else str(input_type))
+        input_handler_coordinator = getattr(self, 'input_handler_coordinator', None)
+        if input_handler_coordinator:
+            input_type_value = getattr(input_type, 'value', None) if input_type else None
+            result = input_handler_coordinator.handle_input_action('menu', pressed, input_type_value or str(input_type))
             logger.debug(f"GameManager._on_menu_action: InputHandlerCoordinator実行完了 result={result}")
             return result
         else:
@@ -439,22 +443,28 @@ class GameManager(EventHandler):
     
     def _on_confirm_action(self, action: str, pressed: bool, input_type):
         """確認アクションの処理 - InputHandlerCoordinatorに委譲"""
-        if hasattr(self, 'input_handler_coordinator'):
-            return self.input_handler_coordinator.handle_input_action('confirm', pressed, input_type.value if hasattr(input_type, 'value') else str(input_type))
+        input_handler_coordinator = getattr(self, 'input_handler_coordinator', None)
+        if input_handler_coordinator:
+            input_type_value = getattr(input_type, 'value', None) if input_type else None
+            return input_handler_coordinator.handle_input_action('confirm', pressed, input_type_value or str(input_type))
         else:
             logger.error("InputHandlerCoordinator not initialized")
     
     def _on_cancel_action(self, action: str, pressed: bool, input_type):
         """キャンセルアクションの処理 - InputHandlerCoordinatorに委譲"""
-        if hasattr(self, 'input_handler_coordinator'):
-            return self.input_handler_coordinator.handle_input_action('cancel', pressed, input_type.value if hasattr(input_type, 'value') else str(input_type))
+        input_handler_coordinator = getattr(self, 'input_handler_coordinator', None)
+        if input_handler_coordinator:
+            input_type_value = getattr(input_type, 'value', None) if input_type else None
+            return input_handler_coordinator.handle_input_action('cancel', pressed, input_type_value or str(input_type))
         else:
             logger.error("InputHandlerCoordinator not initialized")
     
     def _on_action_action(self, action: str, pressed: bool, input_type):
         """アクションボタンの処理 - InputHandlerCoordinatorに委譲"""
-        if hasattr(self, 'input_handler_coordinator'):
-            return self.input_handler_coordinator.handle_input_action('action', pressed, input_type.value if hasattr(input_type, 'value') else str(input_type))
+        input_handler_coordinator = getattr(self, 'input_handler_coordinator', None)
+        if input_handler_coordinator:
+            input_type_value = getattr(input_type, 'value', None) if input_type else None
+            return input_handler_coordinator.handle_input_action('action', pressed, input_type_value or str(input_type))
         else:
             logger.error("InputHandlerCoordinator not initialized")
             
@@ -463,7 +473,8 @@ class GameManager(EventHandler):
                 logger.info(self.game_config.get_text("app_log.3d_manual_recovery_attempt"))
                 
                 try:
-                    if hasattr(self.dungeon_renderer, 'manual_recovery_attempt'):
+                    manual_recovery_attempt = getattr(self.dungeon_renderer, 'manual_recovery_attempt', None)
+                    if manual_recovery_attempt:
                         recovery_success = getattr(self.dungeon_renderer, 'manual_recovery_attempt', lambda: False)()
                         
                         if recovery_success:
@@ -478,7 +489,8 @@ class GameManager(EventHandler):
                     else:
                         # フォールバック: 旧システムとの互換性
                         logger.info(self.game_config.get_text("app_log.legacy_compatibility_mode"))
-                        if hasattr(self.dungeon_renderer, 'ui_manager'):
+                        dungeon_ui_manager = getattr(self.dungeon_renderer, 'ui_manager', None)
+                        if dungeon_ui_manager:
                             ui_manager = getattr(self.dungeon_renderer, 'ui_manager', None)
                             if ui_manager:
                                 ui_manager._open_inventory()
@@ -529,7 +541,8 @@ class GameManager(EventHandler):
             logger.info(self.game_config.get_text("app_log.3d_emergency_reset_debug"))
             
             # 緊急無効化を実行
-            if hasattr(self.dungeon_renderer, 'emergency_disable'):
+            emergency_disable = getattr(self.dungeon_renderer, 'emergency_disable', None)
+            if emergency_disable:
                 getattr(self.dungeon_renderer, 'emergency_disable', lambda: None)()
             logger.info(self.game_config.get_text("app_log.3d_emergency_reset_complete"))
     
@@ -565,7 +578,8 @@ class GameManager(EventHandler):
             logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.equipment_action"), input_type=input_type.value))
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 ui_manager = getattr(self.dungeon_renderer, 'ui_manager', None)
-                if ui_manager and hasattr(ui_manager, '_open_equipment'):
+                open_equipment = getattr(ui_manager, '_open_equipment', None)
+                if ui_manager and open_equipment:
                     getattr(ui_manager, '_open_equipment', lambda: None)()
     
     def _on_status_action(self, action: str, pressed: bool, input_type):
@@ -574,7 +588,8 @@ class GameManager(EventHandler):
             logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.status_action"), input_type=input_type.value))
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 ui_manager = getattr(self.dungeon_renderer, 'ui_manager', None)
-                if ui_manager and hasattr(ui_manager, '_open_status'):
+                open_status = getattr(ui_manager, '_open_status', None)
+                if ui_manager and open_status:
                     getattr(ui_manager, '_open_status', lambda: None)()
     
     def _on_camp_action(self, action: str, pressed: bool, input_type):
@@ -583,7 +598,8 @@ class GameManager(EventHandler):
             logger.info(self.game_config.get_text("app_log.action_log_prefix").format(action=self.game_config.get_text("app_log.camp_action"), input_type=input_type.value))
             if self.current_location == GameLocation.DUNGEON and self.dungeon_renderer:
                 ui_manager = getattr(self.dungeon_renderer, 'ui_manager', None)
-                if ui_manager and hasattr(ui_manager, '_open_camp'):
+                open_camp = getattr(ui_manager, '_open_camp', None)
+                if ui_manager and open_camp:
                     getattr(ui_manager, '_open_camp', lambda: None)()
     
     def _on_help_action(self, action: str, pressed: bool, input_type):
@@ -708,8 +724,9 @@ class GameManager(EventHandler):
     
     def set_game_state(self, state: str):
         """ゲーム状態の設定 - SceneTransitionManagerに委譲"""
-        if hasattr(self, 'scene_transition_manager'):
-            self.scene_transition_manager.set_game_state(state)
+        scene_transition_manager = getattr(self, 'scene_transition_manager', None)
+        if scene_transition_manager:
+            scene_transition_manager.set_game_state(state)
             # ローカル状態も同期
             self.game_state = state
         else:
@@ -720,15 +737,17 @@ class GameManager(EventHandler):
     
     def set_current_location(self, location: GameLocation):
         """現在のロケーション設定 - SceneTransitionManagerに委譲"""
-        if hasattr(self, 'scene_transition_manager'):
+        scene_transition_manager = getattr(self, 'scene_transition_manager', None)
+        if scene_transition_manager:
             # GameLocationからLiteral型に変換
             if location == GameLocation.OVERWORLD:
                 location_str = "overworld"
             elif location == GameLocation.DUNGEON:
                 location_str = "dungeon"
             else:
-                location_str = location.value if hasattr(location, 'value') else str(location)
-            self.scene_transition_manager.set_current_location(location_str)
+                location_value = getattr(location, 'value', None)
+                location_str = location_value if location_value else str(location)
+            scene_transition_manager.set_current_location(location_str)
             # ローカル状態も同期
             self.current_location = location
         else:
@@ -741,9 +760,10 @@ class GameManager(EventHandler):
             logger.info(f"Location changed: {old_location_str} -> {new_location_str}")
         
         # 重要: InputHandlerCoordinatorにも現在位置を更新
-        if hasattr(self, 'input_handler_coordinator'):
+        input_handler_coordinator = getattr(self, 'input_handler_coordinator', None)
+        if input_handler_coordinator:
             logger.debug(f"GameManager.set_current_location: InputHandlerCoordinatorの位置を更新 {location}")
-            self.input_handler_coordinator.update_location(location)
+            input_handler_coordinator.update_location(location)
     
     def set_current_party(self, party: Party):
         """現在のパーティを設定 - イベント駆動版"""
@@ -762,8 +782,9 @@ class GameManager(EventHandler):
             self.dungeon_renderer.set_party(party)
         
         # CombatStateManagerにも反映
-        if hasattr(self, 'combat_state_manager'):
-            self.combat_state_manager.set_current_party(party)
+        combat_state_manager = getattr(self, 'combat_state_manager', None)
+        if combat_state_manager:
+            combat_state_manager.set_current_party(party)
             
             # dungeon_ui_managerは既にdungeon_renderer.set_party()内で設定されるので重複呼び出しを削除
             # if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
@@ -956,7 +977,8 @@ class GameManager(EventHandler):
     
     def save_current_game(self, slot_id: int, save_name: str = "") -> bool:
         """現在のゲーム状態を保存 - GameStateManagerに委譲"""
-        if hasattr(self, 'game_state_manager'):
+        game_state_manager = getattr(self, 'game_state_manager', None)
+        if game_state_manager:
             # 現在のパーティ状態を更新
             self.game_state_manager.current_party = self.current_party
             self.game_state_manager.current_location = self.current_location
@@ -976,7 +998,7 @@ class GameManager(EventHandler):
                 
                 # ゲーム状態を作成
                 game_state = {
-                    'location': self.current_location.value if hasattr(self.current_location, 'value') else str(self.current_location)
+                    'location': getattr(self.current_location, 'value', None) or str(self.current_location)
                 }
                 
                 # セーブ実行
@@ -1005,7 +1027,8 @@ class GameManager(EventHandler):
     
     def transition_to_dungeon(self, dungeon_id: str = "main_dungeon"):
         """ダンジョンへの遷移 - SceneTransitionManagerに委譲"""
-        if hasattr(self, 'scene_transition_manager'):
+        scene_transition_manager = getattr(self, 'scene_transition_manager', None)
+        if scene_transition_manager:
             # 現在のパーティ状態を更新
             self.scene_transition_manager.current_party = self.current_party
             return self.scene_transition_manager.transition_to_dungeon(dungeon_id)
@@ -1033,7 +1056,8 @@ class GameManager(EventHandler):
     
     def transition_to_overworld(self):
         """地上部への遷移 - SceneTransitionManagerに委譲"""
-        if hasattr(self, 'scene_transition_manager'):
+        scene_transition_manager = getattr(self, 'scene_transition_manager', None)
+        if scene_transition_manager:
             # 現在のパーティ状態を更新
             self.scene_transition_manager.current_party = self.current_party
             return self.scene_transition_manager.transition_to_overworld()
@@ -1081,7 +1105,8 @@ class GameManager(EventHandler):
     
     def save_game_state(self, slot_id: str) -> bool:
         """ゲーム状態の保存 - GameStateManagerに委譲"""
-        if hasattr(self, 'game_state_manager'):
+        game_state_manager = getattr(self, 'game_state_manager', None)
+        if game_state_manager:
             # 現在のパーティ状態を更新
             self.game_state_manager.current_party = self.current_party
             self.game_state_manager.current_location = self.current_location
@@ -1128,7 +1153,8 @@ class GameManager(EventHandler):
     
     def load_game_state(self, slot_id: str) -> bool:
         """ゲーム状態の読み込み - GameStateManagerに委譲"""
-        if hasattr(self, 'game_state_manager'):
+        game_state_manager = getattr(self, 'game_state_manager', None)
+        if game_state_manager:
             # GameStateManagerでロード実行
             success = self.game_state_manager.load_game_state(slot_id)
             if success:
@@ -1200,8 +1226,9 @@ class GameManager(EventHandler):
     def save_input_settings(self):
         """入力設定を保存"""
         try:
-            if hasattr(self, 'input_manager'):
-                bindings_data = self.input_manager.save_bindings()
+            input_manager = getattr(self, 'input_manager', None)
+            if input_manager:
+                bindings_data = input_manager.save_bindings()
                 # save_configが未実装のため、一時的にコメントアウト
                 # self.game_config.save_config("input_settings", bindings_data)
                 logger.info(self.game_config.get_text("game_manager.input_settings_saved"))
@@ -1212,7 +1239,7 @@ class GameManager(EventHandler):
     
     def get_input_manager(self):
         """入力マネージャーを取得"""
-        return self.input_manager if hasattr(self, 'input_manager') else None
+        return getattr(self, 'input_manager', None)
     
     def exit_game(self):
         """ゲーム終了処理"""
@@ -1232,8 +1259,9 @@ class GameManager(EventHandler):
         # 入力設定を自動保存
         self.save_input_settings()
         
-        if hasattr(self, 'input_manager'):
-            self.input_manager.cleanup()
+        input_manager = getattr(self, 'input_manager', None)
+        if input_manager:
+            input_manager.cleanup()
             
         pygame.quit()
         
@@ -1299,8 +1327,9 @@ class GameManager(EventHandler):
             logger.debug(f"GameManager._handle_ui_events: WindowManager処理結果={ui_handled}")
         
         # WindowManagerで処理されなかった場合のみ、既存UIマネージャーで処理
-        if not ui_handled and hasattr(self, 'ui_manager') and self.ui_manager:
-            ui_handled = self.ui_manager.handle_event(event)
+        ui_manager = getattr(self, 'ui_manager', None)
+        if not ui_handled and ui_manager:
+            ui_handled = ui_manager.handle_event(event)
             if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
                 logger.debug(f"GameManager._handle_ui_events: ui_manager処理結果={ui_handled}")
         
@@ -1314,13 +1343,16 @@ class GameManager(EventHandler):
         このメソッドで個別に描画を行う。
         """
         try:
-            if self.ui_manager and hasattr(self.ui_manager, 'persistent_elements'):
+            persistent_elements = getattr(self.ui_manager, 'persistent_elements', None) if self.ui_manager else None
+            if self.ui_manager and persistent_elements:
                 for element in self.ui_manager.persistent_elements.values():
-                    if element and hasattr(element, 'render'):
+                    render_method = getattr(element, 'render', None) if element else None
+                    if element and render_method:
                         try:
                             # フォントを取得
                             font = None
-                            if self.ui_manager and hasattr(self.ui_manager, 'default_font'):
+                            default_font = getattr(self.ui_manager, 'default_font', None) if self.ui_manager else None
+                            if self.ui_manager and default_font:
                                 font = self.ui_manager.default_font
                             
                             if self.screen:
@@ -1350,12 +1382,13 @@ class GameManager(EventHandler):
                     )
                     
                     # ダンジョンUIマネージャーの追加描画（小地図等）
-                    if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
+                    dungeon_ui_manager = getattr(self.dungeon_renderer, 'dungeon_ui_manager', None)
+                    if dungeon_ui_manager:
                         try:
                             # ダンジョン状態を最新に更新
-                            self.dungeon_renderer.dungeon_ui_manager.set_dungeon_state(current_dungeon)
+                            dungeon_ui_manager.set_dungeon_state(current_dungeon)
                             # オーバーレイを描画
-                            self.dungeon_renderer.dungeon_ui_manager.render_overlay()
+                            dungeon_ui_manager.render_overlay()
                         except Exception as e:
                             logger.warning(self.game_config.get_text("game_manager.dungeon_ui_render_error").format(error=e))
         else:
@@ -1364,8 +1397,9 @@ class GameManager(EventHandler):
     
     def _render_startup_screen(self):
         """スタートアップ画面の描画"""
-        if hasattr(self, 'debug_font') and self.debug_font and self.screen:
-            text = self.debug_font.render(self.get_text("system.startup"), True, (255, 255, 255))
+        debug_font = getattr(self, 'debug_font', None)
+        if debug_font and self.screen:
+            text = debug_font.render(self.get_text("system.startup"), True, (255, 255, 255))
             text_rect = text.get_rect(center=(self.screen.get_width()//2, self.screen.get_height()//2))
             self.screen.blit(text, text_rect)
     
@@ -1393,7 +1427,8 @@ class GameManager(EventHandler):
     
     def _try_auto_load(self):
         """自動セーブデータロードを試行 - GameStateManagerに委譲"""
-        if hasattr(self, 'game_state_manager'):
+        game_state_manager = getattr(self, 'game_state_manager', None)
+        if game_state_manager:
             # GameStateManagerで自動ロード実行
             success = self.game_state_manager.try_auto_load()
             if success:
@@ -1512,31 +1547,35 @@ class GameManager(EventHandler):
     
     def trigger_encounter(self, encounter_type: str = "normal", level: int = 1):
         """エンカウンターを発生させる - CombatStateManagerに委譲"""
-        if hasattr(self, 'combat_state_manager'):
-            return self.combat_state_manager.trigger_encounter(encounter_type, level)
+        combat_state_manager = getattr(self, 'combat_state_manager', None)
+        if combat_state_manager:
+            return combat_state_manager.trigger_encounter(encounter_type, level)
         else:
             logger.error("CombatStateManager not initialized")
             return False
     
     def start_combat(self, monsters):
         """戦闘開始 - CombatStateManagerに委譲"""
-        if hasattr(self, 'combat_state_manager'):
-            return self.combat_state_manager.start_combat(monsters)
+        combat_state_manager = getattr(self, 'combat_state_manager', None)
+        if combat_state_manager:
+            return combat_state_manager.start_combat(monsters)
         else:
             logger.error("CombatStateManager not initialized")
             return False
     
     def check_combat_state(self):
         """戦闘状態の確認・戦闘終了処理 - CombatStateManagerに委譲"""
-        if hasattr(self, 'combat_state_manager'):
-            self.combat_state_manager.check_combat_state()
+        combat_state_manager = getattr(self, 'combat_state_manager', None)
+        if combat_state_manager:
+            combat_state_manager.check_combat_state()
         else:
             logger.error("CombatStateManager not initialized")
     
     def end_combat(self):
         """戦闘終了処理 - CombatStateManagerに委譲"""
-        if hasattr(self, 'combat_state_manager'):
-            self.combat_state_manager.end_combat()
+        combat_state_manager = getattr(self, 'combat_state_manager', None)
+        if combat_state_manager:
+            combat_state_manager.end_combat()
         else:
             logger.error("CombatStateManager not initialized")
     
@@ -1569,8 +1608,9 @@ class GameManager(EventHandler):
             if dropped_items:
                 for item in dropped_items:
                     # パーティインベントリに追加
-                    if hasattr(self.current_party, 'shared_inventory') and self.current_party.shared_inventory:
-                        self.current_party.shared_inventory.add_item(item)
+                    shared_inventory = getattr(self.current_party, 'shared_inventory', None)
+                    if shared_inventory:
+                        shared_inventory.add_item(item)
                     logger.info(f"アイテム「{item.name}」を獲得しました")
             
         except Exception as e:
@@ -1856,7 +1896,8 @@ class GameManager(EventHandler):
             encounter_id = boss_result.get("encounter_id")
             
             # 現在のエンカウンター情報を保存
-            if hasattr(self, 'current_boss_encounter'):
+            current_boss_encounter = getattr(self, 'current_boss_encounter', None)
+            if current_boss_encounter:
                 self.current_boss_encounter = {
                     "encounter": boss_encounter,
                     "encounter_id": encounter_id
@@ -1920,11 +1961,12 @@ class GameManager(EventHandler):
     
     def handle_boss_encounter_completion(self, victory: bool):
         """ボス戦完了処理"""
-        if not hasattr(self, 'current_boss_encounter') or not self.current_boss_encounter:
+        current_boss_encounter = getattr(self, 'current_boss_encounter', None)
+        if not current_boss_encounter:
             return
         
         try:
-            encounter_id = self.current_boss_encounter.get("encounter_id")
+            encounter_id = current_boss_encounter.get("encounter_id")
             if not encounter_id:
                 logger.error("ボス戦エンカウンターIDが見つかりません")
                 return

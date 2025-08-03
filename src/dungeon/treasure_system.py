@@ -234,7 +234,8 @@ class TreasureSystem:
         # アイテム
         for item in contents["items"]:
             # パーティの共有インベントリに追加
-            if hasattr(party, 'shared_inventory') and party.shared_inventory:
+            shared_inventory = getattr(party, 'shared_inventory', None)
+            if shared_inventory:
                 party.shared_inventory.add_item(item)
             result["items"].append(item)
             result["contents"].append(f"アイテム「{item.get_name()}」を獲得")

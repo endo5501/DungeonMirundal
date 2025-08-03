@@ -778,14 +778,16 @@ class EquipmentWindow(Window):
         elif self.current_mode == EquipmentViewMode.EQUIPMENT_SELECTION:
             if element_id.startswith('item_button_'):
                 inventory_index = int(element_id.split('_')[-1])
-                suitable_items = self._get_suitable_items_for_slot(self.selected_slot)
-                for inv_idx, item_instance, item in suitable_items:
-                    if inv_idx == inventory_index:
-                        self.equip_item_from_inventory(item_instance, self.selected_slot, inventory_index)
-                        break
+                if self.selected_slot is not None:
+                    suitable_items = self._get_suitable_items_for_slot(self.selected_slot)
+                    for inv_idx, item_instance, item in suitable_items:
+                        if inv_idx == inventory_index:
+                            self.equip_item_from_inventory(item_instance, self.selected_slot, inventory_index)
+                            break
                 return True
             elif element_id == 'cancel_button':
-                self.show_slot_options(self.selected_slot)
+                if self.selected_slot is not None:
+                    self.show_slot_options(self.selected_slot)
                 return True
         
         return False

@@ -34,10 +34,19 @@ class StoragePanel(ServicePanel):
         self.selected_storage_item: Optional[Dict[str, Any]] = None
         self.storage_capacity = 100
         
-        # 宿屋倉庫マネージャーへの参照
+        # 宿屋倉庫マネージャーへの参照（Protocol型安全チェック）
         self.storage_manager = None
-        if controller and hasattr(controller, 'service') and hasattr(controller.service, 'storage_manager'):
-            self.storage_manager = controller.service.storage_manager
+        if controller:
+            from src.interfaces import FacilityController as FacilityControllerProtocol, StorageService
+            
+            # FacilityControllerProtocolをチェック
+            if isinstance(controller, FacilityControllerProtocol):
+                service = controller.get_service()
+                if isinstance(service, StorageService):
+                    self.storage_manager = service.storage_manager
+            # フォールバック：従来のhasattrチェック  
+            elif hasattr(controller, 'service') and hasattr(controller.service, 'storage_manager'):
+                self.storage_manager = controller.service.storage_manager
         
         # 親クラスの初期化（_create_ui()が呼ばれる）
         super().__init__(rect, parent, controller, "storage", ui_manager)

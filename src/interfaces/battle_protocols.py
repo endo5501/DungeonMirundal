@@ -4,10 +4,11 @@
 戦闘システムで使用される型安全なインターフェースを定義します。
 """
 
-from typing import Protocol, Any, Dict, List, Optional, runtime_checkable
+from typing import Protocol, Any, Dict, List, runtime_checkable
 from .core_protocols import MessageSender, Cleanupable
 
 
+@runtime_checkable
 class BattleWindow(MessageSender, Cleanupable, Protocol):
     """戦闘ウィンドウのインターフェース"""
     
@@ -16,6 +17,7 @@ class BattleWindow(MessageSender, Cleanupable, Protocol):
         ...
 
 
+@runtime_checkable
 class BattleManager(Protocol):
     """戦闘管理のインターフェース"""
     

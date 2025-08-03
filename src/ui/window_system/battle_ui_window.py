@@ -16,6 +16,7 @@ from .battle_types import (
     StatusEffect, KeyboardShortcut, ActionMenuEntry, TargetInfo
 )
 from src.utils.logger import logger
+from src.interfaces import UIDestructible
 
 
 class BattleUIWindow(Window):
@@ -602,7 +603,9 @@ class BattleUIWindow(Window):
                 if root_container and hasattr(root_container, 'elements'):
                     elements = getattr(root_container, 'elements', [])
                     for element in list(elements):
-                        if hasattr(element, 'kill'):
+                        if isinstance(element, UIDestructible):
+                            element.kill()
+                        elif hasattr(element, 'kill'):  # フォールバック
                             element.kill()
             except Exception as e:
                 logger.warning(f"UI要素削除中にエラー: {e}")

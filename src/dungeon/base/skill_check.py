@@ -29,17 +29,20 @@ class SkillCheckBase(ABC):
         base_rate = self.base_success_rate
         
         # クラスボーナス（設定ファイルから取得）
-        if hasattr(character, 'character_class'):
+        character_class = getattr(character, 'character_class', None)
+        if character_class:
             class_bonus = self._get_class_bonus_from_config(character.character_class, skill_type)
             base_rate += class_bonus
         
         # ステータスボーナス（設定ファイルから取得）
-        if hasattr(character, 'base_stats'):
+        base_stats = getattr(character, 'base_stats', None)
+        if base_stats:
             stat_bonus = self._get_stat_bonus_from_config(character.base_stats, skill_type)
             base_rate += stat_bonus
         
         # レベルボーナス
-        if hasattr(character, 'experience'):
+        experience = getattr(character, 'experience', None)
+        if experience:
             level_bonus = character.experience.level * 0.01
             base_rate += level_bonus
         
@@ -54,7 +57,8 @@ class SkillCheckBase(ABC):
     def _get_stat_bonus_from_config(self, stats: Any, skill_type: str) -> float:
         """設定ファイルからステータスボーナスを取得"""
         stat_name = self.skill_stats.get(skill_type)
-        if stat_name and hasattr(stats, stat_name):
+        stat_value = getattr(stats, stat_name, None) if stat_name and stats else None
+        if stat_name and stat_value is not None:
             stat_value = getattr(stats, stat_name)
             return (stat_value - 10) * 0.02
         return 0.0

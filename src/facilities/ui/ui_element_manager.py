@@ -537,6 +537,7 @@ class DestructionMixin:
             破棄が成功したかどうか
         """
         import time
+        from src.interfaces import Cleanupable
         
         if self.destruction_verified:
             logger.warning("destroy_with_verification called on already destroyed object")
@@ -545,8 +546,11 @@ class DestructionMixin:
         self.destruction_start_time = time.time()
         
         try:
-            # 破棄処理を実行
-            if hasattr(self, 'destroy') and callable(getattr(self, 'destroy', None)):
+            # Protocol型安全チェック
+            if isinstance(self, Cleanupable):
+                self.destroy()
+            elif hasattr(self, 'destroy') and callable(getattr(self, 'destroy', None)):
+                # フォールバック：従来のhasattrチェック
                 getattr(self, 'destroy')()
             
             # 破棄の検証
@@ -569,19 +573,26 @@ class DestructionMixin:
         Returns:
             破棄が完了しているかどうか
         """
+        from src.interfaces import UIContainer, UIRefreshable
+        
         # UIElementManagerを持つ場合は検証
-        if hasattr(self, 'ui_element_manager'):
-            manager = getattr(self, 'ui_element_manager', None)
-            if manager and not manager.is_destroyed:
+        ui_element_manager = getattr(self, 'ui_element_manager', None)
+        if ui_element_manager is not None:
+            if hasattr(ui_element_manager, 'is_destroyed') and not ui_element_manager.is_destroyed:
                 logger.warning("UIElementManager is not destroyed")
                 return False
         
         # containerを持つ場合は検証
-        if hasattr(self, 'container') and getattr(self, 'container', None) is not None:
+        container = getattr(self, 'container', None)
+        if container is not None:
             try:
-                # コンテナがまだ有効かチェック
-                container = getattr(self, 'container', None)
-                if container and hasattr(container, 'rect'):
+                # Protocol型安全チェック
+                if isinstance(container, UIContainer):
+                    # Protocol準拠の場合は rect 属性を持つ
+                    logger.warning("Container still active (UIContainer protocol)")
+                    return False
+                elif hasattr(container, 'rect'):
+                    # フォールバック：従来のhasattrチェック
                     logger.warning("Container still has rect attribute")
                     return False
             except Exception:

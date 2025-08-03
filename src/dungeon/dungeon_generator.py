@@ -550,17 +550,20 @@ class DungeonGenerator:
         self._place_stairs(dungeon_level, floor_cells, rng, dungeon_id)
         
         # 開始位置を設定（レベル1の場合はEXIT階段の位置、それ以外は上階段の位置）
-        if dungeon_level.level == 1 and hasattr(dungeon_level, 'exit_position') and dungeon_level.exit_position:
+        exit_position = getattr(dungeon_level, 'exit_position', None)
+        if dungeon_level.level == 1 and exit_position:
             dungeon_level.start_position = dungeon_level.exit_position
             logger.info(f"レベル1開始位置をEXIT階段に設定: {dungeon_level.exit_position}")
-        elif hasattr(dungeon_level, 'stairs_up_position') and dungeon_level.stairs_up_position:
-            dungeon_level.start_position = dungeon_level.stairs_up_position
-            logger.info(f"レベル{dungeon_level.level}開始位置を上階段に設定: {dungeon_level.stairs_up_position}")
         else:
-            # フォールバック：最初の床セルを使用
-            start_pos, start_cell = floor_cells[0] if floor_cells else ((1, 1), None)
-            dungeon_level.start_position = start_pos
-            logger.warning(f"レベル{dungeon_level.level}でフォールバック開始位置を使用: {start_pos}")
+            stairs_up_position = getattr(dungeon_level, 'stairs_up_position', None)
+            if stairs_up_position:
+                dungeon_level.start_position = dungeon_level.stairs_up_position
+                logger.info(f"レベル{dungeon_level.level}開始位置を上階段に設定: {dungeon_level.stairs_up_position}")
+            else:
+                # フォールバック：最初の床セルを使用
+                start_pos, start_cell = floor_cells[0] if floor_cells else ((1, 1), None)
+                dungeon_level.start_position = start_pos
+                logger.warning(f"レベル{dungeon_level.level}でフォールバック開始位置を使用: {start_pos}")
         
         # 宝箱配置
         treasure_count = self._place_treasures(dungeon_level, floor_cells, rng)

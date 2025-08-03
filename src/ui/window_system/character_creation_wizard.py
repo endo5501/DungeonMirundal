@@ -12,6 +12,7 @@ from typing import Dict, List, Any, Optional, cast
 from pathlib import Path
 
 from .window import Window
+from src.interfaces import UIDestructible
 from .character_creation_types import (
     WizardStep, CharacterData, CharacterStats, WizardConfig, StepValidationResult
 )
@@ -258,7 +259,9 @@ class CharacterCreationWizard(Window):
     def _clear_current_step_ui(self) -> None:
         """現在のステップのUI要素をクリア"""
         for element in self.current_ui_elements.values():
-            if hasattr(element, 'kill'):
+            if isinstance(element, UIDestructible):
+                element.kill()
+            elif hasattr(element, 'kill'):  # フォールバック
                 element.kill()
         self.current_ui_elements.clear()
     
@@ -568,7 +571,9 @@ class CharacterCreationWizard(Window):
         for key in list(self.current_ui_elements.keys()):
             if key.startswith('stat_'):
                 element = self.current_ui_elements.pop(key)
-                if hasattr(element, 'kill'):
+                if isinstance(element, UIDestructible):
+                    element.kill()
+                elif hasattr(element, 'kill'):  # フォールバック
                     element.kill()
         
         # ステータスラベルを作成
