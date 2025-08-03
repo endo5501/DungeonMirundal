@@ -239,7 +239,8 @@ class TrapSystem:
         damage = random.randint(min_damage, max_damage)
         
         # 対象の敏捷性で軽減判定
-        if hasattr(target, 'base_stats') and target.base_stats.agility > 15:
+        base_stats = getattr(target, 'base_stats', None)
+        if base_stats and base_stats.agility > 15:
             if random.random() < 0.3:  # 30%で部分回避
                 damage = damage // 2
                 logger.info(f"{target.name}が素早い動きで一部回避！")
@@ -255,7 +256,8 @@ class TrapSystem:
         
         # 対象の抵抗力チェック
         resistance_chance = 0.2
-        if hasattr(target, 'base_stats'):
+        base_stats = getattr(target, 'base_stats', None)
+        if base_stats:
             if status_effect in ["poison", "paralysis"]:
                 resistance_chance += target.base_stats.strength * 0.01
             elif status_effect in ["sleep", "confusion"]:
@@ -297,7 +299,8 @@ class TrapSystem:
     def _apply_item_loss_trap(self, party: Party) -> str:
         """アイテム紛失トラップの適用"""
         # パーティの共有インベントリからランダムにアイテムを1つ紛失
-        if hasattr(party, 'shared_inventory') and party.shared_inventory:
+        shared_inventory = getattr(party, 'shared_inventory', None)
+        if shared_inventory:
             items = party.shared_inventory.get_all_items()
             if items:
                 # get_all_items()はTuple[int, ItemInstance]のリストを返す

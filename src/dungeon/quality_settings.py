@@ -304,12 +304,14 @@ class DungeonQualityManager:
         
         # 基本設定の値を適用（name以外）
         for field_name, field_value in base_settings.__dict__.items():
-            if hasattr(custom_settings, field_name) and field_name not in ['name', 'description']:
+            field_value = getattr(custom_settings, field_name, None)
+            if field_value is not None and field_name not in ['name', 'description']:
                 setattr(custom_settings, field_name, field_value)
         
         # カスタム修正を適用
         for key, value in modifications.items():
-            if hasattr(custom_settings, key):
+            key_value = getattr(custom_settings, key, None)
+            if key_value is not None:
                 setattr(custom_settings, key, value)
         
         self.custom_difficulty = custom_settings
@@ -328,12 +330,14 @@ class DungeonQualityManager:
         
         # 基本設定の値を適用（preset_name以外）
         for field_name, field_value in base_settings.__dict__.items():
-            if hasattr(custom_settings, field_name) and field_name not in ['preset_name', 'description']:
+            field_value = getattr(custom_settings, field_name, None)
+            if field_value is not None and field_name not in ['preset_name', 'description']:
                 setattr(custom_settings, field_name, field_value)
         
         # カスタム修正を適用
         for key, value in modifications.items():
-            if hasattr(custom_settings, key):
+            key_value = getattr(custom_settings, key, None)
+            if key_value is not None:
                 setattr(custom_settings, key, value)
         
         self.custom_quality = custom_settings

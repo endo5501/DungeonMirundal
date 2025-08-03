@@ -82,7 +82,10 @@ class InventoryManager:
             self.current_window.show()
             inventory = character.get_inventory()
             self.current_window.current_character = character
-            self.current_window.show_inventory_contents(inventory, f"{character.name}のアイテム", "character")
+            if inventory is not None:
+                self.current_window.show_inventory_contents(inventory, f"{character.name}のアイテム", "character")
+            else:
+                logger.warning(f"キャラクター {character.name} のインベントリが None です")
             
             logger.info(f"キャラクターインベントリを表示: {character.name}")
             

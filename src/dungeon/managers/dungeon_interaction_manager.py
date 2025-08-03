@@ -147,7 +147,8 @@ class DungeonInteractionManager:
         if treasure_result.get("success") and not treasure_result.get("mimic"):
             cell.has_treasure = False
             cell.treasure_id = None
-            if hasattr(cell, 'treasure_type'):
+            treasure_type = getattr(cell, 'treasure_type', None)
+            if treasure_type:
                 delattr(cell, 'treasure_type')
         
         return treasure_result

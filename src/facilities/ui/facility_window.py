@@ -6,6 +6,7 @@ from typing import Dict, Optional, Any, TYPE_CHECKING, cast
 import logging
 from src.ui.window_system.window import Window
 from src.ui.window_system.window_manager import WindowManager
+from src.interfaces import UIDestructible
 
 if TYPE_CHECKING:
     from ..core.facility_controller import FacilityController
@@ -217,16 +218,25 @@ class FacilityWindow(Window):
             # パネルを破棄してUIを完全にクリア
             current_panel = self.service_panels[self.current_service_id]
             try:
-                if hasattr(current_panel, 'destroy'):
+                from src.interfaces import Cleanupable, UIDestructible
+                
+                # Protocol型安全チェック
+                if isinstance(current_panel, Cleanupable):
+                    current_panel.destroy()
+                    logger.info(f"FacilityWindow: Successfully destroyed panel {self.current_service_id} using Cleanupable protocol")
+                elif isinstance(current_panel, UIDestructible):
+                    current_panel.kill()
+                    logger.info(f"FacilityWindow: Successfully killed panel {self.current_service_id} using UIDestructible protocol")
+                elif hasattr(current_panel, 'destroy') and callable(getattr(current_panel, 'destroy', None)):
+                    # フォールバック：従来のhasattrチェック
                     current_panel.destroy()
                     logger.info(f"FacilityWindow: Successfully destroyed panel {self.current_service_id} using destroy() method")
+                elif hasattr(current_panel, 'kill') and callable(getattr(current_panel, 'kill', None)):
+                    # フォールバック：従来のkillチェック
+                    current_panel.kill()
+                    logger.info(f"FacilityWindow: Successfully killed panel {self.current_service_id} using kill() method")
                 else:
-                    # 汎用UIPanelの場合はkillメソッドを使用
-                    if hasattr(current_panel, 'kill'):
-                        current_panel.kill()
-                        logger.info(f"FacilityWindow: Successfully killed panel {self.current_service_id} using kill() method")
-                    else:
-                        logger.warning(f"FacilityWindow: Panel {self.current_service_id} has no destroy() or kill() method")
+                    logger.warning(f"FacilityWindow: Panel {self.current_service_id} has no destroy() or kill() method")
             except Exception as e:
                 logger.error(f"FacilityWindow: Error destroying panel {self.current_service_id}: {e}")
             
@@ -288,7 +298,11 @@ class FacilityWindow(Window):
         
         try:
             # サービス自体に専用パネル作成を委任
-            if self.controller and hasattr(self.controller.service, 'create_service_panel'):
+            from src.interfaces import FacilityService as FacilityServiceProtocol
+            
+            if (self.controller and 
+                isinstance(self.controller.service, FacilityServiceProtocol)):
+                # Protocol型安全チェック
                 logger.debug(f"[DEBUG] Calling create_service_panel for {service_id}")
                 custom_panel = self.controller.service.create_service_panel(
                     service_id, content_rect, self.main_panel, self.ui_manager
@@ -329,12 +343,26 @@ class FacilityWindow(Window):
         """汎用サービスパネルを作成"""
         from src.facilities.ui.ui_element_manager import UIElementManager
         
-        panel = pygame_gui.elements.UIPanel(
-            relative_rect=rect,
-            manager=self.ui_manager,
-            container=self.main_panel,
-            element_id=f"{service_id}_panel"
-        )
+        # main_panelがpygame_guiの実際のUIElementかどうかをチェック
+        try:
+            is_valid_container = (self.main_panel and 
+                                isinstance(self.main_panel, pygame_gui.elements.UIPanel))
+        except:
+            is_valid_container = False
+        
+        if is_valid_container:
+            panel = pygame_gui.elements.UIPanel(
+                relative_rect=rect,
+                manager=self.ui_manager,
+                container=self.main_panel,
+                element_id=f"{service_id}_panel"
+            )
+        else:
+            panel = pygame_gui.elements.UIPanel(
+                relative_rect=rect,
+                manager=self.ui_manager,
+                element_id=f"{service_id}_panel"
+            )
         
         # UIElementManagerを使用してUI要素を管理  
         assert self.ui_manager is not None, "ui_manager must not be None"
@@ -349,7 +377,8 @@ class FacilityWindow(Window):
         )
         
         # サービス説明を表示
-        if hasattr(menu_item, 'description') and menu_item.description:
+        description = getattr(menu_item, 'description', None)
+        if description:
             ui_element_manager.create_label(
                 f"{service_id}_description",
                 menu_item.description,
@@ -386,8 +415,9 @@ class FacilityWindow(Window):
             logger.info(f"Generic panel destroy: Starting destruction for {service_id}")
             try:
                 # UIElementManagerによる完全破棄
-                if hasattr(panel, 'ui_element_manager'):
-                    cast(Any, panel).ui_element_manager.destroy_all()
+                ui_element_manager = getattr(panel, 'ui_element_manager', None)
+                if ui_element_manager and hasattr(ui_element_manager, 'destroy_all'):
+                    ui_element_manager.destroy_all()
                     logger.debug(f"Generic panel: UIElementManager destroyed for {service_id}")
                 
                 # パネル自体を破棄
@@ -407,11 +437,24 @@ class FacilityWindow(Window):
         """フォールバック用のシンプルなパネルを作成"""
         from src.facilities.ui.ui_element_manager import UIElementManager
         
-        panel = pygame_gui.elements.UIPanel(
-            relative_rect=rect,
-            manager=self.ui_manager,
-            container=self.main_panel
-        )
+        # main_panelがpygame_guiの実際のUIElementかどうかをチェック
+        try:
+            is_valid_container = (self.main_panel and 
+                                isinstance(self.main_panel, pygame_gui.elements.UIPanel))
+        except:
+            is_valid_container = False
+        
+        if is_valid_container:
+            panel = pygame_gui.elements.UIPanel(
+                relative_rect=rect,
+                manager=self.ui_manager,
+                container=self.main_panel
+            )
+        else:
+            panel = pygame_gui.elements.UIPanel(
+                relative_rect=rect,
+                manager=self.ui_manager
+            )
         
         # UIElementManagerを使用してUI要素を管理
         assert self.ui_manager is not None, "ui_manager must not be None"
@@ -433,8 +476,9 @@ class FacilityWindow(Window):
             logger.info(f"Fallback panel destroy: Starting destruction for {service_id}")
             try:
                 # UIElementManagerによる完全破棄
-                if hasattr(panel, 'ui_element_manager'):
-                    cast(Any, panel).ui_element_manager.destroy_all()
+                ui_element_manager = getattr(panel, 'ui_element_manager', None)
+                if ui_element_manager and hasattr(ui_element_manager, 'destroy_all'):
+                    ui_element_manager.destroy_all()
                     logger.debug(f"Fallback panel: UIElementManager destroyed for {service_id}")
                 
                 # パネル自体を破棄
@@ -474,8 +518,10 @@ class FacilityWindow(Window):
         
         try:
             # UIマネージャー内の orphaned elements をクリア
-            if self.ui_manager and hasattr(self.ui_manager, 'get_sprite_group'):
-                sprite_group = self.ui_manager.get_sprite_group()
+            if self.ui_manager:
+                get_sprite_group_method = getattr(self.ui_manager, 'get_sprite_group', None)
+                if callable(get_sprite_group_method):
+                    sprite_group = get_sprite_group_method()
                 if sprite_group:
                     # main_panelに属さないスプライトをチェック
                     orphaned_sprites = []
@@ -492,7 +538,13 @@ class FacilityWindow(Window):
                     # orphaned sprites を削除
                     for sprite in orphaned_sprites:
                         try:
-                            if hasattr(sprite, 'kill'):
+                            from src.interfaces import UIDestructible
+                            
+                            if isinstance(sprite, UIDestructible):
+                                sprite.kill()
+                                logger.debug(f"FacilityWindow: Killed orphaned sprite {type(sprite).__name__} using UIDestructible protocol")
+                            elif hasattr(sprite, 'kill') and callable(getattr(sprite, 'kill', None)):
+                                # フォールバック：従来のhasattrチェック
                                 sprite.kill()
                                 logger.debug(f"FacilityWindow: Killed orphaned sprite {type(sprite).__name__}")
                         except Exception as e:
@@ -533,9 +585,17 @@ class FacilityWindow(Window):
                 logger.info(f"Destroying service panel: {service_id}")
                 # パネル内のすべてのUI要素を再帰的に削除
                 self._recursive_kill_children(panel)
-                if hasattr(panel, 'destroy'):
+                from src.interfaces import Cleanupable, UIDestructible
+                
+                if isinstance(panel, Cleanupable):
                     panel.destroy()
-                elif hasattr(panel, 'kill'):
+                elif isinstance(panel, UIDestructible):
+                    panel.kill()
+                elif hasattr(panel, 'destroy') and callable(getattr(panel, 'destroy', None)):
+                    # フォールバック：従来のhasattrチェック
+                    panel.destroy()
+                elif hasattr(panel, 'kill') and callable(getattr(panel, 'kill', None)):
+                    # フォールバック：従来のkillチェック
                     panel.kill()
             except Exception as e:
                 logger.error(f"Failed to destroy service panel {service_id}: {e}")
@@ -546,14 +606,18 @@ class FacilityWindow(Window):
             try:
                 logger.info("Destroying navigation panel")
                 self._recursive_kill_children(self.navigation_panel)
-                if hasattr(self.navigation_panel, 'destroy'):
+                from src.interfaces import Cleanupable, UIDestructible
+                
+                if isinstance(self.navigation_panel, Cleanupable):
                     self.navigation_panel.destroy()
-                elif hasattr(self.navigation_panel, 'kill'):
-                    # navigation_panel は pygame_gui の要素ではない可能性があるため、
-                    # kill メソッドの存在を確認してから呼び出し
-                    kill_method = getattr(self.navigation_panel, 'kill', None)
-                    if callable(kill_method):
-                        kill_method()
+                elif isinstance(self.navigation_panel, UIDestructible):
+                    self.navigation_panel.kill()
+                elif hasattr(self.navigation_panel, 'destroy') and callable(getattr(self.navigation_panel, 'destroy', None)):
+                    # フォールバック：従来のhasattrチェック
+                    self.navigation_panel.destroy()
+                elif hasattr(self.navigation_panel, 'kill') and callable(getattr(self.navigation_panel, 'kill', None)):
+                    # フォールバック：従来のkillチェック
+                    self.navigation_panel.kill()
             except Exception as e:
                 logger.error(f"Failed to destroy navigation panel: {e}")
             self.navigation_panel = None
@@ -591,7 +655,12 @@ class FacilityWindow(Window):
                     for child_element in list(layer_elements):
                         try:
                             self._recursive_kill_children(child_element)
-                            if hasattr(child_element, 'kill'):
+                            from src.interfaces import UIDestructible
+                            
+                            if isinstance(child_element, UIDestructible):
+                                child_element.kill()
+                            elif hasattr(child_element, 'kill') and callable(getattr(child_element, 'kill', None)):
+                                # フォールバック：従来のhasattrチェック
                                 child_element.kill()
                         except Exception as e:
                             logger.warning(f"Failed to kill child element: {e}")
@@ -603,7 +672,12 @@ class FacilityWindow(Window):
                 for child in list(container.elements):
                     try:
                         self._recursive_kill_children(child)
-                        if hasattr(child, 'kill'):
+                        from src.interfaces import UIDestructible
+                        
+                        if isinstance(child, UIDestructible):
+                            child.kill()
+                        elif hasattr(child, 'kill') and callable(getattr(child, 'kill', None)):
+                            # フォールバック：従来のhasattrチェック
                             child.kill()
                     except Exception as e:
                         logger.warning(f"Failed to kill container child: {e}")
@@ -613,7 +687,12 @@ class FacilityWindow(Window):
         # 現在のサービスパネルを更新
         if self.current_service_id and self.current_service_id in self.service_panels:
             panel = self.service_panels[self.current_service_id]
-            if hasattr(panel, 'refresh'):
+            from src.interfaces import UIRefreshable
+            
+            if isinstance(panel, UIRefreshable):
+                panel.refresh()
+            elif hasattr(panel, 'refresh') and callable(getattr(panel, 'refresh', None)):
+                # フォールバック：従来のhasattrチェック
                 panel.refresh()
         
         # ナビゲーションを更新（メニュー項目の有効/無効が変わる可能性）
@@ -655,34 +734,38 @@ class FacilityWindow(Window):
             service_panel = self.service_panels[self.current_service_id]
             
             # UISelectionListのイベント処理
-            if hasattr(service_panel, 'handle_selection_list_changed'):
+            handle_selection_list_changed = getattr(service_panel, 'handle_selection_list_changed', None)
+            if callable(handle_selection_list_changed):
                 if (event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION or
                     event.type == pygame_gui.UI_SELECTION_LIST_DOUBLE_CLICKED_SELECTION):
                     logger.info(f"[DEBUG] Processing selection list event: {event.type}")
-                    if service_panel.handle_selection_list_changed(event):
+                    if handle_selection_list_changed(event):
                         return True
             
             # ボタンクリック（UI_BUTTON_PRESSED）イベントの処理
-            if hasattr(service_panel, 'handle_button_click') and event.type == pygame_gui.UI_BUTTON_PRESSED:
+            handle_button_click = getattr(service_panel, 'handle_button_click', None)
+            if callable(handle_button_click) and event.type == pygame_gui.UI_BUTTON_PRESSED:
                 logger.info(f"[DEBUG] Processing button click event: {event.ui_element}")
                 logger.info(f"[DEBUG] Service panel: {service_panel.__class__.__name__}")
-                logger.info(f"[DEBUG] Service panel has handle_button_click: {hasattr(service_panel, 'handle_button_click')}")
-                if service_panel.handle_button_click(event.ui_element):
+                logger.info(f"[DEBUG] Service panel has handle_button_click: {callable(handle_button_click)}")
+                if handle_button_click(event.ui_element):
                     logger.info(f"[DEBUG] Button click handled by service panel")
                     return True
                 else:
                     logger.info(f"[DEBUG] Button click not handled by service panel")
             
             # テキスト変更イベント処理
-            if hasattr(service_panel, 'handle_text_changed'):
+            handle_text_changed = getattr(service_panel, 'handle_text_changed', None)
+            if callable(handle_text_changed):
                 if (event.type == pygame_gui.UI_TEXT_ENTRY_CHANGED or
                     event.type == pygame_gui.UI_TEXT_ENTRY_FINISHED):
-                    if service_panel.handle_text_changed(event):
+                    if handle_text_changed(event):
                         return True
             
             # ENTERキーやその他のキーイベントの処理（ウィザード用）
-            if hasattr(service_panel, 'handle_key_event') and event.type == pygame.KEYDOWN:
-                if service_panel.handle_key_event(event):
+            handle_key_event = getattr(service_panel, 'handle_key_event', None)
+            if callable(handle_key_event) and event.type == pygame.KEYDOWN:
+                if handle_key_event(event):
                     return True
         
         # ESCキー処理
@@ -707,7 +790,8 @@ class FacilityWindow(Window):
         
         # NavigationPanelのボタンクリック処理
         if self.navigation_panel and event.type == pygame_gui.UI_BUTTON_PRESSED:
-            if hasattr(self.navigation_panel, 'handle_button_click'):
+            nav_handle_button_click = getattr(self.navigation_panel, 'handle_button_click', None)
+            if callable(nav_handle_button_click):
                 # NavigationPanelのボタンかどうかチェック
                 nav_buttons = getattr(self.navigation_panel, 'nav_buttons', {})
                 for nav_button in nav_buttons.values():
@@ -715,13 +799,14 @@ class FacilityWindow(Window):
                         # nav_button の item_id 属性を安全に取得
                         item_id = getattr(nav_button, 'item_id', None)
                         logger.info(f"[DEBUG] NavigationPanel button clicked: {item_id}")
-                        if self.navigation_panel.handle_button_click(nav_button):
+                        if nav_handle_button_click(nav_button):
                             return True
                         break
         
         # シンプルナビゲーションのボタンクリック処理（フォールバック）
-        if hasattr(self, 'nav_buttons') and event.type == pygame_gui.UI_BUTTON_PRESSED:
-            for button in self.nav_buttons:
+        nav_buttons = getattr(self, 'nav_buttons', None)
+        if nav_buttons and event.type == pygame_gui.UI_BUTTON_PRESSED:
+            for button in nav_buttons:
                 if event.ui_element == button:
                     # button の item_id 属性を安全に取得
                     item_id = getattr(button, 'item_id', None)

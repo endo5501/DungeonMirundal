@@ -186,7 +186,8 @@ class DungeonScene(GameScene):
                     )
                     
                     # ダンジョンUIマネージャーの追加描画
-                    if hasattr(self.dungeon_renderer, 'dungeon_ui_manager') and self.dungeon_renderer.dungeon_ui_manager:
+                    dungeon_ui_manager = getattr(self.dungeon_renderer, 'dungeon_ui_manager', None)
+                    if dungeon_ui_manager:
                         try:
                             # ダンジョン状態とパーティ情報を確実に設定
                             self.dungeon_renderer.dungeon_ui_manager.set_dungeon_state(current_dungeon)
@@ -248,7 +249,8 @@ class DungeonScene(GameScene):
                     game_manager.encounter_manager.set_dungeon(current_dungeon)
                 
                 # ダンジョンUIマネージャーにダンジョン状態とパーティ情報を設定
-                    if self.dungeon_renderer and hasattr(self.dungeon_renderer, 'dungeon_ui_manager'):
+                    dungeon_ui_manager = getattr(self.dungeon_renderer, 'dungeon_ui_manager', None) if self.dungeon_renderer else None
+                    if self.dungeon_renderer and dungeon_ui_manager:
                         if self.dungeon_renderer.dungeon_ui_manager:
                             try:
                                 # ダンジョン状態を設定
@@ -264,7 +266,8 @@ class DungeonScene(GameScene):
                                 logger.error(f"ダンジョンUIマネージャーへの状態・パーティ設定でエラー: {e}")
                 
                 # 3D描画自動復旧
-                if self.dungeon_renderer and hasattr(self.dungeon_renderer, 'auto_recover'):
+                auto_recover = getattr(self.dungeon_renderer, 'auto_recover', None) if self.dungeon_renderer else None
+                if self.dungeon_renderer and auto_recover:
                     recovery_success = self.dungeon_renderer.auto_recover()
                     if recovery_success:
                         logger.info("3D描画自動復旧成功")
@@ -292,11 +295,13 @@ class DungeonScene(GameScene):
             game_manager = self.scene_manager.game_manager
             
             # 地上部UIの復旧
-            if hasattr(game_manager, 'overworld_manager') and game_manager.overworld_manager:
+            overworld_manager = getattr(game_manager, 'overworld_manager', None)
+            if overworld_manager:
                 logger.info("地上部UIの復旧を試行します")
                 # 地上部に強制復帰
                 overworld_manager = game_manager.overworld_manager
-                if hasattr(overworld_manager, 'restore_ui_state'):
+                restore_ui_state = getattr(overworld_manager, 'restore_ui_state', None)
+                if restore_ui_state:
                     overworld_manager.restore_ui_state()
                 else:
                     # フォールバック: 地上部に再入場
@@ -306,7 +311,8 @@ class DungeonScene(GameScene):
                 logger.info("地上部UI復旧処理が完了しました")
             
             # ゲーム状態を地上部に戻す
-            if hasattr(game_manager, 'set_location'):
+            set_location = getattr(game_manager, 'set_location', None)
+            if set_location:
                 game_manager.set_location("overworld")
             
             # シーン遷移をoverworld に戻す

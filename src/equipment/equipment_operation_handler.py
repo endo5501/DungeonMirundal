@@ -203,7 +203,8 @@ class EquipmentOperationHandler:
                 return can_equip_result
             
             # 実際の装備処理
-            if hasattr(self.equipment_slots, 'equip_item'):
+            from src.interfaces import EquipmentSlots
+            if isinstance(self.equipment_slots, EquipmentSlots):
                 success = self.equipment_slots.equip_item(item, slot_type)
                 if success:
                     return EquipmentOperationResult(
@@ -244,7 +245,9 @@ class EquipmentOperationHandler:
                 )
             
             # 実際の装備解除処理
-            if hasattr(self.equipment_slots, 'unequip_item'):
+            # EquipmentSlotsプロトコル準拠チェック済み（上記のimportで対応）
+            unequip_item_method = getattr(self.equipment_slots, 'unequip_item', None)
+            if unequip_item_method:
                 unequipped_item = self.equipment_slots.unequip_item(slot_type)
                 if unequipped_item:
                     return EquipmentOperationResult(
@@ -287,7 +290,8 @@ class EquipmentOperationHandler:
                 )
             
             # 実際の交換処理
-            if hasattr(self.equipment_slots, 'swap_equipment'):
+            swap_equipment_method = getattr(self.equipment_slots, 'swap_equipment', None)
+            if swap_equipment_method:
                 success = self.equipment_slots.swap_equipment(from_slot, to_slot)
                 if success:
                     return EquipmentOperationResult(
@@ -335,7 +339,8 @@ class EquipmentOperationHandler:
         """全スロット情報取得処理"""
         try:
             all_slots = {}
-            if hasattr(self.equipment_slots, 'get_all_slots'):
+            get_all_slots_method = getattr(self.equipment_slots, 'get_all_slots', None)
+            if get_all_slots_method:
                 slots_data = self.equipment_slots.get_all_slots()
                 for slot_type, slot_data in slots_data.items():
                     all_slots[slot_type] = self._get_slot_info_internal(slot_type)
@@ -358,7 +363,8 @@ class EquipmentOperationHandler:
             validation_results = []
             
             # 各スロットの検証
-            if hasattr(self.equipment_slots, 'get_all_slots'):
+            get_all_slots_method = getattr(self.equipment_slots, 'get_all_slots', None)
+            if get_all_slots_method:
                 slots_data = self.equipment_slots.get_all_slots()
                 for slot_type, slot_data in slots_data.items():
                     slot_validation = self._validate_slot(slot_type, slot_data)
@@ -427,7 +433,8 @@ class EquipmentOperationHandler:
         try:
             equippable_items = []
             
-            if hasattr(self.inventory, 'get_items'):
+            from src.interfaces import ItemContainer
+            if isinstance(self.inventory, ItemContainer):
                 inventory_items = self.inventory.get_items()
                 for item in inventory_items:
                     if self._is_item_equippable(item, slot_type):
@@ -457,7 +464,9 @@ class EquipmentOperationHandler:
             )
         
         # レベル制限チェック
-        if hasattr(item, 'required_level') and hasattr(self.character, 'level'):
+        required_level = getattr(item, 'required_level', None)
+        character_level = getattr(self.character, 'level', None)
+        if required_level is not None and character_level is not None:
             character_level = getattr(self.character, 'level', 1)
             if character_level < item.required_level:
                 return EquipmentOperationResult(
@@ -467,7 +476,9 @@ class EquipmentOperationHandler:
                 )
         
         # クラス制限チェック
-        if hasattr(item, 'allowed_classes') and hasattr(self.character, 'character_class'):
+        allowed_classes = getattr(item, 'allowed_classes', None)
+        character_class = getattr(self.character, 'character_class', None)
+        if allowed_classes is not None and character_class is not None:
             if self.character.character_class not in item.allowed_classes:
                 return EquipmentOperationResult(
                     success=False,
@@ -479,7 +490,8 @@ class EquipmentOperationHandler:
     
     def _get_slot_info_internal(self, slot_type: str) -> Optional[Dict[str, Any]]:
         """内部用スロット情報取得"""
-        if hasattr(self.equipment_slots, 'get_slot'):
+        get_slot_method = getattr(self.equipment_slots, 'get_slot', None)
+        if get_slot_method:
             slot = self.equipment_slots.get_slot(slot_type)
             if slot:
                 return {
@@ -508,9 +520,10 @@ class EquipmentOperationHandler:
     
     def _is_item_equippable(self, item: Any, slot_type: Optional[str]) -> bool:
         """アイテムが装備可能かチェック"""
-        if slot_type and hasattr(item, 'equipment_slot'):
+        equipment_slot = getattr(item, 'equipment_slot', None)
+        if slot_type and equipment_slot is not None:
             return item.equipment_slot == slot_type
-        return hasattr(item, 'equipment_slot')
+        return getattr(item, 'equipment_slot', None) is not None
     
     def _recalculate_character_stats(self):
         """キャラクターステータス再計算"""

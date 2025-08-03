@@ -289,17 +289,22 @@ class TestFacilityWindowServicePanelCreation:
     def test_create_service_panel_custom_panel(self, mock_controller):
         """サービスがカスタムパネルを提供する場合"""
         window = FacilityWindow("test_window", controller=mock_controller)
-        window.main_panel = Mock()
-        window.ui_manager = Mock()
         
-        # カスタムパネルを返すモック
+        # カスタムパネルを返すモック（UIPanel作成が発生しないように）
         custom_panel = Mock()
-        mock_controller.service.create_service_panel.return_value = custom_panel
         
-        result = window._create_service_panel("service1")
+        # Protocol型チェックを通すためにMagicMockを使用
+        from unittest.mock import MagicMock
+        mock_service = MagicMock()
+        mock_service.create_service_panel.return_value = custom_panel
+        mock_controller.service = mock_service
+        
+        # Protocol型チェックを模擬
+        with patch('src.facilities.ui.facility_window.isinstance', return_value=True):
+            result = window._create_service_panel("service1")
         
         assert result == custom_panel
-        mock_controller.service.create_service_panel.assert_called_once()
+        mock_service.create_service_panel.assert_called_once()
     
     def test_create_service_panel_wizard_type(self, mock_controller):
         """ウィザードタイプのサービスパネル作成"""

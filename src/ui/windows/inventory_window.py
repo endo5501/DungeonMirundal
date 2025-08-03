@@ -759,7 +759,7 @@ class InventoryWindow(Window):
         
         details += f"状態: {int(item_instance.condition * 100)}%\\n"
         
-        if item.is_usable():
+        if hasattr(item, 'is_usable') and callable(getattr(item, 'is_usable', None)) and item.is_usable():
             details += "\\nこのアイテムは使用可能です。"
         
         return details
